@@ -39,6 +39,7 @@ REVIEW PHASE (results presented)
 **Game length:** 20 turns = 5 galactic years (1 turn = 1 quarter)
 
 **Victory/Loss:**
+
 - Loss: negative cash + no sellable assets for 2 consecutive turns = bankruptcy
 - Win: survive all 20 turns
 - Score: net worth + route network size + reputation + total cargo/passengers moved
@@ -64,27 +65,29 @@ Total: ~30-50 destinations per game.
 ### Distance Model
 
 Three tiers create natural strategic layers:
+
 - **Intra-system:** 1-5 distance units (cheap, fast trips)
 - **Inter-system:** 10-30 distance units (moderate cost)
 - **Inter-sector:** 40-80 distance units (expensive, slow — high risk/reward)
 
 ### Planet Types
 
-| Type | Produces | Demands | Passenger Volume |
-|------|----------|---------|-----------------|
-| Terran | Tech, Luxury | Food, Raw Materials | High |
-| Industrial | Tech, Manufactured | Raw Materials, Food | Medium |
-| Mining | Raw Materials, Hazmat | Tech, Food, Medical | Low |
-| Agricultural | Food, Organics | Tech, Luxury | Low |
-| Hub Station | Nothing | Everything (small qty) | Very High |
-| Resort | Luxury | Food, Medical | High (tourist) |
-| Research | Medical, Tech | Everything else | Low |
+| Type         | Produces              | Demands                | Passenger Volume |
+| ------------ | --------------------- | ---------------------- | ---------------- |
+| Terran       | Tech, Luxury          | Food, Raw Materials    | High             |
+| Industrial   | Tech, Manufactured    | Raw Materials, Food    | Medium           |
+| Mining       | Raw Materials, Hazmat | Tech, Food, Medical    | Low              |
+| Agricultural | Food, Organics        | Tech, Luxury           | Low              |
+| Hub Station  | Nothing               | Everything (small qty) | Very High        |
+| Resort       | Luxury                | Food, Medical          | High (tourist)   |
+| Research     | Medical, Tech         | Everything else        | Low              |
 
 Each planet is procedurally assigned a type based on its system's star class and orbital position. Names are procedurally generated with a sci-fi name generator.
 
 ### Map Rendering
 
 Two zoom levels:
+
 1. **Galaxy view:** Systems as star icons, sectors as colored regions, inter-system routes as lines
 2. **System view:** Click a system to see planets laid out, intra-system routes visible
 
@@ -105,6 +108,7 @@ Two zoom levels:
 ### Per-Planet Market State
 
 Each planet tracks per cargo type:
+
 - `baseSupply` — how much it produces per turn
 - `baseDemand` — how much it consumes per turn
 - `currentPrice` — derived from supply/demand balance
@@ -134,6 +138,7 @@ price = basePrice * demandMultiplier * (1 - saturation * 0.6) * trendModifier * 
 ### Passenger Model
 
 Same framework but with "popularity" instead of saturation:
+
 - Well-served routes build loyalty (bonus passengers over time)
 - Over-capacity on popular routes drives ticket prices down
 - Under-served routes have pent-up demand (first-mover advantage)
@@ -141,7 +146,7 @@ Same framework but with "popularity" instead of saturation:
 ### Fuel
 
 - Global fuel price fluctuates mildly per turn
-- Fuel cost per trip = distance * ship.fuelEfficiency * fuelPricePerUnit
+- Fuel cost per trip = distance _ ship.fuelEfficiency _ fuelPricePerUnit
 - Fuel is a constant cost pressure that makes route distance meaningful
 
 ---
@@ -155,31 +160,31 @@ interface Ship {
   id: string;
   name: string;
   class: ShipClass;
-  cargoCapacity: number;    // max cargo units
+  cargoCapacity: number; // max cargo units
   passengerCapacity: number; // max passengers
-  speed: number;            // 1-10, affects transit time
-  fuelEfficiency: number;   // cost multiplier per distance unit
-  reliability: number;      // 70-99%, breakdown chance
-  age: number;              // turns since purchase
-  condition: number;        // 0-100%, degrades over time
+  speed: number; // 1-10, affects transit time
+  fuelEfficiency: number; // cost multiplier per distance unit
+  reliability: number; // 70-99%, breakdown chance
+  age: number; // turns since purchase
+  condition: number; // 0-100%, degrades over time
   purchaseCost: number;
-  maintenanceCost: number;  // per-turn upkeep
+  maintenanceCost: number; // per-turn upkeep
   assignedRoute: string | null;
 }
 ```
 
 ### Ship Classes (8 at launch)
 
-| Class | Cargo | Pax | Speed | Fuel Eff | Cost |
-|-------|-------|-----|-------|----------|------|
-| Cargo Shuttle | 80 | 0 | 4 | 0.8 | 40K |
-| Passenger Shuttle | 0 | 60 | 5 | 1.0 | 55K |
-| Mixed Hauler | 50 | 30 | 3 | 1.2 | 60K |
-| Fast Courier | 30 | 10 | 8 | 1.8 | 80K |
-| Bulk Freighter | 300 | 0 | 2 | 0.6 | 150K |
-| Star Liner | 0 | 200 | 6 | 1.4 | 250K |
-| Mega Hauler | 800 | 0 | 2 | 0.5 | 500K |
-| Luxury Liner | 20 | 150 | 7 | 1.6 | 600K |
+| Class             | Cargo | Pax | Speed | Fuel Eff | Cost |
+| ----------------- | ----- | --- | ----- | -------- | ---- |
+| Cargo Shuttle     | 80    | 0   | 4     | 0.8      | 40K  |
+| Passenger Shuttle | 0     | 60  | 5     | 1.0      | 55K  |
+| Mixed Hauler      | 50    | 30  | 3     | 1.2      | 60K  |
+| Fast Courier      | 30    | 10  | 8     | 1.8      | 80K  |
+| Bulk Freighter    | 300   | 0   | 2     | 0.6      | 150K |
+| Star Liner        | 0     | 200 | 6     | 1.4      | 250K |
+| Mega Hauler       | 800   | 0   | 2     | 0.5      | 500K |
+| Luxury Liner      | 20    | 150 | 7     | 1.6      | 600K |
 
 ### Ship Aging & Maintenance
 
@@ -202,6 +207,7 @@ MVP: Each ship assigned to one point-to-point route (origin <-> destination roun
 ### Storyteller (Invisible Director)
 
 Tracks player financial health and adjusts event probability weights:
+
 - Doing well → slightly more headwinds (pirate activity, market downturns)
 - Struggling → slightly more tailwinds (profitable contracts, market booms)
 - Never feels unfair — just adjusts probabilities, doesn't guarantee outcomes
@@ -209,24 +215,28 @@ Tracks player financial health and adjusts event probability weights:
 ### Event Categories
 
 **Market Events** (affect economy):
+
 - Resource booms/busts on specific planets
 - Trade agreements (reduce costs in a sector)
 - Technology breakthroughs (shift demand)
 - Economic recession (global demand drop)
 
 **Hazard Events** (affect routes):
+
 - Asteroid storms (route blocked for 1-2 turns)
 - Pirate activity (increased breakdown risk on routes)
 - Solar flare disruption (speed penalties in a system)
 - Quarantine (no passengers to/from a planet)
 
 **Opportunity Events** (player choices):
+
 - Emergency transport contracts (deliver X for bonus payment)
 - Derelict ship salvage (cheap ship, but low condition)
 - New system discovered (expand the map)
 - Government subsidies (reduced fuel cost if you serve a route)
 
 **Flavor Events** (atmosphere, no mechanical impact):
+
 - Alien ambassador visits
 - Cultural festivals
 - Scientific discoveries
@@ -248,6 +258,7 @@ Full Phaser canvas UI with reusable component library.
 ### Theme System
 
 Single `ThemeConfig` object defines:
+
 - Colors (background, panel, text, accent, profit-green, loss-red)
 - Fonts (heading, body, caption sizes)
 - Spacing (padding, margins, gaps)
@@ -324,7 +335,7 @@ Persistent Overlay Scenes:
 interface GameState {
   seed: number;
   turn: number;
-  phase: 'planning' | 'simulation' | 'review';
+  phase: "planning" | "simulation" | "review";
   cash: number;
   loans: Loan[];
   reputation: number;
@@ -369,6 +380,7 @@ interface GameState {
 ## MVP Scope Summary
 
 ### In MVP
+
 - Hybrid turn loop (plan/sim/review)
 - Procedural galaxy (2-3 sectors, ~30-50 planets)
 - 7 cargo types + passengers
@@ -382,6 +394,7 @@ interface GameState {
 - Procedural planet/system/sector naming
 
 ### Post-MVP
+
 - AI competitor companies
 - Multi-stop routes
 - Ship upgrades & customization

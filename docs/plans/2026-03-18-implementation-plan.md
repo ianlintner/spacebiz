@@ -17,6 +17,7 @@
 ### Task 1.1: Initialize Vite + Phaser + TypeScript project
 
 **Files:**
+
 - Create: `package.json`
 - Create: `tsconfig.json`
 - Create: `vite.config.ts`
@@ -36,16 +37,16 @@ npm install -D vitest @vitest/coverage-v8
 **Step 2: Configure vite.config.ts**
 
 ```typescript
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: './',
+  base: "./",
   build: {
-    target: 'esnext',
+    target: "esnext",
   },
   test: {
     globals: true,
-    environment: 'node',
+    environment: "node",
   },
 });
 ```
@@ -54,18 +55,20 @@ export default defineConfig({
 
 ```typescript
 // src/game/config.ts
-import Phaser from 'phaser';
+import Phaser from "phaser";
 
 export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
 
-export function createGameConfig(scenes: Phaser.Types.Scenes.SceneType[]): Phaser.Types.Core.GameConfig {
+export function createGameConfig(
+  scenes: Phaser.Types.Scenes.SceneType[],
+): Phaser.Types.Core.GameConfig {
   return {
     type: Phaser.AUTO,
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
-    parent: 'game-container',
-    backgroundColor: '#0a0a1a',
+    parent: "game-container",
+    backgroundColor: "#0a0a1a",
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -79,9 +82,9 @@ export function createGameConfig(scenes: Phaser.Types.Scenes.SceneType[]): Phase
 
 ```typescript
 // src/main.ts
-import Phaser from 'phaser';
-import { createGameConfig } from './game/config';
-import { BootScene } from './scenes/BootScene';
+import Phaser from "phaser";
+import { createGameConfig } from "./game/config";
+import { BootScene } from "./scenes/BootScene";
 
 const config = createGameConfig([BootScene]);
 new Phaser.Game(config);
@@ -91,18 +94,20 @@ new Phaser.Game(config);
 
 ```typescript
 // src/scenes/BootScene.ts
-import Phaser from 'phaser';
+import Phaser from "phaser";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
-    super({ key: 'BootScene' });
+    super({ key: "BootScene" });
   }
 
   create(): void {
-    this.add.text(640, 360, 'Star Freight Tycoon', {
-      fontSize: '48px',
-      color: '#00ffcc',
-    }).setOrigin(0.5);
+    this.add
+      .text(640, 360, "Star Freight Tycoon", {
+        fontSize: "48px",
+        color: "#00ffcc",
+      })
+      .setOrigin(0.5);
   }
 }
 ```
@@ -112,20 +117,30 @@ export class BootScene extends Phaser.Scene {
 ```html
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Star Freight Tycoon</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; overflow: hidden; }
-    #game-container { width: 100vw; height: 100vh; }
-  </style>
-</head>
-<body>
-  <div id="game-container"></div>
-  <script type="module" src="/src/main.ts"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Star Freight Tycoon</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #000;
+        overflow: hidden;
+      }
+      #game-container {
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
 ```
 
@@ -147,6 +162,7 @@ git add -A && git commit -m "feat: scaffold Phaser 3 + TypeScript + Vite project
 ### Task 2.1: Seeded Random Number Generator
 
 **Files:**
+
 - Create: `src/utils/SeededRNG.ts`
 - Test: `src/utils/__tests__/SeededRNG.test.ts`
 
@@ -154,11 +170,11 @@ git add -A && git commit -m "feat: scaffold Phaser 3 + TypeScript + Vite project
 
 ```typescript
 // src/utils/__tests__/SeededRNG.test.ts
-import { describe, it, expect } from 'vitest';
-import { SeededRNG } from '../SeededRNG';
+import { describe, it, expect } from "vitest";
+import { SeededRNG } from "../SeededRNG";
 
-describe('SeededRNG', () => {
-  it('produces deterministic results for same seed', () => {
+describe("SeededRNG", () => {
+  it("produces deterministic results for same seed", () => {
     const rng1 = new SeededRNG(12345);
     const rng2 = new SeededRNG(12345);
     const results1 = Array.from({ length: 10 }, () => rng1.next());
@@ -166,13 +182,13 @@ describe('SeededRNG', () => {
     expect(results1).toEqual(results2);
   });
 
-  it('produces different results for different seeds', () => {
+  it("produces different results for different seeds", () => {
     const rng1 = new SeededRNG(12345);
     const rng2 = new SeededRNG(54321);
     expect(rng1.next()).not.toEqual(rng2.next());
   });
 
-  it('next() returns values between 0 and 1', () => {
+  it("next() returns values between 0 and 1", () => {
     const rng = new SeededRNG(42);
     for (let i = 0; i < 100; i++) {
       const val = rng.next();
@@ -181,7 +197,7 @@ describe('SeededRNG', () => {
     }
   });
 
-  it('nextInt(min, max) returns integers in range', () => {
+  it("nextInt(min, max) returns integers in range", () => {
     const rng = new SeededRNG(42);
     for (let i = 0; i < 100; i++) {
       const val = rng.nextInt(5, 10);
@@ -191,7 +207,7 @@ describe('SeededRNG', () => {
     }
   });
 
-  it('nextFloat(min, max) returns floats in range', () => {
+  it("nextFloat(min, max) returns floats in range", () => {
     const rng = new SeededRNG(42);
     for (let i = 0; i < 100; i++) {
       const val = rng.nextFloat(1.0, 5.0);
@@ -200,21 +216,21 @@ describe('SeededRNG', () => {
     }
   });
 
-  it('pick() selects from array deterministically', () => {
+  it("pick() selects from array deterministically", () => {
     const rng1 = new SeededRNG(99);
     const rng2 = new SeededRNG(99);
-    const items = ['a', 'b', 'c', 'd', 'e'];
+    const items = ["a", "b", "c", "d", "e"];
     expect(rng1.pick(items)).toBe(rng2.pick(items));
   });
 
-  it('shuffle() returns deterministic permutation', () => {
+  it("shuffle() returns deterministic permutation", () => {
     const rng1 = new SeededRNG(99);
     const rng2 = new SeededRNG(99);
     const items = [1, 2, 3, 4, 5];
     expect(rng1.shuffle([...items])).toEqual(rng2.shuffle([...items]));
   });
 
-  it('chance(probability) returns boolean', () => {
+  it("chance(probability) returns boolean", () => {
     const rng = new SeededRNG(42);
     let trueCount = 0;
     for (let i = 0; i < 1000; i++) {
@@ -293,6 +309,7 @@ git add src/utils/ && git commit -m "feat: add SeededRNG with Mulberry32 algorit
 ### Task 2.2: EventEmitter for Game State
 
 **Files:**
+
 - Create: `src/utils/EventEmitter.ts`
 - Test: `src/utils/__tests__/EventEmitter.test.ts`
 
@@ -300,50 +317,50 @@ git add src/utils/ && git commit -m "feat: add SeededRNG with Mulberry32 algorit
 
 ```typescript
 // src/utils/__tests__/EventEmitter.test.ts
-import { describe, it, expect, vi } from 'vitest';
-import { GameEventEmitter } from '../EventEmitter';
+import { describe, it, expect, vi } from "vitest";
+import { GameEventEmitter } from "../EventEmitter";
 
-describe('GameEventEmitter', () => {
-  it('calls listener when event is emitted', () => {
+describe("GameEventEmitter", () => {
+  it("calls listener when event is emitted", () => {
     const emitter = new GameEventEmitter();
     const listener = vi.fn();
-    emitter.on('test', listener);
-    emitter.emit('test', { value: 42 });
+    emitter.on("test", listener);
+    emitter.emit("test", { value: 42 });
     expect(listener).toHaveBeenCalledWith({ value: 42 });
   });
 
-  it('supports multiple listeners', () => {
+  it("supports multiple listeners", () => {
     const emitter = new GameEventEmitter();
     const l1 = vi.fn();
     const l2 = vi.fn();
-    emitter.on('test', l1);
-    emitter.on('test', l2);
-    emitter.emit('test', {});
+    emitter.on("test", l1);
+    emitter.on("test", l2);
+    emitter.emit("test", {});
     expect(l1).toHaveBeenCalled();
     expect(l2).toHaveBeenCalled();
   });
 
-  it('off() removes listener', () => {
+  it("off() removes listener", () => {
     const emitter = new GameEventEmitter();
     const listener = vi.fn();
-    emitter.on('test', listener);
-    emitter.off('test', listener);
-    emitter.emit('test', {});
+    emitter.on("test", listener);
+    emitter.off("test", listener);
+    emitter.emit("test", {});
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it('once() fires only once', () => {
+  it("once() fires only once", () => {
     const emitter = new GameEventEmitter();
     const listener = vi.fn();
-    emitter.once('test', listener);
-    emitter.emit('test', {});
-    emitter.emit('test', {});
+    emitter.once("test", listener);
+    emitter.emit("test", {});
+    emitter.emit("test", {});
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it('does nothing when emitting event with no listeners', () => {
+  it("does nothing when emitting event with no listeners", () => {
     const emitter = new GameEventEmitter();
-    expect(() => emitter.emit('nothing', {})).not.toThrow();
+    expect(() => emitter.emit("nothing", {})).not.toThrow();
   });
 });
 ```
@@ -398,6 +415,7 @@ git add src/utils/ && git commit -m "feat: add GameEventEmitter for state change
 ### Task 2.3: Game State Types & Interfaces
 
 **Files:**
+
 - Create: `src/data/types.ts`
 - Create: `src/data/constants.ts`
 
@@ -407,45 +425,45 @@ git add src/utils/ && git commit -m "feat: add GameEventEmitter for state change
 // src/data/types.ts
 
 // --- Enums ---
-export type GamePhase = 'planning' | 'simulation' | 'review';
-export type Trend = 'rising' | 'stable' | 'falling';
+export type GamePhase = "planning" | "simulation" | "review";
+export type Trend = "rising" | "stable" | "falling";
 
 export enum CargoType {
-  Passengers = 'passengers',
-  RawMaterials = 'rawMaterials',
-  Food = 'food',
-  Technology = 'technology',
-  Luxury = 'luxury',
-  Hazmat = 'hazmat',
-  Medical = 'medical',
+  Passengers = "passengers",
+  RawMaterials = "rawMaterials",
+  Food = "food",
+  Technology = "technology",
+  Luxury = "luxury",
+  Hazmat = "hazmat",
+  Medical = "medical",
 }
 
 export enum PlanetType {
-  Terran = 'terran',
-  Industrial = 'industrial',
-  Mining = 'mining',
-  Agricultural = 'agricultural',
-  HubStation = 'hubStation',
-  Resort = 'resort',
-  Research = 'research',
+  Terran = "terran",
+  Industrial = "industrial",
+  Mining = "mining",
+  Agricultural = "agricultural",
+  HubStation = "hubStation",
+  Resort = "resort",
+  Research = "research",
 }
 
 export enum ShipClass {
-  CargoShuttle = 'cargoShuttle',
-  PassengerShuttle = 'passengerShuttle',
-  MixedHauler = 'mixedHauler',
-  FastCourier = 'fastCourier',
-  BulkFreighter = 'bulkFreighter',
-  StarLiner = 'starLiner',
-  MegaHauler = 'megaHauler',
-  LuxuryLiner = 'luxuryLiner',
+  CargoShuttle = "cargoShuttle",
+  PassengerShuttle = "passengerShuttle",
+  MixedHauler = "mixedHauler",
+  FastCourier = "fastCourier",
+  BulkFreighter = "bulkFreighter",
+  StarLiner = "starLiner",
+  MegaHauler = "megaHauler",
+  LuxuryLiner = "luxuryLiner",
 }
 
 export enum EventCategory {
-  Market = 'market',
-  Hazard = 'hazard',
-  Opportunity = 'opportunity',
-  Flavor = 'flavor',
+  Market = "market",
+  Hazard = "hazard",
+  Opportunity = "opportunity",
+  Flavor = "flavor",
 }
 
 // --- Galaxy ---
@@ -547,7 +565,14 @@ export interface GameEvent {
 }
 
 export interface EventEffect {
-  type: 'modifyPrice' | 'blockRoute' | 'modifySpeed' | 'modifyDemand' | 'modifyCash' | 'modifyReputation' | 'blockPassengers';
+  type:
+    | "modifyPrice"
+    | "blockRoute"
+    | "modifySpeed"
+    | "modifyDemand"
+    | "modifyCash"
+    | "modifyReputation"
+    | "blockPassengers";
   targetId?: string; // planet, system, or route ID
   cargoType?: CargoType;
   value: number;
@@ -635,7 +660,7 @@ export interface GameState {
 
 ```typescript
 // src/data/constants.ts
-import { ShipClass, ShipTemplate, PlanetType, CargoType } from './types';
+import { ShipClass, ShipTemplate, PlanetType, CargoType } from "./types";
 
 export const STARTING_CASH = 200000;
 export const MAX_TURNS = 20;
@@ -654,56 +679,133 @@ export const TURN_DURATION = 100; // abstract time units per quarter
 
 export const SHIP_TEMPLATES: Record<ShipClass, ShipTemplate> = {
   [ShipClass.CargoShuttle]: {
-    class: ShipClass.CargoShuttle, name: 'Cargo Shuttle',
-    cargoCapacity: 80, passengerCapacity: 0, speed: 4,
-    fuelEfficiency: 0.8, baseReliability: 92, purchaseCost: 40000, baseMaintenance: 2000,
+    class: ShipClass.CargoShuttle,
+    name: "Cargo Shuttle",
+    cargoCapacity: 80,
+    passengerCapacity: 0,
+    speed: 4,
+    fuelEfficiency: 0.8,
+    baseReliability: 92,
+    purchaseCost: 40000,
+    baseMaintenance: 2000,
   },
   [ShipClass.PassengerShuttle]: {
-    class: ShipClass.PassengerShuttle, name: 'Passenger Shuttle',
-    cargoCapacity: 0, passengerCapacity: 60, speed: 5,
-    fuelEfficiency: 1.0, baseReliability: 90, purchaseCost: 55000, baseMaintenance: 3000,
+    class: ShipClass.PassengerShuttle,
+    name: "Passenger Shuttle",
+    cargoCapacity: 0,
+    passengerCapacity: 60,
+    speed: 5,
+    fuelEfficiency: 1.0,
+    baseReliability: 90,
+    purchaseCost: 55000,
+    baseMaintenance: 3000,
   },
   [ShipClass.MixedHauler]: {
-    class: ShipClass.MixedHauler, name: 'Mixed Hauler',
-    cargoCapacity: 50, passengerCapacity: 30, speed: 3,
-    fuelEfficiency: 1.2, baseReliability: 88, purchaseCost: 60000, baseMaintenance: 3500,
+    class: ShipClass.MixedHauler,
+    name: "Mixed Hauler",
+    cargoCapacity: 50,
+    passengerCapacity: 30,
+    speed: 3,
+    fuelEfficiency: 1.2,
+    baseReliability: 88,
+    purchaseCost: 60000,
+    baseMaintenance: 3500,
   },
   [ShipClass.FastCourier]: {
-    class: ShipClass.FastCourier, name: 'Fast Courier',
-    cargoCapacity: 30, passengerCapacity: 10, speed: 8,
-    fuelEfficiency: 1.8, baseReliability: 85, purchaseCost: 80000, baseMaintenance: 5000,
+    class: ShipClass.FastCourier,
+    name: "Fast Courier",
+    cargoCapacity: 30,
+    passengerCapacity: 10,
+    speed: 8,
+    fuelEfficiency: 1.8,
+    baseReliability: 85,
+    purchaseCost: 80000,
+    baseMaintenance: 5000,
   },
   [ShipClass.BulkFreighter]: {
-    class: ShipClass.BulkFreighter, name: 'Bulk Freighter',
-    cargoCapacity: 300, passengerCapacity: 0, speed: 2,
-    fuelEfficiency: 0.6, baseReliability: 94, purchaseCost: 150000, baseMaintenance: 6000,
+    class: ShipClass.BulkFreighter,
+    name: "Bulk Freighter",
+    cargoCapacity: 300,
+    passengerCapacity: 0,
+    speed: 2,
+    fuelEfficiency: 0.6,
+    baseReliability: 94,
+    purchaseCost: 150000,
+    baseMaintenance: 6000,
   },
   [ShipClass.StarLiner]: {
-    class: ShipClass.StarLiner, name: 'Star Liner',
-    cargoCapacity: 0, passengerCapacity: 200, speed: 6,
-    fuelEfficiency: 1.4, baseReliability: 88, purchaseCost: 250000, baseMaintenance: 10000,
+    class: ShipClass.StarLiner,
+    name: "Star Liner",
+    cargoCapacity: 0,
+    passengerCapacity: 200,
+    speed: 6,
+    fuelEfficiency: 1.4,
+    baseReliability: 88,
+    purchaseCost: 250000,
+    baseMaintenance: 10000,
   },
   [ShipClass.MegaHauler]: {
-    class: ShipClass.MegaHauler, name: 'Mega Hauler',
-    cargoCapacity: 800, passengerCapacity: 0, speed: 2,
-    fuelEfficiency: 0.5, baseReliability: 90, purchaseCost: 500000, baseMaintenance: 15000,
+    class: ShipClass.MegaHauler,
+    name: "Mega Hauler",
+    cargoCapacity: 800,
+    passengerCapacity: 0,
+    speed: 2,
+    fuelEfficiency: 0.5,
+    baseReliability: 90,
+    purchaseCost: 500000,
+    baseMaintenance: 15000,
   },
   [ShipClass.LuxuryLiner]: {
-    class: ShipClass.LuxuryLiner, name: 'Luxury Liner',
-    cargoCapacity: 20, passengerCapacity: 150, speed: 7,
-    fuelEfficiency: 1.6, baseReliability: 86, purchaseCost: 600000, baseMaintenance: 20000,
+    class: ShipClass.LuxuryLiner,
+    name: "Luxury Liner",
+    cargoCapacity: 20,
+    passengerCapacity: 150,
+    speed: 7,
+    fuelEfficiency: 1.6,
+    baseReliability: 86,
+    purchaseCost: 600000,
+    baseMaintenance: 20000,
   },
 };
 
 // What each planet type produces (high supply) and demands (high demand)
-export const PLANET_CARGO_PROFILES: Record<PlanetType, { produces: CargoType[]; demands: CargoType[] }> = {
-  [PlanetType.Terran]: { produces: [CargoType.Technology, CargoType.Luxury], demands: [CargoType.Food, CargoType.RawMaterials] },
-  [PlanetType.Industrial]: { produces: [CargoType.Technology], demands: [CargoType.RawMaterials, CargoType.Food] },
-  [PlanetType.Mining]: { produces: [CargoType.RawMaterials, CargoType.Hazmat], demands: [CargoType.Technology, CargoType.Food, CargoType.Medical] },
-  [PlanetType.Agricultural]: { produces: [CargoType.Food], demands: [CargoType.Technology, CargoType.Luxury] },
-  [PlanetType.HubStation]: { produces: [], demands: [CargoType.Food, CargoType.Technology, CargoType.Luxury, CargoType.Medical] },
-  [PlanetType.Resort]: { produces: [CargoType.Luxury], demands: [CargoType.Food, CargoType.Medical] },
-  [PlanetType.Research]: { produces: [CargoType.Medical, CargoType.Technology], demands: [CargoType.Food, CargoType.RawMaterials, CargoType.Luxury] },
+export const PLANET_CARGO_PROFILES: Record<
+  PlanetType,
+  { produces: CargoType[]; demands: CargoType[] }
+> = {
+  [PlanetType.Terran]: {
+    produces: [CargoType.Technology, CargoType.Luxury],
+    demands: [CargoType.Food, CargoType.RawMaterials],
+  },
+  [PlanetType.Industrial]: {
+    produces: [CargoType.Technology],
+    demands: [CargoType.RawMaterials, CargoType.Food],
+  },
+  [PlanetType.Mining]: {
+    produces: [CargoType.RawMaterials, CargoType.Hazmat],
+    demands: [CargoType.Technology, CargoType.Food, CargoType.Medical],
+  },
+  [PlanetType.Agricultural]: {
+    produces: [CargoType.Food],
+    demands: [CargoType.Technology, CargoType.Luxury],
+  },
+  [PlanetType.HubStation]: {
+    produces: [],
+    demands: [
+      CargoType.Food,
+      CargoType.Technology,
+      CargoType.Luxury,
+      CargoType.Medical,
+    ],
+  },
+  [PlanetType.Resort]: {
+    produces: [CargoType.Luxury],
+    demands: [CargoType.Food, CargoType.Medical],
+  },
+  [PlanetType.Research]: {
+    produces: [CargoType.Medical, CargoType.Technology],
+    demands: [CargoType.Food, CargoType.RawMaterials, CargoType.Luxury],
+  },
 };
 
 export const PLANET_PASSENGER_VOLUME: Record<PlanetType, number> = {
@@ -738,6 +840,7 @@ git add src/data/ && git commit -m "feat: define game state types, interfaces, a
 ### Task 2.4: GameStore — centralized state manager
 
 **Files:**
+
 - Create: `src/data/GameStore.ts`
 - Test: `src/data/__tests__/GameStore.test.ts`
 
@@ -745,27 +848,27 @@ git add src/data/ && git commit -m "feat: define game state types, interfaces, a
 
 ```typescript
 // src/data/__tests__/GameStore.test.ts
-import { describe, it, expect, vi } from 'vitest';
-import { GameStore } from '../GameStore';
+import { describe, it, expect, vi } from "vitest";
+import { GameStore } from "../GameStore";
 
-describe('GameStore', () => {
-  it('initializes with default state', () => {
+describe("GameStore", () => {
+  it("initializes with default state", () => {
     const store = new GameStore();
     expect(store.getState().turn).toBe(1);
-    expect(store.getState().phase).toBe('planning');
+    expect(store.getState().phase).toBe("planning");
     expect(store.getState().cash).toBe(200000);
   });
 
-  it('updates state and emits change event', () => {
+  it("updates state and emits change event", () => {
     const store = new GameStore();
     const listener = vi.fn();
-    store.on('stateChanged', listener);
+    store.on("stateChanged", listener);
     store.update({ cash: 150000 });
     expect(store.getState().cash).toBe(150000);
     expect(listener).toHaveBeenCalled();
   });
 
-  it('serializes and deserializes state', () => {
+  it("serializes and deserializes state", () => {
     const store = new GameStore();
     store.update({ cash: 99999, turn: 5 });
     const json = store.serialize();
@@ -775,10 +878,10 @@ describe('GameStore', () => {
     expect(store2.getState().turn).toBe(5);
   });
 
-  it('emits specific field change events', () => {
+  it("emits specific field change events", () => {
     const store = new GameStore();
     const listener = vi.fn();
-    store.on('cashChanged', listener);
+    store.on("cashChanged", listener);
     store.update({ cash: 180000 });
     expect(listener).toHaveBeenCalledWith(180000);
   });
@@ -789,27 +892,32 @@ describe('GameStore', () => {
 
 ```typescript
 // src/data/GameStore.ts
-import { GameState, GamePhase } from './types';
-import { GameEventEmitter } from '../utils/EventEmitter';
-import { STARTING_CASH, MAX_TURNS } from './constants';
+import { GameState, GamePhase } from "./types";
+import { GameEventEmitter } from "../utils/EventEmitter";
+import { STARTING_CASH, MAX_TURNS } from "./constants";
 
 function createDefaultState(): GameState {
   return {
     seed: Date.now(),
     turn: 1,
     maxTurns: MAX_TURNS,
-    phase: 'planning',
+    phase: "planning",
     cash: STARTING_CASH,
     loans: [],
     reputation: 50,
-    companyName: 'New Ventures Inc.',
+    companyName: "New Ventures Inc.",
     galaxy: { sectors: [], systems: [], planets: [] },
     fleet: [],
     activeRoutes: [],
-    market: { fuelPrice: 10, fuelTrend: 'stable', planetMarkets: {} },
+    market: { fuelPrice: 10, fuelTrend: "stable", planetMarkets: {} },
     activeEvents: [],
     history: [],
-    storyteller: { playerHealthScore: 50, headwindBias: 0, turnsInDebt: 0, consecutiveProfitTurns: 0 },
+    storyteller: {
+      playerHealthScore: 50,
+      headwindBias: 0,
+      turnsInDebt: 0,
+      consecutiveProfitTurns: 0,
+    },
     score: 0,
     gameOver: false,
     gameOverReason: null,
@@ -831,7 +939,7 @@ export class GameStore extends GameEventEmitter {
   update(partial: Partial<GameState>): void {
     const oldState = { ...this.state };
     Object.assign(this.state, partial);
-    this.emit('stateChanged', this.state);
+    this.emit("stateChanged", this.state);
 
     // Emit specific field change events
     for (const key of Object.keys(partial) as (keyof GameState)[]) {
@@ -843,7 +951,7 @@ export class GameStore extends GameEventEmitter {
 
   setState(state: GameState): void {
     this.state = state;
-    this.emit('stateChanged', this.state);
+    this.emit("stateChanged", this.state);
   }
 
   serialize(): string {
@@ -852,13 +960,13 @@ export class GameStore extends GameEventEmitter {
 
   deserialize(json: string): void {
     this.state = JSON.parse(json);
-    this.emit('stateChanged', this.state);
+    this.emit("stateChanged", this.state);
   }
 
   reset(seed?: number): void {
     this.state = createDefaultState();
     if (seed !== undefined) this.state.seed = seed;
-    this.emit('stateChanged', this.state);
+    this.emit("stateChanged", this.state);
   }
 }
 
@@ -884,6 +992,7 @@ git add src/data/ && git commit -m "feat: add GameStore with event-driven state 
 ### Task 3.1: Theme System & Asset Generation
 
 **Files:**
+
 - Create: `src/ui/Theme.ts`
 - Create: `src/scenes/BootScene.ts` (update to generate procedural textures)
 
@@ -965,10 +1074,10 @@ export const DEFAULT_THEME: ThemeConfig = {
     modalOverlay: 0x000000,
   },
   fonts: {
-    heading: { size: 24, family: 'monospace' },
-    body: { size: 16, family: 'monospace' },
-    caption: { size: 12, family: 'monospace' },
-    value: { size: 18, family: 'monospace' },
+    heading: { size: 24, family: "monospace" },
+    body: { size: 16, family: "monospace" },
+    caption: { size: 12, family: "monospace" },
+    value: { size: 18, family: "monospace" },
   },
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
   panel: { borderWidth: 2, cornerRadius: 4, titleHeight: 36 },
@@ -986,7 +1095,7 @@ export function setTheme(theme: ThemeConfig): void {
 }
 
 export function colorToString(color: number): string {
-  return '#' + color.toString(16).padStart(6, '0');
+  return "#" + color.toString(16).padStart(6, "0");
 }
 ```
 
@@ -994,25 +1103,33 @@ export function colorToString(color: number): string {
 
 ```typescript
 // src/scenes/BootScene.ts — generates textures used by UI components
-import Phaser from 'phaser';
-import { getTheme } from '../ui/Theme';
+import Phaser from "phaser";
+import { getTheme } from "../ui/Theme";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
-    super({ key: 'BootScene' });
+    super({ key: "BootScene" });
   }
 
   create(): void {
     const theme = getTheme();
-    this.generatePanelTexture('panel-bg', theme.colors.panelBg, theme.colors.panelBorder);
+    this.generatePanelTexture(
+      "panel-bg",
+      theme.colors.panelBg,
+      theme.colors.panelBorder,
+    );
     this.generateButtonTextures(theme);
-    this.generatePixelTexture('pixel-white', 0xffffff);
+    this.generatePixelTexture("pixel-white", 0xffffff);
 
     // Proceed to main menu after textures are ready
-    this.scene.start('MainMenuScene');
+    this.scene.start("MainMenuScene");
   }
 
-  private generatePanelTexture(key: string, fill: number, border: number): void {
+  private generatePanelTexture(
+    key: string,
+    fill: number,
+    border: number,
+  ): void {
     const size = 32;
     const bw = 2;
     const graphics = this.add.graphics();
@@ -1026,10 +1143,10 @@ export class BootScene extends Phaser.Scene {
 
   private generateButtonTextures(theme: ThemeConfig): void {
     for (const [suffix, color] of [
-      ['normal', theme.colors.buttonBg],
-      ['hover', theme.colors.buttonHover],
-      ['pressed', theme.colors.buttonPressed],
-      ['disabled', theme.colors.buttonDisabled],
+      ["normal", theme.colors.buttonBg],
+      ["hover", theme.colors.buttonHover],
+      ["pressed", theme.colors.buttonPressed],
+      ["disabled", theme.colors.buttonDisabled],
     ] as const) {
       const size = 32;
       const bw = 2;
@@ -1064,14 +1181,15 @@ git add src/ui/ src/scenes/ && git commit -m "feat: add theme system and procedu
 ### Task 3.2: Panel Component
 
 **Files:**
+
 - Create: `src/ui/Panel.ts`
 
 **Step 1: Implement Panel**
 
 ```typescript
 // src/ui/Panel.ts
-import Phaser from 'phaser';
-import { getTheme, colorToString } from './Theme';
+import Phaser from "phaser";
+import { getTheme, colorToString } from "./Theme";
 
 export interface PanelConfig {
   x: number;
@@ -1096,26 +1214,45 @@ export class Panel extends Phaser.GameObjects.Container {
     this.panelHeight = config.height;
 
     // Background
-    this.bg = scene.add.nineslice(
-      0, 0, 'panel-bg',
-      undefined,
-      config.width, config.height,
-      4, 4, 4, 4
-    ).setOrigin(0, 0);
+    this.bg = scene.add
+      .nineslice(
+        0,
+        0,
+        "panel-bg",
+        undefined,
+        config.width,
+        config.height,
+        4,
+        4,
+        4,
+        4,
+      )
+      .setOrigin(0, 0);
     this.add(this.bg);
 
     this.contentY = theme.spacing.sm;
 
     // Title bar
     if (config.title) {
-      const titleBg = scene.add.rectangle(
-        0, 0, config.width, theme.panel.titleHeight,
-        theme.colors.headerBg
-      ).setOrigin(0, 0);
+      const titleBg = scene.add
+        .rectangle(
+          0,
+          0,
+          config.width,
+          theme.panel.titleHeight,
+          theme.colors.headerBg,
+        )
+        .setOrigin(0, 0);
 
       const titleText = scene.add.text(
-        theme.spacing.md, theme.spacing.sm, config.title,
-        { fontSize: `${theme.fonts.heading.size}px`, fontFamily: theme.fonts.heading.family, color: colorToString(theme.colors.accent) }
+        theme.spacing.md,
+        theme.spacing.sm,
+        config.title,
+        {
+          fontSize: `${theme.fonts.heading.size}px`,
+          fontFamily: theme.fonts.heading.family,
+          color: colorToString(theme.colors.accent),
+        },
       );
 
       this.titleBar = scene.add.container(0, 0, [titleBg, titleText]);
@@ -1126,12 +1263,17 @@ export class Panel extends Phaser.GameObjects.Container {
     // Draggable
     if (config.draggable) {
       const hitArea = this.titleBar || this.bg;
-      (hitArea as Phaser.GameObjects.GameObject).setInteractive({ draggable: true });
-      scene.input.setDraggable(hitArea as Phaser.GameObjects.GameObject);
-      hitArea.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-        this.x += dragX;
-        this.y += dragY;
+      (hitArea as Phaser.GameObjects.GameObject).setInteractive({
+        draggable: true,
       });
+      scene.input.setDraggable(hitArea as Phaser.GameObjects.GameObject);
+      hitArea.on(
+        "drag",
+        (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+          this.x += dragX;
+          this.y += dragY;
+        },
+      );
     }
 
     scene.add.existing(this);
@@ -1164,14 +1306,15 @@ git add src/ui/ && git commit -m "feat: add Panel UI component with title bar an
 ### Task 3.3: Button Component
 
 **Files:**
+
 - Create: `src/ui/Button.ts`
 
 **Step 1: Implement Button**
 
 ```typescript
 // src/ui/Button.ts
-import Phaser from 'phaser';
-import { getTheme, colorToString } from './Theme';
+import Phaser from "phaser";
+import { getTheme, colorToString } from "./Theme";
 
 export interface ButtonConfig {
   x: number;
@@ -1197,25 +1340,31 @@ export class Button extends Phaser.GameObjects.Container {
     this.isDisabled = config.disabled ?? false;
     this.onClickFn = config.onClick;
 
-    const textureKey = this.isDisabled ? 'btn-disabled' : 'btn-normal';
-    this.bg = scene.add.nineslice(0, 0, textureKey, undefined, width, height, 4, 4, 4, 4).setOrigin(0, 0);
+    const textureKey = this.isDisabled ? "btn-disabled" : "btn-normal";
+    this.bg = scene.add
+      .nineslice(0, 0, textureKey, undefined, width, height, 4, 4, 4, 4)
+      .setOrigin(0, 0);
 
-    const textColor = this.isDisabled ? colorToString(theme.colors.textDim) : colorToString(theme.colors.text);
-    this.label = scene.add.text(width / 2, height / 2, config.label, {
-      fontSize: `${theme.fonts.body.size}px`,
-      fontFamily: theme.fonts.body.family,
-      color: textColor,
-    }).setOrigin(0.5);
+    const textColor = this.isDisabled
+      ? colorToString(theme.colors.textDim)
+      : colorToString(theme.colors.text);
+    this.label = scene.add
+      .text(width / 2, height / 2, config.label, {
+        fontSize: `${theme.fonts.body.size}px`,
+        fontFamily: theme.fonts.body.family,
+        color: textColor,
+      })
+      .setOrigin(0.5);
 
     this.add([this.bg, this.label]);
 
     if (!this.isDisabled) {
       this.bg.setInteractive({ useHandCursor: true });
-      this.bg.on('pointerover', () => this.setTexture('btn-hover'));
-      this.bg.on('pointerout', () => this.setTexture('btn-normal'));
-      this.bg.on('pointerdown', () => this.setTexture('btn-pressed'));
-      this.bg.on('pointerup', () => {
-        this.setTexture('btn-hover');
+      this.bg.on("pointerover", () => this.setTexture("btn-hover"));
+      this.bg.on("pointerout", () => this.setTexture("btn-normal"));
+      this.bg.on("pointerdown", () => this.setTexture("btn-pressed"));
+      this.bg.on("pointerup", () => {
+        this.setTexture("btn-hover");
         this.onClickFn();
       });
     }
@@ -1231,11 +1380,11 @@ export class Button extends Phaser.GameObjects.Container {
     this.isDisabled = disabled;
     const theme = getTheme();
     if (disabled) {
-      this.bg.setTexture('btn-disabled');
+      this.bg.setTexture("btn-disabled");
       this.bg.removeInteractive();
       this.label.setColor(colorToString(theme.colors.textDim));
     } else {
-      this.bg.setTexture('btn-normal');
+      this.bg.setTexture("btn-normal");
       this.bg.setInteractive({ useHandCursor: true });
       this.label.setColor(colorToString(theme.colors.text));
     }
@@ -1258,14 +1407,15 @@ git add src/ui/ && git commit -m "feat: add Button UI component with hover/press
 ### Task 3.4: Label Component
 
 **Files:**
+
 - Create: `src/ui/Label.ts`
 
 ```typescript
 // src/ui/Label.ts
-import Phaser from 'phaser';
-import { getTheme, colorToString } from './Theme';
+import Phaser from "phaser";
+import { getTheme, colorToString } from "./Theme";
 
-export type LabelStyle = 'heading' | 'body' | 'caption' | 'value';
+export type LabelStyle = "heading" | "body" | "caption" | "value";
 
 export interface LabelConfig {
   x: number;
@@ -1279,7 +1429,7 @@ export interface LabelConfig {
 export class Label extends Phaser.GameObjects.Text {
   constructor(scene: Phaser.Scene, config: LabelConfig) {
     const theme = getTheme();
-    const fontConfig = theme.fonts[config.style ?? 'body'];
+    const fontConfig = theme.fonts[config.style ?? "body"];
     const color = config.color ?? theme.colors.text;
 
     super(scene, config.x, config.y, config.text, {
@@ -1310,12 +1460,13 @@ git add src/ui/ && git commit -m "feat: add Label UI component with style varian
 ### Task 3.5: ScrollableList Component
 
 **Files:**
+
 - Create: `src/ui/ScrollableList.ts`
 
 ```typescript
 // src/ui/ScrollableList.ts
-import Phaser from 'phaser';
-import { getTheme, colorToString } from './Theme';
+import Phaser from "phaser";
+import { getTheme, colorToString } from "./Theme";
 
 export interface ScrollableListConfig {
   x: number;
@@ -1350,19 +1501,36 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     this.add(this.contentContainer);
 
     // Scroll via mouse wheel
-    const hitArea = scene.add.rectangle(0, 0, config.width, config.height, 0x000000, 0)
+    const hitArea = scene.add
+      .rectangle(0, 0, config.width, config.height, 0x000000, 0)
       .setOrigin(0, 0)
       .setInteractive();
     this.add(hitArea);
 
-    hitArea.on('wheel', (_pointer: Phaser.Input.Pointer, _dx: number, _dy: number, dz: number) => {
-      this.scrollBy(dz * 0.5);
-    });
+    hitArea.on(
+      "wheel",
+      (
+        _pointer: Phaser.Input.Pointer,
+        _dx: number,
+        _dy: number,
+        dz: number,
+      ) => {
+        this.scrollBy(dz * 0.5);
+      },
+    );
 
     scene.add.existing(this);
   }
 
-  setItems(renderFn: (index: number, x: number, y: number, width: number, height: number) => Phaser.GameObjects.Container): void {
+  setItems(
+    renderFn: (
+      index: number,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ) => Phaser.GameObjects.Container,
+  ): void {
     // renderFn is called per-item; caller creates the visuals
     // This is set up by the caller after construction
   }
@@ -1373,18 +1541,31 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     container.setPosition(0, y);
     this.items.push(container);
     this.contentContainer.add(container);
-    this.maxScroll = Math.max(0, this.items.length * this.config.itemHeight - this.config.height);
+    this.maxScroll = Math.max(
+      0,
+      this.items.length * this.config.itemHeight - this.config.height,
+    );
 
     // Make item clickable
     const theme = getTheme();
-    const hitBg = this.scene.add.rectangle(0, 0, this.config.width, this.config.itemHeight,
-      index % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd)
+    const hitBg = this.scene.add
+      .rectangle(
+        0,
+        0,
+        this.config.width,
+        this.config.itemHeight,
+        index % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd,
+      )
       .setOrigin(0, 0)
       .setInteractive({ useHandCursor: true });
 
-    hitBg.on('pointerover', () => hitBg.setFillStyle(theme.colors.rowHover));
-    hitBg.on('pointerout', () => hitBg.setFillStyle(index % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd));
-    hitBg.on('pointerup', () => {
+    hitBg.on("pointerover", () => hitBg.setFillStyle(theme.colors.rowHover));
+    hitBg.on("pointerout", () =>
+      hitBg.setFillStyle(
+        index % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd,
+      ),
+    );
+    hitBg.on("pointerup", () => {
       this.selectedIndex = index;
       this.config.onSelect?.(index);
     });
@@ -1421,18 +1602,19 @@ git add src/ui/ && git commit -m "feat: add ScrollableList UI component with mas
 ### Task 3.6: DataTable Component
 
 **Files:**
+
 - Create: `src/ui/DataTable.ts`
 
 ```typescript
 // src/ui/DataTable.ts
-import Phaser from 'phaser';
-import { getTheme, colorToString } from './Theme';
+import Phaser from "phaser";
+import { getTheme, colorToString } from "./Theme";
 
 export interface ColumnDef {
   key: string;
   label: string;
   width: number;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
   sortable?: boolean;
   format?: (value: any) => string;
   colorFn?: (value: any) => number | null;
@@ -1476,16 +1658,27 @@ export class DataTable extends Phaser.GameObjects.Container {
     // Mask for body scrolling
     const maskShape = scene.make.graphics({ x: 0, y: 0, add: false });
     maskShape.fillStyle(0xffffff);
-    maskShape.fillRect(config.x, config.y + this.headerHeight, config.width, config.height - this.headerHeight);
+    maskShape.fillRect(
+      config.x,
+      config.y + this.headerHeight,
+      config.width,
+      config.height - this.headerHeight,
+    );
     this.mask = maskShape.createGeometryMask();
     this.bodyContainer.setMask(this.mask);
 
     // Scroll input
-    const scrollHit = scene.add.rectangle(0, 0, config.width, config.height, 0x000000, 0)
-      .setOrigin(0, 0).setInteractive();
+    const scrollHit = scene.add
+      .rectangle(0, 0, config.width, config.height, 0x000000, 0)
+      .setOrigin(0, 0)
+      .setInteractive();
     this.add(scrollHit);
-    scrollHit.on('wheel', (_p: any, _dx: number, _dy: number, dz: number) => {
-      this.scrollY = Phaser.Math.Clamp(this.scrollY + dz * 0.5, 0, this.maxScroll);
+    scrollHit.on("wheel", (_p: any, _dx: number, _dy: number, dz: number) => {
+      this.scrollY = Phaser.Math.Clamp(
+        this.scrollY + dz * 0.5,
+        0,
+        this.maxScroll,
+      );
       this.bodyContainer.y = this.headerHeight - this.scrollY;
     });
 
@@ -1497,7 +1690,15 @@ export class DataTable extends Phaser.GameObjects.Container {
     const theme = getTheme();
     this.headerContainer.removeAll(true);
 
-    const bg = this.scene.add.rectangle(0, 0, this.config.width, this.headerHeight, theme.colors.headerBg).setOrigin(0, 0);
+    const bg = this.scene.add
+      .rectangle(
+        0,
+        0,
+        this.config.width,
+        this.headerHeight,
+        theme.colors.headerBg,
+      )
+      .setOrigin(0, 0);
     this.headerContainer.add(bg);
 
     let x = 0;
@@ -1509,9 +1710,11 @@ export class DataTable extends Phaser.GameObjects.Container {
       });
 
       if (col.sortable) {
-        const hitArea = this.scene.add.rectangle(x, 0, col.width, this.headerHeight, 0x000000, 0)
-          .setOrigin(0, 0).setInteractive({ useHandCursor: true });
-        hitArea.on('pointerup', () => {
+        const hitArea = this.scene.add
+          .rectangle(x, 0, col.width, this.headerHeight, 0x000000, 0)
+          .setOrigin(0, 0)
+          .setInteractive({ useHandCursor: true });
+        hitArea.on("pointerup", () => {
           if (this.sortKey === col.key) {
             this.sortAsc = !this.sortAsc;
           } else {
@@ -1554,12 +1757,14 @@ export class DataTable extends Phaser.GameObjects.Container {
     sortedRows.forEach((row, i) => {
       const y = i * this.rowHeight;
       const bgColor = i % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd;
-      const rowBg = this.scene.add.rectangle(0, y, this.config.width, this.rowHeight, bgColor).setOrigin(0, 0)
+      const rowBg = this.scene.add
+        .rectangle(0, y, this.config.width, this.rowHeight, bgColor)
+        .setOrigin(0, 0)
         .setInteractive({ useHandCursor: true });
 
-      rowBg.on('pointerover', () => rowBg.setFillStyle(theme.colors.rowHover));
-      rowBg.on('pointerout', () => rowBg.setFillStyle(bgColor));
-      rowBg.on('pointerup', () => {
+      rowBg.on("pointerover", () => rowBg.setFillStyle(theme.colors.rowHover));
+      rowBg.on("pointerout", () => rowBg.setFillStyle(bgColor));
+      rowBg.on("pointerup", () => {
         this.selectedRow = i;
         this.config.onRowSelect?.(i, row);
       });
@@ -1569,7 +1774,7 @@ export class DataTable extends Phaser.GameObjects.Container {
       let x = 0;
       for (const col of this.columns) {
         const raw = row[col.key];
-        const display = col.format ? col.format(raw) : String(raw ?? '');
+        const display = col.format ? col.format(raw) : String(raw ?? "");
         const color = col.colorFn ? col.colorFn(raw) : theme.colors.text;
 
         const text = this.scene.add.text(x + 8, y + 8, display, {
@@ -1578,9 +1783,9 @@ export class DataTable extends Phaser.GameObjects.Container {
           color: colorToString(color ?? theme.colors.text),
         });
 
-        if (col.align === 'right') {
+        if (col.align === "right") {
           text.setOrigin(1, 0).setX(x + col.width - 8);
-        } else if (col.align === 'center') {
+        } else if (col.align === "center") {
           text.setOrigin(0.5, 0).setX(x + col.width / 2);
         }
 
@@ -1589,7 +1794,11 @@ export class DataTable extends Phaser.GameObjects.Container {
       }
     });
 
-    this.maxScroll = Math.max(0, sortedRows.length * this.rowHeight - (this.config.height - this.headerHeight));
+    this.maxScroll = Math.max(
+      0,
+      sortedRows.length * this.rowHeight -
+        (this.config.height - this.headerHeight),
+    );
   }
 }
 ```
@@ -1605,6 +1814,7 @@ git add src/ui/ && git commit -m "feat: add DataTable UI component with sorting 
 ### Task 3.7: ProgressBar, Modal, Tooltip, TabGroup
 
 **Files:**
+
 - Create: `src/ui/ProgressBar.ts`
 - Create: `src/ui/Modal.ts`
 - Create: `src/ui/Tooltip.ts`
@@ -1626,6 +1836,7 @@ git add src/ui/ && git commit -m "feat: add ProgressBar, Modal, Tooltip, TabGrou
 ### Task 4.1: Name Generator
 
 **Files:**
+
 - Create: `src/generation/NameGenerator.ts`
 - Test: `src/generation/__tests__/NameGenerator.test.ts`
 
@@ -1642,6 +1853,7 @@ git add src/generation/ && git commit -m "feat: add procedural sci-fi name gener
 ### Task 4.2: Galaxy Generator
 
 **Files:**
+
 - Create: `src/generation/GalaxyGenerator.ts`
 - Test: `src/generation/__tests__/GalaxyGenerator.test.ts`
 
@@ -1660,6 +1872,7 @@ git add src/generation/ && git commit -m "feat: add procedural galaxy generator"
 ### Task 4.3: Market Initializer
 
 **Files:**
+
 - Create: `src/generation/MarketInitializer.ts`
 - Test: `src/generation/__tests__/MarketInitializer.test.ts`
 
@@ -1676,6 +1889,7 @@ git add src/generation/ && git commit -m "feat: add market state initializer fro
 ### Task 4.4: New Game Setup
 
 **Files:**
+
 - Create: `src/game/NewGameSetup.ts`
 - Test: `src/game/__tests__/NewGameSetup.test.ts`
 
@@ -1694,6 +1908,7 @@ git add src/game/ && git commit -m "feat: add new game setup orchestrator"
 ### Task 5.1: Price Calculator
 
 **Files:**
+
 - Create: `src/game/economy/PriceCalculator.ts`
 - Test: `src/game/economy/__tests__/PriceCalculator.test.ts`
 
@@ -1710,6 +1925,7 @@ git add src/game/economy/ && git commit -m "feat: add price calculator with satu
 ### Task 5.2: Market Updater (turn-to-turn)
 
 **Files:**
+
 - Create: `src/game/economy/MarketUpdater.ts`
 - Test: `src/game/economy/__tests__/MarketUpdater.test.ts`
 
@@ -1728,6 +1944,7 @@ git add src/game/economy/ && git commit -m "feat: add per-turn market updater wi
 ### Task 6.1: Fleet Manager
 
 **Files:**
+
 - Create: `src/game/fleet/FleetManager.ts`
 - Test: `src/game/fleet/__tests__/FleetManager.test.ts`
 
@@ -1744,6 +1961,7 @@ git add src/game/fleet/ && git commit -m "feat: add fleet management functions"
 ### Task 6.2: Route Manager
 
 **Files:**
+
 - Create: `src/game/routes/RouteManager.ts`
 - Test: `src/game/routes/__tests__/RouteManager.test.ts`
 
@@ -1762,6 +1980,7 @@ git add src/game/routes/ && git commit -m "feat: add route management and estima
 ### Task 7.1: Event Definitions
 
 **Files:**
+
 - Create: `src/game/events/EventDefinitions.ts`
 
 Define ~20 event templates across all 4 categories. Each has name, description, category, duration, effects, and optional choices.
@@ -1777,6 +1996,7 @@ git add src/game/events/ && git commit -m "feat: define 20 event templates acros
 ### Task 7.2: Storyteller & Event Engine
 
 **Files:**
+
 - Create: `src/game/events/Storyteller.ts`
 - Create: `src/game/events/EventEngine.ts`
 - Test: `src/game/events/__tests__/Storyteller.test.ts`
@@ -1796,10 +2016,12 @@ git add src/game/events/ && git commit -m "feat: add storyteller rubber-banding 
 ### Task 8.1: Turn Simulator
 
 **Files:**
+
 - Create: `src/game/simulation/TurnSimulator.ts`
 - Test: `src/game/simulation/__tests__/TurnSimulator.test.ts`
 
 The core simulation loop for one turn. Steps:
+
 1. For each active route with assigned ships, calculate trips, revenue, fuel costs
 2. Handle breakdowns (reliability check per ship)
 3. Update saturation on destination planets
@@ -1826,6 +2048,7 @@ git add src/game/simulation/ && git commit -m "feat: add turn simulation engine"
 ### Task 8.2: Score Calculator
 
 **Files:**
+
 - Create: `src/game/scoring/ScoreCalculator.ts`
 - Test: `src/game/scoring/__tests__/ScoreCalculator.test.ts`
 
@@ -1844,6 +2067,7 @@ git add src/game/scoring/ && git commit -m "feat: add score calculation and high
 ### Task 9.1: MainMenuScene
 
 **Files:**
+
 - Create: `src/scenes/MainMenuScene.ts`
 
 Title screen with: game title, New Game button, Continue button (disabled if no save), Settings button. Sci-fi styled using Panel, Button, Label components.
@@ -1859,6 +2083,7 @@ git add src/scenes/ && git commit -m "feat: add main menu scene"
 ### Task 9.2: GalaxySetupScene
 
 **Files:**
+
 - Create: `src/scenes/GalaxySetupScene.ts`
 
 Seed input (random or custom), company name input, pick starting system from 3 options (show system info on selection). "Launch" button runs NewGameSetup and transitions to game.
@@ -1874,6 +2099,7 @@ git add src/scenes/ && git commit -m "feat: add galaxy setup / new game scene"
 ### Task 9.3: GameHUDScene
 
 **Files:**
+
 - Create: `src/scenes/GameHUDScene.ts`
 
 Persistent overlay: top bar with company name, cash display, turn counter (e.g., "Q3 Year 2"), phase indicator. Navigation buttons along one edge: Map, Fleet, Routes, Finance, Market. "End Turn" button (only visible in planning phase).
@@ -1889,6 +2115,7 @@ git add src/scenes/ && git commit -m "feat: add persistent game HUD scene"
 ### Task 9.4: GalaxyMapScene
 
 **Files:**
+
 - Create: `src/scenes/GalaxyMapScene.ts`
 
 Render galaxy: sectors as semi-transparent colored regions, systems as star dots with labels, active routes as lines between systems. Click system → transition to SystemMapScene. Sector names displayed.
@@ -1904,6 +2131,7 @@ git add src/scenes/ && git commit -m "feat: add galaxy map scene with sector and
 ### Task 9.5: SystemMapScene
 
 **Files:**
+
 - Create: `src/scenes/SystemMapScene.ts`
 
 Render system detail: central star, orbiting planets as circles with labels. Planet type indicated by color. Click planet → show PlanetDetailScene (as modal/panel). Back button returns to galaxy map. Show intra-system route lines.
@@ -1919,6 +2147,7 @@ git add src/scenes/ && git commit -m "feat: add system map scene with planet det
 ### Task 9.6: PlanetDetailScene
 
 **Files:**
+
 - Create: `src/scenes/PlanetDetailScene.ts`
 
 Panel showing: planet name, type, population. DataTable of cargo types with columns: cargo, supply, demand, price, trend, saturation. Passenger volume indicator. "Create Route To/From" button.
@@ -1934,6 +2163,7 @@ git add src/scenes/ && git commit -m "feat: add planet detail scene with market 
 ### Task 9.7: FleetScene
 
 **Files:**
+
 - Create: `src/scenes/FleetScene.ts`
 
 DataTable listing all ships: name, class, cargo cap, pax cap, speed, condition, assigned route, maintenance cost. Buttons: Buy Ship (opens ship market modal), Sell Ship, Overhaul. Ship market modal shows all ship classes with stats and Buy button (disabled if too expensive).
@@ -1949,6 +2179,7 @@ git add src/scenes/ && git commit -m "feat: add fleet management scene with ship
 ### Task 9.8: RoutesScene
 
 **Files:**
+
 - Create: `src/scenes/RoutesScene.ts`
 
 DataTable of active routes: origin, destination, distance, assigned ships, cargo type, estimated revenue, estimated cost, est. profit. Buttons: Create Route (dropdown/search for origin + destination), Delete Route, Assign Ship. Create route flow: pick origin planet → pick destination planet → pick cargo type → confirm.
@@ -1964,6 +2195,7 @@ git add src/scenes/ && git commit -m "feat: add route management scene with crea
 ### Task 9.9: FinanceScene
 
 **Files:**
+
 - Create: `src/scenes/FinanceScene.ts`
 
 TabGroup with tabs: P&L (last turn and cumulative), Balance Sheet (cash, ship values, loans, net worth), Loans (active loans, take new loan, repay). Historical P&L as simple bar/line chart using Phaser graphics primitives.
@@ -1979,6 +2211,7 @@ git add src/scenes/ && git commit -m "feat: add finance scene with P&L, balance 
 ### Task 9.10: MarketScene
 
 **Files:**
+
 - Create: `src/scenes/MarketScene.ts`
 
 Galaxy-wide market overview. DataTable: planet name, type, then columns for each cargo type showing price + trend arrow. Sort by any column. Color-code prices (green = high demand/good price, red = saturated). Fuel price display with trend.
@@ -1994,6 +2227,7 @@ git add src/scenes/ && git commit -m "feat: add galaxy market overview scene"
 ### Task 9.11: SimPlaybackScene
 
 **Files:**
+
 - Create: `src/scenes/SimPlaybackScene.ts`
 
 Animates one turn: show galaxy map with ships moving along routes (simple dots/arrows). Event popups slide in as they fire. Running revenue/cost ticker. Speed controls (1x, 2x, 4x, skip). When sim completes, auto-transition to review phase.
@@ -2009,6 +2243,7 @@ git add src/scenes/ && git commit -m "feat: add simulation playback scene with a
 ### Task 9.12: TurnReportScene
 
 **Files:**
+
 - Create: `src/scenes/TurnReportScene.ts`
 
 Review screen: P&L summary for the turn, route performance table, news digest (events that fired with descriptions), market changes highlighted (biggest movers). "Continue to Next Turn" button → transitions back to planning phase (or game over screen).
@@ -2024,6 +2259,7 @@ git add src/scenes/ && git commit -m "feat: add turn report / review scene"
 ### Task 9.13: GameOverScene
 
 **Files:**
+
 - Create: `src/scenes/GameOverScene.ts`
 
 Shows: win/lose message, final score breakdown, high score table, "Play Again" and "Main Menu" buttons.
@@ -2041,6 +2277,7 @@ git add src/scenes/ && git commit -m "feat: add game over scene with score and h
 ### Task 10.1: Save/Load System
 
 **Files:**
+
 - Create: `src/game/SaveManager.ts`
 - Test: `src/game/__tests__/SaveManager.test.ts`
 
@@ -2057,6 +2294,7 @@ git add src/game/ && git commit -m "feat: add save/load system with localStorage
 ### Task 10.2: Scene Wiring & Game Loop Integration
 
 **Files:**
+
 - Modify: `src/main.ts`
 - Modify: `src/scenes/BootScene.ts`
 
