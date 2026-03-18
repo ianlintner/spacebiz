@@ -4,8 +4,18 @@ import type { PlanetType } from "../data/types.ts";
 import { getTheme, colorToString } from "../ui/Theme.ts";
 import { Label } from "../ui/Label.ts";
 import { Button } from "../ui/Button.ts";
+import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { createStarfield } from "../ui/Starfield.ts";
+import {
+  CONTENT_TOP,
+  CONTENT_HEIGHT,
+  SIDEBAR_LEFT,
+  SIDEBAR_WIDTH,
+  MAIN_CONTENT_LEFT,
+  MAIN_CONTENT_WIDTH,
+} from "../ui/Layout.ts";
 
-const HUD_TOP = 60;
+import type { GameHUDScene } from "./GameHUDScene.ts";
 
 const PLANET_TYPE_COLORS: Record<PlanetType, number> = {
   terran: 0x4488ff,
@@ -19,6 +29,7 @@ const PLANET_TYPE_COLORS: Record<PlanetType, number> = {
 
 export class SystemMapScene extends Phaser.Scene {
   private systemId = "";
+  private portraitPanel: PortraitPanel | null = null;
 
   constructor() {
     super({ key: "SystemMapScene" });
@@ -39,35 +50,61 @@ export class SystemMapScene extends Phaser.Scene {
     );
     const routes = state.activeRoutes;
 
-    // Center of the view
-    const cx = 640;
-    const cy = 360 + HUD_TOP / 2;
+    // Starfield background
+    createStarfield(this);
 
-    // Title
-    new Label(this, {
-      x: 20,
-      y: HUD_TOP + 10,
-      text: `System: ${system.name}`,
-      style: "heading",
-      color: theme.colors.accent,
+    // PortraitPanel as left sidebar showing system portrait
+    this.portraitPanel = new PortraitPanel(this, {
+      x: SIDEBAR_LEFT,
+      y: CONTENT_TOP,
+      width: SIDEBAR_WIDTH,
+      height: CONTENT_HEIGHT,
     });
+    this.portraitPanel.showSystem(system, planets.length);
 
-    // Back button
+    // Center the solar system visualization within the main content area
+    const cx = MAIN_CONTENT_LEFT + MAIN_CONTENT_WIDTH / 2;
+    const cy = CONTENT_TOP + CONTENT_HEIGHT / 2;
+
+    // Title: small caption label at top center of content area
+    new Label(this, {
+      x: cx,
+      y: CONTENT_TOP + 10,
+      text: system.name,
+      style: "caption",
+      color: theme.colors.textDim,
+    }).setOrigin(0.5, 0);
+
+    // Back button: glass styled, using Layout constants
     new Button(this, {
-      x: 20,
-      y: HUD_TOP + 50,
+      x: MAIN_CONTENT_LEFT,
+      y: CONTENT_TOP + CONTENT_HEIGHT - 50,
       width: 160,
       label: "Back to Galaxy",
       onClick: () => {
-        this.scene.start("GalaxyMapScene");
+        const hud = this.scene.get("GameHUDScene") as GameHUDScene;
+        hud.switchContentScene("GalaxyMapScene");
       },
     });
 
+    // Central star with multi-layer glow
+    const starRadius = 30;
+
+    // Outermost glow layer
+    this.add
+      .circle(cx, cy, starRadius * 3, system.starColor)
+      .setAlpha(0.08);
+
+    // Middle glow layer
+    this.add
+      .circle(cx, cy, starRadius * 2, system.starColor)
+      .setAlpha(0.2);
+
     // Central star
-    this.add.circle(cx, cy, 30, system.starColor);
+    this.add.circle(cx, cy, starRadius, system.starColor);
 
     // Build planet positions in a circular layout
-    const orbitRadius = 180;
+    const orbitRadius = Math.min(180, MAIN_CONTENT_WIDTH / 2 - 60, CONTENT_HEIGHT / 2 - 80);
     const planetPositions = new Map<string, { x: number; y: number }>();
 
     planets.forEach((planet, index) => {
@@ -98,12 +135,20 @@ export class SystemMapScene extends Phaser.Scene {
     orbitGraphics.strokeCircle(cx, cy, orbitRadius);
 
     // Draw planets
-    for (const planet of planets) {
+    for (let i = 0; i < planets.length; i++) {
+      const planet = planets[i];
       const pos = planetPositions.get(planet.id);
       if (!pos) continue;
 
       const planetColor = PLANET_TYPE_COLORS[planet.type] ?? 0xcccccc;
-      const planetCircle = this.add.circle(pos.x, pos.y, 16, planetColor);
+      const planetRadius = 16;
+
+      // Planet glow halo
+      this.add
+        .circle(pos.x, pos.y, planetRadius * 1.8, planetColor)
+        .setAlpha(0.15);
+
+      const planetCircle = this.add.circle(pos.x, pos.y, planetRadius, planetColor);
       planetCircle.setInteractive({ useHandCursor: true });
 
       // Planet name
@@ -124,10 +169,17 @@ export class SystemMapScene extends Phaser.Scene {
         })
         .setOrigin(0.5, 0);
 
-      // Click to see planet detail
+      // Click to see planet detail — launch as overlay
+      const planetIndex = i;
       planetCircle.on("pointerup", () => {
-        this.scene.launch("PlanetDetailScene", { planetId: planet.id });
-        this.scene.pause();
+        // Update the PortraitPanel to show the planet
+        if (this.portraitPanel) {
+          this.portraitPanel.showPlanet(planet, planetIndex);
+        }
+        // Launch PlanetDetail as overlay on top (don't pause self — HUD stays active)
+        if (!this.scene.isActive("PlanetDetailScene")) {
+          this.scene.launch("PlanetDetailScene", { planetId: planet.id });
+        }
       });
 
       // Hover effect
@@ -135,7 +187,7 @@ export class SystemMapScene extends Phaser.Scene {
         planetCircle.setRadius(20);
       });
       planetCircle.on("pointerout", () => {
-        planetCircle.setRadius(16);
+        planetCircle.setRadius(planetRadius);
       });
     }
   }

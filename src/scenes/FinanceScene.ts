@@ -6,16 +6,21 @@ import {
   LOAN_INTEREST_RATE_MAX,
 } from "../data/constants.ts";
 import { getTheme, colorToString } from "../ui/Theme.ts";
-import { Label } from "../ui/Label.ts";
 import { Button } from "../ui/Button.ts";
 import { TabGroup } from "../ui/TabGroup.ts";
 import { DataTable } from "../ui/DataTable.ts";
 import { Modal } from "../ui/Modal.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Panel } from "../ui/Panel.ts";
+import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import {
+  CONTENT_TOP,
+  CONTENT_HEIGHT,
+  SIDEBAR_LEFT,
+  MAIN_CONTENT_LEFT,
+  MAIN_CONTENT_WIDTH,
+} from "../ui/Layout.ts";
 import { calculateShipValue } from "../game/fleet/FleetManager.ts";
-
-const HUD_TOP = 60;
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -31,28 +36,57 @@ export class FinanceScene extends Phaser.Scene {
   }
 
   create(): void {
-    const theme = getTheme();
     this.selectedLoanId = null;
 
-    // Title
-    new Label(this, {
-      x: 20,
-      y: HUD_TOP + 10,
-      text: "Finance",
-      style: "heading",
-      color: theme.colors.accent,
+    const state = gameStore.getState();
+
+    // Sidebar portrait — company health gauge
+    const fleetValue = state.fleet.reduce(
+      (sum, ship) => sum + calculateShipValue(ship),
+      0,
+    );
+    const totalLoans = state.loans.reduce(
+      (sum, loan) => sum + loan.remainingBalance,
+      0,
+    );
+    const netWorth = state.cash + fleetValue - totalLoans;
+
+    const portrait = new PortraitPanel(this, {
+      x: SIDEBAR_LEFT,
+      y: CONTENT_TOP,
     });
+    portrait.updatePortrait(
+      "event",
+      0,
+      state.companyName,
+      [
+        { label: "Cash", value: formatCash(state.cash) },
+        { label: "Net Worth", value: formatCash(netWorth) },
+        { label: "Fleet Value", value: formatCash(fleetValue) },
+      ],
+      { eventCategory: "market" },
+    );
+
+    // Content panel
+    const contentPanel = new Panel(this, {
+      x: MAIN_CONTENT_LEFT,
+      y: CONTENT_TOP,
+      width: MAIN_CONTENT_WIDTH,
+      height: CONTENT_HEIGHT,
+      title: "Finance",
+    });
+    const content = contentPanel.getContentArea();
 
     // Build tab contents
     const plContent = this.buildPLTab();
     const balanceContent = this.buildBalanceTab();
     const loansContent = this.buildLoansTab();
 
-    // Tab group
+    // Tab group inside content panel
     new TabGroup(this, {
-      x: 20,
-      y: HUD_TOP + 55,
-      width: 1240,
+      x: MAIN_CONTENT_LEFT + content.x,
+      y: CONTENT_TOP + content.y,
+      width: content.width,
       tabs: [
         { label: "P&L", content: plContent },
         { label: "Balance", content: balanceContent },

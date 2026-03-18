@@ -1,8 +1,11 @@
 import Phaser from "phaser";
+import { createStarfield } from "../ui/Starfield.ts";
 import { Panel } from "../ui/Panel.ts";
 import { Button } from "../ui/Button.ts";
 import { Label } from "../ui/Label.ts";
+import { PortraitPanel } from "../ui/PortraitPanel.ts";
 import { getTheme } from "../ui/Theme.ts";
+import { GAME_WIDTH, MAX_CONTENT_WIDTH } from "../ui/Layout.ts";
 import { gameStore } from "../data/GameStore.ts";
 import { createNewGame } from "../game/NewGameSetup.ts";
 import type { GameState, StarSystem } from "../data/types.ts";
@@ -22,9 +25,10 @@ export class GalaxySetupScene extends Phaser.Scene {
   private seedLabel!: Label;
   private nameLabel!: Label;
   private cardObjects: Phaser.GameObjects.GameObject[] = [];
-  private selectionGraphics!: Phaser.GameObjects.Graphics;
+  private systemCards: Panel[] = [];
   private startingOptions: StarSystem[] = [];
   private currentState!: GameState;
+  private portraitPanel!: PortraitPanel;
 
   constructor() {
     super({ key: "GalaxySetupScene" });
@@ -38,34 +42,66 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.nameIndex = 0;
     this.selectedSystemIndex = 0;
     this.cardObjects = [];
+    this.systemCards = [];
 
-    // Background panel
-    const panelX = 190;
-    const panelY = 40;
-    const panelW = 900;
-    const panelH = 640;
-    new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
-      title: "New Galaxy",
+    // 1. Starfield background
+    createStarfield(this);
+
+    // Centering offset for MAX_CONTENT_WIDTH
+    const contentLeft = Math.floor((GAME_WIDTH - MAX_CONTENT_WIDTH) / 2);
+
+    // 2. Title with glow
+    const titleLabel = new Label(this, {
+      x: GAME_WIDTH / 2,
+      y: 40,
+      text: "NEW GALAXY",
+      style: "heading",
+      color: theme.colors.accent,
+      glow: true,
+    });
+    titleLabel.setOrigin(0.5);
+    titleLabel.setFontSize(32);
+
+    // 3. System portrait panel (left side)
+    const portraitX = contentLeft;
+    const portraitY = 100;
+    const portraitW = 260;
+    const portraitH = 520;
+    this.portraitPanel = new PortraitPanel(this, {
+      x: portraitX,
+      y: portraitY,
+      width: portraitW,
+      height: portraitH,
     });
 
-    const contentX = panelX + theme.spacing.lg;
-    let currentY = panelY + theme.panel.titleHeight + theme.spacing.lg;
+    // 4. Config panel (right side, glass)
+    const configGap = 20;
+    const configX = portraitX + portraitW + configGap;
+    const configW = MAX_CONTENT_WIDTH - portraitW - configGap;
+    const configY = portraitY;
+    const configH = portraitH;
+    new Panel(this, {
+      x: configX,
+      y: configY,
+      width: configW,
+      height: configH,
+    });
+
+    // Content insets within config panel
+    const innerX = configX + theme.spacing.lg;
+    let rowY = configY + theme.spacing.lg;
 
     // Company name row
     new Label(this, {
-      x: contentX,
-      y: currentY,
+      x: innerX,
+      y: rowY,
       text: "Company:",
       style: "body",
     });
 
     this.nameLabel = new Label(this, {
-      x: contentX + 130,
-      y: currentY,
+      x: innerX + 130,
+      y: rowY,
       text: PRESET_NAMES[0],
       style: "value",
       color: theme.colors.accent,
@@ -76,27 +112,27 @@ export class GalaxySetupScene extends Phaser.Scene {
       this.nameLabel.setText(PRESET_NAMES[this.nameIndex]);
     });
 
-    currentY += 50;
+    rowY += 50;
 
     // Seed row
     new Label(this, {
-      x: contentX,
-      y: currentY,
+      x: innerX,
+      y: rowY,
       text: "Seed:",
       style: "body",
     });
 
     this.seedLabel = new Label(this, {
-      x: contentX + 130,
-      y: currentY,
+      x: innerX + 130,
+      y: rowY,
       text: String(this.seed),
       style: "value",
       color: theme.colors.accent,
     });
 
     new Button(this, {
-      x: contentX + 340,
-      y: currentY - 4,
+      x: innerX + 340,
+      y: rowY - 4,
       width: 140,
       height: 36,
       label: "Randomize",
@@ -107,27 +143,26 @@ export class GalaxySetupScene extends Phaser.Scene {
       },
     });
 
-    currentY += 60;
+    rowY += 60;
 
-    // Starting system section header
+    // Section header
     new Label(this, {
-      x: contentX,
-      y: currentY,
+      x: innerX,
+      y: rowY,
       text: "Select Starting System:",
       style: "body",
     });
 
-    // Selection highlight graphics (rendered above cards)
-    this.selectionGraphics = this.add.graphics();
-
-    // Generate initial game data and build system cards
+    // Generate initial game data and build cards
     this.regenerate();
 
-    // Launch button
-    const launchBtnW = 200;
+    // Launch button at bottom of config panel
+    const launchBtnW = 220;
+    const launchBtnX = configX + (configW - launchBtnW) / 2;
+    const launchBtnY = configY + configH - 70;
     new Button(this, {
-      x: 640 - launchBtnW / 2,
-      y: panelY + panelH - 70,
+      x: launchBtnX,
+      y: launchBtnY,
       width: launchBtnW,
       height: 48,
       label: "Launch",
@@ -144,6 +179,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.startingOptions = result.startingSystemOptions;
     this.selectedSystemIndex = 0;
     this.buildSystemCards();
+    this.updatePortraitPanel();
   }
 
   private buildSystemCards(): void {
@@ -152,16 +188,23 @@ export class GalaxySetupScene extends Phaser.Scene {
       obj.destroy();
     }
     this.cardObjects = [];
+    this.systemCards = [];
 
     if (this.startingOptions.length === 0) return;
 
     const theme = getTheme();
-    const cardW = 260;
-    const cardH = 260;
-    const gap = 20;
+    const contentLeft = Math.floor((GAME_WIDTH - MAX_CONTENT_WIDTH) / 2);
+    const portraitW = 260;
+    const configGap = 20;
+    const configX = contentLeft + portraitW + configGap;
+    const configW = MAX_CONTENT_WIDTH - portraitW - configGap;
+
+    const cardW = 200;
+    const cardH = 200;
+    const gap = 16;
     const count = this.startingOptions.length;
     const totalW = cardW * count + gap * (count - 1);
-    const startX = (1280 - totalW) / 2;
+    const startX = configX + (configW - totalW) / 2;
     const cardsY = 280;
     const planets = this.currentState.galaxy.planets;
 
@@ -169,7 +212,7 @@ export class GalaxySetupScene extends Phaser.Scene {
       const cardX = startX + index * (cardW + gap);
       const systemPlanets = planets.filter((p) => p.systemId === system.id);
 
-      // Card background panel
+      // Card panel with title
       const panel = new Panel(this, {
         x: cardX,
         y: cardsY,
@@ -178,6 +221,7 @@ export class GalaxySetupScene extends Phaser.Scene {
         title: system.name,
       });
       this.cardObjects.push(panel);
+      this.systemCards.push(panel);
 
       // Planet count
       const infoX = cardX + theme.spacing.md;
@@ -218,34 +262,28 @@ export class GalaxySetupScene extends Phaser.Scene {
 
       hitRect.on("pointerdown", () => {
         this.selectedSystemIndex = index;
-        this.drawSelectionHighlight();
+        this.updateSelectionHighlight();
+        this.updatePortraitPanel();
       });
       this.cardObjects.push(hitRect);
     });
 
-    this.drawSelectionHighlight();
+    this.updateSelectionHighlight();
   }
 
-  private drawSelectionHighlight(): void {
+  private updateSelectionHighlight(): void {
+    // Use panel.setActive for selection highlight instead of manual graphics
+    this.systemCards.forEach((panel, index) => {
+      panel.setActive(index === this.selectedSystemIndex);
+    });
+  }
+
+  private updatePortraitPanel(): void {
     if (this.startingOptions.length === 0) return;
-
-    const theme = getTheme();
-    const cardW = 260;
-    const cardH = 260;
-    const gap = 20;
-    const count = this.startingOptions.length;
-    const totalW = cardW * count + gap * (count - 1);
-    const startX = (1280 - totalW) / 2;
-    const cardsY = 280;
-
-    this.selectionGraphics.clear();
-    this.selectionGraphics.lineStyle(3, theme.colors.accent, 1);
-    const selX = startX + this.selectedSystemIndex * (cardW + gap);
-    this.selectionGraphics.strokeRect(
-      selX - 2,
-      cardsY - 2,
-      cardW + 4,
-      cardH + 4,
-    );
+    const system = this.startingOptions[this.selectedSystemIndex];
+    const planetCount = this.currentState.galaxy.planets.filter(
+      (p) => p.systemId === system.id,
+    ).length;
+    this.portraitPanel.showSystem(system, planetCount);
   }
 }

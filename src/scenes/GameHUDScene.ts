@@ -2,6 +2,12 @@ import Phaser from "phaser";
 import { Button } from "../ui/Button.ts";
 import { Label } from "../ui/Label.ts";
 import { getTheme } from "../ui/Theme.ts";
+import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  HUD_TOP_BAR_HEIGHT,
+  HUD_BOTTOM_BAR_HEIGHT,
+} from "../ui/Layout.ts";
 import { gameStore } from "../data/GameStore.ts";
 
 function formatCash(amount: number): string {
@@ -15,6 +21,8 @@ export class GameHUDScene extends Phaser.Scene {
   private phaseLabel!: Label;
   private endTurnButton!: Button;
   private activeContentScene = "GalaxyMapScene";
+  private previousCash = 0;
+  private navIndicators = new Map<string, Phaser.GameObjects.Rectangle>();
 
   private stateListener = (_data: unknown) => {
     this.updateHUD();
@@ -27,56 +35,56 @@ export class GameHUDScene extends Phaser.Scene {
   create(): void {
     const theme = getTheme();
     const state = gameStore.getState();
+    this.previousCash = state.cash;
 
-    const topBarHeight = 50;
-
-    // Top bar background
+    // ── Top Bar ──────────────────────────────────────────────
     this.add
-      .rectangle(
-        640,
-        topBarHeight / 2,
-        1280,
-        topBarHeight,
-        theme.colors.headerBg,
+      .nineslice(
+        0,
+        0,
+        "hud-bar-bg",
+        undefined,
+        GAME_WIDTH,
+        HUD_TOP_BAR_HEIGHT,
+        10,
+        10,
+        10,
+        10,
       )
-      .setOrigin(0.5);
+      .setOrigin(0, 0)
+      .setAlpha(0.92);
 
-    // Left: Company name
+    // Company name (left-aligned)
     this.companyLabel = new Label(this, {
-      x: theme.spacing.md,
-      y: (topBarHeight - theme.fonts.body.size) / 2,
+      x: 20,
+      y: HUD_TOP_BAR_HEIGHT / 2,
       text: state.companyName,
       style: "body",
     });
+    this.companyLabel.setOrigin(0, 0.5);
 
-    // Center: Turn display
+    // Turn display (centered)
     const quarter = ((state.turn - 1) % 4) + 1;
     const year = Math.ceil(state.turn / 4);
     this.turnLabel = new Label(this, {
-      x: 640,
-      y: (topBarHeight - theme.fonts.value.size) / 2,
+      x: GAME_WIDTH / 2,
+      y: HUD_TOP_BAR_HEIGHT / 2,
       text: `Q${quarter} Year ${year}`,
       style: "value",
     });
-    this.turnLabel.setOrigin(0.5, 0);
+    this.turnLabel.setOrigin(0.5, 0.5);
 
-    // Right: Cash display (green if positive, red if negative)
+    // Cash display (right-aligned, green/red conditional)
     this.cashLabel = new Label(this, {
-      x: 1280 - theme.spacing.md,
-      y: (topBarHeight - theme.fonts.value.size) / 2,
+      x: GAME_WIDTH - 20,
+      y: HUD_TOP_BAR_HEIGHT / 2,
       text: formatCash(state.cash),
       style: "value",
       color: state.cash >= 0 ? theme.colors.profit : theme.colors.loss,
     });
-    this.cashLabel.setOrigin(1, 0);
+    this.cashLabel.setOrigin(1, 0.5);
 
-    // Navigation buttons (left side, vertical column below top bar)
-    const navBtnWidth = 100;
-    const navBtnHeight = 36;
-    const navX = theme.spacing.sm;
-    let navY = topBarHeight + theme.spacing.sm;
-    const navSpacing = navBtnHeight + theme.spacing.xs;
-
+    // ── Navigation Buttons (horizontal row below top bar) ───
     const navItems = [
       { label: "Map", scene: "GalaxyMapScene" },
       { label: "Fleet", scene: "FleetScene" },
@@ -85,9 +93,20 @@ export class GameHUDScene extends Phaser.Scene {
       { label: "Market", scene: "MarketScene" },
     ];
 
-    for (const item of navItems) {
+    const navBtnWidth = 100;
+    const navBtnHeight = 32;
+    const navSpacing = 8;
+    const totalNavWidth =
+      navItems.length * navBtnWidth + (navItems.length - 1) * navSpacing;
+    const navStartX = (GAME_WIDTH - totalNavWidth) / 2;
+    const navY = HUD_TOP_BAR_HEIGHT + 4;
+
+    for (let i = 0; i < navItems.length; i++) {
+      const item = navItems[i];
+      const btnX = navStartX + i * (navBtnWidth + navSpacing);
+
       new Button(this, {
-        x: navX,
+        x: btnX,
         y: navY,
         width: navBtnWidth,
         height: navBtnHeight,
@@ -96,17 +115,54 @@ export class GameHUDScene extends Phaser.Scene {
           this.switchContentScene(item.scene);
         },
       });
-      navY += navSpacing;
+
+      // Active indicator: accent-colored bar (3px tall) below button
+      const indicator = this.add
+        .rectangle(
+          btnX + navBtnWidth / 2,
+          navY + navBtnHeight + 2,
+          navBtnWidth,
+          3,
+          theme.colors.accent,
+        )
+        .setOrigin(0.5, 0);
+      indicator.setVisible(item.scene === this.activeContentScene);
+      this.navIndicators.set(item.scene, indicator);
     }
 
-    // Bottom area
-    const bottomY = 660;
+    // ── Bottom Bar ───────────────────────────────────────────
+    const bottomBarY = GAME_HEIGHT - HUD_BOTTOM_BAR_HEIGHT;
 
-    // End Turn button (only visible during planning phase)
+    this.add
+      .nineslice(
+        0,
+        bottomBarY,
+        "hud-bar-bg",
+        undefined,
+        GAME_WIDTH,
+        HUD_BOTTOM_BAR_HEIGHT,
+        10,
+        10,
+        10,
+        10,
+      )
+      .setOrigin(0, 0)
+      .setAlpha(0.88);
+
+    // Phase indicator (left side of bottom bar)
+    this.phaseLabel = new Label(this, {
+      x: 20,
+      y: GAME_HEIGHT - HUD_BOTTOM_BAR_HEIGHT / 2,
+      text: `Phase: ${state.phase}`,
+      style: "caption",
+    });
+    this.phaseLabel.setOrigin(0, 0.5);
+
+    // End Turn button (centered in bottom bar)
     const endTurnW = 160;
     this.endTurnButton = new Button(this, {
-      x: 640 - endTurnW / 2,
-      y: bottomY,
+      x: GAME_WIDTH / 2 - endTurnW / 2,
+      y: bottomBarY + 6,
       width: endTurnW,
       height: 40,
       label: "End Turn",
@@ -116,19 +172,9 @@ export class GameHUDScene extends Phaser.Scene {
     });
     this.endTurnButton.setVisible(state.phase === "planning");
 
-    // Phase indicator
-    this.phaseLabel = new Label(this, {
-      x: 640,
-      y: bottomY + 45,
-      text: `Phase: ${state.phase}`,
-      style: "caption",
-    });
-    this.phaseLabel.setOrigin(0.5, 0);
-
-    // Subscribe to gameStore state changes
+    // ── State Subscription ───────────────────────────────────
     gameStore.on("stateChanged", this.stateListener);
 
-    // Clean up listener when scene shuts down
     this.events.once("shutdown", () => {
       gameStore.off("stateChanged", this.stateListener);
     });
@@ -149,19 +195,62 @@ export class GameHUDScene extends Phaser.Scene {
     const year = Math.ceil(state.turn / 4);
     this.turnLabel.setText(`Q${quarter} Year ${year}`);
 
-    this.cashLabel.setText(formatCash(state.cash));
+    // Cash display with flash effect on change
+    const newCash = state.cash;
+    this.cashLabel.setText(formatCash(newCash));
     this.cashLabel.setLabelColor(
-      state.cash >= 0 ? theme.colors.profit : theme.colors.loss,
+      newCash >= 0 ? theme.colors.profit : theme.colors.loss,
     );
+
+    if (newCash !== this.previousCash) {
+      const flashTint =
+        newCash > this.previousCash ? theme.colors.profit : theme.colors.loss;
+      this.cashLabel.setTint(flashTint);
+      this.tweens.add({
+        targets: this.cashLabel,
+        alpha: { from: 1, to: 0.5 },
+        duration: 150,
+        yoyo: true,
+        onComplete: () => {
+          this.cashLabel.clearTint();
+        },
+      });
+      this.previousCash = newCash;
+    }
 
     this.phaseLabel.setText(`Phase: ${state.phase}`);
     this.endTurnButton.setVisible(state.phase === "planning");
   }
 
-  private switchContentScene(sceneName: string): void {
+  /**
+   * Central method for all content scene transitions. Content scenes
+   * must use this instead of calling scene.start() directly.
+   * Access from any scene: (this.scene.get("GameHUDScene") as GameHUDScene).switchContentScene(name)
+   */
+  switchContentScene(sceneName: string, data?: object): void {
+    // Stop overlay scenes that might be stacked on top
+    const overlayScenes = ["PlanetDetailScene"];
+    for (const key of overlayScenes) {
+      if (this.scene.isActive(key)) {
+        this.scene.stop(key);
+      }
+    }
+
     if (sceneName === this.activeContentScene) return;
-    this.scene.stop(this.activeContentScene);
-    this.scene.launch(sceneName);
+
+    // Stop current content scene (check it's actually running)
+    if (this.scene.isActive(this.activeContentScene) || this.scene.isPaused(this.activeContentScene)) {
+      this.scene.stop(this.activeContentScene);
+    }
+
+    // Launch new content scene
+    this.scene.launch(sceneName, data);
+
+    // Update active indicators
+    for (const [scene, indicator] of this.navIndicators) {
+      indicator.setVisible(scene === sceneName);
+    }
+
     this.activeContentScene = sceneName;
     this.scene.bringToTop();
   }

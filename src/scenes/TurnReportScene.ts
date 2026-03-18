@@ -1,15 +1,25 @@
 import Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
 import { getTheme, colorToString } from "../ui/Theme.ts";
-import { Label } from "../ui/Label.ts";
 import { Panel } from "../ui/Panel.ts";
 import { Button } from "../ui/Button.ts";
 import { DataTable } from "../ui/DataTable.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
+import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { createStarfield } from "../ui/Starfield.ts";
 import { autoSave } from "../game/SaveManager.ts";
+import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  CONTENT_TOP,
+  CONTENT_HEIGHT,
+  SIDEBAR_LEFT,
+  SIDEBAR_WIDTH,
+  MAIN_CONTENT_LEFT,
+  MAIN_CONTENT_WIDTH,
+} from "../ui/Layout.ts";
 import type { TurnResult } from "../data/types.ts";
-
-const HUD_TOP = 60;
+import type { GameHUDScene } from "./GameHUDScene.ts";
 
 function formatCash(amount: number): string {
   const sign = amount < 0 ? "-" : "";
@@ -30,35 +40,58 @@ export class TurnReportScene extends Phaser.Scene {
 
     if (!lastTurn) {
       // Safety: should never arrive here without history, but handle gracefully
-      this.scene.start("GalaxyMapScene");
+      const hud = this.scene.get("GameHUDScene") as GameHUDScene;
+      hud.switchContentScene("GalaxyMapScene");
       return;
     }
 
     // Auto-save after each completed turn so the player can resume later
     autoSave(state);
 
-    this.cameras.main.setBackgroundColor(theme.colors.background);
+    // Starfield background
+    createStarfield(this);
 
     // -----------------------------------------------------------------------
-    // Title
+    // Left sidebar — PortraitPanel with turn summary
     // -----------------------------------------------------------------------
-    const title = new Label(this, {
-      x: 640,
-      y: HUD_TOP + 10,
-      text: `Turn ${lastTurn.turn} Report`,
-      style: "heading",
-      color: theme.colors.accent,
+    const totalCosts =
+      lastTurn.fuelCosts +
+      lastTurn.maintenanceCosts +
+      lastTurn.loanPayments +
+      lastTurn.otherCosts;
+    const netColor =
+      lastTurn.netProfit >= 0 ? theme.colors.profit : theme.colors.loss;
+
+    const portrait = new PortraitPanel(this, {
+      x: SIDEBAR_LEFT,
+      y: CONTENT_TOP,
+      width: SIDEBAR_WIDTH,
+      height: CONTENT_HEIGHT,
     });
-    title.setOrigin(0.5, 0);
+    portrait.updatePortrait(
+      "event",
+      lastTurn.turn,
+      `Turn ${lastTurn.turn} Report`,
+      [
+        { label: "Revenue", value: formatCash(lastTurn.revenue) },
+        { label: "Costs", value: formatCash(totalCosts) },
+        { label: "Net Profit", value: formatCash(lastTurn.netProfit) },
+      ],
+      { eventCategory: "market" },
+    );
+
+    // Manually color the net profit stat label if possible — PortraitPanel
+    // doesn't support per-stat colors, so we accept the default styling here.
+    void netColor; // acknowledged but not applicable via API
 
     // -----------------------------------------------------------------------
-    // P&L Summary (left column)
+    // P&L Panel (top of main content area)
     // -----------------------------------------------------------------------
     const plPanel = new Panel(this, {
-      x: 20,
-      y: HUD_TOP + 50,
-      width: 380,
-      height: 250,
+      x: MAIN_CONTENT_LEFT,
+      y: CONTENT_TOP,
+      width: MAIN_CONTENT_WIDTH,
+      height: 200,
       title: "Profit & Loss",
     });
     const plContent = plPanel.getContentArea();
@@ -121,7 +154,7 @@ export class TurnReportScene extends Phaser.Scene {
     rowY += 12;
 
     // Net profit row
-    const netColor =
+    const plNetColor =
       lastTurn.netProfit >= 0 ? theme.colors.profit : theme.colors.loss;
     const netLabel = this.add.text(plContent.x + 8, rowY, "Net Profit", {
       fontSize: `${theme.fonts.body.size}px`,
@@ -138,39 +171,14 @@ export class TurnReportScene extends Phaser.Scene {
         {
           fontSize: `${theme.fonts.value.size}px`,
           fontFamily: theme.fonts.value.family,
-          color: colorToString(netColor),
+          color: colorToString(plNetColor),
         },
       )
       .setOrigin(1, 0);
     plPanel.add(netValue);
-    rowY += 32;
-
-    // Cash at end
-    const cashLabel = this.add.text(plContent.x + 8, rowY, "Cash", {
-      fontSize: `${theme.fonts.caption.size}px`,
-      fontFamily: theme.fonts.caption.family,
-      color: colorToString(theme.colors.textDim),
-    });
-    plPanel.add(cashLabel);
-
-    const cashValue = this.add
-      .text(
-        plContent.x + plContent.width - 8,
-        rowY,
-        formatCash(lastTurn.cashAtEnd),
-        {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(
-            lastTurn.cashAtEnd >= 0 ? theme.colors.profit : theme.colors.loss,
-          ),
-        },
-      )
-      .setOrigin(1, 0);
-    plPanel.add(cashValue);
 
     // -----------------------------------------------------------------------
-    // Route Performance (right column)
+    // Route Performance (middle of main content area)
     // -----------------------------------------------------------------------
     const routePerf = lastTurn.routePerformance;
 
@@ -189,34 +197,34 @@ export class TurnReportScene extends Phaser.Scene {
     }
 
     new Panel(this, {
-      x: 420,
-      y: HUD_TOP + 50,
-      width: 840,
-      height: 250,
+      x: MAIN_CONTENT_LEFT,
+      y: CONTENT_TOP + 210,
+      width: MAIN_CONTENT_WIDTH,
+      height: 180,
       title: "Route Performance",
     });
 
     const routeTable = new DataTable(this, {
-      x: 430,
-      y: HUD_TOP + 90,
-      width: 820,
-      height: 200,
+      x: MAIN_CONTENT_LEFT + 10,
+      y: CONTENT_TOP + 250,
+      width: MAIN_CONTENT_WIDTH - 20,
+      height: 130,
       columns: [
         {
           key: "route",
           label: "Route",
-          width: 220,
+          width: 200,
         },
         {
           key: "trips",
           label: "Trips",
-          width: 80,
+          width: 70,
           align: "right",
         },
         {
           key: "revenue",
           label: "Revenue",
-          width: 140,
+          width: 130,
           align: "right",
           format: (v) => formatCash(v as number),
           colorFn: () => theme.colors.profit,
@@ -224,7 +232,7 @@ export class TurnReportScene extends Phaser.Scene {
         {
           key: "fuelCost",
           label: "Fuel Cost",
-          width: 140,
+          width: 130,
           align: "right",
           format: (v) => formatCash(v as number),
           colorFn: () => theme.colors.loss,
@@ -232,13 +240,13 @@ export class TurnReportScene extends Phaser.Scene {
         {
           key: "cargo",
           label: "Cargo",
-          width: 100,
+          width: 90,
           align: "right",
         },
         {
           key: "breakdowns",
           label: "Breakdowns",
-          width: 100,
+          width: 90,
           align: "right",
           colorFn: (v) => ((v as number) > 0 ? theme.colors.loss : null),
         },
@@ -256,21 +264,25 @@ export class TurnReportScene extends Phaser.Scene {
     routeTable.setRows(routeRows);
 
     // -----------------------------------------------------------------------
-    // News Digest (bottom-left)
+    // Bottom row: News Digest (left) + Market Changes (right)
     // -----------------------------------------------------------------------
+    const bottomY = CONTENT_TOP + 400;
+    const halfWidth = MAIN_CONTENT_WIDTH / 2 - 5;
+
+    // News Digest (bottom-left)
     new Panel(this, {
-      x: 20,
-      y: HUD_TOP + 315,
-      width: 620,
-      height: 240,
+      x: MAIN_CONTENT_LEFT,
+      y: bottomY,
+      width: halfWidth,
+      height: 160,
       title: "News Digest",
     });
 
     const newsList = new ScrollableList(this, {
-      x: 30,
-      y: HUD_TOP + 355,
-      width: 600,
-      height: 190,
+      x: MAIN_CONTENT_LEFT + 10,
+      y: bottomY + 40,
+      width: halfWidth - 20,
+      height: 110,
       itemHeight: 48,
     });
 
@@ -301,21 +313,19 @@ export class TurnReportScene extends Phaser.Scene {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
           color: colorToString(theme.colors.textDim),
-          wordWrap: { width: 580 },
+          wordWrap: { width: halfWidth - 40 },
         });
         item.add([nameText, descText]);
         newsList.addItem(item);
       }
     }
 
-    // -----------------------------------------------------------------------
-    // Market Changes (bottom-right) — simple summary text
-    // -----------------------------------------------------------------------
+    // Market Changes (bottom-right)
     const marketPanel = new Panel(this, {
-      x: 660,
-      y: HUD_TOP + 315,
-      width: 600,
-      height: 240,
+      x: MAIN_CONTENT_LEFT + MAIN_CONTENT_WIDTH / 2 + 5,
+      y: bottomY,
+      width: halfWidth,
+      height: 160,
       title: "Market Changes",
     });
     const mpContent = marketPanel.getContentArea();
@@ -384,21 +394,22 @@ export class TurnReportScene extends Phaser.Scene {
     }
 
     // -----------------------------------------------------------------------
-    // Continue button
+    // Continue button — centered at bottom
     // -----------------------------------------------------------------------
-    const btnWidth = 180;
     new Button(this, {
-      x: 640 - btnWidth / 2,
-      y: HUD_TOP + 570,
-      width: btnWidth,
-      height: 44,
+      x: GAME_WIDTH / 2 - 80,
+      y: GAME_HEIGHT - 60,
+      width: 160,
+      height: 40,
       label: state.gameOver ? "View Results" : "Continue",
       onClick: () => {
         if (state.gameOver) {
+          // GameOver exits HUD-managed flow entirely — use scene.start directly
           this.scene.start("GameOverScene");
         } else {
           gameStore.update({ phase: "planning" });
-          this.scene.start("GalaxyMapScene");
+          const hud = this.scene.get("GameHUDScene") as GameHUDScene;
+          hud.switchContentScene("GalaxyMapScene");
         }
       },
     });

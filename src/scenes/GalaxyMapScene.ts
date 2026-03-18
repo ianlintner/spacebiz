@@ -2,6 +2,9 @@ import Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
 import { getTheme, colorToString } from "../ui/Theme.ts";
 import { Label } from "../ui/Label.ts";
+import { createStarfield } from "../ui/Starfield.ts";
+
+import type { GameHUDScene } from "./GameHUDScene.ts";
 
 const HUD_TOP = 60;
 
@@ -16,17 +19,26 @@ export class GalaxyMapScene extends Phaser.Scene {
     const { sectors, systems, planets } = state.galaxy;
     const routes = state.activeRoutes;
 
-    // Title
+    // Starfield background
+    createStarfield(this);
+
+    // Subtle title (caption style, top-left)
     new Label(this, {
       x: 20,
       y: HUD_TOP + 10,
       text: "Galaxy Map",
-      style: "heading",
-      color: theme.colors.accent,
+      style: "caption",
+      color: theme.colors.textDim,
     });
 
-    // Draw sectors as semi-transparent ellipses
+    // Draw sectors as semi-transparent ellipses with gradient edge effect
     for (const sector of sectors) {
+      // Outer gradient ellipse (larger, more transparent)
+      this.add
+        .ellipse(sector.x, sector.y + HUD_TOP, 230, 185, sector.color, 0.06)
+        .setOrigin(0.5, 0.5);
+
+      // Inner sector ellipse
       this.add
         .ellipse(sector.x, sector.y + HUD_TOP, 200, 160, sector.color, 0.12)
         .setOrigin(0.5, 0.5);
@@ -52,7 +64,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       systemMap.set(sys.id, { x: sys.x, y: sys.y });
     }
 
-    // Draw active route lines between systems
+    // Draw active route lines between systems with breathing animation
     const routeGraphics = this.add.graphics();
     routeGraphics.lineStyle(1, theme.colors.accent, 0.4);
     for (const route of routes) {
@@ -69,13 +81,29 @@ export class GalaxyMapScene extends Phaser.Scene {
       routeGraphics.strokePath();
     }
 
+    // Breathing animation on route lines
+    this.tweens.add({
+      targets: routeGraphics,
+      alpha: { from: 0.3, to: 0.5 },
+      duration: 3000,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+
     // Draw each star system
     for (const system of systems) {
       const sysX = system.x;
       const sysY = system.y + HUD_TOP;
+      const mainRadius = 6;
+
+      // Glow halo behind the star dot
+      this.add
+        .circle(sysX, sysY, mainRadius * 2.5, system.starColor)
+        .setAlpha(0.18);
 
       // Star dot
-      const star = this.add.circle(sysX, sysY, 6, system.starColor);
+      const star = this.add.circle(sysX, sysY, mainRadius, system.starColor);
       star.setInteractive({ useHandCursor: true });
 
       // Name label
@@ -87,9 +115,10 @@ export class GalaxyMapScene extends Phaser.Scene {
         })
         .setOrigin(0.5, 0);
 
-      // Click to drill into system
+      // Click to drill into system — route through HUD
       star.on("pointerup", () => {
-        this.scene.start("SystemMapScene", { systemId: system.id });
+        const hud = this.scene.get("GameHUDScene") as GameHUDScene;
+        hud.switchContentScene("SystemMapScene", { systemId: system.id });
       });
 
       // Hover effect
@@ -97,7 +126,7 @@ export class GalaxyMapScene extends Phaser.Scene {
         star.setRadius(9);
       });
       star.on("pointerout", () => {
-        star.setRadius(6);
+        star.setRadius(mainRadius);
       });
     }
   }

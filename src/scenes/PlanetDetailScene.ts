@@ -9,7 +9,9 @@ import { Button } from "../ui/Button.ts";
 import { DataTable } from "../ui/DataTable.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Modal } from "../ui/Modal.ts";
+import { PortraitPanel } from "../ui/PortraitPanel.ts";
 import { calculateDistance, createRoute } from "../game/routes/RouteManager.ts";
+import { GAME_WIDTH, GAME_HEIGHT, CONTENT_GAP } from "../ui/Layout.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -28,6 +30,12 @@ function trendColor(trend: string): number {
   if (trend === "rising") return theme.colors.profit;
   if (trend === "falling") return theme.colors.loss;
   return theme.colors.text;
+}
+
+function formatPopulation(pop: number): string {
+  if (pop >= 1_000_000) return `${(pop / 1_000_000).toFixed(1)}M`;
+  if (pop >= 1_000) return `${(pop / 1_000).toFixed(1)}K`;
+  return String(pop);
 }
 
 const CARGO_TYPE_VALUES = Object.values(CargoType) as CargoType[];
@@ -53,21 +61,34 @@ export class PlanetDetailScene extends Phaser.Scene {
 
     // Overlay background
     this.add
-      .rectangle(0, 0, 1280, 720, theme.colors.modalOverlay, 0.6)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
       .setOrigin(0, 0)
       .setInteractive();
 
-    // Main panel
-    const panelW = 800;
-    const panelH = 580;
-    const panelX = (1280 - panelW) / 2;
-    const panelY = (720 - panelH) / 2;
+    // Overlay layout: sidebar (PortraitPanel) + content panel
+    const overlayWidth = 900;
+    const overlayHeight = 580;
+    const overlayX = (GAME_WIDTH - overlayWidth) / 2;
+    const overlayY = (GAME_HEIGHT - overlayHeight) / 2;
+    const portraitWidth = 200;
+    const contentX = overlayX + portraitWidth + CONTENT_GAP;
+    const contentWidth = overlayWidth - portraitWidth - CONTENT_GAP;
 
+    // Portrait panel (left sidebar)
+    const portraitPanel = new PortraitPanel(this, {
+      x: overlayX,
+      y: overlayY,
+      width: portraitWidth,
+      height: overlayHeight,
+    });
+    portraitPanel.showPlanet(planet);
+
+    // Content panel (right)
     const panel = new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
+      x: contentX,
+      y: overlayY,
+      width: contentWidth,
+      height: overlayHeight,
       title: planet.name,
     });
 
@@ -75,25 +96,28 @@ export class PlanetDetailScene extends Phaser.Scene {
 
     // Planet info
     new Label(this, {
-      x: panelX + contentArea.x,
-      y: panelY + contentArea.y,
-      text: `Type: ${planet.type}  |  Population: ${planet.population.toLocaleString("en-US")}`,
+      x: contentX + contentArea.x,
+      y: overlayY + contentArea.y,
+      text: `Type: ${planet.type}  |  Population: ${formatPopulation(planet.population)}`,
       style: "body",
     });
 
     // Market data table
-    const tableY = panelY + contentArea.y + 35;
+    const tableY = overlayY + contentArea.y + 35;
+    const tableWidth = contentArea.width;
+    const colScale = tableWidth / 600; // scale columns proportionally
+
     const table = new DataTable(this, {
-      x: panelX + contentArea.x,
+      x: contentX + contentArea.x,
       y: tableY,
-      width: contentArea.width,
+      width: tableWidth,
       height: 320,
       columns: [
-        { key: "cargoType", label: "Cargo Type", width: 130, sortable: true },
+        { key: "cargoType", label: "Cargo Type", width: Math.floor(130 * colScale), sortable: true },
         {
           key: "supply",
           label: "Supply",
-          width: 90,
+          width: Math.floor(80 * colScale),
           align: "right",
           sortable: true,
           format: (v) => String(Math.round(v as number)),
@@ -101,7 +125,7 @@ export class PlanetDetailScene extends Phaser.Scene {
         {
           key: "demand",
           label: "Demand",
-          width: 90,
+          width: Math.floor(80 * colScale),
           align: "right",
           sortable: true,
           format: (v) => String(Math.round(v as number)),
@@ -109,7 +133,7 @@ export class PlanetDetailScene extends Phaser.Scene {
         {
           key: "price",
           label: "Price",
-          width: 110,
+          width: Math.floor(100 * colScale),
           align: "right",
           sortable: true,
           format: (v) => formatCash(v as number),
@@ -117,15 +141,15 @@ export class PlanetDetailScene extends Phaser.Scene {
         {
           key: "trend",
           label: "Trend",
-          width: 80,
+          width: Math.floor(70 * colScale),
           align: "center",
           format: (v) => trendArrow(v as string),
           colorFn: (v) => trendColor(v as string),
         },
         {
           key: "saturation",
-          label: "Saturation",
-          width: 100,
+          label: "Sat%",
+          width: Math.floor(80 * colScale),
           align: "right",
           format: (v) => `${Math.round((v as number) * 100)}%`,
         },
@@ -148,12 +172,12 @@ export class PlanetDetailScene extends Phaser.Scene {
       table.setRows(rows);
     }
 
-    // Buttons row
-    const buttonY = panelY + panelH - 60;
+    // Buttons row at bottom of content panel
+    const buttonY = overlayY + overlayHeight - 60;
 
     // Create Route button
     new Button(this, {
-      x: panelX + contentArea.x,
+      x: contentX + contentArea.x,
       y: buttonY,
       width: 150,
       label: "Create Route",
@@ -164,7 +188,7 @@ export class PlanetDetailScene extends Phaser.Scene {
 
     // Close button
     new Button(this, {
-      x: panelX + panelW - contentArea.x - 120,
+      x: contentX + contentWidth - contentArea.x - 120,
       y: buttonY,
       width: 120,
       label: "Close",
@@ -183,14 +207,14 @@ export class PlanetDetailScene extends Phaser.Scene {
 
     // Overlay for destination picker
     const overlay = this.add
-      .rectangle(0, 0, 1280, 720, theme.colors.modalOverlay, 0.5)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.5)
       .setOrigin(0, 0)
       .setInteractive();
 
     const listW = 400;
     const listH = 450;
-    const listX = (1280 - listW) / 2;
-    const listY = (720 - listH) / 2;
+    const listX = (GAME_WIDTH - listW) / 2;
+    const listY = (GAME_HEIGHT - listH) / 2;
 
     const pickerPanel = new Panel(this, {
       x: listX,
@@ -264,13 +288,7 @@ export class PlanetDetailScene extends Phaser.Scene {
   }
 
   private closeOverlay(): void {
-    // Resume the previous scene and stop this one
-    const scenes = this.scene.manager.getScenes(false);
-    for (const s of scenes) {
-      if (s.scene.key !== "PlanetDetailScene" && s.scene.isPaused()) {
-        s.scene.resume();
-      }
-    }
+    // Just stop this overlay scene — the content scene underneath is still running
     this.scene.stop();
   }
 }

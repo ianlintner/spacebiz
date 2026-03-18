@@ -3,12 +3,19 @@ import { gameStore } from "../data/GameStore.ts";
 import { CargoType } from "../data/types.ts";
 import type { CargoType as CargoTypeValue } from "../data/types.ts";
 import { getTheme, colorToString } from "../ui/Theme.ts";
-import { Label } from "../ui/Label.ts";
 import { Button } from "../ui/Button.ts";
 import { DataTable } from "../ui/DataTable.ts";
 import { Modal } from "../ui/Modal.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Panel } from "../ui/Panel.ts";
+import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import {
+  CONTENT_TOP,
+  CONTENT_HEIGHT,
+  SIDEBAR_LEFT,
+  MAIN_CONTENT_LEFT,
+  MAIN_CONTENT_WIDTH,
+} from "../ui/Layout.ts";
 import {
   calculateDistance,
   createRoute,
@@ -17,8 +24,6 @@ import {
   estimateRouteRevenue,
   estimateRouteFuelCost,
 } from "../game/routes/RouteManager.ts";
-
-const HUD_TOP = 60;
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -29,42 +34,54 @@ function formatCash(n: number): string {
 export class RoutesScene extends Phaser.Scene {
   private selectedRouteId: string | null = null;
   private routeTable!: DataTable;
+  private portrait!: PortraitPanel;
 
   constructor() {
     super({ key: "RoutesScene" });
   }
 
   create(): void {
-    const theme = getTheme();
     this.selectedRouteId = null;
 
-    // Title
-    new Label(this, {
-      x: 20,
-      y: HUD_TOP + 10,
-      text: "Route Management",
-      style: "heading",
-      color: theme.colors.accent,
+    // Sidebar portrait — destination planet of selected route
+    this.portrait = new PortraitPanel(this, {
+      x: SIDEBAR_LEFT,
+      y: CONTENT_TOP,
     });
+    this.portrait.updatePortrait("planet", 0, "Select a Route", [], {
+      planetType: "terran",
+    });
+
+    // Content panel
+    const contentPanel = new Panel(this, {
+      x: MAIN_CONTENT_LEFT,
+      y: CONTENT_TOP,
+      width: MAIN_CONTENT_WIDTH,
+      height: CONTENT_HEIGHT,
+      title: "Routes",
+    });
+    const content = contentPanel.getContentArea();
+    const absX = MAIN_CONTENT_LEFT + content.x;
+    const absY = CONTENT_TOP + content.y;
 
     // Route table
     this.routeTable = new DataTable(this, {
-      x: 20,
-      y: HUD_TOP + 55,
-      width: 1240,
-      height: 420,
+      x: absX,
+      y: absY,
+      width: content.width,
+      height: content.height - 50,
       columns: [
-        { key: "origin", label: "Origin", width: 150, sortable: true },
+        { key: "origin", label: "Origin", width: 120, sortable: true },
         {
           key: "destination",
           label: "Destination",
-          width: 150,
+          width: 120,
           sortable: true,
         },
         {
           key: "distance",
           label: "Distance",
-          width: 100,
+          width: 80,
           align: "right",
           sortable: true,
           format: (v) => (v as number).toFixed(1),
@@ -72,15 +89,15 @@ export class RoutesScene extends Phaser.Scene {
         {
           key: "ships",
           label: "Ships",
-          width: 80,
+          width: 60,
           align: "center",
           sortable: true,
         },
-        { key: "cargoType", label: "Cargo", width: 130, sortable: true },
+        { key: "cargoType", label: "Cargo", width: 100, sortable: true },
         {
           key: "revenue",
           label: "Est. Revenue",
-          width: 140,
+          width: 110,
           align: "right",
           format: (v) =>
             (v as string | number) === "\u2014"
@@ -96,7 +113,7 @@ export class RoutesScene extends Phaser.Scene {
         {
           key: "fuelCost",
           label: "Est. Fuel",
-          width: 130,
+          width: 110,
           align: "right",
           format: (v) =>
             (v as string | number) === "\u2014"
@@ -112,7 +129,7 @@ export class RoutesScene extends Phaser.Scene {
         {
           key: "profit",
           label: "Est. Profit",
-          width: 140,
+          width: 110,
           align: "right",
           format: (v) =>
             (v as string | number) === "\u2014"
@@ -127,16 +144,39 @@ export class RoutesScene extends Phaser.Scene {
       ],
       onRowSelect: (_rowIndex, rowData) => {
         this.selectedRouteId = rowData["id"] as string;
+        const currentState = gameStore.getState();
+        const route = currentState.activeRoutes.find(
+          (r) => r.id === this.selectedRouteId,
+        );
+        if (route) {
+          const destPlanet = currentState.galaxy.planets.find(
+            (p) => p.id === route.destinationPlanetId,
+          );
+          if (destPlanet) {
+            const planetIndex = currentState.galaxy.planets.indexOf(destPlanet);
+            this.portrait.updatePortrait(
+              "planet",
+              planetIndex,
+              destPlanet.name,
+              [
+                { label: "Type", value: destPlanet.type },
+                { label: "Distance", value: route.distance.toFixed(1) },
+                { label: "Cargo", value: route.cargoType ?? "None" },
+              ],
+              { planetType: destPlanet.type },
+            );
+          }
+        }
       },
     });
 
     this.refreshTable();
 
-    // Buttons
-    const buttonY = HUD_TOP + 490;
+    // Buttons at bottom of content panel
+    const buttonY = absY + content.height - 40;
 
     new Button(this, {
-      x: 20,
+      x: absX,
       y: buttonY,
       width: 140,
       label: "Create Route",
@@ -144,7 +184,7 @@ export class RoutesScene extends Phaser.Scene {
     });
 
     new Button(this, {
-      x: 180,
+      x: absX + 160,
       y: buttonY,
       width: 140,
       label: "Delete Route",
@@ -152,7 +192,7 @@ export class RoutesScene extends Phaser.Scene {
     });
 
     new Button(this, {
-      x: 340,
+      x: absX + 320,
       y: buttonY,
       width: 140,
       label: "Assign Ship",
@@ -160,7 +200,7 @@ export class RoutesScene extends Phaser.Scene {
     });
 
     new Button(this, {
-      x: 500,
+      x: absX + 480,
       y: buttonY,
       width: 140,
       label: "Set Cargo",

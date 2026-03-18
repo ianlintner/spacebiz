@@ -10,14 +10,24 @@ import { DataTable } from "../ui/DataTable.ts";
 import { Modal } from "../ui/Modal.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Panel } from "../ui/Panel.ts";
+import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { createStarfield } from "../ui/Starfield.ts";
+import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  CONTENT_TOP,
+  CONTENT_HEIGHT,
+  SIDEBAR_LEFT,
+  SIDEBAR_WIDTH,
+  MAIN_CONTENT_LEFT,
+  MAIN_CONTENT_WIDTH,
+} from "../ui/Layout.ts";
 import {
   buyShip,
   sellShip,
   overhaulShip,
   calculateShipValue,
 } from "../game/fleet/FleetManager.ts";
-
-const HUD_TOP = 60;
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -36,6 +46,7 @@ function conditionColor(value: unknown): number {
 export class FleetScene extends Phaser.Scene {
   private selectedShipId: string | null = null;
   private fleetTable!: DataTable;
+  private portrait!: PortraitPanel;
 
   constructor() {
     super({ key: "FleetScene" });
@@ -45,20 +56,35 @@ export class FleetScene extends Phaser.Scene {
     const theme = getTheme();
     this.selectedShipId = null;
 
-    // Title
-    new Label(this, {
-      x: 20,
-      y: HUD_TOP + 10,
-      text: "Fleet Management",
-      style: "heading",
-      color: theme.colors.accent,
-    });
+    // Starfield background
+    createStarfield(this);
 
-    // Cash display
+    // Sidebar portrait
+    this.portrait = new PortraitPanel(this, {
+      x: SIDEBAR_LEFT,
+      y: CONTENT_TOP,
+      width: SIDEBAR_WIDTH,
+      height: CONTENT_HEIGHT,
+    });
+    this.portrait.updatePortrait("ship", 0, "Select a Ship", []);
+
+    // Content panel
+    const contentPanel = new Panel(this, {
+      x: MAIN_CONTENT_LEFT,
+      y: CONTENT_TOP,
+      width: MAIN_CONTENT_WIDTH,
+      height: CONTENT_HEIGHT,
+      title: "Fleet Management",
+    });
+    const content = contentPanel.getContentArea();
+    const absX = MAIN_CONTENT_LEFT + content.x;
+    const absY = CONTENT_TOP + content.y;
+
+    // Cash display inside content panel header area
     const state = gameStore.getState();
     const cashLabel = new Label(this, {
-      x: 1260,
-      y: HUD_TOP + 10,
+      x: MAIN_CONTENT_LEFT + MAIN_CONTENT_WIDTH - 16,
+      y: absY + 2,
       text: `Cash: ${formatCash(state.cash)}`,
       style: "value",
       color: theme.colors.accent,
@@ -67,48 +93,48 @@ export class FleetScene extends Phaser.Scene {
 
     // Fleet table
     this.fleetTable = new DataTable(this, {
-      x: 20,
-      y: HUD_TOP + 55,
-      width: 1240,
-      height: 420,
+      x: absX,
+      y: absY + 28,
+      width: content.width,
+      height: content.height - 80,
       columns: [
-        { key: "name", label: "Name", width: 160, sortable: true },
-        { key: "class", label: "Class", width: 140, sortable: true },
+        { key: "name", label: "Name", width: 110, sortable: true },
+        { key: "class", label: "Class", width: 100, sortable: true },
         {
           key: "cargo",
           label: "Cargo",
-          width: 90,
+          width: 70,
           align: "right",
           sortable: true,
         },
         {
           key: "pax",
           label: "Pax",
-          width: 80,
+          width: 60,
           align: "right",
           sortable: true,
         },
         {
           key: "speed",
           label: "Speed",
-          width: 80,
+          width: 60,
           align: "right",
           sortable: true,
         },
         {
           key: "condition",
           label: "Condition",
-          width: 110,
+          width: 85,
           align: "right",
           sortable: true,
           format: (v) => `${Math.round(v as number)}%`,
           colorFn: conditionColor,
         },
-        { key: "route", label: "Route", width: 200, sortable: true },
+        { key: "route", label: "Route", width: 130, sortable: true },
         {
           key: "maintenance",
           label: "Maint.",
-          width: 120,
+          width: 100,
           align: "right",
           sortable: true,
           format: (v) => formatCash(v as number),
@@ -116,23 +142,45 @@ export class FleetScene extends Phaser.Scene {
         {
           key: "value",
           label: "Value",
-          width: 120,
+          width: 100,
           align: "right",
           format: (v) => formatCash(v as number),
         },
       ],
-      onRowSelect: (_rowIndex, rowData) => {
+      onRowSelect: (rowIndex, rowData) => {
         this.selectedShipId = rowData["id"] as string;
+        const currentState = gameStore.getState();
+        const ship = currentState.fleet.find(
+          (s) => s.id === this.selectedShipId,
+        );
+        if (ship) {
+          const template = SHIP_TEMPLATES[ship.class];
+          this.portrait.updatePortrait(
+            "ship",
+            rowIndex,
+            ship.name,
+            [
+              { label: "Class", value: template.name },
+              {
+                label: "Condition",
+                value: `${Math.round(ship.condition)}%`,
+              },
+              { label: "Speed", value: ship.speed.toString() },
+              { label: "Cargo", value: ship.cargoCapacity.toString() },
+            ],
+            { shipClass: ship.class },
+          );
+        }
       },
     });
 
     this.refreshTable();
 
-    // Buttons
-    const buttonY = HUD_TOP + 490;
+    // Buttons at bottom of content panel
+    const buttonY = absY + content.height - 40;
 
     new Button(this, {
-      x: 20,
+      x: absX,
       y: buttonY,
       width: 130,
       label: "Buy Ship",
@@ -140,7 +188,7 @@ export class FleetScene extends Phaser.Scene {
     });
 
     new Button(this, {
-      x: 170,
+      x: absX + 150,
       y: buttonY,
       width: 130,
       label: "Sell Ship",
@@ -148,7 +196,7 @@ export class FleetScene extends Phaser.Scene {
     });
 
     new Button(this, {
-      x: 320,
+      x: absX + 300,
       y: buttonY,
       width: 130,
       label: "Overhaul",
@@ -194,14 +242,14 @@ export class FleetScene extends Phaser.Scene {
     const state = gameStore.getState();
 
     const overlay = this.add
-      .rectangle(0, 0, 1280, 720, theme.colors.modalOverlay, 0.6)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
       .setOrigin(0, 0)
       .setInteractive();
 
     const panelW = 600;
     const panelH = 500;
-    const panelX = (1280 - panelW) / 2;
-    const panelY = (720 - panelH) / 2;
+    const panelX = (GAME_WIDTH - panelW) / 2;
+    const panelY = (GAME_HEIGHT - panelH) / 2;
 
     const buyPanel = new Panel(this, {
       x: panelX,

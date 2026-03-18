@@ -5,6 +5,7 @@ import { Label } from "../ui/Label.ts";
 import { Button } from "../ui/Button.ts";
 import { Panel } from "../ui/Panel.ts";
 import { DataTable } from "../ui/DataTable.ts";
+import { createStarfield } from "../ui/Starfield.ts";
 import { CargoType } from "../data/types.ts";
 import type { CargoType as CargoTypeT } from "../data/types.ts";
 import {
@@ -13,6 +14,12 @@ import {
   getHighScores,
 } from "../game/scoring/ScoreCalculator.ts";
 import { calculateShipValue } from "../game/fleet/FleetManager.ts";
+import {
+  GAME_WIDTH,
+  CONTENT_TOP,
+  CONTENT_HEIGHT,
+  FULL_CONTENT_LEFT,
+} from "../ui/Layout.ts";
 
 function formatCash(amount: number): string {
   const sign = amount < 0 ? "-" : "";
@@ -29,26 +36,28 @@ export class GameOverScene extends Phaser.Scene {
     const theme = getTheme();
     const state = gameStore.getState();
 
-    this.cameras.main.setBackgroundColor(theme.colors.background);
-
     // Stop the HUD scene since the game is over
     this.scene.stop("GameHUDScene");
 
+    // Starfield background
+    createStarfield(this);
+
     // -----------------------------------------------------------------------
-    // Win / Lose heading
+    // Win / Lose heading with glow
     // -----------------------------------------------------------------------
     const isVictory = state.gameOverReason === "completed";
     const headingText = isVictory ? "VICTORY!" : "BANKRUPTCY!";
     const headingColor = isVictory ? theme.colors.profit : theme.colors.loss;
 
     const heading = new Label(this, {
-      x: 640,
-      y: 40,
+      x: GAME_WIDTH / 2,
+      y: CONTENT_TOP + 10,
       text: headingText,
       style: "heading",
       color: headingColor,
+      glow: true,
     });
-    heading.setOrigin(0.5, 0);
+    heading.setOrigin(0.5, 0.5);
     heading.setFontSize(48);
 
     // Subtitle
@@ -56,8 +65,8 @@ export class GameOverScene extends Phaser.Scene {
       ? `Congratulations, ${state.companyName}! You survived all ${state.maxTurns} turns.`
       : `${state.companyName} has gone bankrupt after ${state.turn - 1} turns.`;
     const subtitle = new Label(this, {
-      x: 640,
-      y: 100,
+      x: GAME_WIDTH / 2,
+      y: CONTENT_TOP + 60,
       text: subtitleText,
       style: "body",
       color: theme.colors.text,
@@ -91,11 +100,13 @@ export class GameOverScene extends Phaser.Scene {
     const cargoBonus = totalCargoDelivered * 0.5;
     const routeBonus = state.activeRoutes.length * 500;
 
-    // Score breakdown panel
+    // -----------------------------------------------------------------------
+    // Score breakdown panel (left side, glass panel)
+    // -----------------------------------------------------------------------
     const scorePanel = new Panel(this, {
-      x: 80,
-      y: 140,
-      width: 500,
+      x: FULL_CONTENT_LEFT,
+      y: CONTENT_TOP + 90,
+      width: 520,
       height: 280,
       title: "Score Breakdown",
     });
@@ -190,23 +201,28 @@ export class GameOverScene extends Phaser.Scene {
     saveHighScore(state.companyName, finalScore, state.seed);
 
     // -----------------------------------------------------------------------
-    // High score table
+    // High score table (right side, glass panel)
     // -----------------------------------------------------------------------
+    const hsPanelX = FULL_CONTENT_LEFT + 540;
+    const hsPanelY = CONTENT_TOP + 90;
+    const hsPanelWidth = 520;
+    const hsPanelHeight = 280;
+
     new Panel(this, {
-      x: 620,
-      y: 140,
-      width: 580,
-      height: 280,
+      x: hsPanelX,
+      y: hsPanelY,
+      width: hsPanelWidth,
+      height: hsPanelHeight,
       title: "High Scores",
     });
 
     const highScores = getHighScores();
 
     const hsTable = new DataTable(this, {
-      x: 630,
-      y: 180,
-      width: 560,
-      height: 230,
+      x: hsPanelX + 10,
+      y: hsPanelY + 40,
+      width: hsPanelWidth - 20,
+      height: hsPanelHeight - 50,
       columns: [
         {
           key: "rank",
@@ -222,7 +238,7 @@ export class GameOverScene extends Phaser.Scene {
         {
           key: "score",
           label: "Score",
-          width: 160,
+          width: 140,
           align: "right",
           format: (v) => (v as number).toLocaleString(),
           colorFn: () => theme.colors.accent,
@@ -230,7 +246,7 @@ export class GameOverScene extends Phaser.Scene {
         {
           key: "seed",
           label: "Seed",
-          width: 120,
+          width: 110,
           align: "right",
         },
       ],
@@ -245,14 +261,14 @@ export class GameOverScene extends Phaser.Scene {
     hsTable.setRows(hsRows);
 
     // -----------------------------------------------------------------------
-    // Action buttons
+    // Action buttons — centered horizontally below panels
     // -----------------------------------------------------------------------
     const btnWidth = 180;
     const btnHeight = 48;
-    const btnY = 450;
+    const btnY = CONTENT_TOP + CONTENT_HEIGHT - 100;
 
     new Button(this, {
-      x: 640 - btnWidth - 20,
+      x: GAME_WIDTH / 2 - btnWidth - 20,
       y: btnY,
       width: btnWidth,
       height: btnHeight,
@@ -263,7 +279,7 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     new Button(this, {
-      x: 640 + 20,
+      x: GAME_WIDTH / 2 + 20,
       y: btnY,
       width: btnWidth,
       height: btnHeight,

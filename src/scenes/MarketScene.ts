@@ -6,8 +6,15 @@ import { BASE_CARGO_PRICES } from "../data/constants.ts";
 import { getTheme } from "../ui/Theme.ts";
 import { Label } from "../ui/Label.ts";
 import { DataTable } from "../ui/DataTable.ts";
-
-const HUD_TOP = 60;
+import { Panel } from "../ui/Panel.ts";
+import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import {
+  CONTENT_TOP,
+  CONTENT_HEIGHT,
+  SIDEBAR_LEFT,
+  MAIN_CONTENT_LEFT,
+  MAIN_CONTENT_WIDTH,
+} from "../ui/Layout.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -24,6 +31,8 @@ function trendArrow(trend: string): string {
 const CARGO_TYPE_VALUES = Object.values(CargoType) as CargoTypeValue[];
 
 export class MarketScene extends Phaser.Scene {
+  private portrait!: PortraitPanel;
+
   constructor() {
     super({ key: "MarketScene" });
   }
@@ -32,36 +41,60 @@ export class MarketScene extends Phaser.Scene {
     const theme = getTheme();
     const state = gameStore.getState();
 
-    // Title
-    new Label(this, {
-      x: 20,
-      y: HUD_TOP + 10,
-      text: "Galaxy Market Overview",
-      style: "heading",
-      color: theme.colors.accent,
+    // Sidebar portrait — selected planet
+    this.portrait = new PortraitPanel(this, {
+      x: SIDEBAR_LEFT,
+      y: CONTENT_TOP,
+    });
+    this.portrait.updatePortrait("planet", 0, "Select a Planet", [], {
+      planetType: "terran",
     });
 
-    // Fuel price display
+    // Content panel
+    const contentPanel = new Panel(this, {
+      x: MAIN_CONTENT_LEFT,
+      y: CONTENT_TOP,
+      width: MAIN_CONTENT_WIDTH,
+      height: CONTENT_HEIGHT,
+      title: "Market Overview",
+    });
+    const content = contentPanel.getContentArea();
+    const absX = MAIN_CONTENT_LEFT + content.x;
+    const absY = CONTENT_TOP + content.y;
+
+    // Fuel price display inside content panel
     const fuelTrendStr = trendArrow(state.market.fuelTrend);
     new Label(this, {
-      x: 800,
-      y: HUD_TOP + 10,
+      x: absX,
+      y: absY + 2,
       text: `Fuel Price: ${formatCash(state.market.fuelPrice)} ${fuelTrendStr}`,
       style: "value",
       color: theme.colors.accent,
     });
 
     // Build columns: Planet, Type, then one per cargo type
+    const planetColWidth = 100;
+    const typeColWidth = 80;
+    const cargoColWidth = Math.floor(
+      (content.width - planetColWidth - typeColWidth) /
+        CARGO_TYPE_VALUES.length,
+    );
+
     const columns = [
-      { key: "planet", label: "Planet", width: 140, sortable: true },
-      { key: "type", label: "Type", width: 110, sortable: true },
+      {
+        key: "planet",
+        label: "Planet",
+        width: planetColWidth,
+        sortable: true,
+      },
+      { key: "type", label: "Type", width: typeColWidth, sortable: true },
     ];
 
     for (const ct of CARGO_TYPE_VALUES) {
       columns.push({
         key: ct,
         label: ct.charAt(0).toUpperCase() + ct.slice(1),
-        width: Math.floor(990 / CARGO_TYPE_VALUES.length),
+        width: cargoColWidth,
         sortable: true,
       });
     }
@@ -92,11 +125,21 @@ export class MarketScene extends Phaser.Scene {
     });
 
     const table = new DataTable(this, {
-      x: 20,
-      y: HUD_TOP + 55,
-      width: 1240,
-      height: 520,
+      x: absX,
+      y: absY + 28,
+      width: content.width,
+      height: content.height - 32,
       columns: columnDefs,
+      onRowSelect: (_rowIndex, rowData) => {
+        const planetName = rowData["planet"] as string;
+        const currentState = gameStore.getState();
+        const planet = currentState.galaxy.planets.find(
+          (p) => p.name === planetName,
+        );
+        if (planet) {
+          this.portrait.showPlanet(planet);
+        }
+      },
     });
 
     // Build rows

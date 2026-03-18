@@ -5,6 +5,14 @@ import { SeededRNG } from "../utils/SeededRNG.ts";
 import { getTheme, colorToString } from "../ui/Theme.ts";
 import { Button } from "../ui/Button.ts";
 import { Label } from "../ui/Label.ts";
+import { Panel } from "../ui/Panel.ts";
+import { createStarfield } from "../ui/Starfield.ts";
+import type { GameHUDScene } from "./GameHUDScene.ts";
+import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  CONTENT_TOP,
+} from "../ui/Layout.ts";
 import type { GameState, TurnResult } from "../data/types.ts";
 
 function formatCash(amount: number): string {
@@ -25,8 +33,10 @@ export class SimPlaybackScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
-    this.cameras.main.setBackgroundColor(theme.colors.background);
     this.animationComplete = false;
+
+    // Starfield background (depth -100 by default)
+    createStarfield(this);
 
     // -----------------------------------------------------------------------
     // Step 1: Run simulation immediately — animation is purely cosmetic
@@ -56,8 +66,11 @@ export class SimPlaybackScene extends Phaser.Scene {
       systemLookup.set(sys.id, { x: sys.x, y: sys.y, color: sys.starColor });
     }
 
-    // Draw systems
+    // Draw systems with glow halos
     for (const sys of systems) {
+      // Glow halo behind the star dot
+      this.add.circle(sys.x, sys.y, 8, sys.starColor, 0.15);
+      // Star dot
       this.add.circle(sys.x, sys.y, 4, sys.starColor, 0.6);
       this.add
         .text(sys.x, sys.y + 8, sys.name, {
@@ -68,7 +81,7 @@ export class SimPlaybackScene extends Phaser.Scene {
         .setOrigin(0.5, 0);
     }
 
-    // Draw route lines and animate ships
+    // Draw route lines and animate ships with glow trails
     const routeGraphics = this.add.graphics();
     routeGraphics.lineStyle(1, theme.colors.accent, 0.3);
 
@@ -86,6 +99,29 @@ export class SimPlaybackScene extends Phaser.Scene {
       routeGraphics.lineTo(destSys.x, destSys.y);
       routeGraphics.strokePath();
 
+      // Trailing glow dots (behind the ship)
+      const trail1 = this.add.circle(
+        originSys.x,
+        originSys.y,
+        2,
+        theme.colors.accent,
+        0.5,
+      );
+      const trail2 = this.add.circle(
+        originSys.x,
+        originSys.y,
+        1.5,
+        theme.colors.accent,
+        0.3,
+      );
+      const trail3 = this.add.circle(
+        originSys.x,
+        originSys.y,
+        1,
+        theme.colors.accent,
+        0.1,
+      );
+
       // Animated ship dot traveling the route
       const shipDot = this.add.circle(
         originSys.x,
@@ -93,65 +129,105 @@ export class SimPlaybackScene extends Phaser.Scene {
         3,
         theme.colors.accent,
       );
+
+      const halfDuration = ANIM_DURATION / 2;
+
       this.tweens.add({
         targets: shipDot,
         x: destSys.x,
         y: destSys.y,
-        duration: ANIM_DURATION / 2,
+        duration: halfDuration,
         yoyo: true,
         repeat: -1,
         ease: "Sine.easeInOut",
       });
+
+      // Trail dots follow with small delays for trailing effect
+      this.tweens.add({
+        targets: trail1,
+        x: destSys.x,
+        y: destSys.y,
+        duration: halfDuration,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+        delay: 60,
+      });
+
+      this.tweens.add({
+        targets: trail2,
+        x: destSys.x,
+        y: destSys.y,
+        duration: halfDuration,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+        delay: 120,
+      });
+
+      this.tweens.add({
+        targets: trail3,
+        x: destSys.x,
+        y: destSys.y,
+        duration: halfDuration,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+        delay: 180,
+      });
     }
 
     // -----------------------------------------------------------------------
-    // Step 3: Revenue / Cost ticker (top-right)
+    // Step 3: Revenue / Cost ticker (top-right) — Panel component
     // -----------------------------------------------------------------------
-    const tickerX = 1070;
-    const tickerY = 70;
+    const tickerPanel = new Panel(this, {
+      x: GAME_WIDTH - 230,
+      y: CONTENT_TOP + 10,
+      width: 220,
+      height: 130,
+      showGlow: false,
+    });
+    const tc = tickerPanel.getContentArea();
 
-    this.add
-      .rectangle(
-        tickerX - 10,
-        tickerY - 10,
-        220,
-        110,
-        theme.colors.panelBg,
-        0.85,
-      )
-      .setOrigin(0, 0);
-
-    new Label(this, {
-      x: tickerX,
-      y: tickerY,
+    const tickerTitle = new Label(this, {
+      x: tc.x,
+      y: tc.y,
       text: "Turn Simulation",
       style: "caption",
       color: theme.colors.accent,
     });
+    this.children.remove(tickerTitle);
+    tickerPanel.add(tickerTitle);
 
     this.revenueLabel = new Label(this, {
-      x: tickerX,
-      y: tickerY + 22,
+      x: tc.x,
+      y: tc.y + 22,
       text: "Revenue: " + formatCash(0),
       style: "body",
       color: theme.colors.profit,
     });
+    this.children.remove(this.revenueLabel);
+    tickerPanel.add(this.revenueLabel);
 
     this.costsLabel = new Label(this, {
-      x: tickerX,
-      y: tickerY + 44,
+      x: tc.x,
+      y: tc.y + 44,
       text: "Costs: " + formatCash(0),
       style: "body",
       color: theme.colors.loss,
     });
+    this.children.remove(this.costsLabel);
+    tickerPanel.add(this.costsLabel);
 
     this.profitLabel = new Label(this, {
-      x: tickerX,
-      y: tickerY + 72,
+      x: tc.x,
+      y: tc.y + 66,
       text: "Profit: " + formatCash(0),
       style: "value",
       color: theme.colors.text,
     });
+    this.children.remove(this.profitLabel);
+    tickerPanel.add(this.profitLabel);
 
     // Drive the ticker with a tween on a dummy progress value
     const totalRevenue = this.turnResult.revenue;
@@ -201,13 +277,13 @@ export class SimPlaybackScene extends Phaser.Scene {
     }
 
     // -----------------------------------------------------------------------
-    // Step 5: Speed control buttons
+    // Step 5: Speed control buttons — centered horizontally
     // -----------------------------------------------------------------------
-    const btnY = 660;
+    const btnY = GAME_HEIGHT - 50;
     const btnWidth = 80;
-    const btnHeight = 36;
+    const btnHeight = 32;
     const totalBtnWidth = btnWidth * 4 + 30;
-    const startX = 640 - totalBtnWidth / 2;
+    const startX = GAME_WIDTH / 2 - totalBtnWidth / 2;
 
     new Button(this, {
       x: startX,
@@ -256,7 +332,7 @@ export class SimPlaybackScene extends Phaser.Scene {
   }
 
   // -------------------------------------------------------------------------
-  // Event popup slide-in
+  // Event popup slide-in — glass-styled panels
   // -------------------------------------------------------------------------
 
   private showEventPopup(
@@ -269,9 +345,11 @@ export class SimPlaybackScene extends Phaser.Scene {
 
     const container = this.add.container(1280, popupY);
 
+    // Glass-styled background rectangle using theme colors
     const bg = this.add
-      .rectangle(0, 0, 300, 55, theme.colors.panelBg, 0.9)
+      .rectangle(0, 0, 300, 55, theme.colors.panelBg, 0.85)
       .setOrigin(0, 0);
+    // Warning-colored accent left border bar
     const border = this.add
       .rectangle(0, 0, 4, 55, theme.colors.warning)
       .setOrigin(0, 0);
@@ -340,10 +418,11 @@ export class SimPlaybackScene extends Phaser.Scene {
     // Commit the simulated state to the store
     gameStore.setState(this.newState);
 
-    // Brief pause then transition to the turn report
+    // Brief pause then transition to the turn report via HUD
     this.time.timeScale = 1;
     this.time.delayedCall(500, () => {
-      this.scene.start("TurnReportScene");
+      const hud = this.scene.get("GameHUDScene") as GameHUDScene;
+      hud.switchContentScene("TurnReportScene");
     });
   }
 }
