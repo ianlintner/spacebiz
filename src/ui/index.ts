@@ -16,10 +16,22 @@ export {
   type ThemeConfig,
 } from "./Theme";
 export { createStarfield, type StarfieldConfig } from "./Starfield";
-export { drawPortrait, type PortraitType } from "./PortraitGenerator";
 export {
-  PortraitPanel,
-  type PortraitPanelConfig,
-  type PortraitStat,
-} from "./PortraitPanel";
+  drawPortrait,
+  drawTerranPortrait,
+  drawMiningPortrait,
+  drawAgriculturalPortrait,
+  drawIndustrialPortrait,
+  drawHubStationPortrait,
+  drawResortPortrait,
+  drawResearchPortrait,
+  drawShipPortrait,
+  drawSystemPortrait,
+  drawEventPortrait,
+  fillGradientV,
+  fillGradientH,
+  type PortraitType,
+  type PortraitData,
+} from "./PortraitGenerator";
+export { PortraitPanel, type PortraitPanelConfig } from "./PortraitPanel";
 export * from "./Layout";
