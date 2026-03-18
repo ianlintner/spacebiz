@@ -45,18 +45,18 @@ Replace opaque flat-filled panels with semi-transparent gradient panels:
 
 ### 2B. Portrait Types
 
-| Type | Content | Palette |
-|---|---|---|
-| Planet: Terran | Gradient sky + green/blue terrain bands + city silhouette | Blues, greens, white |
-| Planet: Mining | Dark gradient + rocky terrain + mining rig silhouettes + ore veins | Browns, oranges, red glow |
-| Planet: Agricultural | Warm gradient + rolling field bands + silo silhouettes | Greens, yellows, amber |
-| Planet: Industrial | Smoky gradient + factory silhouettes + smokestacks | Grays, steel blue, orange |
-| Planet: Hub Station | Space gradient + station ring geometry | Dark blue, white, accent |
-| Planet: Resort | Bright gradient + water bands + dome silhouettes | Turquoise, pink, golden |
-| Planet: Research | Dark gradient + dish/telescope silhouettes + data stream lines | Purple, cyan, white |
-| Ship | Space gradient + ship silhouette (varies by class) + engine glow | Dark space + class accent |
-| Star System | Black space + radial gradient star + orbiting planet dots | System star color |
-| Event | Category-themed: explosion for hazards, star for opportunities, chart for market | Category-dependent |
+| Type                 | Content                                                                          | Palette                   |
+| -------------------- | -------------------------------------------------------------------------------- | ------------------------- |
+| Planet: Terran       | Gradient sky + green/blue terrain bands + city silhouette                        | Blues, greens, white      |
+| Planet: Mining       | Dark gradient + rocky terrain + mining rig silhouettes + ore veins               | Browns, oranges, red glow |
+| Planet: Agricultural | Warm gradient + rolling field bands + silo silhouettes                           | Greens, yellows, amber    |
+| Planet: Industrial   | Smoky gradient + factory silhouettes + smokestacks                               | Grays, steel blue, orange |
+| Planet: Hub Station  | Space gradient + station ring geometry                                           | Dark blue, white, accent  |
+| Planet: Resort       | Bright gradient + water bands + dome silhouettes                                 | Turquoise, pink, golden   |
+| Planet: Research     | Dark gradient + dish/telescope silhouettes + data stream lines                   | Purple, cyan, white       |
+| Ship                 | Space gradient + ship silhouette (varies by class) + engine glow                 | Dark space + class accent |
+| Star System          | Black space + radial gradient star + orbiting planet dots                        | System star color         |
+| Event                | Category-themed: explosion for hazards, star for opportunities, chart for market | Category-dependent        |
 
 ### 2C. Design Principles
 
@@ -111,6 +111,7 @@ CONTENT_HEIGHT    = 612   (720 - HUD_TOP - HUD_BOTTOM)
 ### 3C. Starfield Background Component
 
 Shared utility `src/ui/Starfield.ts`:
+
 - Creates N small white dots at random positions, varying alpha (0.2–0.8) and size (1–3px)
 - Optional slow drift tween for subtle parallax
 - Sits at depth 0 behind everything
