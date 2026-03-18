@@ -13,14 +13,18 @@ import { Modal } from "../ui/Modal.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Panel } from "../ui/Panel.ts";
 import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { createStarfield } from "../ui/Starfield.ts";
+import { calculateShipValue } from "../game/fleet/FleetManager.ts";
 import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
   CONTENT_TOP,
   CONTENT_HEIGHT,
   SIDEBAR_LEFT,
+  SIDEBAR_WIDTH,
   MAIN_CONTENT_LEFT,
   MAIN_CONTENT_WIDTH,
 } from "../ui/Layout.ts";
-import { calculateShipValue } from "../game/fleet/FleetManager.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -38,9 +42,12 @@ export class FinanceScene extends Phaser.Scene {
   create(): void {
     this.selectedLoanId = null;
 
+    // Animated starfield background
+    createStarfield(this);
+
     const state = gameStore.getState();
 
-    // Sidebar portrait — company health gauge
+    // --- Left sidebar: Company health portrait ---
     const fleetValue = state.fleet.reduce(
       (sum, ship) => sum + calculateShipValue(ship),
       0,
@@ -54,39 +61,43 @@ export class FinanceScene extends Phaser.Scene {
     const portrait = new PortraitPanel(this, {
       x: SIDEBAR_LEFT,
       y: CONTENT_TOP,
+      width: SIDEBAR_WIDTH,
+      height: CONTENT_HEIGHT,
     });
     portrait.updatePortrait(
       "event",
-      0,
-      state.companyName,
+      state.turn,
+      "Company Health",
       [
         { label: "Cash", value: formatCash(state.cash) },
         { label: "Net Worth", value: formatCash(netWorth) },
         { label: "Fleet Value", value: formatCash(fleetValue) },
+        { label: "Loans", value: formatCash(totalLoans) },
       ],
       { eventCategory: "market" },
     );
 
-    // Content panel
-    const contentPanel = new Panel(this, {
+    // --- Main content panel with title ---
+    const mainPanel = new Panel(this, {
       x: MAIN_CONTENT_LEFT,
       y: CONTENT_TOP,
       width: MAIN_CONTENT_WIDTH,
       height: CONTENT_HEIGHT,
       title: "Finance",
     });
-    const content = contentPanel.getContentArea();
+
+    const contentArea = mainPanel.getContentArea();
 
     // Build tab contents
     const plContent = this.buildPLTab();
     const balanceContent = this.buildBalanceTab();
     const loansContent = this.buildLoansTab();
 
-    // Tab group inside content panel
+    // Tab group positioned inside the main content panel
     new TabGroup(this, {
-      x: MAIN_CONTENT_LEFT + content.x,
-      y: CONTENT_TOP + content.y,
-      width: content.width,
+      x: MAIN_CONTENT_LEFT + contentArea.x,
+      y: CONTENT_TOP + contentArea.y,
+      width: contentArea.width,
       tabs: [
         { label: "P&L", content: plContent },
         { label: "Balance", content: balanceContent },
@@ -275,11 +286,11 @@ export class FinanceScene extends Phaser.Scene {
     const container = this.add.container(0, 0);
     const state = gameStore.getState();
 
-    // Loans table
+    // Loans table — fits within main content area
     const loanTable = new DataTable(this, {
       x: 0,
       y: 20,
-      width: 800,
+      width: MAIN_CONTENT_WIDTH - 20,
       height: 280,
       columns: [
         {
@@ -359,14 +370,14 @@ export class FinanceScene extends Phaser.Scene {
       Math.random() * (LOAN_INTEREST_RATE_MAX - LOAN_INTEREST_RATE_MIN);
 
     const overlay = this.add
-      .rectangle(0, 0, 1280, 720, theme.colors.modalOverlay, 0.6)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
       .setOrigin(0, 0)
       .setInteractive();
 
     const panelW = 400;
     const panelH = 350;
-    const panelX = (1280 - panelW) / 2;
-    const panelY = (720 - panelH) / 2;
+    const panelX = (GAME_WIDTH - panelW) / 2;
+    const panelY = (GAME_HEIGHT - panelH) / 2;
 
     const loanPanel = new Panel(this, {
       x: panelX,

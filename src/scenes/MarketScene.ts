@@ -8,10 +8,12 @@ import { Label } from "../ui/Label.ts";
 import { DataTable } from "../ui/DataTable.ts";
 import { Panel } from "../ui/Panel.ts";
 import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { createStarfield } from "../ui/Starfield.ts";
 import {
   CONTENT_TOP,
   CONTENT_HEIGHT,
   SIDEBAR_LEFT,
+  SIDEBAR_WIDTH,
   MAIN_CONTENT_LEFT,
   MAIN_CONTENT_WIDTH,
 } from "../ui/Layout.ts";
@@ -41,22 +43,28 @@ export class MarketScene extends Phaser.Scene {
     const theme = getTheme();
     const state = gameStore.getState();
 
-    // Sidebar portrait — selected planet
+    // Animated starfield background
+    createStarfield(this);
+
+    // --- Left sidebar: Planet portrait (updates on row select) ---
     this.portrait = new PortraitPanel(this, {
       x: SIDEBAR_LEFT,
       y: CONTENT_TOP,
+      width: SIDEBAR_WIDTH,
+      height: CONTENT_HEIGHT,
     });
-    this.portrait.updatePortrait("planet", 0, "Select a Planet", [], {
+    // Default state: no planet selected
+    this.portrait.updatePortrait("planet", 0, "Galaxy Market", [], {
       planetType: "terran",
     });
 
-    // Content panel
+    // --- Main content panel ---
     const contentPanel = new Panel(this, {
       x: MAIN_CONTENT_LEFT,
       y: CONTENT_TOP,
       width: MAIN_CONTENT_WIDTH,
       height: CONTENT_HEIGHT,
-      title: "Market Overview",
+      title: "Galaxy Market Overview",
     });
     const content = contentPanel.getContentArea();
     const absX = MAIN_CONTENT_LEFT + content.x;
@@ -132,11 +140,29 @@ export class MarketScene extends Phaser.Scene {
       columns: columnDefs,
       onRowSelect: (_rowIndex, rowData) => {
         const planetName = rowData["planet"] as string;
+        const planetType = rowData["type"] as string;
         const currentState = gameStore.getState();
         const planet = currentState.galaxy.planets.find(
           (p) => p.name === planetName,
         );
         if (planet) {
+          // Build a cargo summary for the sidebar stats
+          const planetMarket = currentState.market.planetMarkets[planet.id];
+          const stats: Array<{ label: string; value: string }> = [
+            { label: "Type", value: planetType },
+          ];
+          if (planetMarket) {
+            // Show top cargo prices as summary
+            for (const ct of CARGO_TYPE_VALUES) {
+              const entry = planetMarket[ct];
+              if (entry) {
+                stats.push({
+                  label: ct.charAt(0).toUpperCase() + ct.slice(1),
+                  value: formatCash(entry.currentPrice),
+                });
+              }
+            }
+          }
           this.portrait.showPlanet(planet);
         }
       },

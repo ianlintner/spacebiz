@@ -9,10 +9,14 @@ import { Modal } from "../ui/Modal.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Panel } from "../ui/Panel.ts";
 import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { createStarfield } from "../ui/Starfield.ts";
 import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
   CONTENT_TOP,
   CONTENT_HEIGHT,
   SIDEBAR_LEFT,
+  SIDEBAR_WIDTH,
   MAIN_CONTENT_LEFT,
   MAIN_CONTENT_WIDTH,
 } from "../ui/Layout.ts";
@@ -43,10 +47,15 @@ export class RoutesScene extends Phaser.Scene {
   create(): void {
     this.selectedRouteId = null;
 
+    // Starfield background
+    createStarfield(this);
+
     // Sidebar portrait — destination planet of selected route
     this.portrait = new PortraitPanel(this, {
       x: SIDEBAR_LEFT,
       y: CONTENT_TOP,
+      width: SIDEBAR_WIDTH,
+      height: CONTENT_HEIGHT,
     });
     this.portrait.updatePortrait("planet", 0, "Select a Route", [], {
       planetType: "terran",
@@ -58,7 +67,7 @@ export class RoutesScene extends Phaser.Scene {
       y: CONTENT_TOP,
       width: MAIN_CONTENT_WIDTH,
       height: CONTENT_HEIGHT,
-      title: "Routes",
+      title: "Route Management",
     });
     const content = contentPanel.getContentArea();
     const absX = MAIN_CONTENT_LEFT + content.x;
@@ -262,14 +271,14 @@ export class RoutesScene extends Phaser.Scene {
 
     // Step 1: Pick origin
     const overlay = this.add
-      .rectangle(0, 0, 1280, 720, theme.colors.modalOverlay, 0.6)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
       .setOrigin(0, 0)
       .setInteractive();
 
     const panelW = 400;
     const panelH = 480;
-    const panelX = (1280 - panelW) / 2;
-    const panelY = (720 - panelH) / 2;
+    const panelX = (GAME_WIDTH - panelW) / 2;
+    const panelY = (GAME_HEIGHT - panelH) / 2;
 
     const originPanel = new Panel(this, {
       x: panelX,
@@ -321,14 +330,14 @@ export class RoutesScene extends Phaser.Scene {
     );
 
     const overlay = this.add
-      .rectangle(0, 0, 1280, 720, theme.colors.modalOverlay, 0.6)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
       .setOrigin(0, 0)
       .setInteractive();
 
     const panelW = 400;
     const panelH = 480;
-    const panelX = (1280 - panelW) / 2;
-    const panelY = (720 - panelH) / 2;
+    const panelX = (GAME_WIDTH - panelW) / 2;
+    const panelY = (GAME_HEIGHT - panelH) / 2;
 
     const destPanel = new Panel(this, {
       x: panelX,
@@ -377,14 +386,14 @@ export class RoutesScene extends Phaser.Scene {
     const cargoTypes = Object.values(CargoType) as CargoTypeValue[];
 
     const overlay = this.add
-      .rectangle(0, 0, 1280, 720, theme.colors.modalOverlay, 0.6)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
       .setOrigin(0, 0)
       .setInteractive();
 
     const panelW = 350;
     const panelH = 420;
-    const panelX = (1280 - panelW) / 2;
-    const panelY = (720 - panelH) / 2;
+    const panelX = (GAME_WIDTH - panelW) / 2;
+    const panelY = (GAME_HEIGHT - panelH) / 2;
 
     const cargoPanel = new Panel(this, {
       x: panelX,
@@ -520,14 +529,14 @@ export class RoutesScene extends Phaser.Scene {
     }
 
     const overlay = this.add
-      .rectangle(0, 0, 1280, 720, theme.colors.modalOverlay, 0.6)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
       .setOrigin(0, 0)
       .setInteractive();
 
     const panelW = 450;
     const panelH = 400;
-    const panelX = (1280 - panelW) / 2;
-    const panelY = (720 - panelH) / 2;
+    const panelX = (GAME_WIDTH - panelW) / 2;
+    const panelY = (GAME_HEIGHT - panelH) / 2;
 
     const shipPanel = new Panel(this, {
       x: panelX,
@@ -621,14 +630,14 @@ export class RoutesScene extends Phaser.Scene {
     const routeId = this.selectedRouteId;
 
     const overlay = this.add
-      .rectangle(0, 0, 1280, 720, theme.colors.modalOverlay, 0.6)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
       .setOrigin(0, 0)
       .setInteractive();
 
     const panelW = 350;
     const panelH = 400;
-    const panelX = (1280 - panelW) / 2;
-    const panelY = (720 - panelH) / 2;
+    const panelX = (GAME_WIDTH - panelW) / 2;
+    const panelY = (GAME_HEIGHT - panelH) / 2;
 
     const cargoPanel = new Panel(this, {
       x: panelX,
