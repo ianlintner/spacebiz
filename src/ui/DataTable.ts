@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { getTheme, colorToString } from "./Theme";
+import { getTheme, colorToString } from "./Theme.ts";
 
 export interface ColumnDef {
   key: string;
@@ -32,6 +32,8 @@ export class DataTable extends Phaser.GameObjects.Container {
   private headerHeight = 36;
   private sortKey: string | null = null;
   private sortAsc = true;
+  private selectedRowIndex = -1;
+  private selectedRowIndicator: Phaser.GameObjects.Rectangle | null = null;
 
   constructor(scene: Phaser.Scene, config: DataTableConfig) {
     super(scene, config.x, config.y);
@@ -93,6 +95,19 @@ export class DataTable extends Phaser.GameObjects.Container {
       .setOrigin(0, 0);
     this.headerContainer.add(bg);
 
+    // Accent-colored bottom border line under header
+    const headerBorderLine = this.scene.add
+      .rectangle(
+        0,
+        this.headerHeight - 1,
+        this.tableConfig.width,
+        1,
+        theme.colors.accent,
+      )
+      .setOrigin(0, 0)
+      .setAlpha(0.4);
+    this.headerContainer.add(headerBorderLine);
+
     let x = 0;
     for (const col of this.columns) {
       const text = this.scene.add.text(x + 8, 8, col.label, {
@@ -126,6 +141,8 @@ export class DataTable extends Phaser.GameObjects.Container {
   setRows(rows: Record<string, unknown>[]): void {
     this.rows = [...rows];
     this.scrollY = 0;
+    this.selectedRowIndex = -1;
+    this.selectedRowIndicator = null;
     this.renderBody();
   }
 
@@ -133,6 +150,7 @@ export class DataTable extends Phaser.GameObjects.Container {
     const theme = getTheme();
     this.bodyContainer.removeAll(true);
     this.bodyContainer.y = this.headerHeight;
+    this.selectedRowIndicator = null;
 
     const sortedRows = [...this.rows];
     if (this.sortKey) {
@@ -158,11 +176,13 @@ export class DataTable extends Phaser.GameObjects.Container {
       const rowBg = this.scene.add
         .rectangle(0, y, this.tableConfig.width, this.rowHeight, bgColor)
         .setOrigin(0, 0)
+        .setAlpha(0.85)
         .setInteractive({ useHandCursor: true });
 
       rowBg.on("pointerover", () => rowBg.setFillStyle(theme.colors.rowHover));
       rowBg.on("pointerout", () => rowBg.setFillStyle(bgColor));
       rowBg.on("pointerup", () => {
+        this.selectRow(i, y);
         this.tableConfig.onRowSelect?.(i, row);
       });
 
@@ -196,5 +216,28 @@ export class DataTable extends Phaser.GameObjects.Container {
       sortedRows.length * this.rowHeight -
         (this.tableConfig.height - this.headerHeight),
     );
+  }
+
+  private selectRow(rowIndex: number, rowY: number): void {
+    const theme = getTheme();
+
+    // Remove previous indicator
+    if (this.selectedRowIndicator) {
+      this.selectedRowIndicator.destroy();
+      this.selectedRowIndicator = null;
+    }
+
+    this.selectedRowIndex = rowIndex;
+
+    // Draw a 3px wide accent-colored rectangle on the left edge of the selected row
+    this.selectedRowIndicator = this.scene.add
+      .rectangle(0, rowY, 3, this.rowHeight, theme.colors.accent)
+      .setOrigin(0, 0)
+      .setAlpha(0.8);
+    this.bodyContainer.add(this.selectedRowIndicator);
+  }
+
+  getSelectedRowIndex(): number {
+    return this.selectedRowIndex;
   }
 }

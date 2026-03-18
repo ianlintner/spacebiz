@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { getTheme, colorToString } from "./Theme";
+import { getTheme, colorToString } from "./Theme.ts";
 
 export interface PanelConfig {
   x: number;
@@ -8,10 +8,12 @@ export interface PanelConfig {
   height: number;
   title?: string;
   draggable?: boolean;
+  showGlow?: boolean;
 }
 
 export class Panel extends Phaser.GameObjects.Container {
   protected bg: Phaser.GameObjects.NineSlice;
+  protected glowLayer: Phaser.GameObjects.NineSlice | null = null;
   protected titleBar: Phaser.GameObjects.Container | null = null;
   protected contentY: number;
   protected panelWidth: number;
@@ -22,6 +24,29 @@ export class Panel extends Phaser.GameObjects.Container {
     const theme = getTheme();
     this.panelWidth = config.width;
     this.panelHeight = config.height;
+
+    const showGlow = config.showGlow ?? true;
+
+    // Glow layer (rendered behind the background)
+    if (showGlow) {
+      const glowW = theme.glow.width;
+      this.glowLayer = scene.add
+        .nineslice(
+          -glowW,
+          -glowW,
+          "panel-glow",
+          undefined,
+          config.width + glowW * 2,
+          config.height + glowW * 2,
+          10,
+          10,
+          10,
+          10,
+        )
+        .setOrigin(0, 0)
+        .setAlpha(theme.glow.alpha);
+      this.add(this.glowLayer);
+    }
 
     // Background
     this.bg = scene.add
@@ -54,6 +79,18 @@ export class Panel extends Phaser.GameObjects.Container {
         )
         .setOrigin(0, 0);
 
+      // 1px accent-colored line at the bottom of the title bar
+      const titleAccentLine = scene.add
+        .rectangle(
+          0,
+          theme.panel.titleHeight - 1,
+          config.width,
+          1,
+          theme.colors.accent,
+        )
+        .setOrigin(0, 0)
+        .setAlpha(0.5);
+
       const titleText = scene.add.text(
         theme.spacing.md,
         theme.spacing.sm,
@@ -65,7 +102,11 @@ export class Panel extends Phaser.GameObjects.Container {
         },
       );
 
-      this.titleBar = scene.add.container(0, 0, [titleBg, titleText]);
+      this.titleBar = scene.add.container(0, 0, [
+        titleBg,
+        titleAccentLine,
+        titleText,
+      ]);
       this.add(this.titleBar);
       this.contentY = theme.panel.titleHeight + theme.spacing.sm;
     }
@@ -101,5 +142,18 @@ export class Panel extends Phaser.GameObjects.Container {
       width: this.panelWidth - theme.spacing.sm * 2,
       height: this.panelHeight - this.contentY - theme.spacing.sm,
     };
+  }
+
+  setActive(active: boolean): this {
+    super.setActive(active);
+    if (!this.glowLayer) return this;
+    const theme = getTheme();
+    this.scene.tweens.add({
+      targets: this.glowLayer,
+      alpha: active ? theme.glow.activeAlpha : theme.glow.alpha,
+      duration: 300,
+      ease: "Power2",
+    });
+    return this;
   }
 }

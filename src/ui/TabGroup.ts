@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { getTheme, colorToString } from "./Theme";
+import { getTheme, colorToString } from "./Theme.ts";
 
 export interface TabConfig {
   label: string;
@@ -48,6 +48,7 @@ export class TabGroup extends Phaser.GameObjects.Container {
           isActive ? theme.colors.panelBg : theme.colors.headerBg,
         )
         .setOrigin(0, 0)
+        .setAlpha(isActive ? 1.0 : 0.6)
         .setInteractive({ useHandCursor: true });
 
       const labelText = scene.add
@@ -60,18 +61,30 @@ export class TabGroup extends Phaser.GameObjects.Container {
         })
         .setOrigin(0.5);
 
-      // Active indicator line at bottom
+      // Glow behind the active indicator (wider, lower alpha)
+      const indicatorGlow = scene.add
+        .rectangle(
+          0,
+          this.tabHeight - 3,
+          tabWidth,
+          3,
+          isActive ? theme.colors.accent : theme.colors.panelBorder,
+        )
+        .setOrigin(0, 0)
+        .setAlpha(isActive ? 0.2 : 0);
+
+      // Active indicator line at bottom (now 3px)
       const indicator = scene.add
         .rectangle(
           0,
-          this.tabHeight - 2,
+          this.tabHeight - 3,
           tabWidth,
-          2,
+          3,
           isActive ? theme.colors.accent : theme.colors.panelBorder,
         )
         .setOrigin(0, 0);
 
-      tabBtn.add([bg, labelText, indicator]);
+      tabBtn.add([bg, labelText, indicatorGlow, indicator]);
 
       bg.on("pointerover", () => {
         if (index !== this.activeIndex) {
@@ -79,11 +92,11 @@ export class TabGroup extends Phaser.GameObjects.Container {
         }
       });
       bg.on("pointerout", () => {
+        const active = index === this.activeIndex;
         bg.setFillStyle(
-          index === this.activeIndex
-            ? theme.colors.panelBg
-            : theme.colors.headerBg,
+          active ? theme.colors.panelBg : theme.colors.headerBg,
         );
+        bg.setAlpha(active ? 1.0 : 0.6);
       });
       bg.on("pointerup", () => {
         this.setActiveTab(index);
@@ -122,6 +135,7 @@ export class TabGroup extends Phaser.GameObjects.Container {
     // bg is index 0
     const bg = children[0] as Phaser.GameObjects.Rectangle;
     bg.setFillStyle(active ? theme.colors.panelBg : theme.colors.headerBg);
+    bg.setAlpha(active ? 1.0 : 0.6);
 
     // label is index 1
     const label = children[1] as Phaser.GameObjects.Text;
@@ -129,8 +143,15 @@ export class TabGroup extends Phaser.GameObjects.Container {
       colorToString(active ? theme.colors.accent : theme.colors.textDim),
     );
 
-    // indicator is index 2
-    const indicator = children[2] as Phaser.GameObjects.Rectangle;
+    // indicatorGlow is index 2
+    const indicatorGlow = children[2] as Phaser.GameObjects.Rectangle;
+    indicatorGlow.setFillStyle(
+      active ? theme.colors.accent : theme.colors.panelBorder,
+    );
+    indicatorGlow.setAlpha(active ? 0.2 : 0);
+
+    // indicator is index 3
+    const indicator = children[3] as Phaser.GameObjects.Rectangle;
     indicator.setFillStyle(
       active ? theme.colors.accent : theme.colors.panelBorder,
     );

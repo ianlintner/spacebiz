@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { getTheme, colorToString } from "./Theme";
+import { getTheme, colorToString } from "./Theme.ts";
 
 export interface ModalConfig {
   title: string;
@@ -65,6 +65,19 @@ export class Modal extends Phaser.GameObjects.Container {
       )
       .setOrigin(0, 0);
     this.panel.add(titleBg);
+
+    // 1px accent line at the bottom of the title bar
+    const titleAccentLine = scene.add
+      .rectangle(
+        0,
+        theme.panel.titleHeight - 1,
+        modalWidth,
+        1,
+        theme.colors.accent,
+      )
+      .setOrigin(0, 0)
+      .setAlpha(0.5);
+    this.panel.add(titleAccentLine);
 
     const titleText = scene.add.text(
       theme.spacing.md,

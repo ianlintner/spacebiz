@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { getTheme, colorToString } from "./Theme";
+import { getTheme, colorToString } from "./Theme.ts";
 
 export interface ProgressBarConfig {
   x: number;
@@ -19,6 +19,7 @@ export class ProgressBar extends Phaser.GameObjects.Container {
   private bg: Phaser.GameObjects.Rectangle;
   private fill: Phaser.GameObjects.Rectangle;
   private border: Phaser.GameObjects.Rectangle;
+  private outerGlow: Phaser.GameObjects.Rectangle;
   private label: Phaser.GameObjects.Text | null = null;
   private currentValue: number;
   private maxValue: number;
@@ -39,6 +40,19 @@ export class ProgressBar extends Phaser.GameObjects.Container {
     const borderColor = config.borderColor ?? theme.colors.panelBorder;
     const bgColor = config.bgColor ?? theme.colors.panelBg;
     const bw = theme.panel.borderWidth;
+
+    // Outer glow (behind the border, offset by -2px on each side)
+    this.outerGlow = scene.add
+      .rectangle(
+        -2,
+        -2,
+        config.width + 4,
+        config.height + 4,
+        theme.colors.accent,
+      )
+      .setOrigin(0, 0)
+      .setAlpha(0.15);
+    this.add(this.outerGlow);
 
     // Border
     this.border = scene.add

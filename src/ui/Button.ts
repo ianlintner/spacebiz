@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { getTheme, colorToString } from "./Theme";
+import { getTheme, colorToString } from "./Theme.ts";
 
 export interface ButtonConfig {
   x: number;
@@ -14,6 +14,7 @@ export interface ButtonConfig {
 export class Button extends Phaser.GameObjects.Container {
   private bg: Phaser.GameObjects.NineSlice;
   private label: Phaser.GameObjects.Text;
+  private accentLine: Phaser.GameObjects.Rectangle;
   private isDisabled: boolean;
   private onClickFn: () => void;
 
@@ -41,7 +42,13 @@ export class Button extends Phaser.GameObjects.Container {
       })
       .setOrigin(0.5);
 
-    this.add([this.bg, this.label]);
+    // Bottom accent line
+    this.accentLine = scene.add
+      .rectangle(2, height - 1, width - 4, 1, theme.colors.accent)
+      .setOrigin(0, 0)
+      .setAlpha(this.isDisabled ? 0.15 : 0.4);
+
+    this.add([this.bg, this.accentLine, this.label]);
 
     if (!this.isDisabled) {
       this.setupInteractive();
@@ -52,8 +59,24 @@ export class Button extends Phaser.GameObjects.Container {
 
   private setupInteractive(): void {
     this.bg.setInteractive({ useHandCursor: true });
-    this.bg.on("pointerover", () => this.setTexture("btn-hover"));
-    this.bg.on("pointerout", () => this.setTexture("btn-normal"));
+    this.bg.on("pointerover", () => {
+      this.setTexture("btn-hover");
+      this.scene.tweens.add({
+        targets: this.accentLine,
+        alpha: 0.8,
+        duration: 150,
+        ease: "Power2",
+      });
+    });
+    this.bg.on("pointerout", () => {
+      this.setTexture("btn-normal");
+      this.scene.tweens.add({
+        targets: this.accentLine,
+        alpha: 0.4,
+        duration: 150,
+        ease: "Power2",
+      });
+    });
     this.bg.on("pointerdown", () => this.setTexture("btn-pressed"));
     this.bg.on("pointerup", () => {
       this.setTexture("btn-hover");
@@ -72,10 +95,12 @@ export class Button extends Phaser.GameObjects.Container {
       this.bg.setTexture("btn-disabled");
       this.bg.removeInteractive();
       this.label.setColor(colorToString(theme.colors.textDim));
+      this.accentLine.setAlpha(0.15);
     } else {
       this.bg.setTexture("btn-normal");
       this.setupInteractive();
       this.label.setColor(colorToString(theme.colors.text));
+      this.accentLine.setAlpha(0.4);
     }
   }
 
