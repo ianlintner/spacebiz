@@ -1,0 +1,337 @@
+import { describe, it, expect } from "vitest";
+import {
+  calculateDistance,
+  calculateTripsPerTurn,
+  createRoute,
+  assignShipToRoute,
+  unassignShip,
+  deleteRoute,
+  estimateRouteRevenue,
+  estimateRouteFuelCost,
+} from "../RouteManager.ts";
+import { CargoType, PlanetType } from "../../../data/types.ts";
+import type {
+  Planet,
+  StarSystem,
+  Ship,
+  ActiveRoute,
+  MarketState,
+  CargoMarketEntry,
+  PlanetMarket,
+  CargoType as CargoTypeT,
+} from "../../../data/types.ts";
+import { BASE_FUEL_PRICE } from "../../../data/constants.ts";
+// TURN_DURATION and BASE_CARGO_PRICES used internally by RouteManager
+
+const ALL_CARGO_TYPES: CargoTypeT[] = Object.values(CargoType);
+
+function makePlanet(overrides: Partial<Planet> = {}): Planet {
+  return {
+    id: "planet-1",
+    name: "Test Planet",
+    systemId: "system-1",
+    type: PlanetType.Terran,
+    x: 0,
+    y: 0,
+    population: 1000000,
+    ...overrides,
+  };
+}
+
+function makeSystem(overrides: Partial<StarSystem> = {}): StarSystem {
+  return {
+    id: "system-1",
+    name: "Test System",
+    sectorId: "sector-1",
+    x: 0,
+    y: 0,
+    starColor: 0xffffff,
+    ...overrides,
+  };
+}
+
+function makeShip(overrides: Partial<Ship> = {}): Ship {
+  return {
+    id: "ship-1",
+    name: "Test Ship",
+    class: "cargoShuttle" as Ship["class"],
+    cargoCapacity: 80,
+    passengerCapacity: 0,
+    speed: 4,
+    fuelEfficiency: 0.8,
+    reliability: 92,
+    age: 0,
+    condition: 100,
+    purchaseCost: 40000,
+    maintenanceCost: 2000,
+    assignedRouteId: null,
+    ...overrides,
+  };
+}
+
+function makeRoute(overrides: Partial<ActiveRoute> = {}): ActiveRoute {
+  return {
+    id: "route-1",
+    originPlanetId: "planet-1",
+    destinationPlanetId: "planet-2",
+    distance: 10,
+    assignedShipIds: [],
+    cargoType: CargoType.Food,
+    ...overrides,
+  };
+}
+
+function makeMarketEntry(overrides: Partial<CargoMarketEntry> = {}): CargoMarketEntry {
+  return {
+    baseSupply: 30,
+    baseDemand: 80,
+    currentPrice: 40,
+    saturation: 0,
+    trend: "stable",
+    trendMomentum: 0,
+    eventModifier: 1.0,
+    ...overrides,
+  };
+}
+
+function makePlanetMarket(
+  overrides: Partial<Record<CargoTypeT, Partial<CargoMarketEntry>>> = {},
+): PlanetMarket {
+  const market: Partial<PlanetMarket> = {};
+  for (const ct of ALL_CARGO_TYPES) {
+    market[ct] = makeMarketEntry(overrides[ct] || {});
+  }
+  return market as PlanetMarket;
+}
+
+function makeMarketState(overrides: Partial<MarketState> = {}): MarketState {
+  return {
+    fuelPrice: BASE_FUEL_PRICE,
+    fuelTrend: "stable",
+    planetMarkets: {
+      "planet-1": makePlanetMarket(),
+      "planet-2": makePlanetMarket({
+        [CargoType.Food]: { currentPrice: 50, baseDemand: 80, baseSupply: 20 },
+      }),
+    },
+    ...overrides,
+  };
+}
+
+describe("RouteManager", () => {
+  describe("calculateDistance", () => {
+    it("same system planets use planet positions (short distance)", () => {
+      const planet1 = makePlanet({ id: "p1", systemId: "sys-1", x: 0, y: 0 });
+      const planet2 = makePlanet({ id: "p2", systemId: "sys-1", x: 3, y: 4 });
+      const systems = [makeSystem({ id: "sys-1", x: 100, y: 200 })];
+
+      const dist = calculateDistance(planet1, planet2, systems);
+
+      // Same system: use planet coords -> sqrt(9 + 16) = 5
+      expect(dist).toBeCloseTo(5, 1);
+    });
+
+    it("different system planets use system positions (long distance)", () => {
+      const planet1 = makePlanet({ id: "p1", systemId: "sys-1", x: 0, y: 0 });
+      const planet2 = makePlanet({ id: "p2", systemId: "sys-2", x: 0, y: 0 });
+      const systems = [
+        makeSystem({ id: "sys-1", x: 0, y: 0 }),
+        makeSystem({ id: "sys-2", x: 30, y: 40 }),
+      ];
+
+      const dist = calculateDistance(planet1, planet2, systems);
+
+      // Different system: use system coords -> sqrt(900 + 1600) = 50
+      expect(dist).toBeCloseTo(50, 1);
+    });
+
+    it("different system distance is much longer than same system", () => {
+      const planet1 = makePlanet({ id: "p1", systemId: "sys-1", x: 1, y: 1 });
+      const planet2Same = makePlanet({ id: "p2", systemId: "sys-1", x: 4, y: 5 });
+      const planet2Diff = makePlanet({ id: "p3", systemId: "sys-2", x: 1, y: 1 });
+      const systems = [
+        makeSystem({ id: "sys-1", x: 0, y: 0 }),
+        makeSystem({ id: "sys-2", x: 100, y: 100 }),
+      ];
+
+      const sameDist = calculateDistance(planet1, planet2Same, systems);
+      const diffDist = calculateDistance(planet1, planet2Diff, systems);
+
+      expect(diffDist).toBeGreaterThan(sameDist * 5);
+    });
+  });
+
+  describe("calculateTripsPerTurn", () => {
+    it("returns floor of TURN_DURATION / (distance * 2 / speed)", () => {
+      // TURN_DURATION = 100, distance = 10, speed = 4
+      // roundTrip = 10 * 2 / 4 = 5
+      // trips = floor(100 / 5) = 20
+      const trips = calculateTripsPerTurn(10, 4);
+      expect(trips).toBe(20);
+    });
+
+    it("faster ships make more trips", () => {
+      const slowTrips = calculateTripsPerTurn(10, 2);
+      const fastTrips = calculateTripsPerTurn(10, 8);
+
+      expect(fastTrips).toBeGreaterThan(slowTrips);
+    });
+
+    it("returns minimum of 1 trip", () => {
+      // Very long distance, slow ship
+      const trips = calculateTripsPerTurn(10000, 1);
+      expect(trips).toBe(1);
+    });
+  });
+
+  describe("createRoute", () => {
+    it("creates a route with correct properties", () => {
+      const route = createRoute("planet-1", "planet-2", 15.5, CargoType.Food);
+
+      expect(route.originPlanetId).toBe("planet-1");
+      expect(route.destinationPlanetId).toBe("planet-2");
+      expect(route.distance).toBe(15.5);
+      expect(route.cargoType).toBe(CargoType.Food);
+      expect(route.assignedShipIds).toEqual([]);
+      expect(route.id).toBeTruthy();
+    });
+
+    it("can create route with null cargo type", () => {
+      const route = createRoute("planet-1", "planet-2", 10, null);
+      expect(route.cargoType).toBeNull();
+    });
+  });
+
+  describe("assignShipToRoute", () => {
+    it("assigns ship to route and updates both fleet and routes", () => {
+      const ship = makeShip({ id: "ship-1", assignedRouteId: null });
+      const route = makeRoute({ id: "route-1", assignedShipIds: [] });
+      const fleet = [ship];
+      const routes = [route];
+
+      const result = assignShipToRoute("ship-1", "route-1", fleet, routes);
+
+      const updatedShip = result.fleet.find((s) => s.id === "ship-1");
+      const updatedRoute = result.routes.find((r) => r.id === "route-1");
+
+      expect(updatedShip!.assignedRouteId).toBe("route-1");
+      expect(updatedRoute!.assignedShipIds).toContain("ship-1");
+    });
+  });
+
+  describe("unassignShip", () => {
+    it("unassigns ship from its route", () => {
+      const ship = makeShip({ id: "ship-1", assignedRouteId: "route-1" });
+      const route = makeRoute({ id: "route-1", assignedShipIds: ["ship-1"] });
+      const fleet = [ship];
+      const routes = [route];
+
+      const result = unassignShip("ship-1", fleet, routes);
+
+      const updatedShip = result.fleet.find((s) => s.id === "ship-1");
+      const updatedRoute = result.routes.find((r) => r.id === "route-1");
+
+      expect(updatedShip!.assignedRouteId).toBeNull();
+      expect(updatedRoute!.assignedShipIds).not.toContain("ship-1");
+    });
+
+    it("handles ship with no assigned route gracefully", () => {
+      const ship = makeShip({ id: "ship-1", assignedRouteId: null });
+      const fleet = [ship];
+      const routes: ActiveRoute[] = [];
+
+      const result = unassignShip("ship-1", fleet, routes);
+      expect(result.fleet[0].assignedRouteId).toBeNull();
+    });
+  });
+
+  describe("deleteRoute", () => {
+    it("deletes route and unassigns all ships", () => {
+      const ship1 = makeShip({ id: "ship-1", assignedRouteId: "route-1" });
+      const ship2 = makeShip({ id: "ship-2", assignedRouteId: "route-1" });
+      const route = makeRoute({
+        id: "route-1",
+        assignedShipIds: ["ship-1", "ship-2"],
+      });
+      const fleet = [ship1, ship2];
+      const routes = [route];
+
+      const result = deleteRoute("route-1", fleet, routes);
+
+      expect(result.routes).toHaveLength(0);
+      expect(result.fleet[0].assignedRouteId).toBeNull();
+      expect(result.fleet[1].assignedRouteId).toBeNull();
+    });
+
+    it("does not affect other routes", () => {
+      const ship1 = makeShip({ id: "ship-1", assignedRouteId: "route-1" });
+      const ship2 = makeShip({ id: "ship-2", assignedRouteId: "route-2" });
+      const route1 = makeRoute({ id: "route-1", assignedShipIds: ["ship-1"] });
+      const route2 = makeRoute({ id: "route-2", assignedShipIds: ["ship-2"] });
+      const fleet = [ship1, ship2];
+      const routes = [route1, route2];
+
+      const result = deleteRoute("route-1", fleet, routes);
+
+      expect(result.routes).toHaveLength(1);
+      expect(result.routes[0].id).toBe("route-2");
+      expect(result.fleet.find((s) => s.id === "ship-2")!.assignedRouteId).toBe("route-2");
+    });
+  });
+
+  describe("estimateRouteRevenue", () => {
+    it("is positive for demanded goods", () => {
+      const route = makeRoute({
+        cargoType: CargoType.Food,
+        distance: 10,
+      });
+      const ship = makeShip({ speed: 4, cargoCapacity: 80 });
+      const market = makeMarketState();
+
+      const revenue = estimateRouteRevenue(route, ship, market);
+      expect(revenue).toBeGreaterThan(0);
+    });
+
+    it("returns 0 when no cargo type is set", () => {
+      const route = makeRoute({ cargoType: null, distance: 10 });
+      const ship = makeShip();
+      const market = makeMarketState();
+
+      const revenue = estimateRouteRevenue(route, ship, market);
+      expect(revenue).toBe(0);
+    });
+
+    it("higher capacity ships earn more revenue", () => {
+      const route = makeRoute({ cargoType: CargoType.Food, distance: 10 });
+      const smallShip = makeShip({ cargoCapacity: 30, speed: 4 });
+      const bigShip = makeShip({ cargoCapacity: 300, speed: 4 });
+      const market = makeMarketState();
+
+      const smallRev = estimateRouteRevenue(route, smallShip, market);
+      const bigRev = estimateRouteRevenue(route, bigShip, market);
+
+      expect(bigRev).toBeGreaterThan(smallRev);
+    });
+  });
+
+  describe("estimateRouteFuelCost", () => {
+    it("returns positive fuel cost", () => {
+      const route = makeRoute({ distance: 10 });
+      const ship = makeShip({ fuelEfficiency: 0.8, speed: 4 });
+
+      const cost = estimateRouteFuelCost(route, ship, BASE_FUEL_PRICE);
+      expect(cost).toBeGreaterThan(0);
+    });
+
+    it("more fuel-efficient ships cost less per trip but less efficient ships cost more", () => {
+      const route = makeRoute({ distance: 10 });
+      const efficientShip = makeShip({ fuelEfficiency: 0.5, speed: 4 });
+      const inefficientShip = makeShip({ fuelEfficiency: 2.0, speed: 4 });
+
+      const efficientCost = estimateRouteFuelCost(route, efficientShip, BASE_FUEL_PRICE);
+      const inefficientCost = estimateRouteFuelCost(route, inefficientShip, BASE_FUEL_PRICE);
+
+      expect(inefficientCost).toBeGreaterThan(efficientCost);
+    });
+  });
+});
