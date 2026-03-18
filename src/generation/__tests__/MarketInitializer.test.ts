@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { initializeMarkets } from "../MarketInitializer.ts";
 import { generateGalaxy } from "../GalaxyGenerator.ts";
 import { SeededRNG } from "../../utils/SeededRNG.ts";
-import { CargoType, PlanetType } from "../../data/types.ts";
+import { CargoType } from "../../data/types.ts";
 import type { CargoType as CargoTypeT } from "../../data/types.ts";
 import { PLANET_CARGO_PROFILES } from "../../data/constants.ts";
 

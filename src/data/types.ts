@@ -1,45 +1,45 @@
-export type GamePhase = 'planning' | 'simulation' | 'review';
-export type Trend = 'rising' | 'stable' | 'falling';
+export type GamePhase = "planning" | "simulation" | "review";
+export type Trend = "rising" | "stable" | "falling";
 
 export const CargoType = {
-  Passengers: 'passengers',
-  RawMaterials: 'rawMaterials',
-  Food: 'food',
-  Technology: 'technology',
-  Luxury: 'luxury',
-  Hazmat: 'hazmat',
-  Medical: 'medical',
+  Passengers: "passengers",
+  RawMaterials: "rawMaterials",
+  Food: "food",
+  Technology: "technology",
+  Luxury: "luxury",
+  Hazmat: "hazmat",
+  Medical: "medical",
 } as const;
 export type CargoType = (typeof CargoType)[keyof typeof CargoType];
 
 export const PlanetType = {
-  Terran: 'terran',
-  Industrial: 'industrial',
-  Mining: 'mining',
-  Agricultural: 'agricultural',
-  HubStation: 'hubStation',
-  Resort: 'resort',
-  Research: 'research',
+  Terran: "terran",
+  Industrial: "industrial",
+  Mining: "mining",
+  Agricultural: "agricultural",
+  HubStation: "hubStation",
+  Resort: "resort",
+  Research: "research",
 } as const;
 export type PlanetType = (typeof PlanetType)[keyof typeof PlanetType];
 
 export const ShipClass = {
-  CargoShuttle: 'cargoShuttle',
-  PassengerShuttle: 'passengerShuttle',
-  MixedHauler: 'mixedHauler',
-  FastCourier: 'fastCourier',
-  BulkFreighter: 'bulkFreighter',
-  StarLiner: 'starLiner',
-  MegaHauler: 'megaHauler',
-  LuxuryLiner: 'luxuryLiner',
+  CargoShuttle: "cargoShuttle",
+  PassengerShuttle: "passengerShuttle",
+  MixedHauler: "mixedHauler",
+  FastCourier: "fastCourier",
+  BulkFreighter: "bulkFreighter",
+  StarLiner: "starLiner",
+  MegaHauler: "megaHauler",
+  LuxuryLiner: "luxuryLiner",
 } as const;
 export type ShipClass = (typeof ShipClass)[keyof typeof ShipClass];
 
 export const EventCategory = {
-  Market: 'market',
-  Hazard: 'hazard',
-  Opportunity: 'opportunity',
-  Flavor: 'flavor',
+  Market: "market",
+  Hazard: "hazard",
+  Opportunity: "opportunity",
+  Flavor: "flavor",
 } as const;
 export type EventCategory = (typeof EventCategory)[keyof typeof EventCategory];
 
@@ -137,7 +137,14 @@ export interface GameEvent {
 }
 
 export interface EventEffect {
-  type: 'modifyPrice' | 'blockRoute' | 'modifySpeed' | 'modifyDemand' | 'modifyCash' | 'modifyReputation' | 'blockPassengers';
+  type:
+    | "modifyPrice"
+    | "blockRoute"
+    | "modifySpeed"
+    | "modifyDemand"
+    | "modifyCash"
+    | "modifyReputation"
+    | "blockPassengers";
   targetId?: string;
   cargoType?: CargoType;
   value: number;

@@ -1,4 +1,4 @@
-import { ShipClass, type ShipTemplate, PlanetType, CargoType } from './types';
+import { ShipClass, type ShipTemplate, PlanetType, CargoType } from "./types";
 
 export const STARTING_CASH = 200000;
 export const MAX_TURNS = 20;
@@ -17,55 +17,132 @@ export const TURN_DURATION = 100;
 
 export const SHIP_TEMPLATES: Record<ShipClass, ShipTemplate> = {
   [ShipClass.CargoShuttle]: {
-    class: ShipClass.CargoShuttle, name: 'Cargo Shuttle',
-    cargoCapacity: 80, passengerCapacity: 0, speed: 4,
-    fuelEfficiency: 0.8, baseReliability: 92, purchaseCost: 40000, baseMaintenance: 2000,
+    class: ShipClass.CargoShuttle,
+    name: "Cargo Shuttle",
+    cargoCapacity: 80,
+    passengerCapacity: 0,
+    speed: 4,
+    fuelEfficiency: 0.8,
+    baseReliability: 92,
+    purchaseCost: 40000,
+    baseMaintenance: 2000,
   },
   [ShipClass.PassengerShuttle]: {
-    class: ShipClass.PassengerShuttle, name: 'Passenger Shuttle',
-    cargoCapacity: 0, passengerCapacity: 60, speed: 5,
-    fuelEfficiency: 1.0, baseReliability: 90, purchaseCost: 55000, baseMaintenance: 3000,
+    class: ShipClass.PassengerShuttle,
+    name: "Passenger Shuttle",
+    cargoCapacity: 0,
+    passengerCapacity: 60,
+    speed: 5,
+    fuelEfficiency: 1.0,
+    baseReliability: 90,
+    purchaseCost: 55000,
+    baseMaintenance: 3000,
   },
   [ShipClass.MixedHauler]: {
-    class: ShipClass.MixedHauler, name: 'Mixed Hauler',
-    cargoCapacity: 50, passengerCapacity: 30, speed: 3,
-    fuelEfficiency: 1.2, baseReliability: 88, purchaseCost: 60000, baseMaintenance: 3500,
+    class: ShipClass.MixedHauler,
+    name: "Mixed Hauler",
+    cargoCapacity: 50,
+    passengerCapacity: 30,
+    speed: 3,
+    fuelEfficiency: 1.2,
+    baseReliability: 88,
+    purchaseCost: 60000,
+    baseMaintenance: 3500,
   },
   [ShipClass.FastCourier]: {
-    class: ShipClass.FastCourier, name: 'Fast Courier',
-    cargoCapacity: 30, passengerCapacity: 10, speed: 8,
-    fuelEfficiency: 1.8, baseReliability: 85, purchaseCost: 80000, baseMaintenance: 5000,
+    class: ShipClass.FastCourier,
+    name: "Fast Courier",
+    cargoCapacity: 30,
+    passengerCapacity: 10,
+    speed: 8,
+    fuelEfficiency: 1.8,
+    baseReliability: 85,
+    purchaseCost: 80000,
+    baseMaintenance: 5000,
   },
   [ShipClass.BulkFreighter]: {
-    class: ShipClass.BulkFreighter, name: 'Bulk Freighter',
-    cargoCapacity: 300, passengerCapacity: 0, speed: 2,
-    fuelEfficiency: 0.6, baseReliability: 94, purchaseCost: 150000, baseMaintenance: 6000,
+    class: ShipClass.BulkFreighter,
+    name: "Bulk Freighter",
+    cargoCapacity: 300,
+    passengerCapacity: 0,
+    speed: 2,
+    fuelEfficiency: 0.6,
+    baseReliability: 94,
+    purchaseCost: 150000,
+    baseMaintenance: 6000,
   },
   [ShipClass.StarLiner]: {
-    class: ShipClass.StarLiner, name: 'Star Liner',
-    cargoCapacity: 0, passengerCapacity: 200, speed: 6,
-    fuelEfficiency: 1.4, baseReliability: 88, purchaseCost: 250000, baseMaintenance: 10000,
+    class: ShipClass.StarLiner,
+    name: "Star Liner",
+    cargoCapacity: 0,
+    passengerCapacity: 200,
+    speed: 6,
+    fuelEfficiency: 1.4,
+    baseReliability: 88,
+    purchaseCost: 250000,
+    baseMaintenance: 10000,
   },
   [ShipClass.MegaHauler]: {
-    class: ShipClass.MegaHauler, name: 'Mega Hauler',
-    cargoCapacity: 800, passengerCapacity: 0, speed: 2,
-    fuelEfficiency: 0.5, baseReliability: 90, purchaseCost: 500000, baseMaintenance: 15000,
+    class: ShipClass.MegaHauler,
+    name: "Mega Hauler",
+    cargoCapacity: 800,
+    passengerCapacity: 0,
+    speed: 2,
+    fuelEfficiency: 0.5,
+    baseReliability: 90,
+    purchaseCost: 500000,
+    baseMaintenance: 15000,
   },
   [ShipClass.LuxuryLiner]: {
-    class: ShipClass.LuxuryLiner, name: 'Luxury Liner',
-    cargoCapacity: 20, passengerCapacity: 150, speed: 7,
-    fuelEfficiency: 1.6, baseReliability: 86, purchaseCost: 600000, baseMaintenance: 20000,
+    class: ShipClass.LuxuryLiner,
+    name: "Luxury Liner",
+    cargoCapacity: 20,
+    passengerCapacity: 150,
+    speed: 7,
+    fuelEfficiency: 1.6,
+    baseReliability: 86,
+    purchaseCost: 600000,
+    baseMaintenance: 20000,
   },
 };
 
-export const PLANET_CARGO_PROFILES: Record<PlanetType, { produces: CargoType[]; demands: CargoType[] }> = {
-  [PlanetType.Terran]: { produces: [CargoType.Technology, CargoType.Luxury], demands: [CargoType.Food, CargoType.RawMaterials] },
-  [PlanetType.Industrial]: { produces: [CargoType.Technology], demands: [CargoType.RawMaterials, CargoType.Food] },
-  [PlanetType.Mining]: { produces: [CargoType.RawMaterials, CargoType.Hazmat], demands: [CargoType.Technology, CargoType.Food, CargoType.Medical] },
-  [PlanetType.Agricultural]: { produces: [CargoType.Food], demands: [CargoType.Technology, CargoType.Luxury] },
-  [PlanetType.HubStation]: { produces: [], demands: [CargoType.Food, CargoType.Technology, CargoType.Luxury, CargoType.Medical] },
-  [PlanetType.Resort]: { produces: [CargoType.Luxury], demands: [CargoType.Food, CargoType.Medical] },
-  [PlanetType.Research]: { produces: [CargoType.Medical, CargoType.Technology], demands: [CargoType.Food, CargoType.RawMaterials, CargoType.Luxury] },
+export const PLANET_CARGO_PROFILES: Record<
+  PlanetType,
+  { produces: CargoType[]; demands: CargoType[] }
+> = {
+  [PlanetType.Terran]: {
+    produces: [CargoType.Technology, CargoType.Luxury],
+    demands: [CargoType.Food, CargoType.RawMaterials],
+  },
+  [PlanetType.Industrial]: {
+    produces: [CargoType.Technology],
+    demands: [CargoType.RawMaterials, CargoType.Food],
+  },
+  [PlanetType.Mining]: {
+    produces: [CargoType.RawMaterials, CargoType.Hazmat],
+    demands: [CargoType.Technology, CargoType.Food, CargoType.Medical],
+  },
+  [PlanetType.Agricultural]: {
+    produces: [CargoType.Food],
+    demands: [CargoType.Technology, CargoType.Luxury],
+  },
+  [PlanetType.HubStation]: {
+    produces: [],
+    demands: [
+      CargoType.Food,
+      CargoType.Technology,
+      CargoType.Luxury,
+      CargoType.Medical,
+    ],
+  },
+  [PlanetType.Resort]: {
+    produces: [CargoType.Luxury],
+    demands: [CargoType.Food, CargoType.Medical],
+  },
+  [PlanetType.Research]: {
+    produces: [CargoType.Medical, CargoType.Technology],
+    demands: [CargoType.Food, CargoType.RawMaterials, CargoType.Luxury],
+  },
 };
 
 export const PLANET_PASSENGER_VOLUME: Record<PlanetType, number> = {
