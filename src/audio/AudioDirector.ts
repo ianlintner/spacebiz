@@ -1,4 +1,10 @@
 import Phaser from "phaser";
+import {
+  DEFAULT_AUDIO_SETTINGS,
+  loadAudioSettings,
+  saveAudioSettings,
+  type AudioSettings,
+} from "./AudioSettings.ts";
 
 export type MusicState =
   | "menu"
@@ -59,8 +65,12 @@ class AudioDirector {
   private ctx: AudioContext | null = null;
   private initialized = false;
   private enabled = true;
+  private settingsHydrated = false;
   private currentState: MusicState = "menu";
   private currentPlanningSubstate: PlanningSubstate = "galaxy";
+  private musicVolume = DEFAULT_AUDIO_SETTINGS.musicVolume;
+  private sfxVolume = DEFAULT_AUDIO_SETTINGS.sfxVolume;
+  private reducedUiSfx = DEFAULT_AUDIO_SETTINGS.reducedUiSfx;
 
   private musicBus: GainNode | null = null;
   private sfxBus: GainNode | null = null;
@@ -89,12 +99,41 @@ class AudioDirector {
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
-    if (!this.ctx || !this.musicBus || !this.sfxBus) return;
+    this.applyBusVolumes();
+  }
 
-    const now = this.ctx.currentTime;
-    const target = enabled ? 1 : 0;
-    this.musicBus.gain.setTargetAtTime(target * 0.26, now, 0.08);
-    this.sfxBus.gain.setTargetAtTime(target * 0.4, now, 0.04);
+  getSettings(): AudioSettings {
+    this.hydrateSettingsFromStorage();
+    return {
+      musicVolume: this.musicVolume,
+      sfxVolume: this.sfxVolume,
+      reducedUiSfx: this.reducedUiSfx,
+    };
+  }
+
+  setMusicVolume(volume: number): void {
+    this.musicVolume = Phaser.Math.Clamp(volume, 0, 1);
+    this.persistSettings();
+    this.applyBusVolumes();
+  }
+
+  setSfxVolume(volume: number): void {
+    this.sfxVolume = Phaser.Math.Clamp(volume, 0, 1);
+    this.persistSettings();
+    this.applyBusVolumes();
+  }
+
+  setReducedUiSfx(enabled: boolean): void {
+    this.reducedUiSfx = enabled;
+    this.persistSettings();
+  }
+
+  setSettings(settings: AudioSettings): void {
+    this.musicVolume = Phaser.Math.Clamp(settings.musicVolume, 0, 1);
+    this.sfxVolume = Phaser.Math.Clamp(settings.sfxVolume, 0, 1);
+    this.reducedUiSfx = settings.reducedUiSfx;
+    this.persistSettings();
+    this.applyBusVolumes();
   }
 
   async resume(): Promise<void> {
@@ -144,6 +183,11 @@ class AudioDirector {
   sfx(key: SfxKey): void {
     this.ensureInitialized();
     if (!this.ctx || !this.sfxBus || !this.enabled) return;
+
+    if (this.reducedUiSfx && this.isLowPriorityUiSfx(key)) {
+      return;
+    }
+
     const patch = this.getSfxPatch(key);
     if (!patch) return;
 
@@ -185,6 +229,44 @@ class AudioDirector {
       target,
       this.ctx.currentTime,
       0.25,
+    );
+  }
+
+  private isLowPriorityUiSfx(key: SfxKey): boolean {
+    return key === "ui_hover" || key === "ui_tab_switch" || key === "ui_row_select";
+  }
+
+  private persistSettings(): void {
+    saveAudioSettings({
+      musicVolume: this.musicVolume,
+      sfxVolume: this.sfxVolume,
+      reducedUiSfx: this.reducedUiSfx,
+    });
+  }
+
+  private hydrateSettingsFromStorage(): void {
+    if (this.settingsHydrated) return;
+    const settings = loadAudioSettings();
+    this.musicVolume = settings.musicVolume;
+    this.sfxVolume = settings.sfxVolume;
+    this.reducedUiSfx = settings.reducedUiSfx;
+    this.settingsHydrated = true;
+  }
+
+  private applyBusVolumes(): void {
+    if (!this.ctx || !this.musicBus || !this.sfxBus) return;
+
+    const now = this.ctx.currentTime;
+    const enabledMultiplier = this.enabled ? 1 : 0;
+    this.musicBus.gain.setTargetAtTime(
+      enabledMultiplier * this.musicVolume * 0.26,
+      now,
+      0.08,
+    );
+    this.sfxBus.gain.setTargetAtTime(
+      enabledMultiplier * this.sfxVolume * 0.4,
+      now,
+      0.04,
     );
   }
 
@@ -335,14 +417,16 @@ class AudioDirector {
     const ctx = soundManager.context;
     if (!ctx) return;
 
+    this.hydrateSettingsFromStorage();
+
     this.ctx = ctx;
 
     this.musicBus = ctx.createGain();
-    this.musicBus.gain.value = 0.26;
+    this.musicBus.gain.value = this.musicVolume * 0.26;
     this.musicBus.connect(ctx.destination);
 
     this.sfxBus = ctx.createGain();
-    this.sfxBus.gain.value = 0.4;
+    this.sfxBus.gain.value = this.sfxVolume * 0.4;
     this.sfxBus.connect(ctx.destination);
 
     this.colorFilter = ctx.createBiquadFilter();
@@ -392,6 +476,7 @@ class AudioDirector {
     this.pulseLfo.start();
 
     this.initialized = true;
+    this.applyBusVolumes();
     this.setMusicState(this.currentState);
     this.applyPlanningSubstateColor();
   }

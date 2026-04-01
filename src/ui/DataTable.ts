@@ -141,7 +141,11 @@ export class DataTable extends Phaser.GameObjects.Container {
         if (hitArea.input) {
           hitArea.input.cursor = "pointer";
         }
+        hitArea.on("pointerdown", () => {
+          hitArea.setAlpha(0.75);
+        });
         hitArea.on("pointerup", () => {
+          hitArea.setAlpha(1);
           getAudioDirector().sfx("ui_tab_switch");
           if (this.sortKey === col.key) {
             this.sortAsc = !this.sortAsc;
@@ -150,6 +154,12 @@ export class DataTable extends Phaser.GameObjects.Container {
             this.sortAsc = true;
           }
           this.renderBody();
+        });
+        hitArea.on("pointerout", () => {
+          hitArea.setAlpha(1);
+        });
+        hitArea.on("pointerupoutside", () => {
+          hitArea.setAlpha(1);
         });
         this.headerContainer.add(hitArea);
       }
@@ -212,11 +222,21 @@ export class DataTable extends Phaser.GameObjects.Container {
       }
 
       rowBg.on("pointerover", () => rowBg.setFillStyle(theme.colors.rowHover));
-      rowBg.on("pointerout", () => rowBg.setFillStyle(bgColor));
+      rowBg.on("pointerout", () => {
+        rowBg.setAlpha(0.85);
+        rowBg.setFillStyle(bgColor);
+      });
+      rowBg.on("pointerdown", () => {
+        rowBg.setAlpha(0.72);
+      });
       rowBg.on("pointerup", () => {
+        rowBg.setAlpha(0.85);
         getAudioDirector().sfx("ui_row_select");
         this.selectRow(i, y);
         this.tableConfig.onRowSelect?.(i, row);
+      });
+      rowBg.on("pointerupoutside", () => {
+        rowBg.setAlpha(0.85);
       });
 
       this.bodyContainer.add(rowBg);

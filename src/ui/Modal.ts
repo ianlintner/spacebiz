@@ -147,12 +147,22 @@ export class Modal extends Phaser.GameObjects.Container {
       })
       .setOrigin(0.5);
 
-    okBg.on("pointerover", () => okBg.setTexture("btn-hover"));
-    okBg.on("pointerout", () => okBg.setTexture("btn-normal"));
+    okBg.on("pointerover", () => {
+      okBg.setTexture("btn-hover");
+      okLabel.setColor(colorToString(theme.colors.accent));
+    });
+    okBg.on("pointerout", () => {
+      okBg.setTexture("btn-normal");
+      okLabel.setColor(colorToString(theme.colors.text));
+    });
     okBg.on("pointerdown", () => okBg.setTexture("btn-pressed"));
     okBg.on("pointerup", () => {
       config.onOk?.();
       this.hide();
+    });
+    okBg.on("pointerupoutside", () => {
+      okBg.setTexture("btn-normal");
+      okLabel.setColor(colorToString(theme.colors.text));
     });
 
     this.panel.add([okBg, okLabel]);
@@ -196,12 +206,22 @@ export class Modal extends Phaser.GameObjects.Container {
         )
         .setOrigin(0.5);
 
-      cancelBg.on("pointerover", () => cancelBg.setTexture("btn-hover"));
-      cancelBg.on("pointerout", () => cancelBg.setTexture("btn-normal"));
+      cancelBg.on("pointerover", () => {
+        cancelBg.setTexture("btn-hover");
+        cancelLabel.setColor(colorToString(theme.colors.text));
+      });
+      cancelBg.on("pointerout", () => {
+        cancelBg.setTexture("btn-normal");
+        cancelLabel.setColor(colorToString(theme.colors.textDim));
+      });
       cancelBg.on("pointerdown", () => cancelBg.setTexture("btn-pressed"));
       cancelBg.on("pointerup", () => {
         config.onCancel?.();
         this.hide();
+      });
+      cancelBg.on("pointerupoutside", () => {
+        cancelBg.setTexture("btn-normal");
+        cancelLabel.setColor(colorToString(theme.colors.textDim));
       });
 
       this.panel.add([cancelBg, cancelLabel]);

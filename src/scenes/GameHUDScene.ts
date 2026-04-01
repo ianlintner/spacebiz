@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { Button } from "../ui/Button.ts";
 import { Label } from "../ui/Label.ts";
+import { Panel } from "../ui/Panel.ts";
 import { getTheme } from "../ui/Theme.ts";
 import {
   GAME_WIDTH,
@@ -24,6 +25,11 @@ export class GameHUDScene extends Phaser.Scene {
   private activeContentScene = "GalaxyMapScene";
   private previousCash = 0;
   private navIndicators = new Map<string, Phaser.GameObjects.Rectangle>();
+  private audioPanelObjects: Phaser.GameObjects.GameObject[] = [];
+  private audioPanelOpen = false;
+  private musicVolumeValueLabel: Label | null = null;
+  private sfxVolumeValueLabel: Label | null = null;
+  private reducedUiSfxValueLabel: Label | null = null;
 
   private stateListener = (_data: unknown) => {
     this.updateHUD();
@@ -135,6 +141,17 @@ export class GameHUDScene extends Phaser.Scene {
       this.navIndicators.set(item.scene, indicator);
     }
 
+    new Button(this, {
+      x: GAME_WIDTH - 96,
+      y: navY,
+      width: 80,
+      height: navBtnHeight,
+      label: "Audio",
+      onClick: () => {
+        this.toggleAudioPanel();
+      },
+    });
+
     // ── Bottom Bar ───────────────────────────────────────────
     const bottomBarY = GAME_HEIGHT - HUD_BOTTOM_BAR_HEIGHT;
 
@@ -182,6 +199,7 @@ export class GameHUDScene extends Phaser.Scene {
 
     this.events.once("shutdown", () => {
       gameStore.off("stateChanged", this.stateListener);
+      this.destroyAudioPanel();
     });
 
     // Launch default content scene and ensure HUD renders on top
@@ -292,5 +310,225 @@ export class GameHUDScene extends Phaser.Scene {
 
     this.activeContentScene = sceneName;
     this.scene.bringToTop();
+  }
+
+  private toggleAudioPanel(): void {
+    if (this.audioPanelOpen) {
+      this.destroyAudioPanel();
+      return;
+    }
+
+    this.openAudioPanel();
+  }
+
+  private openAudioPanel(): void {
+    if (this.audioPanelOpen) return;
+
+    const audio = getAudioDirector();
+    const settings = audio.getSettings();
+
+    const overlay = this.add
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.35)
+      .setOrigin(0, 0)
+      .setInteractive();
+    overlay.on("pointerup", () => {
+      this.destroyAudioPanel();
+      audio.sfx("ui_modal_close");
+    });
+
+    const panelW = 420;
+    const panelH = 260;
+    const panelX = Math.floor((GAME_WIDTH - panelW) / 2);
+    const panelY = Math.floor((GAME_HEIGHT - panelH) / 2);
+    const panel = new Panel(this, {
+      x: panelX,
+      y: panelY,
+      width: panelW,
+      height: panelH,
+      title: "Audio Settings",
+    });
+
+    const content = panel.getContentArea();
+    const row1Y = panelY + content.y + 8;
+    const row2Y = row1Y + 62;
+    const row3Y = row2Y + 62;
+
+    const musicLabel = new Label(this, {
+      x: panelX + content.x,
+      y: row1Y,
+      text: "Music Volume",
+      style: "body",
+    });
+
+    this.musicVolumeValueLabel = new Label(this, {
+      x: panelX + panelW - content.x,
+      y: row1Y,
+      text: `${Math.round(settings.musicVolume * 100)}%`,
+      style: "value",
+    });
+    this.musicVolumeValueLabel.setOrigin(1, 0);
+
+    const decMusicBtn = new Button(this, {
+      x: panelX + content.x,
+      y: row1Y + 26,
+      width: 46,
+      height: 32,
+      label: "-",
+      onClick: () => {
+        const current = audio.getSettings().musicVolume;
+        audio.setMusicVolume(current - 0.1);
+        this.refreshAudioPanelValues();
+      },
+    });
+
+    const incMusicBtn = new Button(this, {
+      x: panelX + content.x + 54,
+      y: row1Y + 26,
+      width: 46,
+      height: 32,
+      label: "+",
+      onClick: () => {
+        const current = audio.getSettings().musicVolume;
+        audio.setMusicVolume(current + 0.1);
+        this.refreshAudioPanelValues();
+      },
+    });
+
+    const sfxLabel = new Label(this, {
+      x: panelX + content.x,
+      y: row2Y,
+      text: "SFX Volume",
+      style: "body",
+    });
+
+    this.sfxVolumeValueLabel = new Label(this, {
+      x: panelX + panelW - content.x,
+      y: row2Y,
+      text: `${Math.round(settings.sfxVolume * 100)}%`,
+      style: "value",
+    });
+    this.sfxVolumeValueLabel.setOrigin(1, 0);
+
+    const decSfxBtn = new Button(this, {
+      x: panelX + content.x,
+      y: row2Y + 26,
+      width: 46,
+      height: 32,
+      label: "-",
+      onClick: () => {
+        const current = audio.getSettings().sfxVolume;
+        audio.setSfxVolume(current - 0.1);
+        this.refreshAudioPanelValues();
+        audio.sfx("ui_click_secondary");
+      },
+    });
+
+    const incSfxBtn = new Button(this, {
+      x: panelX + content.x + 54,
+      y: row2Y + 26,
+      width: 46,
+      height: 32,
+      label: "+",
+      onClick: () => {
+        const current = audio.getSettings().sfxVolume;
+        audio.setSfxVolume(current + 0.1);
+        this.refreshAudioPanelValues();
+        audio.sfx("ui_click_secondary");
+      },
+    });
+
+    const reducedLabel = new Label(this, {
+      x: panelX + content.x,
+      y: row3Y,
+      text: "Reduced UI SFX",
+      style: "body",
+    });
+
+    this.reducedUiSfxValueLabel = new Label(this, {
+      x: panelX + panelW - content.x,
+      y: row3Y,
+      text: settings.reducedUiSfx ? "On" : "Off",
+      style: "value",
+    });
+    this.reducedUiSfxValueLabel.setOrigin(1, 0);
+
+    const toggleReducedBtn = new Button(this, {
+      x: panelX + content.x,
+      y: row3Y + 26,
+      width: 100,
+      height: 32,
+      label: "Toggle",
+      onClick: () => {
+        const current = audio.getSettings().reducedUiSfx;
+        audio.setReducedUiSfx(!current);
+        this.refreshAudioPanelValues();
+        audio.sfx("ui_confirm");
+      },
+    });
+
+    const closeBtn = new Button(this, {
+      x: panelX + panelW - content.x - 110,
+      y: panelY + panelH - 44,
+      width: 110,
+      height: 32,
+      label: "Close",
+      onClick: () => {
+        this.destroyAudioPanel();
+        audio.sfx("ui_modal_close");
+      },
+    });
+
+    this.audioPanelObjects = [
+      overlay,
+      panel,
+      musicLabel,
+      decMusicBtn,
+      incMusicBtn,
+      sfxLabel,
+      decSfxBtn,
+      incSfxBtn,
+      reducedLabel,
+      toggleReducedBtn,
+      closeBtn,
+    ];
+
+    if (this.musicVolumeValueLabel) {
+      this.audioPanelObjects.push(this.musicVolumeValueLabel);
+    }
+    if (this.sfxVolumeValueLabel) {
+      this.audioPanelObjects.push(this.sfxVolumeValueLabel);
+    }
+    if (this.reducedUiSfxValueLabel) {
+      this.audioPanelObjects.push(this.reducedUiSfxValueLabel);
+    }
+
+    this.audioPanelOpen = true;
+    audio.sfx("ui_modal_open");
+  }
+
+  private refreshAudioPanelValues(): void {
+    if (!this.audioPanelOpen) return;
+    const settings = getAudioDirector().getSettings();
+
+    this.musicVolumeValueLabel?.setText(
+      `${Math.round(settings.musicVolume * 100)}%`,
+    );
+    this.sfxVolumeValueLabel?.setText(
+      `${Math.round(settings.sfxVolume * 100)}%`,
+    );
+    this.reducedUiSfxValueLabel?.setText(settings.reducedUiSfx ? "On" : "Off");
+  }
+
+  private destroyAudioPanel(): void {
+    for (const obj of this.audioPanelObjects) {
+      if (obj.active) {
+        obj.destroy();
+      }
+    }
+    this.audioPanelObjects = [];
+    this.musicVolumeValueLabel = null;
+    this.sfxVolumeValueLabel = null;
+    this.reducedUiSfxValueLabel = null;
+    this.audioPanelOpen = false;
   }
 }

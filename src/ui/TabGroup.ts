@@ -103,9 +103,21 @@ export class TabGroup extends Phaser.GameObjects.Container {
         bg.setFillStyle(active ? theme.colors.panelBg : theme.colors.headerBg);
         bg.setAlpha(active ? 1.0 : 0.6);
       });
+      bg.on("pointerdown", () => {
+        if (index !== this.activeIndex) {
+          bg.setAlpha(0.8);
+        }
+      });
       bg.on("pointerup", () => {
+        if (index !== this.activeIndex) {
+          bg.setAlpha(0.6);
+        }
         getAudioDirector().sfx("ui_tab_switch");
         this.setActiveTab(index);
+      });
+      bg.on("pointerupoutside", () => {
+        const active = index === this.activeIndex;
+        bg.setAlpha(active ? 1.0 : 0.6);
       });
 
       this.tabButtons.push(tabBtn);

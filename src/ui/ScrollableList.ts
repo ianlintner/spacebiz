@@ -104,14 +104,22 @@ export class ScrollableList extends Phaser.GameObjects.Container {
       this.showHoverIndicator(container);
     });
     container.on("pointerout", () => {
+      hitBg.setAlpha(1);
       hitBg.setFillStyle(
         index % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd,
       );
       this.hideHoverIndicator(container);
     });
+    container.on("pointerdown", () => {
+      hitBg.setAlpha(0.82);
+    });
     container.on("pointerup", () => {
+      hitBg.setAlpha(1);
       this.selectedIndex = index;
       this.listConfig.onSelect?.(index);
+    });
+    container.on("pointerupoutside", () => {
+      hitBg.setAlpha(1);
     });
 
     container.addAt(hitBg, 0);
