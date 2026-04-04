@@ -61,8 +61,15 @@ export class MilestoneOverlay {
       .setDepth(depth);
 
     // Center banner background
-    const bannerH = subtext ? 140 : 110;
-    const bannerW = Math.min(GAME_WIDTH - 80, 700);
+    const bannerH = subtext ? 150 : 120;
+    const bannerW = Math.min(GAME_WIDTH - 60, 740);
+
+    // Solid dark backing behind the tinted banner for full contrast
+    const bannerBacking = scene.add
+      .rectangle(cx, cy, bannerW + 4, bannerH + 4, 0x000000, 0)
+      .setOrigin(0.5, 0.5)
+      .setDepth(depth + 1);
+
     const banner = scene.add
       .rectangle(cx, cy, bannerW, bannerH, colors.bg, 0)
       .setOrigin(0.5, 0.5)
@@ -78,15 +85,22 @@ export class MilestoneOverlay {
     drawBorder(0);
 
     // Headline text
-    const headlineFontSize = headline.length > 20 ? 32 : 40;
+    const headlineFontSize = headline.length > 20 ? 34 : 44;
     const headlineTxt = scene.add
-      .text(cx, cy - (subtext ? 24 : 0), headline, {
+      .text(cx, cy - (subtext ? 28 : 0), headline, {
         fontSize: `${headlineFontSize}px`,
         fontFamily: theme.fonts.heading.family,
         fontStyle: "bold",
         color: colorToString(colors.text),
         stroke: "#000000",
-        strokeThickness: 3,
+        strokeThickness: 5,
+        shadow: {
+          offsetX: 0,
+          offsetY: 0,
+          color: colorToString(colors.glow),
+          blur: 12,
+          fill: true,
+        },
       })
       .setOrigin(0.5, 0.5)
       .setDepth(depth + 2)
@@ -97,10 +111,14 @@ export class MilestoneOverlay {
     let subtextObj: Phaser.GameObjects.Text | null = null;
     if (subtext) {
       subtextObj = scene.add
-        .text(cx, cy + 28, subtext, {
-          fontSize: `${theme.fonts.body.size}px`,
+        .text(cx, cy + 32, subtext, {
+          fontSize: `${theme.fonts.body.size + 2}px`,
           fontFamily: theme.fonts.body.family,
-          color: colorToString(theme.colors.textDim),
+          color: colorToString(theme.colors.text),
+          stroke: "#000000",
+          strokeThickness: 3,
+          padding: { x: 8, y: 4 },
+          backgroundColor: "rgba(0,0,0,0.5)",
         })
         .setOrigin(0.5, 0.5)
         .setDepth(depth + 2)
@@ -120,13 +138,19 @@ export class MilestoneOverlay {
     // Phase 1: slam in (150ms)
     scene.tweens.add({
       targets: overlay,
-      alpha: 0.65,
+      alpha: 0.75,
       duration: 120,
       ease: "Linear",
     });
     scene.tweens.add({
+      targets: bannerBacking,
+      alpha: 0.85,
+      duration: 100,
+      ease: "Linear",
+    });
+    scene.tweens.add({
       targets: banner,
-      alpha: 0.9,
+      alpha: 0.95,
       duration: 120,
       ease: "Linear",
     });
@@ -171,6 +195,7 @@ export class MilestoneOverlay {
     const fadeOutDuration = 380;
     const allObjects: Phaser.GameObjects.GameObject[] = [
       overlay,
+      bannerBacking,
       banner,
       border,
       headlineTxt,

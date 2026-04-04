@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { Button } from "../ui/Button.ts";
 import { Label } from "../ui/Label.ts";
 import { Panel } from "../ui/Panel.ts";
-import { getTheme } from "../ui/Theme.ts";
+import { getTheme, colorToString } from "../ui/Theme.ts";
 import {
   GAME_WIDTH,
   GAME_HEIGHT,
@@ -14,6 +14,11 @@ import { gameStore } from "../data/GameStore.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { Tooltip } from "../ui/Tooltip.ts";
 import { FloatingText } from "../ui/FloatingText.ts";
+import { AdviserPanel } from "../ui/AdviserPanel.ts";
+import { TutorialOverlay } from "../ui/TutorialOverlay.ts";
+import { checkTutorialAdvancement } from "../game/adviser/AdviserEngine.ts";
+import type { TutorialTrigger } from "../data/types.ts";
+import { TUTORIAL_STEPS } from "../game/adviser/TutorialDefinitions.ts";
 
 function formatCash(amount: number): string {
   return "\u00A7" + amount.toLocaleString();
@@ -42,6 +47,9 @@ export class GameHUDScene extends Phaser.Scene {
   private musicStyleValueLabel: Label | null = null;
   private musicTrackValueLabel: Label | null = null;
   private muteValueLabel: Label | null = null;
+  private adviserPanel!: AdviserPanel;
+  private adviserBadge: Phaser.GameObjects.Text | null = null;
+  private tutorialOverlay: TutorialOverlay | null = null;
 
   private readonly contentSceneKeys = [
     "GalaxyMapScene",
@@ -269,6 +277,76 @@ export class GameHUDScene extends Phaser.Scene {
       this.navHitAreas.set(item.scene, btnContainer);
     }
 
+    // ── Adviser button in nav sidebar ──
+    const adviserBtnY =
+      navSidebarTop + navSidebarH - (iconBtnSize / 2 + 12) * 2 - iconSpacing;
+    const adviserContainer = this.add.container(navCenterX, adviserBtnY);
+
+    const adviserHit = this.add
+      .rectangle(
+        0,
+        0,
+        NAV_SIDEBAR_WIDTH,
+        iconBtnSize + iconSpacing,
+        0x000000,
+        0,
+      )
+      .setOrigin(0.5, 0.5)
+      .setInteractive(
+        new Phaser.Geom.Rectangle(
+          -NAV_SIDEBAR_WIDTH / 2,
+          -(iconBtnSize + iconSpacing) / 2,
+          NAV_SIDEBAR_WIDTH,
+          iconBtnSize + iconSpacing,
+        ),
+        Phaser.Geom.Rectangle.Contains,
+      );
+    if (adviserHit.input) {
+      adviserHit.input.cursor = "pointer";
+    }
+
+    const adviserBg = this.add
+      .rectangle(0, 0, iconBtnSize, iconBtnSize, theme.colors.buttonBg, 0.0)
+      .setOrigin(0.5, 0.5);
+
+    const adviserIcon = this.add
+      .image(0, 0, "icon-adviser")
+      .setOrigin(0.5, 0.5)
+      .setTint(theme.colors.textDim);
+
+    // Badge dot (shows pending message count)
+    this.adviserBadge = this.add
+      .text(iconBtnSize / 2 - 2, -iconBtnSize / 2 + 2, "", {
+        fontSize: "9px",
+        fontFamily: theme.fonts.caption.family,
+        color: "#fff",
+        backgroundColor: colorToString(theme.colors.accent),
+        padding: { x: 3, y: 1 },
+      })
+      .setOrigin(1, 0)
+      .setVisible(false);
+
+    adviserContainer.add([
+      adviserHit,
+      adviserBg,
+      adviserIcon,
+      this.adviserBadge,
+    ]);
+    this.navTooltip.attachTo(adviserHit, "Rex — Adviser");
+
+    adviserHit.on("pointerover", () => {
+      getAudioDirector().sfx("ui_hover");
+      adviserBg.setAlpha(0.2);
+      adviserIcon.setTint(theme.colors.text);
+    });
+    adviserHit.on("pointerout", () => {
+      adviserBg.setAlpha(0.0);
+      adviserIcon.setTint(theme.colors.textDim);
+    });
+    adviserHit.on("pointerup", () => {
+      this.toggleAdviserPanel();
+    });
+
     // ── Audio button at bottom of nav sidebar ──
     const audioBtnY = navSidebarTop + navSidebarH - iconBtnSize / 2 - 12;
     const audioContainer = this.add.container(navCenterX, audioBtnY);
@@ -374,6 +452,28 @@ export class GameHUDScene extends Phaser.Scene {
       },
     });
     this.endTurnButton.setVisible(state.phase === "planning");
+
+    // ── Adviser Panel (compact, positioned above bottom bar) ──
+    const advPanelW = 320;
+    const advPanelX = NAV_SIDEBAR_WIDTH + 8;
+    const advPanelY = GAME_HEIGHT - HUD_BOTTOM_BAR_HEIGHT - 72;
+    this.adviserPanel = new AdviserPanel(this, {
+      x: advPanelX,
+      y: advPanelY,
+      width: advPanelW,
+      compact: true,
+    });
+    this.adviserPanel.setDepth(200);
+
+    // Show any pending adviser messages on load
+    const pendingMsgs = state.adviser?.pendingMessages ?? [];
+    if (pendingMsgs.length > 0) {
+      this.adviserPanel.showMessages(pendingMsgs);
+      this.updateAdviserBadge(pendingMsgs.length);
+    }
+
+    // Fire initial tutorial trigger
+    this.fireTutorialTrigger("newGame");
 
     // ── State Subscription ───────────────────────────────────
     gameStore.on("stateChanged", this.stateListener);
@@ -957,5 +1057,88 @@ export class GameHUDScene extends Phaser.Scene {
     this.musicTrackValueLabel = null;
     this.muteValueLabel = null;
     this.audioPanelOpen = false;
+  }
+
+  // ── Adviser integration ──────────────────────────────────
+
+  private toggleAdviserPanel(): void {
+    if (this.adviserPanel.visible) {
+      this.adviserPanel.clear();
+    } else {
+      const state = gameStore.getState();
+      const pending = state.adviser?.pendingMessages ?? [];
+      if (pending.length > 0) {
+        this.adviserPanel.showMessages(pending);
+      } else {
+        this.adviserPanel.showSingle(
+          "All quiet on the corporate front, boss.",
+          "standby",
+        );
+      }
+    }
+  }
+
+  private updateAdviserBadge(count: number): void {
+    if (!this.adviserBadge) return;
+    if (count > 0) {
+      this.adviserBadge.setText(`${count}`);
+      this.adviserBadge.setVisible(true);
+    } else {
+      this.adviserBadge.setVisible(false);
+    }
+  }
+
+  /** Call from scenes or HUD to advance tutorial on user actions. */
+  fireTutorialTrigger(trigger: TutorialTrigger): void {
+    const state = gameStore.getState();
+    if (
+      !state.adviser ||
+      state.adviser.tutorialComplete ||
+      state.adviser.tutorialSkipped
+    )
+      return;
+
+    const result = checkTutorialAdvancement(state.adviser, trigger, state.turn);
+    if (result === state.adviser) return; // no change
+
+    // Update game store
+    gameStore.update({ adviser: result });
+
+    // Show tutorial overlay for current step
+    const step = TUTORIAL_STEPS[result.tutorialStepIndex];
+    if (step && result.tutorialStepIndex > state.adviser.tutorialStepIndex) {
+      // Previous step was already shown, show the new one
+      this.showTutorialStep(result.tutorialStepIndex - 1);
+    } else if (result.tutorialStepIndex === 0 && trigger === "newGame") {
+      this.showTutorialStep(0);
+    }
+  }
+
+  private showTutorialStep(stepIndex: number): void {
+    if (this.tutorialOverlay) {
+      this.tutorialOverlay.close();
+      this.tutorialOverlay = null;
+    }
+
+    const step = TUTORIAL_STEPS[stepIndex];
+    if (!step) return;
+
+    this.tutorialOverlay = new TutorialOverlay(this, {
+      text: step.text,
+      mood: step.mood,
+      highlightHint: step.highlightHint,
+      onDismiss: () => {
+        this.tutorialOverlay = null;
+      },
+    });
+  }
+
+  /** Skip the entire tutorial. */
+  skipTutorial(): void {
+    const state = gameStore.getState();
+    if (!state.adviser) return;
+    gameStore.update({
+      adviser: { ...state.adviser, tutorialSkipped: true },
+    });
   }
 }

@@ -23,6 +23,7 @@ import {
   tickEvents,
 } from "../events/EventEngine.ts";
 import { updateStorytellerState } from "../events/Storyteller.ts";
+import { generateTurnMessages } from "../adviser/AdviserEngine.ts";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 
 // ---------------------------------------------------------------------------
@@ -359,6 +360,19 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   nextState = {
     ...nextState,
     history: [...nextState.history, turnResult],
+  };
+
+  // ----- Step 11b: Generate adviser messages -----
+  const adviserMessages = generateTurnMessages(nextState, turnResult);
+  nextState = {
+    ...nextState,
+    adviser: {
+      ...nextState.adviser,
+      pendingMessages: [
+        ...nextState.adviser.pendingMessages,
+        ...adviserMessages,
+      ],
+    },
   };
 
   // ----- Step 12: Advance turn counter and check end conditions -----

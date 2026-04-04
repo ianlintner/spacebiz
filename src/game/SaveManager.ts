@@ -1,5 +1,6 @@
 import { gameStore } from "../data/GameStore.ts";
 import type { GameState } from "../data/types.ts";
+import { initAdviserState } from "./adviser/AdviserEngine.ts";
 
 const SAVE_KEY = "sft_save";
 const AUTOSAVE_KEY = "sft_autosave";
@@ -41,6 +42,14 @@ function readSave(key: string): GameState | null {
   }
 }
 
+/** Migrate older saves that lack newer fields. */
+function migrateSave(state: GameState): GameState {
+  if (!state.adviser) {
+    return { ...state, adviser: initAdviserState() };
+  }
+  return state;
+}
+
 /** Serialize the current game state to localStorage under the manual-save key. */
 export function saveGame(state: GameState): void {
   writeSave(SAVE_KEY, state);
@@ -48,7 +57,8 @@ export function saveGame(state: GameState): void {
 
 /** Read a previously saved game from localStorage. Returns null if no save exists or data is corrupted. */
 export function loadGame(): GameState | null {
-  return readSave(SAVE_KEY);
+  const state = readSave(SAVE_KEY);
+  return state ? migrateSave(state) : null;
 }
 
 /** Returns true when a valid manual save exists in localStorage. */
@@ -68,7 +78,8 @@ export function autoSave(state: GameState): void {
 
 /** Load auto-save data. Returns null if none exists or data is corrupted. */
 export function loadAutoSave(): GameState | null {
-  return readSave(AUTOSAVE_KEY);
+  const state = readSave(AUTOSAVE_KEY);
+  return state ? migrateSave(state) : null;
 }
 
 /** Remove the auto-save from localStorage. */

@@ -8,6 +8,7 @@ import type {
   StarSystem,
   StorytellerState,
 } from "../data/types.ts";
+import { initAdviserState } from "./adviser/AdviserEngine.ts";
 import { SHIP_TEMPLATES, STARTING_CASH, MAX_TURNS } from "../data/constants.ts";
 
 export interface NewGameResult {
@@ -120,6 +121,7 @@ export function createNewGame(
     score: 0,
     gameOver: false,
     gameOverReason: null,
+    adviser: initAdviserState(),
   };
 
   return { state, startingSystemOptions };

@@ -195,6 +195,49 @@ export interface StorytellerState {
   consecutiveProfitTurns: number;
 }
 
+// ── Adviser types ──────────────────────────────────────────
+
+export type AdviserMood = "standby" | "analyzing" | "alert" | "success";
+
+export type AdviserMessageContext =
+  | "tutorial"
+  | "tip"
+  | "commentary"
+  | "event"
+  | "warning"
+  | "reveal";
+
+export interface AdviserMessage {
+  id: string;
+  text: string;
+  mood: AdviserMood;
+  priority: 1 | 2 | 3;
+  context: AdviserMessageContext;
+  turnGenerated: number;
+}
+
+export type TutorialTrigger =
+  | "newGame"
+  | "firstRoute"
+  | "firstShip"
+  | "firstTurnEnd"
+  | "firstSimulation"
+  | "firstReport"
+  | "firstProfit"
+  | "firstLoss"
+  | "complete";
+
+export interface AdviserState {
+  tutorialStepIndex: number;
+  tutorialComplete: boolean;
+  tutorialSkipped: boolean;
+  pendingMessages: AdviserMessage[];
+  shownMessageIds: string[];
+  secretRevealed: boolean;
+  statsAdviserSaved: number;
+  statsAdviserHindered: number;
+}
+
 export interface GameState {
   seed: number;
   turn: number;
@@ -215,6 +258,7 @@ export interface GameState {
   activeEvents: GameEvent[];
   history: TurnResult[];
   storyteller: StorytellerState;
+  adviser: AdviserState;
   score: number;
   gameOver: boolean;
   gameOverReason: string | null;

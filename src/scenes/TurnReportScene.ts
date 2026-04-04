@@ -8,6 +8,8 @@ import { ScrollableList } from "../ui/ScrollableList.ts";
 import { PortraitPanel } from "../ui/PortraitPanel.ts";
 import { createStarfield } from "../ui/Starfield.ts";
 import { autoSave } from "../game/SaveManager.ts";
+import { AdviserPanel } from "../ui/AdviserPanel.ts";
+import { consumeMessages } from "../game/adviser/AdviserEngine.ts";
 import {
   GAME_WIDTH,
   GAME_HEIGHT,
@@ -549,6 +551,24 @@ export class TurnReportScene extends Phaser.Scene {
         },
       );
       marketPanel.add(paxText);
+    }
+
+    // -----------------------------------------------------------------------
+    // Adviser panel — Rex's commentary on the turn
+    // -----------------------------------------------------------------------
+    const adviserMsgs = state.adviser?.pendingMessages ?? [];
+    if (adviserMsgs.length > 0) {
+      const advPanel = new AdviserPanel(this, {
+        x: MAIN_CONTENT_LEFT,
+        y: CONTENT_TOP + CONTENT_HEIGHT - 160,
+        width: MAIN_CONTENT_WIDTH,
+      });
+      advPanel.setDepth(150);
+      advPanel.showMessages(adviserMsgs);
+
+      // Consume messages from state so they aren't shown again
+      const { adviser: updatedAdviser } = consumeMessages(state.adviser);
+      gameStore.update({ adviser: updatedAdviser });
     }
 
     // -----------------------------------------------------------------------

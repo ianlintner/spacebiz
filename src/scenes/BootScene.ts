@@ -420,5 +420,34 @@ export class BootScene extends Phaser.Scene {
       ctx.fill();
       tex.refresh();
     }
+
+    // ── icon-adviser: Husky face silhouette (ears + muzzle) ──
+    {
+      const { tex, ctx } = this.makeCanvas("icon-adviser", s, s);
+      ctx.fillStyle = col;
+      // Left ear
+      ctx.beginPath();
+      ctx.moveTo(5, 14);
+      ctx.lineTo(8, 3);
+      ctx.lineTo(11, 10);
+      ctx.closePath();
+      ctx.fill();
+      // Right ear
+      ctx.beginPath();
+      ctx.moveTo(19, 14);
+      ctx.lineTo(16, 3);
+      ctx.lineTo(13, 10);
+      ctx.closePath();
+      ctx.fill();
+      // Head circle
+      ctx.beginPath();
+      ctx.arc(12, 14, 7, 0, Math.PI * 2);
+      ctx.fill();
+      // Muzzle
+      ctx.beginPath();
+      ctx.ellipse(12, 18, 3, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      tex.refresh();
+    }
   }
 }

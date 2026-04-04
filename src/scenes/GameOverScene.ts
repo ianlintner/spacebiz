@@ -21,6 +21,8 @@ import {
   FULL_CONTENT_LEFT,
 } from "../ui/Layout.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
+import { AdviserPanel } from "../ui/AdviserPanel.ts";
+import { buildRevealMessages } from "../game/adviser/AdviserEngine.ts";
 
 function formatCash(amount: number): string {
   const sign = amount < 0 ? "-" : "";
@@ -269,6 +271,25 @@ export class GameOverScene extends Phaser.Scene {
     const btnWidth = 180;
     const btnHeight = 48;
     const btnY = CONTENT_TOP + CONTENT_HEIGHT - 100;
+
+    // -----------------------------------------------------------------------
+    // Rex's Reveal — the adviser reveals their true role
+    // -----------------------------------------------------------------------
+    if (state.adviser && !state.adviser.secretRevealed) {
+      const revealMsgs = buildRevealMessages(state);
+      if (revealMsgs.length > 0) {
+        const revealPanel = new AdviserPanel(this, {
+          x: FULL_CONTENT_LEFT,
+          y: btnY - 120,
+          width: GAME_WIDTH - FULL_CONTENT_LEFT * 2,
+        });
+        revealPanel.setDepth(150);
+        revealPanel.showMessages(revealMsgs);
+        gameStore.update({
+          adviser: { ...state.adviser, secretRevealed: true },
+        });
+      }
+    }
 
     new Button(this, {
       x: GAME_WIDTH / 2 - btnWidth - 20,
