@@ -84,11 +84,15 @@ export class Button extends Phaser.GameObjects.Container {
     this.off("pointerout");
     this.off("pointerdown");
     this.off("pointerup");
+    this.bg.off("pointerover");
+    this.bg.off("pointerout");
+    this.bg.off("pointerdown");
+    this.bg.off("pointerup");
+    this.bg.off("pointerupoutside");
 
     this.startIdleShimmer();
     const hitPadding = 8;
-    this.setSize(this.widthPx + hitPadding * 2, this.heightPx + hitPadding * 2);
-    this.setInteractive(
+    this.bg.setInteractive(
       new Phaser.Geom.Rectangle(
         -hitPadding,
         -hitPadding,
@@ -97,10 +101,10 @@ export class Button extends Phaser.GameObjects.Container {
       ),
       Phaser.Geom.Rectangle.Contains,
     );
-    if (this.input) {
-      this.input.cursor = "pointer";
+    if (this.bg.input) {
+      this.bg.input.cursor = "pointer";
     }
-    this.on("pointerover", () => {
+    this.bg.on("pointerover", () => {
       getAudioDirector().sfx("ui_hover");
       // Pause idle shimmer so the hover brightening is clean
       if (this.idleShimmerTween) {
@@ -115,7 +119,7 @@ export class Button extends Phaser.GameObjects.Container {
         ease: "Power2",
       });
     });
-    this.on("pointerout", () => {
+    this.bg.on("pointerout", () => {
       this.setTexture("btn-normal");
       this.scene.tweens.add({
         targets: this.accentLine,
@@ -125,11 +129,14 @@ export class Button extends Phaser.GameObjects.Container {
         onComplete: () => this.startIdleShimmer(),
       });
     });
-    this.on("pointerdown", () => this.setTexture("btn-pressed"));
-    this.on("pointerup", () => {
+    this.bg.on("pointerdown", () => this.setTexture("btn-pressed"));
+    this.bg.on("pointerup", () => {
       this.setTexture("btn-hover");
       getAudioDirector().sfx("ui_click_primary");
       this.onClickFn();
+    });
+    this.bg.on("pointerupoutside", () => {
+      this.setTexture("btn-normal");
     });
   }
 
