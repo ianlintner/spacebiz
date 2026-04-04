@@ -15,9 +15,12 @@ export interface ModalConfig {
 export class Modal extends Phaser.GameObjects.Container {
   private overlay: Phaser.GameObjects.Rectangle;
   private panel: Phaser.GameObjects.Container;
+  private config: ModalConfig;
+  private isShowing = false;
 
   constructor(scene: Phaser.Scene, config: ModalConfig) {
     super(scene, 0, 0);
+    this.config = config;
     const theme = getTheme();
 
     const gameWidth = scene.cameras.main.width;
@@ -30,6 +33,14 @@ export class Modal extends Phaser.GameObjects.Container {
       .rectangle(0, 0, gameWidth, gameHeight, theme.colors.modalOverlay, 0.7)
       .setOrigin(0, 0)
       .setInteractive();
+    this.overlay.on("pointerup", () => {
+      if (config.onCancel) {
+        config.onCancel();
+      }
+      if (this.scene) {
+        this.hide();
+      }
+    });
     this.add(this.overlay);
 
     // Centered panel
@@ -90,6 +101,28 @@ export class Modal extends Phaser.GameObjects.Container {
       },
     );
     this.panel.add(titleText);
+
+    const closeText = scene.add
+      .text(modalWidth - theme.spacing.md, theme.spacing.xs, "×", {
+        fontSize: `${theme.fonts.heading.size + 4}px`,
+        fontFamily: theme.fonts.heading.family,
+        color: colorToString(theme.colors.textDim),
+      })
+      .setOrigin(1, 0)
+      .setInteractive({ useHandCursor: true });
+    closeText.on("pointerover", () => {
+      closeText.setColor(colorToString(theme.colors.accent));
+    });
+    closeText.on("pointerout", () => {
+      closeText.setColor(colorToString(theme.colors.textDim));
+    });
+    closeText.on("pointerup", () => {
+      config.onCancel?.();
+      if (this.scene) {
+        this.hide();
+      }
+    });
+    this.panel.add(closeText);
 
     // Body text
     const bodyText = scene.add.text(
@@ -158,7 +191,9 @@ export class Modal extends Phaser.GameObjects.Container {
     okBg.on("pointerdown", () => okBg.setTexture("btn-pressed"));
     okBg.on("pointerup", () => {
       config.onOk?.();
-      this.hide();
+      if (this.scene) {
+        this.hide();
+      }
     });
     okBg.on("pointerupoutside", () => {
       okBg.setTexture("btn-normal");
@@ -217,7 +252,9 @@ export class Modal extends Phaser.GameObjects.Container {
       cancelBg.on("pointerdown", () => cancelBg.setTexture("btn-pressed"));
       cancelBg.on("pointerup", () => {
         config.onCancel?.();
-        this.hide();
+        if (this.scene) {
+          this.hide();
+        }
       });
       cancelBg.on("pointerupoutside", () => {
         cancelBg.setTexture("btn-normal");
@@ -233,14 +270,44 @@ export class Modal extends Phaser.GameObjects.Container {
     this.setVisible(false);
     this.setDepth(1000);
 
+    this.scene.input.keyboard?.on("keydown", this.handleKeyDown, this);
+
     scene.add.existing(this);
   }
 
   show(): void {
+    this.isShowing = true;
     this.setVisible(true);
   }
 
   hide(): void {
+    this.isShowing = false;
     this.setVisible(false);
+  }
+
+  private handleKeyDown(event: KeyboardEvent): void {
+    if (!this.isShowing || !this.visible) return;
+
+    if (event.code === "Enter") {
+      this.config.onOk?.();
+      if (this.scene) {
+        this.hide();
+      }
+      event.preventDefault();
+      return;
+    }
+
+    if (event.code === "Escape") {
+      this.config.onCancel?.();
+      if (this.scene) {
+        this.hide();
+      }
+      event.preventDefault();
+    }
+  }
+
+  destroy(fromScene?: boolean): void {
+    this.scene.input.keyboard?.off("keydown", this.handleKeyDown, this);
+    super.destroy(fromScene);
   }
 }

@@ -8,10 +8,16 @@ export interface ScrollableListConfig {
   height: number;
   itemHeight: number;
   onSelect?: (index: number) => void;
+  onConfirm?: (index: number) => void;
+  onCancel?: () => void;
+  keyboardNavigation?: boolean;
+  autoFocus?: boolean;
 }
 
 export class ScrollableList extends Phaser.GameObjects.Container {
   private items: Phaser.GameObjects.Container[] = [];
+  private itemBackgrounds: Phaser.GameObjects.Rectangle[] = [];
+  private selectionIndicators: Phaser.GameObjects.Rectangle[] = [];
   private maskGraphics: Phaser.GameObjects.Graphics;
   private contentContainer: Phaser.GameObjects.Container;
   private scrollY = 0;
@@ -23,11 +29,14 @@ export class ScrollableList extends Phaser.GameObjects.Container {
   private hoverIndicator: Phaser.GameObjects.Rectangle | null = null;
   private currentHoverContainer: Phaser.GameObjects.Container | null = null;
   private wheelCapture: Phaser.GameObjects.Rectangle;
+  private hasKeyboardFocus = false;
+  private readonly keyboardNavigationEnabled: boolean;
   private destroyed = false;
 
   constructor(scene: Phaser.Scene, config: ScrollableListConfig) {
     super(scene, config.x, config.y);
     this.listConfig = config;
+    this.keyboardNavigationEnabled = config.keyboardNavigation ?? false;
 
     // Clipping mask
     this.maskGraphics = scene.make.graphics({});
@@ -58,9 +67,20 @@ export class ScrollableList extends Phaser.GameObjects.Container {
         _dy: number,
         dz: number,
       ) => {
+        this.focus();
         this.scrollBy(dz * 0.5);
       },
     );
+    this.wheelCapture.on("pointerdown", () => {
+      this.focus();
+    });
+
+    if (this.keyboardNavigationEnabled) {
+      this.scene.input.keyboard?.on("keydown", this.handleKeyDown, this);
+      if (config.autoFocus) {
+        this.focus();
+      }
+    }
 
     scene.add.existing(this);
   }
@@ -70,6 +90,7 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     const y = index * this.listConfig.itemHeight;
     container.setPosition(0, y);
     this.items.push(container);
+    this.itemBackgrounds.push(hitBg);
     this.contentContainer.add(container);
     this.maxScroll = Math.max(
       0,
@@ -103,17 +124,23 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     }
 
     container.on("pointerover", () => {
-      hitBg.setFillStyle(theme.colors.rowHover);
+      this.focus();
+      if (this.selectedIndex !== index) {
+        hitBg.setFillStyle(theme.colors.rowHover);
+      }
       this.showHoverIndicator(container);
     });
     container.on("pointerout", () => {
       hitBg.setAlpha(1);
-      hitBg.setFillStyle(
-        index % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd,
-      );
+      if (this.selectedIndex !== index) {
+        hitBg.setFillStyle(
+          index % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd,
+        );
+      }
       this.hideHoverIndicator(container);
     });
     container.on("pointerdown", () => {
+      this.focus();
       hitBg.setAlpha(0.82);
     });
     container.on(
@@ -129,8 +156,7 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     );
     container.on("pointerup", () => {
       hitBg.setAlpha(1);
-      this.selectedIndex = index;
-      this.listConfig.onSelect?.(index);
+      this.selectIndex(index, true);
     });
     container.on("pointerupoutside", () => {
       hitBg.setAlpha(1);
@@ -138,15 +164,34 @@ export class ScrollableList extends Phaser.GameObjects.Container {
 
     container.addAt(hitBg, 0);
 
+    const selectionIndicator = this.scene.add
+      .rectangle(0, 0, 3, this.listConfig.itemHeight, theme.colors.accent)
+      .setOrigin(0, 0)
+      .setAlpha(0.8)
+      .setVisible(false);
+    container.add(selectionIndicator);
+    this.selectionIndicators.push(selectionIndicator);
+
     // Update scrollbar after adding item
     this.updateScrollbar();
+
+    if (
+      this.selectedIndex < 0 &&
+      this.listConfig.autoFocus &&
+      this.items.length === 1
+    ) {
+      this.selectIndex(0, false);
+    }
   }
 
   clearItems(): void {
     this.items.forEach((item) => item.destroy());
     this.items = [];
+    this.itemBackgrounds = [];
+    this.selectionIndicators = [];
     this.scrollY = 0;
     this.maxScroll = 0;
+    this.selectedIndex = -1;
     this.hoverIndicator = null;
     this.currentHoverContainer = null;
     this.updateScrollbar();
@@ -160,6 +205,100 @@ export class ScrollableList extends Phaser.GameObjects.Container {
 
   getSelectedIndex(): number {
     return this.selectedIndex;
+  }
+
+  private selectIndex(index: number, notifySelection: boolean): void {
+    if (index < 0 || index >= this.items.length) return;
+
+    const theme = getTheme();
+
+    for (let i = 0; i < this.itemBackgrounds.length; i++) {
+      const bg = this.itemBackgrounds[i];
+      const indicator = this.selectionIndicators[i];
+      const isSelected = i === index;
+      bg.setFillStyle(
+        isSelected
+          ? theme.colors.rowHover
+          : i % 2 === 0
+            ? theme.colors.rowEven
+            : theme.colors.rowOdd,
+      );
+      indicator?.setVisible(isSelected);
+    }
+
+    this.selectedIndex = index;
+    this.ensureItemVisible(index);
+
+    if (notifySelection) {
+      this.listConfig.onSelect?.(index);
+    }
+  }
+
+  private ensureItemVisible(index: number): void {
+    const itemTop = index * this.listConfig.itemHeight;
+    const itemBottom = itemTop + this.listConfig.itemHeight;
+    const visibleTop = this.scrollY;
+    const visibleBottom = this.scrollY + this.listConfig.height;
+
+    if (itemTop < visibleTop) {
+      this.scrollY = itemTop;
+    } else if (itemBottom > visibleBottom) {
+      this.scrollY = itemBottom - this.listConfig.height;
+    }
+
+    this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScroll);
+    this.contentContainer.y = -this.scrollY;
+    this.updateThumbPosition();
+  }
+
+  private focus(): void {
+    if (!this.keyboardNavigationEnabled) return;
+    this.hasKeyboardFocus = true;
+  }
+
+  private handleKeyDown(event: KeyboardEvent): void {
+    if (!this.hasKeyboardFocus || !this.visible) return;
+
+    switch (event.code) {
+      case "ArrowUp":
+      case "KeyW":
+        if (this.items.length > 0) {
+          const nextIndex = Phaser.Math.Clamp(
+            this.selectedIndex < 0 ? 0 : this.selectedIndex - 1,
+            0,
+            this.items.length - 1,
+          );
+          this.selectIndex(nextIndex, false);
+        }
+        event.preventDefault();
+        break;
+      case "ArrowDown":
+      case "KeyS":
+        if (this.items.length > 0) {
+          const nextIndex = Phaser.Math.Clamp(
+            this.selectedIndex < 0 ? 0 : this.selectedIndex + 1,
+            0,
+            this.items.length - 1,
+          );
+          this.selectIndex(nextIndex, false);
+        }
+        event.preventDefault();
+        break;
+      case "Enter":
+      case "Space":
+        if (this.selectedIndex >= 0) {
+          this.listConfig.onConfirm?.(this.selectedIndex);
+          if (!this.listConfig.onConfirm) {
+            this.listConfig.onSelect?.(this.selectedIndex);
+          }
+        }
+        event.preventDefault();
+        break;
+      case "Escape":
+        this.listConfig.onCancel?.();
+        event.preventDefault();
+        break;
+    }
   }
 
   private showHoverIndicator(container: Phaser.GameObjects.Container): void {
@@ -243,6 +382,9 @@ export class ScrollableList extends Phaser.GameObjects.Container {
   destroy(fromScene?: boolean): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    if (this.keyboardNavigationEnabled) {
+      this.scene.input.keyboard?.off("keydown", this.handleKeyDown, this);
+    }
     this.maskGraphics.destroy();
     super.destroy(fromScene);
   }

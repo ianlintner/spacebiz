@@ -19,6 +19,12 @@ export interface DataTableConfig {
   height: number;
   columns: ColumnDef[];
   onRowSelect?: (rowIndex: number, rowData: Record<string, unknown>) => void;
+  onRowActivate?: (rowIndex: number, rowData: Record<string, unknown>) => void;
+  onCancel?: () => void;
+  keyboardNavigation?: boolean;
+  autoFocus?: boolean;
+  emptyStateText?: string;
+  emptyStateHint?: string;
 }
 
 export class DataTable extends Phaser.GameObjects.Container {
@@ -37,12 +43,16 @@ export class DataTable extends Phaser.GameObjects.Container {
   private selectedRowIndicator: Phaser.GameObjects.Rectangle | null = null;
   private wheelHitArea: Phaser.GameObjects.Rectangle;
   private maskShape: Phaser.GameObjects.Graphics;
+  private renderedRows: Record<string, unknown>[] = [];
+  private hasKeyboardFocus = false;
+  private readonly keyboardNavigationEnabled: boolean;
   private destroyed = false;
 
   constructor(scene: Phaser.Scene, config: DataTableConfig) {
     super(scene, config.x, config.y);
     this.tableConfig = config;
     this.columns = config.columns;
+    this.keyboardNavigationEnabled = config.keyboardNavigation ?? false;
 
     this.headerContainer = scene.add.container(0, 0);
     this.add(this.headerContainer);
@@ -65,9 +75,13 @@ export class DataTable extends Phaser.GameObjects.Container {
         _dy: number,
         dz: number,
       ) => {
+        this.focus();
         this.handleWheel(dz);
       },
     );
+    this.wheelHitArea.on("pointerdown", () => {
+      this.focus();
+    });
     this.addAt(this.wheelHitArea, 0);
 
     // Mask for body scrolling
@@ -84,6 +98,14 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.bodyContainer.setMask(mask);
 
     this.renderHeader();
+
+    if (this.keyboardNavigationEnabled) {
+      this.scene.input.keyboard?.on("keydown", this.handleKeyDown, this);
+      if (config.autoFocus) {
+        this.focus();
+      }
+    }
+
     scene.add.existing(this);
   }
 
@@ -145,6 +167,7 @@ export class DataTable extends Phaser.GameObjects.Container {
           hitArea.input.cursor = "pointer";
         }
         hitArea.on("pointerdown", () => {
+          this.focus();
           hitArea.setAlpha(0.75);
         });
         hitArea.on(
@@ -186,7 +209,11 @@ export class DataTable extends Phaser.GameObjects.Container {
   setRows(rows: Record<string, unknown>[]): void {
     this.rows = [...rows];
     this.scrollY = 0;
-    this.selectedRowIndex = -1;
+    if (this.rows.length === 0) {
+      this.selectedRowIndex = -1;
+    } else if (this.selectedRowIndex >= this.rows.length) {
+      this.selectedRowIndex = this.rows.length - 1;
+    }
     this.selectedRowIndicator = null;
     this.renderBody();
   }
@@ -213,6 +240,44 @@ export class DataTable extends Phaser.GameObjects.Container {
         if (aNum > bNum) return 1 * dir;
         return 0;
       });
+    }
+
+    this.renderedRows = sortedRows;
+
+    if (sortedRows.length === 0) {
+      const emptyText =
+        this.tableConfig.emptyStateText ?? "No entries available";
+      const hintText = this.tableConfig.emptyStateHint;
+
+      const label = this.scene.add
+        .text(this.tableConfig.width / 2, 44, emptyText, {
+          fontSize: `${theme.fonts.body.size}px`,
+          fontFamily: theme.fonts.body.family,
+          color: colorToString(theme.colors.textDim),
+          align: "center",
+        })
+        .setOrigin(0.5, 0);
+      this.bodyContainer.add(label);
+
+      if (hintText) {
+        const hint = this.scene.add
+          .text(this.tableConfig.width / 2, 70, hintText, {
+            fontSize: `${theme.fonts.caption.size}px`,
+            fontFamily: theme.fonts.caption.family,
+            color: colorToString(theme.colors.textDim),
+            align: "center",
+          })
+          .setOrigin(0.5, 0)
+          .setAlpha(0.9);
+        this.bodyContainer.add(hint);
+      }
+
+      this.maxScroll = 0;
+      return;
+    }
+
+    if (this.selectedRowIndex < 0 && this.tableConfig.autoFocus) {
+      this.selectedRowIndex = 0;
     }
 
     let yCursor = 0;
@@ -269,6 +334,7 @@ export class DataTable extends Phaser.GameObjects.Container {
         rowBg.setFillStyle(bgColor);
       });
       rowBg.on("pointerdown", () => {
+        this.focus();
         rowBg.setAlpha(0.72);
       });
       rowBg.on(
@@ -285,8 +351,7 @@ export class DataTable extends Phaser.GameObjects.Container {
       rowBg.on("pointerup", () => {
         rowBg.setAlpha(0.95);
         getAudioDirector().sfx("ui_row_select");
-        this.selectRow(i, rowTop, rowHeightPx);
-        this.tableConfig.onRowSelect?.(i, row);
+        this.selectRow(i, rowTop, rowHeightPx, true);
       });
       rowBg.on("pointerupoutside", () => {
         rowBg.setAlpha(0.95);
@@ -301,13 +366,22 @@ export class DataTable extends Phaser.GameObjects.Container {
       yCursor += rowHeightPx;
     });
 
+    if (this.selectedRowIndex >= 0) {
+      this.restoreSelectedRowIndicator();
+    }
+
     this.maxScroll = Math.max(
       0,
       yCursor - (this.tableConfig.height - this.headerHeight),
     );
   }
 
-  private selectRow(rowIndex: number, rowY: number, rowHeight: number): void {
+  private selectRow(
+    rowIndex: number,
+    rowY: number,
+    rowHeight: number,
+    notifySelection = false,
+  ): void {
     const theme = getTheme();
 
     // Remove previous indicator
@@ -324,6 +398,152 @@ export class DataTable extends Phaser.GameObjects.Container {
       .setOrigin(0, 0)
       .setAlpha(0.8);
     this.bodyContainer.add(this.selectedRowIndicator);
+
+    if (notifySelection) {
+      const rowData = this.renderedRows[rowIndex];
+      if (rowData) {
+        this.tableConfig.onRowSelect?.(rowIndex, rowData);
+      }
+    }
+  }
+
+  private restoreSelectedRowIndicator(): void {
+    if (this.selectedRowIndex < 0) return;
+
+    const rowObjects = this.bodyContainer.list.filter(
+      (object): object is Phaser.GameObjects.Rectangle =>
+        object instanceof Phaser.GameObjects.Rectangle &&
+        object.width === this.tableConfig.width,
+    );
+
+    const rowBg = rowObjects[this.selectedRowIndex];
+    if (!rowBg) return;
+    this.selectRow(this.selectedRowIndex, rowBg.y, rowBg.height, false);
+  }
+
+  private moveSelection(delta: number): void {
+    if (this.renderedRows.length === 0) return;
+
+    const nextIndex = Phaser.Math.Clamp(
+      this.selectedRowIndex < 0 ? 0 : this.selectedRowIndex + delta,
+      0,
+      this.renderedRows.length - 1,
+    );
+
+    const rowObjects = this.bodyContainer.list.filter(
+      (object): object is Phaser.GameObjects.Rectangle =>
+        object instanceof Phaser.GameObjects.Rectangle &&
+        object.width === this.tableConfig.width,
+    );
+    const rowBg = rowObjects[nextIndex];
+    if (!rowBg) return;
+
+    this.selectRow(nextIndex, rowBg.y, rowBg.height, true);
+    this.ensureRowVisible(nextIndex, rowBg.height);
+  }
+
+  private ensureRowVisible(rowIndex: number, rowHeight: number): void {
+    const rowTop = this.getRowTop(rowIndex);
+    const rowBottom = rowTop + rowHeight;
+    const visibleTop = this.scrollY;
+    const visibleBottom =
+      this.scrollY + (this.tableConfig.height - this.headerHeight);
+
+    if (rowTop < visibleTop) {
+      this.scrollY = rowTop;
+    } else if (rowBottom > visibleBottom) {
+      this.scrollY = rowBottom - (this.tableConfig.height - this.headerHeight);
+    }
+
+    this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScroll);
+    this.bodyContainer.y = this.headerHeight - this.scrollY;
+  }
+
+  private getRowTop(rowIndex: number): number {
+    let rowCursor = 0;
+    let currentIndex = 0;
+
+    for (const object of this.bodyContainer.list) {
+      if (
+        object instanceof Phaser.GameObjects.Rectangle &&
+        object.width === this.tableConfig.width
+      ) {
+        if (currentIndex === rowIndex) {
+          return rowCursor;
+        }
+        rowCursor += object.height;
+        currentIndex += 1;
+      }
+    }
+
+    return 0;
+  }
+
+  private focus(): void {
+    if (!this.keyboardNavigationEnabled) return;
+    this.hasKeyboardFocus = true;
+  }
+
+  private handleKeyDown(event: KeyboardEvent): void {
+    if (
+      !this.hasKeyboardFocus ||
+      !this.visible ||
+      this.renderedRows.length === 0
+    ) {
+      if (this.hasKeyboardFocus && event.code === "Escape") {
+        this.tableConfig.onCancel?.();
+      }
+      return;
+    }
+
+    switch (event.code) {
+      case "ArrowUp":
+      case "KeyW":
+        this.moveSelection(-1);
+        event.preventDefault();
+        break;
+      case "ArrowDown":
+      case "KeyS":
+        this.moveSelection(1);
+        event.preventDefault();
+        break;
+      case "Enter":
+      case "Space": {
+        const rowIndex = this.selectedRowIndex < 0 ? 0 : this.selectedRowIndex;
+        const rowData = this.renderedRows[rowIndex];
+        if (rowData) {
+          this.selectRow(
+            rowIndex,
+            this.getRowTop(rowIndex),
+            this.getRowHeight(rowIndex),
+            true,
+          );
+          this.tableConfig.onRowActivate?.(rowIndex, rowData);
+        }
+        event.preventDefault();
+        break;
+      }
+      case "Escape":
+        this.tableConfig.onCancel?.();
+        event.preventDefault();
+        break;
+    }
+  }
+
+  private getRowHeight(rowIndex: number): number {
+    let currentIndex = 0;
+    for (const object of this.bodyContainer.list) {
+      if (
+        object instanceof Phaser.GameObjects.Rectangle &&
+        object.width === this.tableConfig.width
+      ) {
+        if (currentIndex === rowIndex) {
+          return object.height;
+        }
+        currentIndex += 1;
+      }
+    }
+    return this.rowHeight;
   }
 
   getSelectedRowIndex(): number {
@@ -333,6 +553,9 @@ export class DataTable extends Phaser.GameObjects.Container {
   destroy(fromScene?: boolean): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    if (this.keyboardNavigationEnabled) {
+      this.scene.input.keyboard?.off("keydown", this.handleKeyDown, this);
+    }
     this.maskShape.destroy();
     super.destroy(fromScene);
   }
