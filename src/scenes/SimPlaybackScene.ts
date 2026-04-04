@@ -78,6 +78,8 @@ export class SimPlaybackScene extends Phaser.Scene {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
           color: colorToString(theme.colors.textDim),
+          stroke: "#000000",
+          strokeThickness: 2,
         })
         .setOrigin(0.5, 0);
     }

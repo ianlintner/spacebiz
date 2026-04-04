@@ -49,7 +49,7 @@ export class TabGroup extends Phaser.GameObjects.Container {
           isActive ? theme.colors.panelBg : theme.colors.headerBg,
         )
         .setOrigin(0, 0)
-        .setAlpha(isActive ? 1.0 : 0.6)
+        .setAlpha(isActive ? 1.0 : 0.8)
         .setInteractive(
           new Phaser.Geom.Rectangle(0, 0, tabWidth, this.tabHeight),
           Phaser.Geom.Rectangle.Contains,

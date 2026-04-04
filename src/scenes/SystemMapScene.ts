@@ -294,7 +294,11 @@ export class SystemMapScene extends Phaser.Scene {
         .image(pos.x, pos.y, texKey)
         .setOrigin(0.5, 0.5);
       planetSprite.setInteractive(
-        new Phaser.Geom.Circle(0, 0, Math.max(planetDiameter * 0.78, 16)),
+        new Phaser.Geom.Circle(
+          planetSprite.displayWidth / 2,
+          planetSprite.displayHeight / 2,
+          Math.max(planetDiameter * 0.78, 16),
+        ),
         Phaser.Geom.Circle.Contains,
       );
       if (planetSprite.input) {
@@ -307,6 +311,8 @@ export class SystemMapScene extends Phaser.Scene {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
           color: colorToString(theme.colors.text),
+          stroke: "#000000",
+          strokeThickness: 2,
         })
         .setOrigin(0.5, 0);
 
@@ -316,6 +322,8 @@ export class SystemMapScene extends Phaser.Scene {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
           color: colorToString(theme.colors.textDim),
+          stroke: "#000000",
+          strokeThickness: 2,
         })
         .setOrigin(0.5, 0);
 

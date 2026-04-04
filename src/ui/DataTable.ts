@@ -122,7 +122,7 @@ export class DataTable extends Phaser.GameObjects.Container {
         theme.colors.accent,
       )
       .setOrigin(0, 0)
-      .setAlpha(0.4);
+      .setAlpha(0.6);
     this.headerContainer.add(headerBorderLine);
 
     let x = 0;
@@ -254,7 +254,7 @@ export class DataTable extends Phaser.GameObjects.Container {
       const rowBg = this.scene.add
         .rectangle(0, rowTop, this.tableConfig.width, rowHeightPx, bgColor)
         .setOrigin(0, 0)
-        .setAlpha(0.85)
+        .setAlpha(0.95)
         .setInteractive(
           new Phaser.Geom.Rectangle(0, 0, this.tableConfig.width, rowHeightPx),
           Phaser.Geom.Rectangle.Contains,
@@ -265,7 +265,7 @@ export class DataTable extends Phaser.GameObjects.Container {
 
       rowBg.on("pointerover", () => rowBg.setFillStyle(theme.colors.rowHover));
       rowBg.on("pointerout", () => {
-        rowBg.setAlpha(0.85);
+        rowBg.setAlpha(0.95);
         rowBg.setFillStyle(bgColor);
       });
       rowBg.on("pointerdown", () => {
@@ -283,13 +283,13 @@ export class DataTable extends Phaser.GameObjects.Container {
         },
       );
       rowBg.on("pointerup", () => {
-        rowBg.setAlpha(0.85);
+        rowBg.setAlpha(0.95);
         getAudioDirector().sfx("ui_row_select");
         this.selectRow(i, rowTop, rowHeightPx);
         this.tableConfig.onRowSelect?.(i, row);
       });
       rowBg.on("pointerupoutside", () => {
-        rowBg.setAlpha(0.85);
+        rowBg.setAlpha(0.95);
       });
 
       this.bodyContainer.add(rowBg);

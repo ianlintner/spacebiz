@@ -90,7 +90,7 @@ export class Panel extends Phaser.GameObjects.Container {
           theme.colors.accent,
         )
         .setOrigin(0, 0)
-        .setAlpha(0.5);
+        .setAlpha(0.7);
 
       const titleText = scene.add.text(
         theme.spacing.md,

@@ -63,6 +63,7 @@ export class GameOverScene extends Phaser.Scene {
     });
     heading.setOrigin(0.5, 0.5);
     heading.setFontSize(48);
+    heading.setStroke("#000000", 3);
 
     // Subtitle
     const subtitleText = isVictory

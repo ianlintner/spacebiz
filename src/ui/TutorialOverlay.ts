@@ -43,7 +43,7 @@ export class TutorialOverlay extends Phaser.GameObjects.Container {
         scene.cameras.main.width * 2,
         scene.cameras.main.height * 2,
         0x000000,
-        0.4,
+        0.55,
       )
       .setInteractive();
     this.add(this.dimBg);

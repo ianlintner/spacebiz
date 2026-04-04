@@ -207,9 +207,9 @@ export class ScrollableList extends Phaser.GameObjects.Container {
 
     // Track
     this.scrollTrack = this.scene.add
-      .rectangle(listWidth - 4, 0, 4, listHeight, theme.colors.scrollbarTrack)
+      .rectangle(listWidth - 6, 0, 6, listHeight, theme.colors.scrollbarTrack)
       .setOrigin(0, 0)
-      .setAlpha(0.3);
+      .setAlpha(0.5);
     this.add(this.scrollTrack);
 
     // Thumb: proportional height
@@ -218,9 +218,9 @@ export class ScrollableList extends Phaser.GameObjects.Container {
       (listHeight / totalContentHeight) * listHeight,
     );
     this.scrollThumb = this.scene.add
-      .rectangle(listWidth - 4, 0, 4, thumbHeight, theme.colors.accent)
+      .rectangle(listWidth - 6, 0, 6, thumbHeight, theme.colors.accent)
       .setOrigin(0, 0)
-      .setAlpha(0.5);
+      .setAlpha(0.7);
     this.add(this.scrollThumb);
 
     this.updateThumbPosition();

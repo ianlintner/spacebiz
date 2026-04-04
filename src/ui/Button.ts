@@ -67,7 +67,7 @@ export class Button extends Phaser.GameObjects.Container {
     this.accentLine = scene.add
       .rectangle(2, height - 1, width - 4, 1, theme.colors.accent)
       .setOrigin(0, 0)
-      .setAlpha(this.isDisabled ? 0.15 : 0.4);
+      .setAlpha(this.isDisabled ? 0.25 : 0.4);
 
     this.add([this.bg, this.accentLine, this.label]);
 
@@ -160,7 +160,7 @@ export class Button extends Phaser.GameObjects.Container {
       this.bg.setTexture("btn-disabled");
       this.hitZone.disableInteractive();
       this.label.setColor(colorToString(theme.colors.textDim));
-      this.accentLine.setAlpha(0.15);
+      this.accentLine.setAlpha(0.25);
     } else {
       this.bg.setTexture("btn-normal");
       this.setupInteractive();

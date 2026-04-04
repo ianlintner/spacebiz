@@ -294,8 +294,8 @@ export class GameHUDScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5)
       .setInteractive(
         new Phaser.Geom.Rectangle(
-          -NAV_SIDEBAR_WIDTH / 2,
-          -(iconBtnSize + iconSpacing) / 2,
+          0,
+          0,
           NAV_SIDEBAR_WIDTH,
           iconBtnSize + iconSpacing,
         ),
@@ -363,8 +363,8 @@ export class GameHUDScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5)
       .setInteractive(
         new Phaser.Geom.Rectangle(
-          -NAV_SIDEBAR_WIDTH / 2,
-          -(iconBtnSize + iconSpacing) / 2,
+          0,
+          0,
           NAV_SIDEBAR_WIDTH,
           iconBtnSize + iconSpacing,
         ),

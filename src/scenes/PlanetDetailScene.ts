@@ -78,7 +78,7 @@ export class PlanetDetailScene extends Phaser.Scene {
 
     // Overlay background
     this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.7)
       .setOrigin(0, 0)
       .setInteractive();
 

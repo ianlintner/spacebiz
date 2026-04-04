@@ -201,7 +201,7 @@ export class Modal extends Phaser.GameObjects.Container {
           {
             fontSize: `${theme.fonts.body.size}px`,
             fontFamily: theme.fonts.body.family,
-            color: colorToString(theme.colors.textDim),
+            color: colorToString(theme.colors.text),
           },
         )
         .setOrigin(0.5);

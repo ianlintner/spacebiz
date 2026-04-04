@@ -42,6 +42,8 @@ export class GalaxyMapScene extends Phaser.Scene {
           fontFamily: theme.fonts.caption.family,
           color: colorToString(theme.colors.textDim),
           align: "right",
+          stroke: "#000000",
+          strokeThickness: 2,
         },
       )
       .setOrigin(1, 0)
@@ -112,6 +114,8 @@ export class GalaxyMapScene extends Phaser.Scene {
             fontSize: `${theme.fonts.caption.size}px`,
             fontFamily: theme.fonts.caption.family,
             color: colorToString(theme.colors.textDim),
+            stroke: "#000000",
+            strokeThickness: 2,
           },
         )
         .setOrigin(0.5);
@@ -208,7 +212,11 @@ export class GalaxyMapScene extends Phaser.Scene {
       // Star dot
       const star = this.add.circle(sysX, sysY, mainRadius, system.starColor);
       star.setInteractive(
-        new Phaser.Geom.Circle(0, 0, Math.max(mainRadius + 10, 16)),
+        new Phaser.Geom.Circle(
+          mainRadius,
+          mainRadius,
+          Math.max(mainRadius + 10, 16),
+        ),
         Phaser.Geom.Circle.Contains,
       );
       if (star.input) {
@@ -221,6 +229,8 @@ export class GalaxyMapScene extends Phaser.Scene {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
           color: colorToString(theme.colors.text),
+          stroke: "#000000",
+          strokeThickness: 2,
         })
         .setOrigin(0.5, 0);
 
