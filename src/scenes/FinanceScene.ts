@@ -13,6 +13,7 @@ import { Modal } from "../ui/Modal.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Panel } from "../ui/Panel.ts";
 import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { SceneUiDirector } from "../ui/SceneUiDirector.ts";
 import { createStarfield } from "../ui/Starfield.ts";
 import { calculateShipValue } from "../game/fleet/FleetManager.ts";
 import {
@@ -34,6 +35,7 @@ function formatCash(n: number): string {
 
 export class FinanceScene extends Phaser.Scene {
   private selectedLoanId: string | null = null;
+  private ui!: SceneUiDirector;
 
   constructor() {
     super({ key: "FinanceScene" });
@@ -41,6 +43,7 @@ export class FinanceScene extends Phaser.Scene {
 
   create(): void {
     this.selectedLoanId = null;
+    this.ui = new SceneUiDirector(this);
 
     // Animated starfield background
     createStarfield(this);
@@ -371,67 +374,71 @@ export class FinanceScene extends Phaser.Scene {
       LOAN_INTEREST_RATE_MIN +
       Math.random() * (LOAN_INTEREST_RATE_MAX - LOAN_INTEREST_RATE_MIN);
 
-    const overlay = this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
-      .setOrigin(0, 0)
-      .setInteractive();
+    const layer = this.ui.openLayer({ key: "finance-take-loan" });
+    layer.createOverlay({
+      alpha: 0.6,
+      color: theme.colors.modalOverlay,
+      closeOnPointerUp: true,
+    });
 
     const panelW = 400;
     const panelH = 350;
     const panelX = (GAME_WIDTH - panelW) / 2;
     const panelY = (GAME_HEIGHT - panelH) / 2;
 
-    const loanPanel = new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
-      title: `Take Loan (${(rate * 100).toFixed(1)}% interest)`,
-    });
+    const loanPanel = layer.track(
+      new Panel(this, {
+        x: panelX,
+        y: panelY,
+        width: panelW,
+        height: panelH,
+        title: `Take Loan (${(rate * 100).toFixed(1)}% interest)`,
+      }),
+    );
 
     const content = loanPanel.getContentArea();
 
-    const list = new ScrollableList(this, {
-      x: panelX + content.x,
-      y: panelY + content.y,
-      width: content.width,
-      height: content.height - 50,
-      itemHeight: 48,
-      onSelect: (index: number) => {
-        const amount = loanAmounts[index];
-        if (amount === undefined) return;
+    const list = layer.track(
+      new ScrollableList(this, {
+        x: panelX + content.x,
+        y: panelY + content.y,
+        width: content.width,
+        height: content.height - 50,
+        itemHeight: 48,
+        onSelect: (index: number) => {
+          const amount = loanAmounts[index];
+          if (amount === undefined) return;
 
-        const freshState = gameStore.getState();
-        const loan: Loan = {
-          id: `loan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          principal: amount,
-          interestRate: rate,
-          remainingBalance: amount,
-          turnTaken: freshState.turn,
-        };
+          const freshState = gameStore.getState();
+          const loan: Loan = {
+            id: `loan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            principal: amount,
+            interestRate: rate,
+            remainingBalance: amount,
+            turnTaken: freshState.turn,
+          };
 
-        gameStore.update({
-          cash: freshState.cash + amount,
-          loans: [...freshState.loans, loan],
-        });
+          gameStore.update({
+            cash: freshState.cash + amount,
+            loans: [...freshState.loans, loan],
+          });
 
-        // Refresh loan table
-        const updatedState = gameStore.getState();
-        loanTable.setRows(
-          updatedState.loans.map((l: Loan) => ({
-            id: l.id,
-            principal: l.principal,
-            rate: l.interestRate,
-            remaining: l.remainingBalance,
-            turnTaken: l.turnTaken,
-          })),
-        );
+          // Refresh loan table
+          const updatedState = gameStore.getState();
+          loanTable.setRows(
+            updatedState.loans.map((l: Loan) => ({
+              id: l.id,
+              principal: l.principal,
+              rate: l.interestRate,
+              remaining: l.remainingBalance,
+              turnTaken: l.turnTaken,
+            })),
+          );
 
-        overlay.destroy();
-        loanPanel.destroy();
-        list.destroy();
-      },
-    });
+          layer.destroy();
+        },
+      }),
+    );
 
     for (const amount of loanAmounts) {
       const itemContainer = this.add.container(0, 0);
@@ -454,17 +461,17 @@ export class FinanceScene extends Phaser.Scene {
       list.addItem(itemContainer);
     }
 
-    new Button(this, {
-      x: panelX + panelW - content.x - 100,
-      y: panelY + panelH - 50,
-      width: 100,
-      label: "Close",
-      onClick: () => {
-        overlay.destroy();
-        loanPanel.destroy();
-        list.destroy();
-      },
-    });
+    layer.track(
+      new Button(this, {
+        x: panelX + panelW - content.x - 100,
+        y: panelY + panelH - 50,
+        width: 100,
+        label: "Close",
+        onClick: () => {
+          layer.destroy();
+        },
+      }),
+    );
   }
 
   private repaySelectedLoan(loanTable: DataTable): void {

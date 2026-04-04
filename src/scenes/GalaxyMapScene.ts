@@ -208,7 +208,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       // Star dot
       const star = this.add.circle(sysX, sysY, mainRadius, system.starColor);
       star.setInteractive(
-        new Phaser.Geom.Circle(0, 0, Math.max(mainRadius + 5, 10)),
+        new Phaser.Geom.Circle(0, 0, Math.max(mainRadius + 10, 16)),
         Phaser.Geom.Circle.Contains,
       );
       if (star.input) {
@@ -234,9 +234,11 @@ export class GalaxyMapScene extends Phaser.Scene {
       // Hover effect
       star.on("pointerover", () => {
         star.setRadius(mainRadius + 3);
+        halo.setAlpha(0.34);
       });
       star.on("pointerout", () => {
         star.setRadius(mainRadius);
+        halo.setAlpha(0.18);
       });
     }
   }

@@ -9,6 +9,7 @@ import { Modal } from "../ui/Modal.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Panel } from "../ui/Panel.ts";
 import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { SceneUiDirector } from "../ui/SceneUiDirector.ts";
 import { createStarfield } from "../ui/Starfield.ts";
 import {
   GAME_WIDTH,
@@ -39,6 +40,7 @@ export class RoutesScene extends Phaser.Scene {
   private selectedRouteId: string | null = null;
   private routeTable!: DataTable;
   private portrait!: PortraitPanel;
+  private ui!: SceneUiDirector;
 
   constructor() {
     super({ key: "RoutesScene" });
@@ -46,6 +48,7 @@ export class RoutesScene extends Phaser.Scene {
 
   create(): void {
     this.selectedRouteId = null;
+    this.ui = new SceneUiDirector(this);
 
     // Starfield background
     createStarfield(this);
@@ -270,45 +273,48 @@ export class RoutesScene extends Phaser.Scene {
     const planets = state.galaxy.planets;
 
     // Step 1: Pick origin
-    const overlay = this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
-      .setOrigin(0, 0)
-      .setInteractive();
+    const layer = this.ui.openLayer({ key: "routes-create-origin" });
+    layer.createOverlay({
+      alpha: 0.6,
+      color: theme.colors.modalOverlay,
+      closeOnPointerUp: true,
+    });
 
     const panelW = 400;
     const panelH = 480;
     const panelX = (GAME_WIDTH - panelW) / 2;
     const panelY = (GAME_HEIGHT - panelH) / 2;
 
-    const originPanel = new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
-      title: "Select Origin",
-    });
+    const originPanel = layer.track(
+      new Panel(this, {
+        x: panelX,
+        y: panelY,
+        width: panelW,
+        height: panelH,
+        title: "Select Origin",
+      }),
+    );
 
     const content = originPanel.getContentArea();
 
-    const originList = new ScrollableList(this, {
-      x: panelX + content.x,
-      y: panelY + content.y,
-      width: content.width,
-      height: content.height - 10,
-      itemHeight: 36,
-      onSelect: (index: number) => {
-        const originPlanet = planets[index];
-        if (!originPlanet) return;
+    const originList = layer.track(
+      new ScrollableList(this, {
+        x: panelX + content.x,
+        y: panelY + content.y,
+        width: content.width,
+        height: content.height - 10,
+        itemHeight: 36,
+        onSelect: (index: number) => {
+          const originPlanet = planets[index];
+          if (!originPlanet) return;
 
-        // Clean up origin picker
-        overlay.destroy();
-        originPanel.destroy();
-        originList.destroy();
+          layer.destroy();
 
-        // Step 2: Pick destination
-        this.pickDestination(originPlanet.id);
-      },
-    });
+          // Step 2: Pick destination
+          this.pickDestination(originPlanet.id);
+        },
+      }),
+    );
 
     for (const p of planets) {
       const itemContainer = this.add.container(0, 0);
@@ -330,45 +336,48 @@ export class RoutesScene extends Phaser.Scene {
       (p) => p.id !== originPlanetId,
     );
 
-    const overlay = this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
-      .setOrigin(0, 0)
-      .setInteractive();
+    const layer = this.ui.openLayer({ key: "routes-create-destination" });
+    layer.createOverlay({
+      alpha: 0.6,
+      color: theme.colors.modalOverlay,
+      closeOnPointerUp: true,
+    });
 
     const panelW = 400;
     const panelH = 480;
     const panelX = (GAME_WIDTH - panelW) / 2;
     const panelY = (GAME_HEIGHT - panelH) / 2;
 
-    const destPanel = new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
-      title: "Select Destination",
-    });
+    const destPanel = layer.track(
+      new Panel(this, {
+        x: panelX,
+        y: panelY,
+        width: panelW,
+        height: panelH,
+        title: "Select Destination",
+      }),
+    );
 
     const content = destPanel.getContentArea();
 
-    const destList = new ScrollableList(this, {
-      x: panelX + content.x,
-      y: panelY + content.y,
-      width: content.width,
-      height: content.height - 10,
-      itemHeight: 36,
-      onSelect: (index: number) => {
-        const destPlanet = otherPlanets[index];
-        if (!destPlanet) return;
+    const destList = layer.track(
+      new ScrollableList(this, {
+        x: panelX + content.x,
+        y: panelY + content.y,
+        width: content.width,
+        height: content.height - 10,
+        itemHeight: 36,
+        onSelect: (index: number) => {
+          const destPlanet = otherPlanets[index];
+          if (!destPlanet) return;
 
-        // Clean up
-        overlay.destroy();
-        destPanel.destroy();
-        destList.destroy();
+          layer.destroy();
 
-        // Step 3: Pick cargo type
-        this.pickCargoType(originPlanetId, destPlanet.id);
-      },
-    });
+          // Step 3: Pick cargo type
+          this.pickCargoType(originPlanetId, destPlanet.id);
+        },
+      }),
+    );
 
     for (const p of otherPlanets) {
       const itemContainer = this.add.container(0, 0);
@@ -387,72 +396,75 @@ export class RoutesScene extends Phaser.Scene {
     const theme = getTheme();
     const cargoTypes = Object.values(CargoType) as CargoTypeValue[];
 
-    const overlay = this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
-      .setOrigin(0, 0)
-      .setInteractive();
+    const layer = this.ui.openLayer({ key: "routes-create-cargo" });
+    layer.createOverlay({
+      alpha: 0.6,
+      color: theme.colors.modalOverlay,
+      closeOnPointerUp: true,
+    });
 
     const panelW = 350;
     const panelH = 420;
     const panelX = (GAME_WIDTH - panelW) / 2;
     const panelY = (GAME_HEIGHT - panelH) / 2;
 
-    const cargoPanel = new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
-      title: "Select Cargo Type",
-    });
+    const cargoPanel = layer.track(
+      new Panel(this, {
+        x: panelX,
+        y: panelY,
+        width: panelW,
+        height: panelH,
+        title: "Select Cargo Type",
+      }),
+    );
 
     const content = cargoPanel.getContentArea();
 
-    const cargoList = new ScrollableList(this, {
-      x: panelX + content.x,
-      y: panelY + content.y,
-      width: content.width,
-      height: content.height - 10,
-      itemHeight: 36,
-      onSelect: (index: number) => {
-        const selectedCargo = cargoTypes[index];
-        if (!selectedCargo) return;
+    const cargoList = layer.track(
+      new ScrollableList(this, {
+        x: panelX + content.x,
+        y: panelY + content.y,
+        width: content.width,
+        height: content.height - 10,
+        itemHeight: 36,
+        onSelect: (index: number) => {
+          const selectedCargo = cargoTypes[index];
+          if (!selectedCargo) return;
 
-        // Create the route
-        const freshState = gameStore.getState();
-        const originPlanet = freshState.galaxy.planets.find(
-          (p) => p.id === originPlanetId,
-        );
-        const destPlanet = freshState.galaxy.planets.find(
-          (p) => p.id === destPlanetId,
-        );
+          // Create the route
+          const freshState = gameStore.getState();
+          const originPlanet = freshState.galaxy.planets.find(
+            (p) => p.id === originPlanetId,
+          );
+          const destPlanet = freshState.galaxy.planets.find(
+            (p) => p.id === destPlanetId,
+          );
 
-        if (!originPlanet || !destPlanet) return;
+          if (!originPlanet || !destPlanet) return;
 
-        const distance = calculateDistance(
-          originPlanet,
-          destPlanet,
-          freshState.galaxy.systems,
-        );
+          const distance = calculateDistance(
+            originPlanet,
+            destPlanet,
+            freshState.galaxy.systems,
+          );
 
-        const route = createRoute(
-          originPlanetId,
-          destPlanetId,
-          distance,
-          selectedCargo,
-        );
+          const route = createRoute(
+            originPlanetId,
+            destPlanetId,
+            distance,
+            selectedCargo,
+          );
 
-        gameStore.update({
-          activeRoutes: [...freshState.activeRoutes, route],
-        });
+          gameStore.update({
+            activeRoutes: [...freshState.activeRoutes, route],
+          });
 
-        // Clean up
-        overlay.destroy();
-        cargoPanel.destroy();
-        cargoList.destroy();
+          layer.destroy();
 
-        this.refreshTable();
-      },
-    });
+          this.refreshTable();
+        },
+      }),
+    );
 
     for (const ct of cargoTypes) {
       const itemContainer = this.add.container(0, 0);
@@ -530,55 +542,59 @@ export class RoutesScene extends Phaser.Scene {
       return;
     }
 
-    const overlay = this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
-      .setOrigin(0, 0)
-      .setInteractive();
+    const layer = this.ui.openLayer({ key: "routes-assign-ship" });
+    layer.createOverlay({
+      alpha: 0.6,
+      color: theme.colors.modalOverlay,
+      closeOnPointerUp: true,
+    });
 
     const panelW = 450;
     const panelH = 400;
     const panelX = (GAME_WIDTH - panelW) / 2;
     const panelY = (GAME_HEIGHT - panelH) / 2;
 
-    const shipPanel = new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
-      title: "Assign Ship",
-    });
+    const shipPanel = layer.track(
+      new Panel(this, {
+        x: panelX,
+        y: panelY,
+        width: panelW,
+        height: panelH,
+        title: "Assign Ship",
+      }),
+    );
 
     const content = shipPanel.getContentArea();
     const routeId = this.selectedRouteId;
 
-    const shipList = new ScrollableList(this, {
-      x: panelX + content.x,
-      y: panelY + content.y,
-      width: content.width,
-      height: content.height - 50,
-      itemHeight: 40,
-      onSelect: (index: number) => {
-        const ship = availableShips[index];
-        if (!ship || !routeId) return;
+    const shipList = layer.track(
+      new ScrollableList(this, {
+        x: panelX + content.x,
+        y: panelY + content.y,
+        width: content.width,
+        height: content.height - 50,
+        itemHeight: 40,
+        onSelect: (index: number) => {
+          const ship = availableShips[index];
+          if (!ship || !routeId) return;
 
-        const freshState = gameStore.getState();
-        const result = assignShipToRoute(
-          ship.id,
-          routeId,
-          freshState.fleet,
-          freshState.activeRoutes,
-        );
-        gameStore.update({
-          fleet: result.fleet,
-          activeRoutes: result.routes,
-        });
+          const freshState = gameStore.getState();
+          const result = assignShipToRoute(
+            ship.id,
+            routeId,
+            freshState.fleet,
+            freshState.activeRoutes,
+          );
+          gameStore.update({
+            fleet: result.fleet,
+            activeRoutes: result.routes,
+          });
 
-        overlay.destroy();
-        shipPanel.destroy();
-        shipList.destroy();
-        this.refreshTable();
-      },
-    });
+          layer.destroy();
+          this.refreshTable();
+        },
+      }),
+    );
 
     for (const ship of availableShips) {
       const itemContainer = this.add.container(0, 0);
@@ -603,17 +619,17 @@ export class RoutesScene extends Phaser.Scene {
       shipList.addItem(itemContainer);
     }
 
-    new Button(this, {
-      x: panelX + panelW - content.x - 100,
-      y: panelY + panelH - 50,
-      width: 100,
-      label: "Close",
-      onClick: () => {
-        overlay.destroy();
-        shipPanel.destroy();
-        shipList.destroy();
-      },
-    });
+    layer.track(
+      new Button(this, {
+        x: panelX + panelW - content.x - 100,
+        y: panelY + panelH - 50,
+        width: 100,
+        label: "Close",
+        onClick: () => {
+          layer.destroy();
+        },
+      }),
+    );
   }
 
   private showSetCargo(): void {
@@ -633,48 +649,52 @@ export class RoutesScene extends Phaser.Scene {
     const cargoTypes = Object.values(CargoType) as CargoTypeValue[];
     const routeId = this.selectedRouteId;
 
-    const overlay = this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
-      .setOrigin(0, 0)
-      .setInteractive();
+    const layer = this.ui.openLayer({ key: "routes-set-cargo" });
+    layer.createOverlay({
+      alpha: 0.6,
+      color: theme.colors.modalOverlay,
+      closeOnPointerUp: true,
+    });
 
     const panelW = 350;
     const panelH = 400;
     const panelX = (GAME_WIDTH - panelW) / 2;
     const panelY = (GAME_HEIGHT - panelH) / 2;
 
-    const cargoPanel = new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
-      title: "Set Cargo Type",
-    });
+    const cargoPanel = layer.track(
+      new Panel(this, {
+        x: panelX,
+        y: panelY,
+        width: panelW,
+        height: panelH,
+        title: "Set Cargo Type",
+      }),
+    );
 
     const content = cargoPanel.getContentArea();
 
-    const cargoList = new ScrollableList(this, {
-      x: panelX + content.x,
-      y: panelY + content.y,
-      width: content.width,
-      height: content.height - 50,
-      itemHeight: 36,
-      onSelect: (index: number) => {
-        const selectedCargo = cargoTypes[index];
-        if (!selectedCargo || !routeId) return;
+    const cargoList = layer.track(
+      new ScrollableList(this, {
+        x: panelX + content.x,
+        y: panelY + content.y,
+        width: content.width,
+        height: content.height - 50,
+        itemHeight: 36,
+        onSelect: (index: number) => {
+          const selectedCargo = cargoTypes[index];
+          if (!selectedCargo || !routeId) return;
 
-        const freshState = gameStore.getState();
-        const updatedRoutes = freshState.activeRoutes.map((r) =>
-          r.id === routeId ? { ...r, cargoType: selectedCargo } : r,
-        );
-        gameStore.update({ activeRoutes: updatedRoutes });
+          const freshState = gameStore.getState();
+          const updatedRoutes = freshState.activeRoutes.map((r) =>
+            r.id === routeId ? { ...r, cargoType: selectedCargo } : r,
+          );
+          gameStore.update({ activeRoutes: updatedRoutes });
 
-        overlay.destroy();
-        cargoPanel.destroy();
-        cargoList.destroy();
-        this.refreshTable();
-      },
-    });
+          layer.destroy();
+          this.refreshTable();
+        },
+      }),
+    );
 
     for (const ct of cargoTypes) {
       const itemContainer = this.add.container(0, 0);
@@ -687,16 +707,16 @@ export class RoutesScene extends Phaser.Scene {
       cargoList.addItem(itemContainer);
     }
 
-    new Button(this, {
-      x: panelX + panelW - content.x - 100,
-      y: panelY + panelH - 50,
-      width: 100,
-      label: "Close",
-      onClick: () => {
-        overlay.destroy();
-        cargoPanel.destroy();
-        cargoList.destroy();
-      },
-    });
+    layer.track(
+      new Button(this, {
+        x: panelX + panelW - content.x - 100,
+        y: panelY + panelH - 50,
+        width: 100,
+        label: "Close",
+        onClick: () => {
+          layer.destroy();
+        },
+      }),
+    );
   }
 }

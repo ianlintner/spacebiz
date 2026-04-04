@@ -28,8 +28,9 @@ export class GameHUDScene extends Phaser.Scene {
   private activeContentScene = "GalaxyMapScene";
   private previousCash = 0;
   private navIndicators = new Map<string, Phaser.GameObjects.Rectangle>();
-  private navButtons = new Map<string, Phaser.GameObjects.Container>();
-  private navHitAreas = new Map<string, Phaser.GameObjects.Rectangle>();
+  private navBackgrounds = new Map<string, Phaser.GameObjects.Rectangle>();
+  private navIcons = new Map<string, Phaser.GameObjects.Image>();
+  private navHitAreas = new Map<string, Phaser.GameObjects.Container>();
   private navTooltip!: Tooltip;
   private audioPanelObjects: Phaser.GameObjects.GameObject[] = [];
   private audioPanelOpen = false;
@@ -39,6 +40,19 @@ export class GameHUDScene extends Phaser.Scene {
   private musicStyleValueLabel: Label | null = null;
   private musicTrackValueLabel: Label | null = null;
   private muteValueLabel: Label | null = null;
+
+  private readonly contentSceneKeys = [
+    "GalaxyMapScene",
+    "SystemMapScene",
+    "FleetScene",
+    "RoutesScene",
+    "FinanceScene",
+    "MarketScene",
+    "SimPlaybackScene",
+    "TurnReportScene",
+  ];
+
+  private readonly overlaySceneKeys = ["PlanetDetailScene"];
 
   private stateListener = (_data: unknown) => {
     this.updateHUD();
@@ -148,8 +162,8 @@ export class GameHUDScene extends Phaser.Scene {
 
     this.navTooltip = new Tooltip(this, { showDelay: 300 });
 
-    const iconBtnSize = 44;
-    const iconSpacing = 6;
+    const iconBtnSize = 46;
+    const iconSpacing = 8;
     const navStartY = navSidebarTop + 12;
     const navCenterX = NAV_SIDEBAR_WIDTH / 2;
 
@@ -158,33 +172,30 @@ export class GameHUDScene extends Phaser.Scene {
       const btnY =
         navStartY + i * (iconBtnSize + iconSpacing) + iconBtnSize / 2;
       const btnContainer = this.add.container(navCenterX, btnY);
-
-      const navHit = this.add
-        .rectangle(
-          0,
-          0,
+      btnContainer.setSize(NAV_SIDEBAR_WIDTH, iconBtnSize + iconSpacing + 4);
+      btnContainer.setInteractive(
+        new Phaser.Geom.Rectangle(
+          -NAV_SIDEBAR_WIDTH / 2,
+          -(iconBtnSize + iconSpacing + 4) / 2,
           NAV_SIDEBAR_WIDTH,
-          iconBtnSize + iconSpacing,
-          0x000000,
-          0,
-        )
-        .setOrigin(0.5, 0.5)
-        .setInteractive(
-          new Phaser.Geom.Rectangle(
-            -NAV_SIDEBAR_WIDTH / 2,
-            -(iconBtnSize + iconSpacing) / 2,
-            NAV_SIDEBAR_WIDTH,
-            iconBtnSize + iconSpacing,
-          ),
-          Phaser.Geom.Rectangle.Contains,
-        );
-      if (navHit.input) {
-        navHit.input.cursor = "pointer";
+          iconBtnSize + iconSpacing + 4,
+        ),
+        Phaser.Geom.Rectangle.Contains,
+      );
+      if (btnContainer.input) {
+        btnContainer.input.cursor = "pointer";
       }
 
       // Button background (hover/active states)
       const bg = this.add
-        .rectangle(0, 0, iconBtnSize, iconBtnSize, theme.colors.buttonBg, 0.0)
+        .rectangle(
+          0,
+          0,
+          iconBtnSize + 4,
+          iconBtnSize + 4,
+          theme.colors.buttonBg,
+          0.0,
+        )
         .setOrigin(0.5, 0.5);
 
       // Icon image
@@ -205,32 +216,43 @@ export class GameHUDScene extends Phaser.Scene {
         icon.setTint(theme.colors.textDim);
       }
 
-      btnContainer.add([navHit, bg, icon, indicator]);
+      btnContainer.add([bg, icon, indicator]);
 
       // Tooltip
-      this.navTooltip.attachTo(navHit, item.label);
+      this.navTooltip.attachTo(btnContainer, item.label);
 
-      navHit.on("pointerover", () => {
+      btnContainer.on("pointerover", () => {
         if (item.scene !== this.activeContentScene) {
           getAudioDirector().sfx("ui_hover");
-          bg.setAlpha(0.2);
+          bg.setAlpha(0.22);
           icon.setTint(theme.colors.text);
         }
       });
-      navHit.on("pointerout", () => {
+      btnContainer.on("pointerout", () => {
         if (item.scene !== this.activeContentScene) {
           bg.setAlpha(0.0);
           icon.setTint(theme.colors.textDim);
         }
       });
-      navHit.on("pointerup", () => {
+      btnContainer.on("pointerdown", () => {
+        if (item.scene !== this.activeContentScene) {
+          bg.setAlpha(0.32);
+        }
+      });
+      btnContainer.on("pointerup", () => {
         getAudioDirector().sfx("ui_click_primary");
         this.switchContentScene(item.scene);
       });
+      btnContainer.on("pointerupoutside", () => {
+        if (item.scene !== this.activeContentScene) {
+          bg.setAlpha(0.0);
+        }
+      });
 
       this.navIndicators.set(item.scene, indicator);
-      this.navButtons.set(item.scene, btnContainer);
-      this.navHitAreas.set(item.scene, navHit);
+      this.navBackgrounds.set(item.scene, bg);
+      this.navIcons.set(item.scene, icon);
+      this.navHitAreas.set(item.scene, btnContainer);
     }
 
     // ── Audio button at bottom of nav sidebar ──
@@ -396,7 +418,18 @@ export class GameHUDScene extends Phaser.Scene {
     const navEnabled = state.phase === "planning";
     for (const [, hitArea] of this.navHitAreas) {
       if (navEnabled) {
-        hitArea.setInteractive();
+        hitArea.setInteractive(
+          new Phaser.Geom.Rectangle(
+            -NAV_SIDEBAR_WIDTH / 2,
+            -29,
+            NAV_SIDEBAR_WIDTH,
+            58,
+          ),
+          Phaser.Geom.Rectangle.Contains,
+        );
+        if (hitArea.input) {
+          hitArea.input.cursor = "pointer";
+        }
       } else {
         hitArea.disableInteractive();
       }
@@ -412,15 +445,25 @@ export class GameHUDScene extends Phaser.Scene {
     const audio = getAudioDirector();
     const theme = getTheme();
 
+    if (this.audioPanelOpen) {
+      this.destroyAudioPanel();
+    }
+
     // Stop overlay scenes that might be stacked on top
-    const overlayScenes = ["PlanetDetailScene"];
-    for (const key of overlayScenes) {
+    for (const key of this.overlaySceneKeys) {
       if (this.scene.isActive(key)) {
         this.scene.stop(key);
       }
     }
 
-    if (sceneName === this.activeContentScene) return;
+    for (const key of this.contentSceneKeys) {
+      if (
+        key !== sceneName &&
+        (this.scene.isActive(key) || this.scene.isPaused(key))
+      ) {
+        this.scene.stop(key);
+      }
+    }
 
     if (sceneName === "SimPlaybackScene") {
       gameStore.update({ phase: "simulation" });
@@ -451,6 +494,15 @@ export class GameHUDScene extends Phaser.Scene {
       }
     }
 
+    if (
+      sceneName === this.activeContentScene &&
+      this.scene.isActive(sceneName)
+    ) {
+      this.updateNavVisualState(sceneName, theme);
+      this.scene.bringToTop();
+      return;
+    }
+
     // Stop current content scene (check it's actually running)
     if (
       this.scene.isActive(this.activeContentScene) ||
@@ -459,29 +511,29 @@ export class GameHUDScene extends Phaser.Scene {
       this.scene.stop(this.activeContentScene);
     }
 
+    if (this.scene.isActive(sceneName) || this.scene.isPaused(sceneName)) {
+      this.scene.stop(sceneName);
+    }
+
     // Launch new content scene
     this.scene.launch(sceneName, data);
 
-    // Update active indicators and icon tints
+    this.activeContentScene = sceneName;
+    this.updateNavVisualState(sceneName, theme);
+    this.scene.bringToTop();
+  }
+
+  private updateNavVisualState(sceneName: string, theme = getTheme()): void {
     for (const [scene, indicator] of this.navIndicators) {
       const isActive = scene === sceneName;
       indicator.setVisible(isActive);
-      const btnContainer = this.navButtons.get(scene);
-      if (btnContainer) {
-        const bg = btnContainer.getAt(0) as Phaser.GameObjects.Rectangle;
-        const icon = btnContainer.getAt(1) as Phaser.GameObjects.Image;
-        if (isActive) {
-          bg.setAlpha(0.3);
-          icon.setTint(theme.colors.accent);
-        } else {
-          bg.setAlpha(0.0);
-          icon.setTint(theme.colors.textDim);
-        }
+      const bg = this.navBackgrounds.get(scene);
+      const icon = this.navIcons.get(scene);
+      if (bg && icon) {
+        bg.setAlpha(isActive ? 0.32 : 0.0);
+        icon.setTint(isActive ? theme.colors.accent : theme.colors.textDim);
       }
     }
-
-    this.activeContentScene = sceneName;
-    this.scene.bringToTop();
   }
 
   private toggleAudioPanel(): void {

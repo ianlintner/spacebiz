@@ -75,6 +75,12 @@ export class SystemMapScene extends Phaser.Scene {
     );
     const routes = state.activeRoutes;
 
+    this.events.once("shutdown", () => {
+      if (this.scene.isActive("PlanetDetailScene")) {
+        this.scene.stop("PlanetDetailScene");
+      }
+    });
+
     // Starfield background
     createStarfield(this);
 
@@ -288,7 +294,7 @@ export class SystemMapScene extends Phaser.Scene {
         .image(pos.x, pos.y, texKey)
         .setOrigin(0.5, 0.5);
       planetSprite.setInteractive(
-        new Phaser.Geom.Circle(0, 0, Math.max(planetDiameter * 0.55, 10)),
+        new Phaser.Geom.Circle(0, 0, Math.max(planetDiameter * 0.78, 16)),
         Phaser.Geom.Circle.Contains,
       );
       if (planetSprite.input) {
@@ -321,16 +327,17 @@ export class SystemMapScene extends Phaser.Scene {
         if (this.portraitPanel) {
           this.portraitPanel.showPlanet(planet, planetIndex);
         }
-        // Launch PlanetDetail as overlay on top (don't pause self — HUD stays active)
-        if (!this.scene.isActive("PlanetDetailScene")) {
-          this.scene.launch("PlanetDetailScene", { planetId: planet.id });
+        // Relaunch PlanetDetail so switching planets never leaves a stale overlay stacked up.
+        if (this.scene.isActive("PlanetDetailScene")) {
+          this.scene.stop("PlanetDetailScene");
         }
+        this.scene.launch("PlanetDetailScene", { planetId: planet.id });
       });
 
       // Hover effect
       planetSprite.on("pointerover", () => {
         planetSprite.setScale(1.15);
-        planetHalo.setAlpha(0.3);
+        planetHalo.setAlpha(0.34);
       });
       planetSprite.on("pointerout", () => {
         planetSprite.setScale(1);

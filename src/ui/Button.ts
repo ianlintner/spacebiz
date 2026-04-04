@@ -31,6 +31,7 @@ export class Button extends Phaser.GameObjects.Container {
     this.heightPx = height;
     this.isDisabled = config.disabled ?? false;
     this.onClickFn = config.onClick;
+    this.setSize(width, height);
 
     const textureKey = this.isDisabled ? "btn-disabled" : "btn-normal";
     this.bg = scene.add
@@ -84,27 +85,24 @@ export class Button extends Phaser.GameObjects.Container {
     this.off("pointerout");
     this.off("pointerdown");
     this.off("pointerup");
-    this.bg.off("pointerover");
-    this.bg.off("pointerout");
-    this.bg.off("pointerdown");
-    this.bg.off("pointerup");
-    this.bg.off("pointerupoutside");
+    this.off("pointerupoutside");
 
     this.startIdleShimmer();
-    const hitPadding = 8;
-    this.bg.setInteractive(
+    const hitPaddingX = 10;
+    const hitPaddingY = 8;
+    this.setInteractive(
       new Phaser.Geom.Rectangle(
-        -hitPadding,
-        -hitPadding,
-        this.widthPx + hitPadding * 2,
-        this.heightPx + hitPadding * 2,
+        -hitPaddingX,
+        -hitPaddingY,
+        this.widthPx + hitPaddingX * 2,
+        this.heightPx + hitPaddingY * 2,
       ),
       Phaser.Geom.Rectangle.Contains,
     );
-    if (this.bg.input) {
-      this.bg.input.cursor = "pointer";
+    if (this.input) {
+      this.input.cursor = "pointer";
     }
-    this.bg.on("pointerover", () => {
+    this.on("pointerover", () => {
       getAudioDirector().sfx("ui_hover");
       // Pause idle shimmer so the hover brightening is clean
       if (this.idleShimmerTween) {
@@ -119,7 +117,7 @@ export class Button extends Phaser.GameObjects.Container {
         ease: "Power2",
       });
     });
-    this.bg.on("pointerout", () => {
+    this.on("pointerout", () => {
       this.setTexture("btn-normal");
       this.scene.tweens.add({
         targets: this.accentLine,
@@ -129,13 +127,13 @@ export class Button extends Phaser.GameObjects.Container {
         onComplete: () => this.startIdleShimmer(),
       });
     });
-    this.bg.on("pointerdown", () => this.setTexture("btn-pressed"));
-    this.bg.on("pointerup", () => {
+    this.on("pointerdown", () => this.setTexture("btn-pressed"));
+    this.on("pointerup", () => {
       this.setTexture("btn-hover");
       getAudioDirector().sfx("ui_click_primary");
       this.onClickFn();
     });
-    this.bg.on("pointerupoutside", () => {
+    this.on("pointerupoutside", () => {
       this.setTexture("btn-normal");
     });
   }

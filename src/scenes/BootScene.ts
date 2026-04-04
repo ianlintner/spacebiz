@@ -8,6 +8,11 @@ export class BootScene extends Phaser.Scene {
     super({ key: "BootScene" });
   }
 
+  preload(): void {
+    this.load.image("hero-freight", "concepts/hero/freight.png");
+    this.load.image("hero-passenger", "concepts/hero/passenger.png");
+  }
+
   create(): void {
     const theme = getTheme();
 

@@ -11,6 +11,7 @@ import { Modal } from "../ui/Modal.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Panel } from "../ui/Panel.ts";
 import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { SceneUiDirector } from "../ui/SceneUiDirector.ts";
 import { createStarfield } from "../ui/Starfield.ts";
 import {
   GAME_WIDTH,
@@ -47,6 +48,7 @@ export class FleetScene extends Phaser.Scene {
   private selectedShipId: string | null = null;
   private fleetTable!: DataTable;
   private portrait!: PortraitPanel;
+  private ui!: SceneUiDirector;
 
   constructor() {
     super({ key: "FleetScene" });
@@ -55,6 +57,7 @@ export class FleetScene extends Phaser.Scene {
   create(): void {
     const theme = getTheme();
     this.selectedShipId = null;
+    this.ui = new SceneUiDirector(this);
 
     // Starfield background
     createStarfield(this);
@@ -240,66 +243,68 @@ export class FleetScene extends Phaser.Scene {
   private showBuyShipPanel(): void {
     const theme = getTheme();
     const state = gameStore.getState();
-
-    const overlay = this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.6)
-      .setOrigin(0, 0)
-      .setInteractive();
+    const layer = this.ui.openLayer({ key: "fleet-buy-ship" });
+    layer.createOverlay({
+      alpha: 0.6,
+      color: theme.colors.modalOverlay,
+      closeOnPointerUp: true,
+    });
 
     const panelW = 600;
     const panelH = 500;
     const panelX = (GAME_WIDTH - panelW) / 2;
     const panelY = (GAME_HEIGHT - panelH) / 2;
 
-    const buyPanel = new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
-      title: "Buy Ship",
-    });
+    const buyPanel = layer.track(
+      new Panel(this, {
+        x: panelX,
+        y: panelY,
+        width: panelW,
+        height: panelH,
+        title: "Buy Ship",
+      }),
+    );
 
     const content = buyPanel.getContentArea();
 
-    const list = new ScrollableList(this, {
-      x: panelX + content.x,
-      y: panelY + content.y,
-      width: content.width,
-      height: content.height - 50,
-      itemHeight: 48,
-      onSelect: (index: number) => {
-        const shipClasses = Object.values(ShipClass) as ShipClassType[];
-        const selectedClass = shipClasses[index];
-        if (!selectedClass) return;
+    const list = layer.track(
+      new ScrollableList(this, {
+        x: panelX + content.x,
+        y: panelY + content.y,
+        width: content.width,
+        height: content.height - 50,
+        itemHeight: 48,
+        onSelect: (index: number) => {
+          const shipClasses = Object.values(ShipClass) as ShipClassType[];
+          const selectedClass = shipClasses[index];
+          if (!selectedClass) return;
 
-        const template = SHIP_TEMPLATES[selectedClass];
-        const freshState = gameStore.getState();
+          const template = SHIP_TEMPLATES[selectedClass];
+          const freshState = gameStore.getState();
 
-        if (freshState.cash < template.purchaseCost) {
-          const errorModal = new Modal(this, {
-            title: "Insufficient Funds",
-            body: `You need ${formatCash(template.purchaseCost)} but only have ${formatCash(freshState.cash)}.`,
-            onOk: () => {
-              errorModal.destroy();
-            },
+          if (freshState.cash < template.purchaseCost) {
+            const errorModal = new Modal(this, {
+              title: "Insufficient Funds",
+              body: `You need ${formatCash(template.purchaseCost)} but only have ${formatCash(freshState.cash)}.`,
+              onOk: () => {
+                errorModal.destroy();
+              },
+            });
+            errorModal.show();
+            return;
+          }
+
+          const { ship, cost } = buyShip(selectedClass, freshState.fleet);
+          gameStore.update({
+            fleet: [...freshState.fleet, ship],
+            cash: freshState.cash - cost,
           });
-          errorModal.show();
-          return;
-        }
 
-        const { ship, cost } = buyShip(selectedClass, freshState.fleet);
-        gameStore.update({
-          fleet: [...freshState.fleet, ship],
-          cash: freshState.cash - cost,
-        });
-
-        // Clean up and refresh
-        overlay.destroy();
-        buyPanel.destroy();
-        list.destroy();
-        this.refreshTable();
-      },
-    });
+          layer.destroy();
+          this.refreshTable();
+        },
+      }),
+    );
 
     const shipClasses = Object.values(ShipClass) as ShipClassType[];
     for (const sc of shipClasses) {
@@ -332,17 +337,17 @@ export class FleetScene extends Phaser.Scene {
     }
 
     // Close button for buy panel
-    new Button(this, {
-      x: panelX + panelW - content.x - 100,
-      y: panelY + panelH - 50,
-      width: 100,
-      label: "Close",
-      onClick: () => {
-        overlay.destroy();
-        buyPanel.destroy();
-        list.destroy();
-      },
-    });
+    layer.track(
+      new Button(this, {
+        x: panelX + panelW - content.x - 100,
+        y: panelY + panelH - 50,
+        width: 100,
+        label: "Close",
+        onClick: () => {
+          layer.destroy();
+        },
+      }),
+    );
   }
 
   private confirmSellShip(): void {

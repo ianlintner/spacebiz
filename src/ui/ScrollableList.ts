@@ -23,6 +23,7 @@ export class ScrollableList extends Phaser.GameObjects.Container {
   private hoverIndicator: Phaser.GameObjects.Rectangle | null = null;
   private currentHoverContainer: Phaser.GameObjects.Container | null = null;
   private wheelCapture: Phaser.GameObjects.Rectangle;
+  private destroyed = false;
 
   constructor(scene: Phaser.Scene, config: ScrollableListConfig) {
     super(scene, config.x, config.y);
@@ -237,5 +238,12 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     const trackRange = listHeight - thumbHeight;
     const thumbY = (this.scrollY / this.maxScroll) * trackRange;
     this.scrollThumb.setY(thumbY);
+  }
+
+  destroy(fromScene?: boolean): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.maskGraphics.destroy();
+    super.destroy(fromScene);
   }
 }

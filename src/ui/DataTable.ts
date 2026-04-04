@@ -36,6 +36,8 @@ export class DataTable extends Phaser.GameObjects.Container {
   private selectedRowIndex = -1;
   private selectedRowIndicator: Phaser.GameObjects.Rectangle | null = null;
   private wheelHitArea: Phaser.GameObjects.Rectangle;
+  private maskShape: Phaser.GameObjects.Graphics;
+  private destroyed = false;
 
   constructor(scene: Phaser.Scene, config: DataTableConfig) {
     super(scene, config.x, config.y);
@@ -69,16 +71,16 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.addAt(this.wheelHitArea, 0);
 
     // Mask for body scrolling
-    const maskShape = scene.make.graphics({});
-    maskShape.fillStyle(0xffffff);
-    maskShape.fillRect(
+    this.maskShape = scene.make.graphics({});
+    this.maskShape.fillStyle(0xffffff);
+    this.maskShape.fillRect(
       0,
       this.headerHeight,
       config.width,
       config.height - this.headerHeight,
     );
-    maskShape.setPosition(config.x, config.y);
-    const mask = maskShape.createGeometryMask();
+    this.maskShape.setPosition(config.x, config.y);
+    const mask = this.maskShape.createGeometryMask();
     this.bodyContainer.setMask(mask);
 
     this.renderHeader();
@@ -326,5 +328,12 @@ export class DataTable extends Phaser.GameObjects.Container {
 
   getSelectedRowIndex(): number {
     return this.selectedRowIndex;
+  }
+
+  destroy(fromScene?: boolean): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.maskShape.destroy();
+    super.destroy(fromScene);
   }
 }
