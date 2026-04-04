@@ -180,6 +180,14 @@ export class MainMenuScene extends Phaser.Scene {
     const panelH = 182;
     const panelX = cx - panelW / 2;
     const panelY = GAME_HEIGHT - panelH - 22;
+    const btnWidth = 220;
+    const btnHeight = 52;
+    const btnGap = 18;
+    const btnY = panelY + panelH - btnHeight - 28;
+    const btnStartX = panelX + panelW - btnWidth * 2 - btnGap - 28;
+    const textLeftX = panelX + 28;
+    const textRightLimit = btnStartX - 24;
+    const textColumnWidth = Math.max(220, textRightLimit - textLeftX);
     new Panel(this, {
       x: panelX,
       y: panelY,
@@ -189,7 +197,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     const deckLabel = new Label(this, {
-      x: panelX + 28,
+      x: textLeftX,
       y: panelY + 22,
       text: "Command Deck",
       style: "caption",
@@ -198,7 +206,7 @@ export class MainMenuScene extends Phaser.Scene {
     deckLabel.setOrigin(0, 0);
 
     const promptLabel = new Label(this, {
-      x: panelX + 28,
+      x: textLeftX,
       y: panelY + 48,
       text: "Choose your next jump.",
       style: "body",
@@ -207,32 +215,26 @@ export class MainMenuScene extends Phaser.Scene {
     promptLabel.setOrigin(0, 0);
 
     const statusLabel = new Label(this, {
-      x: panelX + 28,
+      x: textLeftX,
       y: panelY + 80,
       text: canContinue
         ? "Save detected — continue your company from orbit."
         : "No save on record — start a fresh company charter.",
       style: "caption",
       color: theme.colors.textDim,
-      maxWidth: 340,
+      maxWidth: textColumnWidth,
     });
     statusLabel.setOrigin(0, 0);
 
     const vignetteLabel = new Label(this, {
-      x: panelX + 28,
+      x: textLeftX,
       y: panelY + 112,
       text: heroConfig.vignette,
       style: "caption",
       color: theme.colors.textDim,
-      maxWidth: 360,
+      maxWidth: textColumnWidth,
     });
     vignetteLabel.setOrigin(0, 0);
-
-    const btnWidth = 220;
-    const btnHeight = 52;
-    const btnGap = 18;
-    const btnY = panelY + panelH - btnHeight - 28;
-    const btnStartX = panelX + panelW - btnWidth * 2 - btnGap - 28;
 
     new Button(this, {
       x: btnStartX,
