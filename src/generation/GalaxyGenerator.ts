@@ -65,6 +65,109 @@ const STAR_COLORS = [
   0xffffee, 0xffcc88, 0xff8866, 0x88aaff, 0xffffff, 0xffaa44,
 ];
 
+interface Bounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v));
+}
+
+function generateSectorCenters(
+  rng: SeededRNG,
+  count: number,
+  bounds: Bounds,
+): Array<{ x: number; y: number }> {
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cy = (bounds.minY + bounds.maxY) / 2;
+  const radiusX = (bounds.maxX - bounds.minX) * 0.3;
+  const radiusY = (bounds.maxY - bounds.minY) * 0.25;
+  const startAngle = rng.nextFloat(0, Math.PI * 2);
+  const centers: Array<{ x: number; y: number }> = [];
+
+  for (let i = 0; i < count; i++) {
+    const base = startAngle + (i / count) * Math.PI * 2;
+    const jitter = rng.nextFloat(-0.22, 0.22);
+    const angle = base + jitter;
+    const x = clamp(
+      cx + Math.cos(angle) * radiusX + rng.nextFloat(-30, 30),
+      bounds.minX,
+      bounds.maxX,
+    );
+    const y = clamp(
+      cy + Math.sin(angle) * radiusY + rng.nextFloat(-24, 24),
+      bounds.minY,
+      bounds.maxY,
+    );
+    centers.push({ x, y });
+  }
+
+  return centers;
+}
+
+function generateSystemPoints(
+  rng: SeededRNG,
+  count: number,
+  centerX: number,
+  centerY: number,
+  bounds: Bounds,
+): Array<{ x: number; y: number }> {
+  const points: Array<{ x: number; y: number }> = [];
+  const localRadiusX = 125;
+  const localRadiusY = 95;
+  const minDist = 56;
+
+  for (let i = 0; i < count; i++) {
+    let placed = false;
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const angle = rng.nextFloat(0, Math.PI * 2);
+      const radial = Math.sqrt(rng.next()) * 0.95 + 0.05;
+      const px = clamp(
+        centerX + Math.cos(angle) * localRadiusX * radial,
+        bounds.minX,
+        bounds.maxX,
+      );
+      const py = clamp(
+        centerY + Math.sin(angle) * localRadiusY * radial,
+        bounds.minY,
+        bounds.maxY,
+      );
+
+      const overlaps = points.some((p) => {
+        const dx = p.x - px;
+        const dy = p.y - py;
+        return dx * dx + dy * dy < minDist * minDist;
+      });
+      if (!overlaps) {
+        points.push({ x: px, y: py });
+        placed = true;
+        break;
+      }
+    }
+
+    if (!placed) {
+      const fallbackAngle = (i / Math.max(count, 1)) * Math.PI * 2;
+      points.push({
+        x: clamp(
+          centerX + Math.cos(fallbackAngle) * localRadiusX * 0.7,
+          bounds.minX,
+          bounds.maxX,
+        ),
+        y: clamp(
+          centerY + Math.sin(fallbackAngle) * localRadiusY * 0.7,
+          bounds.minY,
+          bounds.maxY,
+        ),
+      });
+    }
+  }
+
+  return points;
+}
+
 export function generateGalaxy(seed: number): GalaxyData {
   const rng = new SeededRNG(seed);
   const nameGen = new NameGenerator(rng);
@@ -74,11 +177,18 @@ export function generateGalaxy(seed: number): GalaxyData {
   const planets: Planet[] = [];
 
   const numSectors = rng.nextInt(2, 3);
+  const mapBounds: Bounds = {
+    minX: 80,
+    maxX: 980,
+    minY: 70,
+    maxY: 630,
+  };
+  const sectorCenters = generateSectorCenters(rng, numSectors, mapBounds);
 
   // Position sectors across the coordinate space
   for (let si = 0; si < numSectors; si++) {
-    const sectorX = rng.nextFloat(150, 850);
-    const sectorY = rng.nextFloat(100, 600);
+    const sectorX = sectorCenters[si].x;
+    const sectorY = sectorCenters[si].y;
     const sector: Sector = {
       id: `sector-${si}`,
       name: nameGen.generateSectorName(),
@@ -89,9 +199,16 @@ export function generateGalaxy(seed: number): GalaxyData {
     sectors.push(sector);
 
     const numSystems = rng.nextInt(4, 6);
+    const systemPoints = generateSystemPoints(
+      rng,
+      numSystems,
+      sectorX,
+      sectorY,
+      mapBounds,
+    );
     for (let syi = 0; syi < numSystems; syi++) {
-      const systemX = sectorX + rng.nextFloat(-150, 150);
-      const systemY = sectorY + rng.nextFloat(-150, 150);
+      const systemX = systemPoints[syi].x;
+      const systemY = systemPoints[syi].y;
       const system: StarSystem = {
         id: `system-${si}-${syi}`,
         name: nameGen.generateSystemName(),

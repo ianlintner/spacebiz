@@ -23,6 +23,7 @@ export class GameHUDScene extends Phaser.Scene {
   private turnLabel!: Label;
   private cashLabel!: Label;
   private phaseLabel!: Label;
+  private bottomTurnInfoLabel!: Label;
   private endTurnButton!: Button;
   private activeContentScene = "GalaxyMapScene";
   private previousCash = 0;
@@ -153,36 +154,46 @@ export class GameHUDScene extends Phaser.Scene {
 
     for (let i = 0; i < navItems.length; i++) {
       const item = navItems[i];
-      const btnY = navStartY + i * (iconBtnSize + iconSpacing);
+      const btnY =
+        navStartY + i * (iconBtnSize + iconSpacing) + iconBtnSize / 2;
       const btnContainer = this.add.container(navCenterX, btnY);
+
+      const navHit = this.add
+        .rectangle(
+          0,
+          0,
+          NAV_SIDEBAR_WIDTH,
+          iconBtnSize + iconSpacing,
+          0x000000,
+          0,
+        )
+        .setOrigin(0.5, 0.5)
+        .setInteractive(
+          new Phaser.Geom.Rectangle(
+            -NAV_SIDEBAR_WIDTH / 2,
+            -(iconBtnSize + iconSpacing) / 2,
+            NAV_SIDEBAR_WIDTH,
+            iconBtnSize + iconSpacing,
+          ),
+          Phaser.Geom.Rectangle.Contains,
+        );
+      if (navHit.input) {
+        navHit.input.cursor = "pointer";
+      }
 
       // Button background (hover/active states)
       const bg = this.add
-        .rectangle(
-          0,
-          iconBtnSize / 2,
-          iconBtnSize,
-          iconBtnSize,
-          theme.colors.buttonBg,
-          0.0,
-        )
+        .rectangle(0, 0, iconBtnSize, iconBtnSize, theme.colors.buttonBg, 0.0)
         .setOrigin(0.5, 0.5);
 
       // Icon image
-      const icon = this.add
-        .image(0, iconBtnSize / 2, item.icon)
-        .setOrigin(0.5, 0.5);
+      const icon = this.add.image(0, 0, item.icon).setOrigin(0.5, 0.5);
 
       // Active indicator: left-edge accent bar (3px wide, full button height)
       const indicator = this.add
-        .rectangle(
-          -(iconBtnSize / 2),
-          iconBtnSize / 2,
-          3,
-          iconBtnSize,
-          theme.colors.accent,
-        )
-        .setOrigin(0, 0.5);
+        .rectangle(-(iconBtnSize / 2), 0, 3, iconBtnSize, theme.colors.accent)
+        .setOrigin(0, 0.5)
+        .setX(-(iconBtnSize / 2));
 
       const isActive = item.scene === this.activeContentScene;
       indicator.setVisible(isActive);
@@ -193,39 +204,25 @@ export class GameHUDScene extends Phaser.Scene {
         icon.setTint(theme.colors.textDim);
       }
 
-      btnContainer.add([bg, icon, indicator]);
-      btnContainer.setSize(NAV_SIDEBAR_WIDTH, iconBtnSize + iconSpacing);
-      btnContainer.setInteractive(
-        new Phaser.Geom.Rectangle(
-          -navCenterX,
-          -iconSpacing / 2,
-          NAV_SIDEBAR_WIDTH,
-          iconBtnSize + iconSpacing,
-        ),
-        Phaser.Geom.Rectangle.Contains,
-      );
-
-      if (btnContainer.input) {
-        btnContainer.input.cursor = "pointer";
-      }
+      btnContainer.add([navHit, bg, icon, indicator]);
 
       // Tooltip
-      this.navTooltip.attachTo(btnContainer, item.label);
+      this.navTooltip.attachTo(navHit, item.label);
 
-      btnContainer.on("pointerover", () => {
+      navHit.on("pointerover", () => {
         if (item.scene !== this.activeContentScene) {
           getAudioDirector().sfx("ui_hover");
           bg.setAlpha(0.2);
           icon.setTint(theme.colors.text);
         }
       });
-      btnContainer.on("pointerout", () => {
+      navHit.on("pointerout", () => {
         if (item.scene !== this.activeContentScene) {
           bg.setAlpha(0.0);
           icon.setTint(theme.colors.textDim);
         }
       });
-      btnContainer.on("pointerup", () => {
+      navHit.on("pointerup", () => {
         getAudioDirector().sfx("ui_click_primary");
         this.switchContentScene(item.scene);
       });
@@ -235,51 +232,54 @@ export class GameHUDScene extends Phaser.Scene {
     }
 
     // ── Audio button at bottom of nav sidebar ──
-    const audioBtnY = navSidebarTop + navSidebarH - iconBtnSize - 12;
+    const audioBtnY = navSidebarTop + navSidebarH - iconBtnSize / 2 - 12;
     const audioContainer = this.add.container(navCenterX, audioBtnY);
 
-    const audioBg = this.add
+    const audioHit = this.add
       .rectangle(
         0,
-        iconBtnSize / 2,
-        iconBtnSize,
-        iconBtnSize,
-        theme.colors.buttonBg,
-        0.0,
+        0,
+        NAV_SIDEBAR_WIDTH,
+        iconBtnSize + iconSpacing,
+        0x000000,
+        0,
       )
+      .setOrigin(0.5, 0.5)
+      .setInteractive(
+        new Phaser.Geom.Rectangle(
+          -NAV_SIDEBAR_WIDTH / 2,
+          -(iconBtnSize + iconSpacing) / 2,
+          NAV_SIDEBAR_WIDTH,
+          iconBtnSize + iconSpacing,
+        ),
+        Phaser.Geom.Rectangle.Contains,
+      );
+    if (audioHit.input) {
+      audioHit.input.cursor = "pointer";
+    }
+
+    const audioBg = this.add
+      .rectangle(0, 0, iconBtnSize, iconBtnSize, theme.colors.buttonBg, 0.0)
       .setOrigin(0.5, 0.5);
 
     const audioIcon = this.add
-      .image(0, iconBtnSize / 2, "icon-audio")
+      .image(0, 0, "icon-audio")
       .setOrigin(0.5, 0.5)
       .setTint(theme.colors.textDim);
 
-    audioContainer.add([audioBg, audioIcon]);
-    audioContainer.setSize(NAV_SIDEBAR_WIDTH, iconBtnSize + iconSpacing);
-    audioContainer.setInteractive(
-      new Phaser.Geom.Rectangle(
-        -navCenterX,
-        -iconSpacing / 2,
-        NAV_SIDEBAR_WIDTH,
-        iconBtnSize + iconSpacing,
-      ),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    if (audioContainer.input) {
-      audioContainer.input.cursor = "pointer";
-    }
-    this.navTooltip.attachTo(audioContainer, "Audio Settings");
+    audioContainer.add([audioHit, audioBg, audioIcon]);
+    this.navTooltip.attachTo(audioHit, "Audio Settings");
 
-    audioContainer.on("pointerover", () => {
+    audioHit.on("pointerover", () => {
       getAudioDirector().sfx("ui_hover");
       audioBg.setAlpha(0.2);
       audioIcon.setTint(theme.colors.text);
     });
-    audioContainer.on("pointerout", () => {
+    audioHit.on("pointerout", () => {
       audioBg.setAlpha(0.0);
       audioIcon.setTint(theme.colors.textDim);
     });
-    audioContainer.on("pointerup", () => {
+    audioHit.on("pointerup", () => {
       this.toggleAudioPanel();
     });
 
@@ -315,19 +315,19 @@ export class GameHUDScene extends Phaser.Scene {
     // Turn info display
     const currentQuarter = ((state.turn - 1) % 4) + 1;
     const currentYear = Math.ceil(state.turn / 4);
-    const turnInfoLabel = new Label(this, {
-      x: GAME_WIDTH - 24,
-      y: GAME_HEIGHT - HUD_BOTTOM_BAR_HEIGHT - 18,
+    this.bottomTurnInfoLabel = new Label(this, {
+      x: GAME_WIDTH - 12,
+      y: bottomBarY - 2,
       text: `Q${currentQuarter} Y${currentYear}`,
       style: "caption",
     });
-    turnInfoLabel.setOrigin(1, 1);
+    this.bottomTurnInfoLabel.setOrigin(1, 1);
 
     // End Turn button (rounded, bottom-right corner)
     const endTurnSize = 52;
     this.endTurnButton = new Button(this, {
-      x: GAME_WIDTH - endTurnSize / 2 - 12,
-      y: GAME_HEIGHT - HUD_BOTTOM_BAR_HEIGHT / 2,
+      x: GAME_WIDTH - endTurnSize - 12,
+      y: bottomBarY,
       width: endTurnSize,
       height: endTurnSize,
       label: "▶",
@@ -361,6 +361,7 @@ export class GameHUDScene extends Phaser.Scene {
     const quarter = ((state.turn - 1) % 4) + 1;
     const year = Math.ceil(state.turn / 4);
     this.turnLabel.setText(`Q${quarter} Year ${year}`);
+    this.bottomTurnInfoLabel.setText(`Q${quarter} Y${year}`);
 
     // Cash display with flash effect on change
     const newCash = state.cash;
@@ -830,7 +831,9 @@ export class GameHUDScene extends Phaser.Scene {
             ? "Retro"
             : "Ambient",
     );
-    this.musicTrackValueLabel?.setText(getAudioDirector().getCurrentTrackLabel());
+    this.musicTrackValueLabel?.setText(
+      getAudioDirector().getCurrentTrackLabel(),
+    );
     this.muteValueLabel?.setText(
       settings.musicVolume === 0 && settings.sfxVolume === 0 ? "Muted" : "On",
     );

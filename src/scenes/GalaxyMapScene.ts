@@ -32,30 +32,88 @@ export class GalaxyMapScene extends Phaser.Scene {
       color: theme.colors.textDim,
     });
 
-    // Draw sectors as semi-transparent ellipses with gradient edge effect
-    for (const sector of sectors) {
-      // Outer nebula ellipse — gently breathes for a cosmic atmosphere
-      const outerEllipse = this.add
-        .ellipse(sector.x, sector.y + CONTENT_TOP, 230, 185, sector.color, 0.06)
-        .setOrigin(0.5, 0.5);
-      addPulseTween(this, outerEllipse, {
-        minAlpha: 0.03,
-        maxAlpha: 0.1,
-        duration: 4000 + Math.random() * 2000,
-        delay: Math.random() * 3000,
-      });
-
-      // Inner sector ellipse
-      this.add
-        .ellipse(sector.x, sector.y + CONTENT_TOP, 200, 160, sector.color, 0.12)
-        .setOrigin(0.5, 0.5);
-
-      this.add
-        .text(sector.x, sector.y + CONTENT_TOP - 70, sector.name, {
+    this.add
+      .text(
+        1260,
+        CONTENT_TOP + 10,
+        "Star size = planets in system\nSector glow = regional influence\nLines = active trade routes",
+        {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
           color: colorToString(theme.colors.textDim),
-        })
+          align: "right",
+        },
+      )
+      .setOrigin(1, 0)
+      .setAlpha(0.85);
+
+    // Sector visuals: replace giant opaque circles with subtler influence fields
+    // centered from actual system positions so clusters read naturally.
+    const systemsBySector = new Map<string, typeof systems>();
+    for (const sector of sectors) {
+      systemsBySector.set(
+        sector.id,
+        systems.filter((s) => s.sectorId === sector.id),
+      );
+    }
+
+    for (const sector of sectors) {
+      const inSector = systemsBySector.get(sector.id) ?? [];
+      if (inSector.length === 0) continue;
+
+      let sumX = 0;
+      let sumY = 0;
+      for (const s of inSector) {
+        sumX += s.x;
+        sumY += s.y;
+      }
+      const centroidX = sumX / inSector.length;
+      const centroidY = sumY / inSector.length;
+
+      let maxDist = 50;
+      for (const s of inSector) {
+        const dx = s.x - centroidX;
+        const dy = s.y - centroidY;
+        maxDist = Math.max(maxDist, Math.sqrt(dx * dx + dy * dy));
+      }
+
+      const influenceRadius = Math.min(190, maxDist + 42);
+
+      const outer = this.add
+        .circle(
+          centroidX,
+          centroidY + CONTENT_TOP,
+          influenceRadius,
+          sector.color,
+          0.035,
+        )
+        .setOrigin(0.5, 0.5);
+      addPulseTween(this, outer, {
+        minAlpha: 0.02,
+        maxAlpha: 0.055,
+        duration: 4200 + Math.random() * 1600,
+        delay: Math.random() * 1500,
+      });
+
+      const edge = this.add.graphics();
+      edge.lineStyle(1, sector.color, 0.18);
+      edge.strokeCircle(
+        centroidX,
+        centroidY + CONTENT_TOP,
+        Math.max(36, influenceRadius - 4),
+      );
+
+      this.add
+        .text(
+          centroidX,
+          centroidY + CONTENT_TOP - influenceRadius - 14,
+          sector.name,
+          {
+            fontSize: `${theme.fonts.caption.size}px`,
+            fontFamily: theme.fonts.caption.family,
+            color: colorToString(theme.colors.textDim),
+          },
+        )
         .setOrigin(0.5);
     }
 
@@ -120,11 +178,21 @@ export class GalaxyMapScene extends Phaser.Scene {
       ease: "Sine.easeInOut",
     });
 
+    // Precompute planet counts for system-size/readability cues
+    const planetCountsBySystem = new Map<string, number>();
+    for (const p of planets) {
+      planetCountsBySystem.set(
+        p.systemId,
+        (planetCountsBySystem.get(p.systemId) ?? 0) + 1,
+      );
+    }
+
     // Draw each star system
     for (const system of systems) {
       const sysX = system.x;
       const sysY = system.y + CONTENT_TOP;
-      const mainRadius = 6;
+      const planetCount = planetCountsBySystem.get(system.id) ?? 0;
+      const mainRadius = 4 + Math.min(4, planetCount);
 
       // Glow halo behind the star dot — pulses with a faint heartbeat
       const halo = this.add
@@ -139,7 +207,13 @@ export class GalaxyMapScene extends Phaser.Scene {
 
       // Star dot
       const star = this.add.circle(sysX, sysY, mainRadius, system.starColor);
-      star.setInteractive({ useHandCursor: true });
+      star.setInteractive(
+        new Phaser.Geom.Circle(0, 0, Math.max(mainRadius + 5, 10)),
+        Phaser.Geom.Circle.Contains,
+      );
+      if (star.input) {
+        star.input.cursor = "pointer";
+      }
 
       // Name label
       this.add
@@ -159,7 +233,7 @@ export class GalaxyMapScene extends Phaser.Scene {
 
       // Hover effect
       star.on("pointerover", () => {
-        star.setRadius(9);
+        star.setRadius(mainRadius + 3);
       });
       star.on("pointerout", () => {
         star.setRadius(mainRadius);

@@ -213,20 +213,48 @@ export class DataTable extends Phaser.GameObjects.Container {
       });
     }
 
+    let yCursor = 0;
+
     sortedRows.forEach((row, i) => {
-      const y = i * this.rowHeight;
+      const rowTop = yCursor;
       const bgColor = i % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd;
+
+      // Build texts first so we can measure wrapped height and size the row correctly.
+      const rowTexts: Phaser.GameObjects.Text[] = [];
+      let maxTextHeight = theme.fonts.body.size;
+
+      let x = 0;
+      for (const col of this.columns) {
+        const raw = row[col.key];
+        const display = col.format ? col.format(raw) : String(raw ?? "");
+        const color = col.colorFn ? col.colorFn(raw) : theme.colors.text;
+
+        const text = this.scene.add.text(x + 8, rowTop + 8, display, {
+          fontSize: `${theme.fonts.body.size}px`,
+          fontFamily: theme.fonts.body.family,
+          color: colorToString(color ?? theme.colors.text),
+          wordWrap: { width: col.width - 16 },
+        });
+
+        if (col.align === "right") {
+          text.setOrigin(1, 0).setX(x + col.width - 8);
+        } else if (col.align === "center") {
+          text.setOrigin(0.5, 0).setX(x + col.width / 2);
+        }
+
+        maxTextHeight = Math.max(maxTextHeight, text.height);
+        rowTexts.push(text);
+        x += col.width;
+      }
+
+      const rowHeightPx = Math.max(this.rowHeight, maxTextHeight + 14);
+
       const rowBg = this.scene.add
-        .rectangle(0, y, this.tableConfig.width, this.rowHeight, bgColor)
+        .rectangle(0, rowTop, this.tableConfig.width, rowHeightPx, bgColor)
         .setOrigin(0, 0)
         .setAlpha(0.85)
         .setInteractive(
-          new Phaser.Geom.Rectangle(
-            0,
-            0,
-            this.tableConfig.width,
-            this.rowHeight,
-          ),
+          new Phaser.Geom.Rectangle(0, 0, this.tableConfig.width, rowHeightPx),
           Phaser.Geom.Rectangle.Contains,
         );
       if (rowBg.input) {
@@ -255,7 +283,7 @@ export class DataTable extends Phaser.GameObjects.Container {
       rowBg.on("pointerup", () => {
         rowBg.setAlpha(0.85);
         getAudioDirector().sfx("ui_row_select");
-        this.selectRow(i, y);
+        this.selectRow(i, rowTop, rowHeightPx);
         this.tableConfig.onRowSelect?.(i, row);
       });
       rowBg.on("pointerupoutside", () => {
@@ -264,38 +292,20 @@ export class DataTable extends Phaser.GameObjects.Container {
 
       this.bodyContainer.add(rowBg);
 
-      let x = 0;
-      for (const col of this.columns) {
-        const raw = row[col.key];
-        const display = col.format ? col.format(raw) : String(raw ?? "");
-        const color = col.colorFn ? col.colorFn(raw) : theme.colors.text;
-
-        const text = this.scene.add.text(x + 8, y + 8, display, {
-          fontSize: `${theme.fonts.body.size}px`,
-          fontFamily: theme.fonts.body.family,
-          color: colorToString(color ?? theme.colors.text),
-          wordWrap: { width: col.width - 16 },
-        });
-
-        if (col.align === "right") {
-          text.setOrigin(1, 0).setX(x + col.width - 8);
-        } else if (col.align === "center") {
-          text.setOrigin(0.5, 0).setX(x + col.width / 2);
-        }
-
+      for (const text of rowTexts) {
         this.bodyContainer.add(text);
-        x += col.width;
       }
+
+      yCursor += rowHeightPx;
     });
 
     this.maxScroll = Math.max(
       0,
-      sortedRows.length * this.rowHeight -
-        (this.tableConfig.height - this.headerHeight),
+      yCursor - (this.tableConfig.height - this.headerHeight),
     );
   }
 
-  private selectRow(rowIndex: number, rowY: number): void {
+  private selectRow(rowIndex: number, rowY: number, rowHeight: number): void {
     const theme = getTheme();
 
     // Remove previous indicator
@@ -308,7 +318,7 @@ export class DataTable extends Phaser.GameObjects.Container {
 
     // Draw a 3px wide accent-colored rectangle on the left edge of the selected row
     this.selectedRowIndicator = this.scene.add
-      .rectangle(0, rowY, 3, this.rowHeight, theme.colors.accent)
+      .rectangle(0, rowY, 3, rowHeight, theme.colors.accent)
       .setOrigin(0, 0)
       .setAlpha(0.8);
     this.bodyContainer.add(this.selectedRowIndicator);
