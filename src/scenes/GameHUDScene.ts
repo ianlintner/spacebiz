@@ -412,8 +412,7 @@ export class GameHUDScene extends Phaser.Scene {
       const delta = newCash - this.previousCash;
       const isGain = delta > 0;
       audio.sfx(isGain ? "ui_confirm" : "ui_error");
-      const flashTint =
-        isGain ? theme.colors.profit : theme.colors.loss;
+      const flashTint = isGain ? theme.colors.profit : theme.colors.loss;
       this.cashLabel.setTint(flashTint);
       this.tweens.add({
         targets: this.cashLabel,

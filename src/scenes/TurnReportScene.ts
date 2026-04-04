@@ -30,12 +30,15 @@ function formatCash(amount: number): string {
 }
 
 /** Grade the turn: S/A/B/C/D/F based on net-profit margin. */
-function getTurnGrade(netProfit: number, revenue: number): { grade: string; color: number } {
-  const margin = revenue > 0 ? netProfit / revenue : (netProfit >= 0 ? 1 : -1);
-  if (margin >= 0.4)  return { grade: "S", color: 0xffdd00 };
-  if (margin >= 0.2)  return { grade: "A", color: 0x00ff88 };
+function getTurnGrade(
+  netProfit: number,
+  revenue: number,
+): { grade: string; color: number } {
+  const margin = revenue > 0 ? netProfit / revenue : netProfit >= 0 ? 1 : -1;
+  if (margin >= 0.4) return { grade: "S", color: 0xffdd00 };
+  if (margin >= 0.2) return { grade: "A", color: 0x00ff88 };
   if (margin >= 0.05) return { grade: "B", color: 0x00ccff };
-  if (margin >= 0)    return { grade: "C", color: 0x88cc88 };
+  if (margin >= 0) return { grade: "C", color: 0x88cc88 };
   if (margin >= -0.15) return { grade: "D", color: 0xff9900 };
   return { grade: "F", color: 0xff4444 };
 }
@@ -201,16 +204,11 @@ export class TurnReportScene extends Phaser.Scene {
     plPanel.add(netLabel);
 
     const netValue = this.add
-      .text(
-        plContent.x + plContent.width - 8,
-        rowY,
-        formatCash(0),
-        {
-          fontSize: `${theme.fonts.value.size}px`,
-          fontFamily: theme.fonts.value.family,
-          color: colorToString(plNetColor),
-        },
-      )
+      .text(plContent.x + plContent.width - 8, rowY, formatCash(0), {
+        fontSize: `${theme.fonts.value.size}px`,
+        fontFamily: theme.fonts.value.family,
+        color: colorToString(plNetColor),
+      })
       .setOrigin(1, 0)
       .setAlpha(0);
     plPanel.add(netValue);
@@ -255,19 +253,14 @@ export class TurnReportScene extends Phaser.Scene {
       lastTurn.revenue,
     );
     const gradeLabel = this.add
-      .text(
-        plContent.x + plContent.width - 8,
-        plContent.y + 4,
-        grade,
-        {
-          fontSize: "42px",
-          fontFamily: theme.fonts.heading.family,
-          fontStyle: "bold",
-          color: "#" + gradeColor.toString(16).padStart(6, "0"),
-          stroke: "#000000",
-          strokeThickness: 3,
-        },
-      )
+      .text(plContent.x + plContent.width - 8, plContent.y + 4, grade, {
+        fontSize: "42px",
+        fontFamily: theme.fonts.heading.family,
+        fontStyle: "bold",
+        color: "#" + gradeColor.toString(16).padStart(6, "0"),
+        stroke: "#000000",
+        strokeThickness: 3,
+      })
       .setOrigin(1, 0)
       .setAlpha(0)
       .setScale(1.5);

@@ -400,9 +400,7 @@ export class SimPlaybackScene extends Phaser.Scene {
       .rectangle(0, 0, 300, 55, theme.colors.panelBg, 0.85)
       .setOrigin(0, 0);
     // Category-colored accent left border bar
-    const border = this.add
-      .rectangle(0, 0, 4, 55, borderColor)
-      .setOrigin(0, 0);
+    const border = this.add.rectangle(0, 0, 4, 55, borderColor).setOrigin(0, 0);
 
     const truncName = name.length > 30 ? name.substring(0, 27) + "..." : name;
     const nameText = this.add.text(12, 6, truncName, {

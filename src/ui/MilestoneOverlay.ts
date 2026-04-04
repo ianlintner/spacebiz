@@ -25,15 +25,18 @@ export type MilestoneType =
   | "event_hazard"
   | "sim_complete";
 
-const TYPE_COLORS: Record<MilestoneType, { bg: number; text: number; glow: number }> = {
-  big_profit:          { bg: 0x003322, text: 0x00ff88, glow: 0x00ff88 },
-  profit_streak:       { bg: 0x1a1100, text: 0xffcc00, glow: 0xffcc00 },
-  record_profit:       { bg: 0x001133, text: 0x00ccff, glow: 0x00ccff },
-  loss_warning:        { bg: 0x220000, text: 0xff6600, glow: 0xff4400 },
-  bankruptcy_warning:  { bg: 0x330000, text: 0xff2222, glow: 0xff0000 },
-  event_opportunity:   { bg: 0x001133, text: 0x00ccff, glow: 0x0088ff },
-  event_hazard:        { bg: 0x221100, text: 0xff8800, glow: 0xff4400 },
-  sim_complete:        { bg: 0x001122, text: 0x00ffcc, glow: 0x00ffcc },
+const TYPE_COLORS: Record<
+  MilestoneType,
+  { bg: number; text: number; glow: number }
+> = {
+  big_profit: { bg: 0x003322, text: 0x00ff88, glow: 0x00ff88 },
+  profit_streak: { bg: 0x1a1100, text: 0xffcc00, glow: 0xffcc00 },
+  record_profit: { bg: 0x001133, text: 0x00ccff, glow: 0x00ccff },
+  loss_warning: { bg: 0x220000, text: 0xff6600, glow: 0xff4400 },
+  bankruptcy_warning: { bg: 0x330000, text: 0xff2222, glow: 0xff0000 },
+  event_opportunity: { bg: 0x001133, text: 0x00ccff, glow: 0x0088ff },
+  event_hazard: { bg: 0x221100, text: 0xff8800, glow: 0xff4400 },
+  sim_complete: { bg: 0x001122, text: 0x00ffcc, glow: 0x00ffcc },
 };
 
 export class MilestoneOverlay {
@@ -70,12 +73,7 @@ export class MilestoneOverlay {
     const drawBorder = (alpha: number) => {
       border.clear();
       border.lineStyle(2, colors.glow, alpha);
-      border.strokeRect(
-        cx - bannerW / 2,
-        cy - bannerH / 2,
-        bannerW,
-        bannerH,
-      );
+      border.strokeRect(cx - bannerW / 2, cy - bannerH / 2, bannerW, bannerH);
     };
     drawBorder(0);
 

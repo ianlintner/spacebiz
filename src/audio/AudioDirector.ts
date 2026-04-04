@@ -496,7 +496,9 @@ class AudioDirector {
    * Play a rapid sequence of SFX notes (arpeggio / fanfare effect).
    * Each step can optionally supply its own hz override.
    */
-  sfxMelody(steps: Array<{ key: SfxKey; delayMs: number; hzOverride?: number }>): void {
+  sfxMelody(
+    steps: Array<{ key: SfxKey; delayMs: number; hzOverride?: number }>,
+  ): void {
     for (const step of steps) {
       const delayS = step.delayMs / 1000;
       this.ensureInitialized();
@@ -539,8 +541,8 @@ class AudioDirector {
   /** Play a 3-note ascending profit fanfare arpeggio. */
   sfxProfitFanfare(): void {
     this.sfxMelody([
-      { key: "cash_gain",       delayMs: 0,   hzOverride: 440 },
-      { key: "cash_gain",       delayMs: 90,  hzOverride: 550 },
+      { key: "cash_gain", delayMs: 0, hzOverride: 440 },
+      { key: "cash_gain", delayMs: 90, hzOverride: 550 },
       { key: "milestone_profit", delayMs: 180, hzOverride: 880 },
     ]);
   }
@@ -548,7 +550,7 @@ class AudioDirector {
   /** Play a 3-note descending loss sting. */
   sfxLossSting(): void {
     this.sfxMelody([
-      { key: "cash_loss", delayMs: 0,   hzOverride: 320 },
+      { key: "cash_loss", delayMs: 0, hzOverride: 320 },
       { key: "cash_loss", delayMs: 100, hzOverride: 220 },
       { key: "cash_loss", delayMs: 200, hzOverride: 140 },
     ]);
