@@ -1,6 +1,7 @@
 import type { GameState } from "./types";
 import { GameEventEmitter } from "../utils/EventEmitter";
 import { STARTING_CASH, MAX_TURNS } from "./constants";
+import { initAdviserState } from "../game/adviser/AdviserEngine.ts";
 
 function createDefaultState(): GameState {
   return {
@@ -27,6 +28,7 @@ function createDefaultState(): GameState {
     score: 0,
     gameOver: false,
     gameOverReason: null,
+    adviser: initAdviserState(),
   };
 }
 

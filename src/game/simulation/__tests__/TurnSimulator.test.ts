@@ -25,6 +25,7 @@ import {
   BASE_FUEL_PRICE,
 } from "../../../data/constants.ts";
 import { calculateTripsPerTurn } from "../../routes/RouteManager.ts";
+import { initAdviserState } from "../../adviser/AdviserEngine.ts";
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -184,6 +185,7 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
     score: 0,
     gameOver: false,
     gameOverReason: null,
+    adviser: initAdviserState(),
     ...overrides,
   };
 }

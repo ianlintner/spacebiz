@@ -11,6 +11,7 @@ import {
 } from "../SaveManager.ts";
 import { gameStore } from "../../data/GameStore.ts";
 import type { GameState } from "../../data/types.ts";
+import { initAdviserState } from "../adviser/AdviserEngine.ts";
 
 /** Minimal but complete GameState for testing purposes. */
 function createTestState(overrides: Partial<GameState> = {}): GameState {
@@ -38,6 +39,7 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     score: 0,
     gameOver: false,
     gameOverReason: null,
+    adviser: initAdviserState(),
     ...overrides,
   };
 }
