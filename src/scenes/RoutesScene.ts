@@ -9,6 +9,7 @@ import { Modal } from "../ui/Modal.ts";
 import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Panel } from "../ui/Panel.ts";
 import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { openRouteBuilder } from "../ui/RouteBuilderPanel.ts";
 import { SceneUiDirector } from "../ui/SceneUiDirector.ts";
 import { createStarfield } from "../ui/Starfield.ts";
 import {
@@ -22,8 +23,6 @@ import {
   MAIN_CONTENT_WIDTH,
 } from "../ui/Layout.ts";
 import {
-  calculateDistance,
-  createRoute,
   assignShipToRoute,
   deleteRoute,
   estimateRouteRevenue,
@@ -41,6 +40,11 @@ export class RoutesScene extends Phaser.Scene {
   private routeTable!: DataTable;
   private portrait!: PortraitPanel;
   private ui!: SceneUiDirector;
+  private selectedRouteSummary!: Phaser.GameObjects.Text;
+  private selectedRouteHint!: Phaser.GameObjects.Text;
+  private deleteRouteButton!: Button;
+  private assignShipButton!: Button;
+  private setCargoButton!: Button;
 
   constructor() {
     super({ key: "RoutesScene" });
@@ -76,12 +80,36 @@ export class RoutesScene extends Phaser.Scene {
     const absX = MAIN_CONTENT_LEFT + content.x;
     const absY = CONTENT_TOP + content.y;
 
+    this.selectedRouteSummary = this.add.text(
+      absX,
+      absY,
+      "Pick a route to manage it",
+      {
+        fontSize: `${getTheme().fonts.value.size}px`,
+        fontFamily: getTheme().fonts.value.family,
+        color: colorToString(getTheme().colors.accent),
+        wordWrap: { width: content.width },
+      },
+    );
+
+    this.selectedRouteHint = this.add.text(
+      absX,
+      absY + 24,
+      "Enter on a route continues the next useful step. Unassigned routes need a ship before profit estimates appear.",
+      {
+        fontSize: `${getTheme().fonts.caption.size}px`,
+        fontFamily: getTheme().fonts.caption.family,
+        color: colorToString(getTheme().colors.textDim),
+        wordWrap: { width: content.width },
+      },
+    );
+
     // Route table
     this.routeTable = new DataTable(this, {
       x: absX,
-      y: absY,
+      y: absY + 54,
       width: content.width,
-      height: content.height - 50,
+      height: content.height - 104,
       columns: [
         { key: "origin", label: "Origin", width: 120, sortable: true },
         {
@@ -154,31 +182,16 @@ export class RoutesScene extends Phaser.Scene {
           },
         },
       ],
+      keyboardNavigation: true,
+      autoFocus: true,
+      emptyStateText: "No trade routes yet",
+      emptyStateHint: "Create a route to start assigning ships and cargo.",
+      onRowActivate: () => {
+        this.activateSelectedRoute();
+      },
       onRowSelect: (_rowIndex, rowData) => {
         this.selectedRouteId = rowData["id"] as string;
-        const currentState = gameStore.getState();
-        const route = currentState.activeRoutes.find(
-          (r) => r.id === this.selectedRouteId,
-        );
-        if (route) {
-          const destPlanet = currentState.galaxy.planets.find(
-            (p) => p.id === route.destinationPlanetId,
-          );
-          if (destPlanet) {
-            const planetIndex = currentState.galaxy.planets.indexOf(destPlanet);
-            this.portrait.updatePortrait(
-              "planet",
-              planetIndex,
-              destPlanet.name,
-              [
-                { label: "Type", value: destPlanet.type },
-                { label: "Distance", value: route.distance.toFixed(1) },
-                { label: "Cargo", value: route.cargoType ?? "None" },
-              ],
-              { planetType: destPlanet.type },
-            );
-          }
-        }
+        this.updateSelectedRouteUi();
       },
     });
 
@@ -195,33 +208,45 @@ export class RoutesScene extends Phaser.Scene {
       onClick: () => this.startCreateRoute(),
     });
 
-    new Button(this, {
+    this.deleteRouteButton = new Button(this, {
       x: absX + 160,
       y: buttonY,
       width: 140,
       label: "Delete Route",
+      disabled: true,
       onClick: () => this.confirmDeleteRoute(),
     });
 
-    new Button(this, {
+    this.assignShipButton = new Button(this, {
       x: absX + 320,
       y: buttonY,
       width: 140,
       label: "Assign Ship",
+      disabled: true,
       onClick: () => this.showAssignShip(),
     });
 
-    new Button(this, {
+    this.setCargoButton = new Button(this, {
       x: absX + 480,
       y: buttonY,
       width: 140,
       label: "Set Cargo",
+      disabled: true,
       onClick: () => this.showSetCargo(),
     });
+
+    this.updateSelectedRouteUi();
   }
 
   private refreshTable(): void {
     const state = gameStore.getState();
+
+    if (
+      this.selectedRouteId &&
+      !state.activeRoutes.some((route) => route.id === this.selectedRouteId)
+    ) {
+      this.selectedRouteId = null;
+    }
 
     const planetMap = new Map<string, string>();
     for (const p of state.galaxy.planets) {
@@ -265,217 +290,125 @@ export class RoutesScene extends Phaser.Scene {
     });
 
     this.routeTable.setRows(rows);
+    this.updateSelectedRouteUi();
+  }
+
+  private updateSelectedRouteUi(): void {
+    const theme = getTheme();
+    const state = gameStore.getState();
+    const route = state.activeRoutes.find(
+      (entry) => entry.id === this.selectedRouteId,
+    );
+
+    const hasSelection = Boolean(route);
+    this.deleteRouteButton?.setDisabled(!hasSelection);
+    this.assignShipButton?.setDisabled(!hasSelection);
+    this.setCargoButton?.setDisabled(!hasSelection);
+
+    if (!route) {
+      this.selectedRouteSummary?.setText("Pick a route to manage it");
+      this.selectedRouteHint?.setText(
+        "Create a route, then assign a ship and fine-tune cargo from here. Enter on a selected route opens the next useful step.",
+      );
+      this.portrait?.updatePortrait("planet", 0, "Select a Route", [], {
+        planetType: "terran",
+      });
+      return;
+    }
+
+    const origin = state.galaxy.planets.find(
+      (planet) => planet.id === route.originPlanetId,
+    );
+    const destination = state.galaxy.planets.find(
+      (planet) => planet.id === route.destinationPlanetId,
+    );
+    const destinationIndex = destination
+      ? state.galaxy.planets.indexOf(destination)
+      : 0;
+    const firstShip = route.assignedShipIds[0]
+      ? state.fleet.find((ship) => ship.id === route.assignedShipIds[0])
+      : undefined;
+
+    if (destination) {
+      this.portrait.updatePortrait(
+        "planet",
+        destinationIndex,
+        destination.name,
+        [
+          { label: "Type", value: destination.type },
+          { label: "Distance", value: route.distance.toFixed(1) },
+          { label: "Cargo", value: route.cargoType ?? "None" },
+          {
+            label: "Ships",
+            value: route.assignedShipIds.length.toString(),
+          },
+        ],
+        { planetType: destination.type },
+      );
+    }
+
+    const routeTitle = `${origin?.name ?? "Origin"} → ${destination?.name ?? "Destination"}`;
+    this.selectedRouteSummary.setText(routeTitle);
+
+    if (route.assignedShipIds.length === 0) {
+      this.selectedRouteHint.setText(
+        "Next step: assign a ship to start flying this route. Press Enter or use Assign Ship.",
+      );
+      this.assignShipButton.setLabel("Assign Ship");
+    } else if (!firstShip) {
+      this.selectedRouteHint.setText(
+        "This route has assigned ship IDs but no matching ship was found. Delete or reassign to recover.",
+      );
+      this.assignShipButton.setLabel("Assign Ship");
+    } else {
+      const revenue = route.cargoType
+        ? estimateRouteRevenue(route, firstShip, state.market)
+        : null;
+      const fuel = route.cargoType
+        ? estimateRouteFuelCost(route, firstShip, state.market.fuelPrice)
+        : null;
+      const profit = revenue != null && fuel != null ? revenue - fuel : null;
+      const profitLabel =
+        profit == null
+          ? "—"
+          : `${profit >= 0 ? "profit" : "loss"} ${formatCash(profit)}`;
+      this.selectedRouteHint.setText(
+        `Assigned: ${firstShip.name}. Cargo: ${route.cargoType ?? "None"}. Current estimate: ${profitLabel}. Enter adjusts cargo; Assign Ship adds another ship.`,
+      );
+      this.assignShipButton.setLabel(
+        route.assignedShipIds.length > 0 ? "Add Ship" : "Assign Ship",
+      );
+    }
+
+    this.selectedRouteSummary.setColor(colorToString(theme.colors.accent));
+  }
+
+  private activateSelectedRoute(): void {
+    const route = gameStore
+      .getState()
+      .activeRoutes.find((entry) => entry.id === this.selectedRouteId);
+    if (!route) {
+      return;
+    }
+
+    if (route.assignedShipIds.length === 0) {
+      this.showAssignShip();
+      return;
+    }
+
+    this.showSetCargo();
   }
 
   private startCreateRoute(): void {
-    const theme = getTheme();
-    const state = gameStore.getState();
-    const planets = state.galaxy.planets;
-
-    // Step 1: Pick origin
-    const layer = this.ui.openLayer({ key: "routes-create-origin" });
-    layer.createOverlay({
-      alpha: 0.6,
-      color: theme.colors.modalOverlay,
-      closeOnPointerUp: true,
+    openRouteBuilder(this, {
+      ui: this.ui,
+      title: "Create Trade Route",
+      confirmLabel: "Create Route",
+      allowAutoBuy: true,
+      onComplete: () => {
+        this.refreshTable();
+      },
     });
-
-    const panelW = 400;
-    const panelH = 480;
-    const panelX = (GAME_WIDTH - panelW) / 2;
-    const panelY = (GAME_HEIGHT - panelH) / 2;
-
-    const originPanel = layer.track(
-      new Panel(this, {
-        x: panelX,
-        y: panelY,
-        width: panelW,
-        height: panelH,
-        title: "Select Origin",
-      }),
-    );
-
-    const content = originPanel.getContentArea();
-
-    const originList = layer.track(
-      new ScrollableList(this, {
-        x: panelX + content.x,
-        y: panelY + content.y,
-        width: content.width,
-        height: content.height - 10,
-        itemHeight: 36,
-        onSelect: (index: number) => {
-          const originPlanet = planets[index];
-          if (!originPlanet) return;
-
-          layer.destroy();
-
-          // Step 2: Pick destination
-          this.pickDestination(originPlanet.id);
-        },
-      }),
-    );
-
-    for (const p of planets) {
-      const itemContainer = this.add.container(0, 0);
-      const itemText = this.add.text(10, 8, `${p.name} (${p.type})`, {
-        fontSize: `${theme.fonts.body.size}px`,
-        fontFamily: theme.fonts.body.family,
-        color: colorToString(theme.colors.text),
-        wordWrap: { width: content.width - 20 },
-      });
-      itemContainer.add(itemText);
-      originList.addItem(itemContainer);
-    }
-  }
-
-  private pickDestination(originPlanetId: string): void {
-    const theme = getTheme();
-    const state = gameStore.getState();
-    const otherPlanets = state.galaxy.planets.filter(
-      (p) => p.id !== originPlanetId,
-    );
-
-    const layer = this.ui.openLayer({ key: "routes-create-destination" });
-    layer.createOverlay({
-      alpha: 0.6,
-      color: theme.colors.modalOverlay,
-      closeOnPointerUp: true,
-    });
-
-    const panelW = 400;
-    const panelH = 480;
-    const panelX = (GAME_WIDTH - panelW) / 2;
-    const panelY = (GAME_HEIGHT - panelH) / 2;
-
-    const destPanel = layer.track(
-      new Panel(this, {
-        x: panelX,
-        y: panelY,
-        width: panelW,
-        height: panelH,
-        title: "Select Destination",
-      }),
-    );
-
-    const content = destPanel.getContentArea();
-
-    const destList = layer.track(
-      new ScrollableList(this, {
-        x: panelX + content.x,
-        y: panelY + content.y,
-        width: content.width,
-        height: content.height - 10,
-        itemHeight: 36,
-        onSelect: (index: number) => {
-          const destPlanet = otherPlanets[index];
-          if (!destPlanet) return;
-
-          layer.destroy();
-
-          // Step 3: Pick cargo type
-          this.pickCargoType(originPlanetId, destPlanet.id);
-        },
-      }),
-    );
-
-    for (const p of otherPlanets) {
-      const itemContainer = this.add.container(0, 0);
-      const itemText = this.add.text(10, 8, `${p.name} (${p.type})`, {
-        fontSize: `${theme.fonts.body.size}px`,
-        fontFamily: theme.fonts.body.family,
-        color: colorToString(theme.colors.text),
-        wordWrap: { width: content.width - 20 },
-      });
-      itemContainer.add(itemText);
-      destList.addItem(itemContainer);
-    }
-  }
-
-  private pickCargoType(originPlanetId: string, destPlanetId: string): void {
-    const theme = getTheme();
-    const cargoTypes = Object.values(CargoType) as CargoTypeValue[];
-
-    const layer = this.ui.openLayer({ key: "routes-create-cargo" });
-    layer.createOverlay({
-      alpha: 0.6,
-      color: theme.colors.modalOverlay,
-      closeOnPointerUp: true,
-    });
-
-    const panelW = 350;
-    const panelH = 420;
-    const panelX = (GAME_WIDTH - panelW) / 2;
-    const panelY = (GAME_HEIGHT - panelH) / 2;
-
-    const cargoPanel = layer.track(
-      new Panel(this, {
-        x: panelX,
-        y: panelY,
-        width: panelW,
-        height: panelH,
-        title: "Select Cargo Type",
-      }),
-    );
-
-    const content = cargoPanel.getContentArea();
-
-    const cargoList = layer.track(
-      new ScrollableList(this, {
-        x: panelX + content.x,
-        y: panelY + content.y,
-        width: content.width,
-        height: content.height - 10,
-        itemHeight: 36,
-        onSelect: (index: number) => {
-          const selectedCargo = cargoTypes[index];
-          if (!selectedCargo) return;
-
-          // Create the route
-          const freshState = gameStore.getState();
-          const originPlanet = freshState.galaxy.planets.find(
-            (p) => p.id === originPlanetId,
-          );
-          const destPlanet = freshState.galaxy.planets.find(
-            (p) => p.id === destPlanetId,
-          );
-
-          if (!originPlanet || !destPlanet) return;
-
-          const distance = calculateDistance(
-            originPlanet,
-            destPlanet,
-            freshState.galaxy.systems,
-          );
-
-          const route = createRoute(
-            originPlanetId,
-            destPlanetId,
-            distance,
-            selectedCargo,
-          );
-
-          gameStore.update({
-            activeRoutes: [...freshState.activeRoutes, route],
-          });
-
-          layer.destroy();
-
-          this.refreshTable();
-        },
-      }),
-    );
-
-    for (const ct of cargoTypes) {
-      const itemContainer = this.add.container(0, 0);
-      const itemText = this.add.text(10, 8, ct, {
-        fontSize: `${theme.fonts.body.size}px`,
-        fontFamily: theme.fonts.body.family,
-        color: colorToString(theme.colors.text),
-      });
-      itemContainer.add(itemText);
-      cargoList.addItem(itemContainer);
-    }
   }
 
   private confirmDeleteRoute(): void {
@@ -574,6 +507,11 @@ export class RoutesScene extends Phaser.Scene {
         width: content.width,
         height: content.height - 50,
         itemHeight: 40,
+        keyboardNavigation: true,
+        autoFocus: true,
+        onCancel: () => {
+          layer.destroy();
+        },
         onSelect: (index: number) => {
           const ship = availableShips[index];
           if (!ship || !routeId) return;
@@ -680,6 +618,11 @@ export class RoutesScene extends Phaser.Scene {
         width: content.width,
         height: content.height - 50,
         itemHeight: 36,
+        keyboardNavigation: true,
+        autoFocus: true,
+        onCancel: () => {
+          layer.destroy();
+        },
         onSelect: (index: number) => {
           const selectedCargo = cargoTypes[index];
           if (!selectedCargo || !routeId) return;

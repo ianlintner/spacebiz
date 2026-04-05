@@ -1,30 +1,21 @@
 import Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
 import { CargoType } from "../data/types.ts";
-import type {
-  Planet,
-  CargoMarketEntry,
-  CargoType as CargoTypeValue,
-  Ship,
-  ShipClass,
-} from "../data/types.ts";
-import { getTheme, colorToString } from "../ui/Theme.ts";
+import type { Planet, CargoMarketEntry } from "../data/types.ts";
+import { getTheme } from "../ui/Theme.ts";
 import { Panel } from "../ui/Panel.ts";
 import { Label } from "../ui/Label.ts";
 import { Button } from "../ui/Button.ts";
 import { DataTable } from "../ui/DataTable.ts";
-import { ScrollableList } from "../ui/ScrollableList.ts";
 import { Modal } from "../ui/Modal.ts";
 import { PortraitPanel } from "../ui/PortraitPanel.ts";
+import { openRouteBuilder } from "../ui/RouteBuilderPanel.ts";
 import { SceneUiDirector } from "../ui/SceneUiDirector.ts";
-import {
-  calculateDistance,
-  createRoute,
-  assignShipToRoute,
-} from "../game/routes/RouteManager.ts";
-import { buyShip } from "../game/fleet/FleetManager.ts";
-import { SHIP_TEMPLATES } from "../data/constants.ts";
 import { GAME_WIDTH, GAME_HEIGHT, CONTENT_GAP } from "../ui/Layout.ts";
+
+const CARGO_TYPE_VALUES = Object.values(CargoType) as Array<
+  (typeof CargoType)[keyof typeof CargoType]
+>;
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -50,8 +41,6 @@ function formatPopulation(pop: number): string {
   if (pop >= 1_000) return `${(pop / 1_000).toFixed(1)}K`;
   return String(pop);
 }
-
-const CARGO_TYPE_VALUES = Object.values(CargoType) as CargoType[];
 
 export class PlanetDetailScene extends Phaser.Scene {
   private planetId = "";
@@ -119,8 +108,17 @@ export class PlanetDetailScene extends Phaser.Scene {
       style: "body",
     });
 
+    new Label(this, {
+      x: contentX + contentArea.x,
+      y: overlayY + contentArea.y + 20,
+      text: "Local market for this world — use Market for galaxy-wide comparison. Esc or Close returns to the system map.",
+      style: "caption",
+      color: theme.colors.textDim,
+      maxWidth: contentArea.width,
+    });
+
     // Market data table
-    const tableY = overlayY + contentArea.y + 35;
+    const tableY = overlayY + contentArea.y + 54;
     const tableWidth = contentArea.width;
     const colScale = tableWidth / 600; // scale columns proportionally
 
@@ -221,414 +219,37 @@ export class PlanetDetailScene extends Phaser.Scene {
   }
 
   private showDestinationPicker(originPlanet: Planet): void {
-    this.scene.bringToTop();
-
-    const theme = getTheme();
-    const state = gameStore.getState();
-    const otherPlanets = state.galaxy.planets.filter(
-      (p) => p.id !== originPlanet.id,
-    );
-
-    const layer = this.ui.openLayer({ key: "planet-detail-destination" });
-    layer.createOverlay({
-      alpha: 0.5,
-      color: theme.colors.modalOverlay,
-      closeOnPointerUp: true,
+    openRouteBuilder(this, {
+      ui: this.ui,
+      title: `Create Route from ${originPlanet.name}`,
+      confirmLabel: "Create Route",
+      initialOriginPlanetId: originPlanet.id,
+      lockOrigin: true,
+      allowAutoBuy: true,
+      onComplete: (result) => {
+        const latestState = gameStore.getState();
+        const destination = latestState.galaxy.planets.find(
+          (planet) => planet.id === result.destinationPlanetId,
+        );
+        const shipSummary = result.assignedShipName
+          ? result.assignedShipName
+          : "Assign later in Routes";
+        const modal = new Modal(this, {
+          title: "Route Ready",
+          body: `Route ${originPlanet.name} → ${destination?.name ?? "Destination"} created.\nCargo: ${result.cargoType}\nShip: ${shipSummary}`,
+          width: 440,
+          height: 260,
+          onOk: () => {
+            modal.destroy();
+          },
+        });
+        modal.show();
+      },
     });
-
-    const listW = 400;
-    const listH = 450;
-    const listX = (GAME_WIDTH - listW) / 2;
-    const listY = (GAME_HEIGHT - listH) / 2;
-
-    const pickerPanel = layer.track(
-      new Panel(this, {
-        x: listX,
-        y: listY,
-        width: listW,
-        height: listH,
-        title: "Select Destination",
-      }),
-    );
-
-    const pickerContent = pickerPanel.getContentArea();
-
-    const list = layer.track(
-      new ScrollableList(this, {
-        x: listX + pickerContent.x,
-        y: listY + pickerContent.y,
-        width: pickerContent.width,
-        height: pickerContent.height - 50,
-        itemHeight: 36,
-        onSelect: (index: number) => {
-          const destPlanet = otherPlanets[index];
-          if (!destPlanet) return;
-
-          layer.destroy();
-
-          this.showQuickRouteSetup(originPlanet, destPlanet);
-        },
-      }),
-    );
-
-    // Populate the list
-    for (const p of otherPlanets) {
-      const itemContainer = this.add.container(0, 0);
-      const itemText = this.add.text(10, 8, `${p.name} (${p.type})`, {
-        fontSize: `${theme.fonts.body.size}px`,
-        fontFamily: theme.fonts.body.family,
-        color: colorToString(theme.colors.text),
-        wordWrap: { width: pickerContent.width - 20 },
-      });
-      itemContainer.add(itemText);
-      list.addItem(itemContainer);
-    }
-  }
-
-  private showQuickRouteSetup(originPlanet: Planet, destPlanet: Planet): void {
-    this.scene.bringToTop();
-
-    const theme = getTheme();
-    const cargoTypes = Object.values(CargoType) as CargoTypeValue[];
-
-    let selectedCargoIndex = 0;
-    let selectedShipId: string | null = null; // null = auto-select
-    let autoBuy = true;
-
-    const layer = this.ui.openLayer({ key: "planet-detail-route-setup" });
-    layer.createOverlay({
-      alpha: 0.6,
-      color: theme.colors.modalOverlay,
-      closeOnPointerUp: true,
-    });
-
-    const panelW = 560;
-    const panelH = 420;
-    const panelX = (GAME_WIDTH - panelW) / 2;
-    const panelY = (GAME_HEIGHT - panelH) / 2;
-
-    const panel = layer.track(
-      new Panel(this, {
-        x: panelX,
-        y: panelY,
-        width: panelW,
-        height: panelH,
-        title: "Create Route (Quick Setup)",
-      }),
-    );
-
-    const content = panel.getContentArea();
-
-    layer.track(
-      new Label(this, {
-        x: panelX + content.x,
-        y: panelY + content.y,
-        text: `${originPlanet.name} → ${destPlanet.name}`,
-        style: "value",
-        color: theme.colors.accent,
-        maxWidth: content.width,
-      }),
-    );
-
-    const distance = calculateDistance(
-      originPlanet,
-      destPlanet,
-      gameStore.getState().galaxy.systems,
-    );
-    layer.track(
-      new Label(this, {
-        x: panelX + content.x,
-        y: panelY + content.y + 28,
-        text: `Distance: ${distance.toFixed(1)} units`,
-        style: "caption",
-        color: theme.colors.textDim,
-      }),
-    );
-
-    layer.track(
-      new Label(this, {
-        x: panelX + content.x,
-        y: panelY + content.y + 72,
-        text: "Cargo",
-        style: "body",
-      }),
-    );
-
-    const cargoValue = layer.track(
-      new Label(this, {
-        x: panelX + content.x + 96,
-        y: panelY + content.y + 72,
-        text: cargoTypes[selectedCargoIndex],
-        style: "value",
-        color: theme.colors.accent,
-      }),
-    );
-
-    const availableShipsAtOpen = gameStore
-      .getState()
-      .fleet.filter((s) => !s.assignedRouteId);
-
-    layer.track(
-      new Label(this, {
-        x: panelX + content.x,
-        y: panelY + content.y + 132,
-        text: "Ship",
-        style: "body",
-      }),
-    );
-
-    const shipValue = layer.track(
-      new Label(this, {
-        x: panelX + content.x + 96,
-        y: panelY + content.y + 132,
-        text: availableShipsAtOpen.length > 0 ? "Auto Select" : "No free ships",
-        style: "value",
-        color: theme.colors.accent,
-      }),
-    );
-
-    const autoBuyBtn = layer.track(
-      new Button(this, {
-        x: panelX + content.x,
-        y: panelY + content.y + 184,
-        width: 240,
-        label: "Auto-buy if needed: ON",
-        onClick: () => {
-          autoBuy = !autoBuy;
-          autoBuyBtn.setLabel(`Auto-buy if needed: ${autoBuy ? "ON" : "OFF"}`);
-        },
-      }),
-    );
-
-    layer.track(
-      new Button(this, {
-        x: panelX + content.x + 300,
-        y: panelY + content.y + 66,
-        width: 46,
-        height: 32,
-        label: "<",
-        onClick: () => {
-          selectedCargoIndex =
-            (selectedCargoIndex - 1 + cargoTypes.length) % cargoTypes.length;
-          cargoValue.setText(cargoTypes[selectedCargoIndex]);
-        },
-      }),
-    );
-    layer.track(
-      new Button(this, {
-        x: panelX + content.x + 352,
-        y: panelY + content.y + 66,
-        width: 46,
-        height: 32,
-        label: ">",
-        onClick: () => {
-          selectedCargoIndex = (selectedCargoIndex + 1) % cargoTypes.length;
-          cargoValue.setText(cargoTypes[selectedCargoIndex]);
-        },
-      }),
-    );
-
-    layer.track(
-      new Button(this, {
-        x: panelX + content.x + 300,
-        y: panelY + content.y + 126,
-        width: 46,
-        height: 32,
-        label: "<",
-        onClick: () => {
-          if (availableShipsAtOpen.length === 0) return;
-          const options = [null, ...availableShipsAtOpen.map((s) => s.id)];
-          const idx = options.findIndex((id) => id === selectedShipId);
-          const next = (idx - 1 + options.length) % options.length;
-          selectedShipId = options[next];
-          shipValue.setText(
-            selectedShipId
-              ? (availableShipsAtOpen.find((s) => s.id === selectedShipId)
-                  ?.name ?? "Auto Select")
-              : "Auto Select",
-          );
-        },
-      }),
-    );
-    layer.track(
-      new Button(this, {
-        x: panelX + content.x + 352,
-        y: panelY + content.y + 126,
-        width: 46,
-        height: 32,
-        label: ">",
-        onClick: () => {
-          if (availableShipsAtOpen.length === 0) return;
-          const options = [null, ...availableShipsAtOpen.map((s) => s.id)];
-          const idx = options.findIndex((id) => id === selectedShipId);
-          const next = (idx + 1) % options.length;
-          selectedShipId = options[next];
-          shipValue.setText(
-            selectedShipId
-              ? (availableShipsAtOpen.find((s) => s.id === selectedShipId)
-                  ?.name ?? "Auto Select")
-              : "Auto Select",
-          );
-        },
-      }),
-    );
-
-    const cleanUp = (): void => {
-      layer.destroy();
-    };
-
-    layer.track(
-      new Button(this, {
-        x: panelX + content.x,
-        y: panelY + panelH - 62,
-        width: 220,
-        label: "Create & Assign Route",
-        onClick: () => {
-          const chosenCargo = cargoTypes[selectedCargoIndex];
-
-          const freshState = gameStore.getState();
-          const latestOrigin = freshState.galaxy.planets.find(
-            (p) => p.id === originPlanet.id,
-          );
-          const latestDest = freshState.galaxy.planets.find(
-            (p) => p.id === destPlanet.id,
-          );
-          if (!latestOrigin || !latestDest) {
-            cleanUp();
-            return;
-          }
-
-          const latestDistance = calculateDistance(
-            latestOrigin,
-            latestDest,
-            freshState.galaxy.systems,
-          );
-          const route = createRoute(
-            latestOrigin.id,
-            latestDest.id,
-            latestDistance,
-            chosenCargo,
-          );
-
-          let updatedFleet = [...freshState.fleet];
-          let updatedRoutes = [...freshState.activeRoutes, route];
-          let updatedCash = freshState.cash;
-
-          let shipIdToAssign: string | null = null;
-          if (
-            selectedShipId &&
-            updatedFleet.some(
-              (s) => s.id === selectedShipId && !s.assignedRouteId,
-            )
-          ) {
-            shipIdToAssign = selectedShipId;
-          } else {
-            shipIdToAssign = pickBestAvailableShipId(updatedFleet, chosenCargo);
-          }
-
-          if (!shipIdToAssign && autoBuy) {
-            const cheapest = getCheapestCompatibleShipClass(chosenCargo);
-            if (cheapest) {
-              const template = SHIP_TEMPLATES[cheapest];
-              if (updatedCash >= template.purchaseCost) {
-                const { ship, cost } = buyShip(cheapest, updatedFleet);
-                updatedFleet = [...updatedFleet, ship];
-                updatedCash -= cost;
-                shipIdToAssign = ship.id;
-              }
-            }
-          }
-
-          if (shipIdToAssign) {
-            const assigned = assignShipToRoute(
-              shipIdToAssign,
-              route.id,
-              updatedFleet,
-              updatedRoutes,
-            );
-            updatedFleet = assigned.fleet;
-            updatedRoutes = assigned.routes;
-          }
-
-          gameStore.update({
-            fleet: updatedFleet,
-            activeRoutes: updatedRoutes,
-            cash: updatedCash,
-          });
-
-          cleanUp();
-
-          const assignedShip = shipIdToAssign
-            ? (updatedFleet.find((s) => s.id === shipIdToAssign)?.name ??
-              "Assigned")
-            : "None";
-          const modal = new Modal(this, {
-            title: "Route Ready",
-            body: `Route ${latestOrigin.name} → ${latestDest.name} created.\nCargo: ${chosenCargo}\nShip: ${assignedShip}${shipIdToAssign ? "" : " (assign later in Routes)"}`,
-            width: 440,
-            height: 280,
-            onOk: () => {
-              modal.destroy();
-            },
-          });
-          modal.show();
-        },
-      }),
-    );
-
-    layer.track(
-      new Button(this, {
-        x: panelX + panelW - content.x - 120,
-        y: panelY + panelH - 62,
-        width: 120,
-        label: "Cancel",
-        onClick: () => {
-          cleanUp();
-        },
-      }),
-    );
   }
 
   private closeOverlay(): void {
     // Just stop this overlay scene — the content scene underneath is still running
     this.scene.stop();
   }
-}
-
-function pickBestAvailableShipId(
-  fleet: Ship[],
-  cargoType: CargoTypeValue,
-): string | null {
-  const available = fleet.filter((s) => !s.assignedRouteId);
-  if (available.length === 0) return null;
-
-  if (cargoType === CargoType.Passengers) {
-    const passengerShips = available
-      .filter((s) => s.passengerCapacity > 0)
-      .sort((a, b) => b.passengerCapacity - a.passengerCapacity);
-    return passengerShips[0]?.id ?? available[0].id;
-  }
-
-  const cargoShips = available
-    .filter((s) => s.cargoCapacity > 0)
-    .sort((a, b) => b.cargoCapacity - a.cargoCapacity);
-  return cargoShips[0]?.id ?? available[0].id;
-}
-
-function getCheapestCompatibleShipClass(
-  cargoType: CargoTypeValue,
-): ShipClass | null {
-  const classes = Object.keys(SHIP_TEMPLATES) as ShipClass[];
-  const compatible = classes.filter((cls) => {
-    const t = SHIP_TEMPLATES[cls];
-    return cargoType === CargoType.Passengers
-      ? t.passengerCapacity > 0
-      : t.cargoCapacity > 0;
-  });
-
-  if (compatible.length === 0) return null;
-  compatible.sort(
-    (a, b) => SHIP_TEMPLATES[a].purchaseCost - SHIP_TEMPLATES[b].purchaseCost,
-  );
-  return compatible[0];
 }

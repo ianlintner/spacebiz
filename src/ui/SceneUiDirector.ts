@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { DEPTH_MODAL } from "./DepthLayers.ts";
 
 export interface SceneUiLayerOptions {
   key?: string;
@@ -9,6 +10,7 @@ export interface SceneUiOverlayOptions {
   color?: number;
   closeOnPointerUp?: boolean;
   onPointerUp?: () => void;
+  activationDelayMs?: number;
 }
 
 export class SceneUiDirector {
@@ -66,6 +68,7 @@ export class SceneUiDirector {
 
 export class SceneUiLayer {
   private objects: Phaser.GameObjects.GameObject[] = [];
+  private destroyCallbacks: (() => void)[] = [];
   private isDestroyed = false;
   public readonly key?: string;
   private scene: Phaser.Scene;
@@ -77,8 +80,16 @@ export class SceneUiLayer {
     this.key = key;
   }
 
+  onDestroy(callback: () => void): void {
+    this.destroyCallbacks.push(callback);
+  }
+
   track<T extends Phaser.GameObjects.GameObject>(object: T): T {
     this.objects.push(object);
+    // Ensure tracked objects are on the scene's display list so they render.
+    if (!this.scene.children.exists(object)) {
+      this.scene.add.existing(object);
+    }
     return object;
   }
 
@@ -93,6 +104,7 @@ export class SceneUiLayer {
     options: SceneUiOverlayOptions = {},
   ): Phaser.GameObjects.Rectangle {
     const camera = this.scene.cameras.main;
+    const activationDelayMs = options.activationDelayMs ?? 0;
     const overlay = this.scene.add
       .rectangle(
         0,
@@ -103,14 +115,23 @@ export class SceneUiLayer {
         options.alpha ?? 0.6,
       )
       .setOrigin(0, 0)
-      .setInteractive();
+      .setDepth(DEPTH_MODAL - 1);
 
-    overlay.on("pointerup", () => {
-      options.onPointerUp?.();
-      if (options.closeOnPointerUp) {
-        this.destroy();
-      }
-    });
+    const armOverlay = () => {
+      overlay.setInteractive();
+      overlay.on("pointerup", () => {
+        options.onPointerUp?.();
+        if (options.closeOnPointerUp) {
+          this.destroy();
+        }
+      });
+    };
+
+    if (activationDelayMs <= 0) {
+      armOverlay();
+    } else {
+      this.scene.time.delayedCall(activationDelayMs, armOverlay);
+    }
 
     return this.track(overlay);
   }
@@ -118,6 +139,11 @@ export class SceneUiLayer {
   destroy(): void {
     if (this.isDestroyed) return;
     this.isDestroyed = true;
+
+    for (const cb of this.destroyCallbacks) {
+      cb();
+    }
+    this.destroyCallbacks = [];
 
     for (const object of [...this.objects].reverse()) {
       if (object.scene) {

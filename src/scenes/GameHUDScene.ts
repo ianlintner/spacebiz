@@ -106,6 +106,18 @@ export class GameHUDScene extends Phaser.Scene {
       style: "body",
     });
     this.companyLabel.setOrigin(0, 0.5);
+    this.companyLabel.setInteractive({ useHandCursor: true });
+    this.companyLabel.on("pointerover", () => {
+      this.companyLabel.setLabelColor(theme.colors.accent);
+    });
+    this.companyLabel.on("pointerout", () => {
+      this.companyLabel.setLabelColor(theme.colors.text);
+    });
+    this.companyLabel.on("pointerup", () => {
+      if (gameStore.getState().phase === "planning") {
+        this.switchContentScene("GalaxyMapScene");
+      }
+    });
 
     // Turn display (centered)
     const quarter = ((state.turn - 1) % 4) + 1;
@@ -117,6 +129,18 @@ export class GameHUDScene extends Phaser.Scene {
       style: "value",
     });
     this.turnLabel.setOrigin(0.5, 0.5);
+    this.turnLabel.setInteractive({ useHandCursor: true });
+    this.turnLabel.on("pointerover", () => {
+      this.turnLabel.setLabelColor(theme.colors.accent);
+    });
+    this.turnLabel.on("pointerout", () => {
+      this.turnLabel.setLabelColor(theme.colors.text);
+    });
+    this.turnLabel.on("pointerup", () => {
+      if (gameStore.getState().phase === "planning") {
+        this.switchContentScene("RoutesScene");
+      }
+    });
 
     // Cash display (right-aligned, green/red conditional)
     this.cashLabel = new Label(this, {
@@ -127,6 +151,18 @@ export class GameHUDScene extends Phaser.Scene {
       color: state.cash >= 0 ? theme.colors.profit : theme.colors.loss,
     });
     this.cashLabel.setOrigin(1, 0.5);
+    this.cashLabel.setInteractive({ useHandCursor: true });
+    this.cashLabel.on("pointerover", () => {
+      this.cashLabel.setScale(1.03);
+    });
+    this.cashLabel.on("pointerout", () => {
+      this.cashLabel.setScale(1);
+    });
+    this.cashLabel.on("pointerup", () => {
+      if (gameStore.getState().phase === "planning") {
+        this.switchContentScene("FinanceScene");
+      }
+    });
 
     // Streak counter (left of cash, hidden until streak >= 2)
     const initStreak = state.storyteller?.consecutiveProfitTurns ?? 0;
@@ -183,6 +219,9 @@ export class GameHUDScene extends Phaser.Scene {
       .setAlpha(0.6);
 
     this.navTooltip = new Tooltip(this, { showDelay: 300 });
+    this.navTooltip.attachTo(this.companyLabel, "Back to galaxy map");
+    this.navTooltip.attachTo(this.turnLabel, "Open route planning");
+    this.navTooltip.attachTo(this.cashLabel, "Open finance overview");
 
     const iconBtnSize = 46;
     const iconSpacing = 8;

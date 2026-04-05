@@ -138,6 +138,11 @@ export class MarketScene extends Phaser.Scene {
       width: content.width,
       height: content.height - 32,
       columns: columnDefs,
+      keyboardNavigation: true,
+      autoFocus: true,
+      emptyStateText: "No market data available",
+      emptyStateHint:
+        "Generate a galaxy to inspect local and galaxy-wide prices.",
       onRowSelect: (_rowIndex, rowData) => {
         const planetName = rowData["planet"] as string;
         const planetType = rowData["type"] as string;

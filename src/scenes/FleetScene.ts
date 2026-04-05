@@ -150,6 +150,10 @@ export class FleetScene extends Phaser.Scene {
           format: (v) => formatCash(v as number),
         },
       ],
+      keyboardNavigation: true,
+      autoFocus: true,
+      emptyStateText: "No ships in your fleet",
+      emptyStateHint: "Buy your first ship to begin building routes.",
       onRowSelect: (rowIndex, rowData) => {
         this.selectedShipId = rowData["id"] as string;
         const currentState = gameStore.getState();
@@ -274,6 +278,11 @@ export class FleetScene extends Phaser.Scene {
         width: content.width,
         height: content.height - 50,
         itemHeight: 48,
+        keyboardNavigation: true,
+        autoFocus: true,
+        onCancel: () => {
+          layer.destroy();
+        },
         onSelect: (index: number) => {
           const shipClasses = Object.values(ShipClass) as ShipClassType[];
           const selectedClass = shipClasses[index];

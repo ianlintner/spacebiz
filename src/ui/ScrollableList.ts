@@ -89,13 +89,6 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     const index = this.items.length;
     const y = index * this.listConfig.itemHeight;
     container.setPosition(0, y);
-    this.items.push(container);
-    this.itemBackgrounds.push(hitBg);
-    this.contentContainer.add(container);
-    this.maxScroll = Math.max(
-      0,
-      this.items.length * this.listConfig.itemHeight - this.listConfig.height,
-    );
 
     // Make item clickable
     const theme = getTheme();
@@ -108,6 +101,14 @@ export class ScrollableList extends Phaser.GameObjects.Container {
         index % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd,
       )
       .setOrigin(0, 0);
+
+    this.items.push(container);
+    this.itemBackgrounds.push(hitBg);
+    this.contentContainer.add(container);
+    this.maxScroll = Math.max(
+      0,
+      this.items.length * this.listConfig.itemHeight - this.listConfig.height,
+    );
 
     container.setSize(this.listConfig.width, this.listConfig.itemHeight);
     container.setInteractive(

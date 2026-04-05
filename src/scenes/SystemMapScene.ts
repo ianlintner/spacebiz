@@ -110,7 +110,7 @@ export class SystemMapScene extends Phaser.Scene {
       .text(
         MAIN_CONTENT_LEFT + MAIN_CONTENT_WIDTH - 8,
         CONTENT_TOP + 10,
-        "Concentric orbits: inner industry → outer leisure/hubs\nPlanet size scales with population",
+        "Click a planet for local market details and route setup\nConcentric orbits: inner industry → outer leisure/hubs\nPlanet size scales with population",
         {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,

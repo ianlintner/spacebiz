@@ -173,6 +173,12 @@ export class Button extends Phaser.GameObjects.Container {
     this.label.setText(text);
   }
 
+  override setDepth(value: number): this {
+    super.setDepth(value);
+    this.hitZone?.setDepth(value);
+    return this;
+  }
+
   override setPosition(x?: number, y?: number, z?: number, w?: number): this {
     super.setPosition(x, y, z, w);
     this.syncHitZonePosition();
