@@ -2,51 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      name="description"
+      content="Star Freight Tycoon is a turn-driven sci-fi freight management game with a playable home page, strategy manual, help center, and AI asset disclosure."
     />
     <title>Star Freight Tycoon</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        background: #000;
-        overflow: hidden;
-        /* Prevent text selection and callouts on long-press */
-        -webkit-user-select: none;
-        -webkit-touch-callout: none;
-        user-select: none;
-        /* Block default browser touch gestures so Phaser gets all input */
-        touch-action: none;
-      }
-      #game-container {
-        width: 100vw;
-        height: 100vh;
-        /* Center the canvas inside when letterboxed */
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      #game-container canvas {
-        /* Keep pixels sharp on high-DPI / mobile upscaling */
-        image-rendering: pixelated;
-        image-rendering: -webkit-optimize-contrast; /* Edge 79+ */
-        image-rendering: crisp-edges;
-        /* Don't let the browser handle touches on the canvas */
-        touch-action: none;
-        /* Fill the container; Phaser Scale.FIT handles aspect ratio */
-        max-width: 100%;
-        max-height: 100%;
-      }
-    </style>
   </head>
   <body>
-    <div id="game-container"></div>
+    <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
