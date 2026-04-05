@@ -194,69 +194,73 @@ function renderSite(): void {
       </header>
 
       <main class="site-main">
-        <section id="overview" class="section panel-surface hero">
-          <div class="hero-stage">
-            <div class="game-frame">
-              <div class="game-frame__hud">
-                <div class="game-frame__cluster">
-                  <span class="signal-light signal-light--teal"></span>
-                  <span class="signal-light signal-light--blue"></span>
-                  <span class="signal-light signal-light--amber"></span>
-                  <span>Bridge View</span>
+        <section id="overview" class="section hero hero--full-bleed">
+          <div class="hero-shell">
+            <div class="hero-stage hero-stage--full">
+              <div class="game-frame game-frame--hero">
+                <div class="game-frame__hud">
+                  <div class="game-frame__cluster">
+                    <span class="signal-light signal-light--teal"></span>
+                    <span class="signal-light signal-light--blue"></span>
+                    <span class="signal-light signal-light--amber"></span>
+                    <span>Bridge View</span>
+                  </div>
+                  <div class="game-frame__status">
+                    <span>Interactive Build</span>
+                    <span>Ready for Launch</span>
+                  </div>
                 </div>
-                <div class="game-frame__status">
-                  <span>Interactive Build</span>
-                  <span>Ready for Launch</span>
+
+                <div class="game-frame__screen game-frame__screen--hero">
+                  <div class="viewport viewport--hero">
+                    <div id="game-container" aria-label="Playable Star Freight Tycoon game viewport"></div>
+                  </div>
                 </div>
               </div>
 
-              <div class="game-frame__screen">
-                <div class="viewport">
-                  <div id="game-container" aria-label="Playable Star Freight Tycoon game viewport"></div>
-                </div>
+              <div class="frame-caption frame-caption--hero">
+                <p>
+                  The game now owns the top of the page as a true hero banner, while the briefings, manual, and disclosures dock neatly underneath it.
+                </p>
+                <span class="frame-caption__meta">Phaser 3 • TypeScript • Vite</span>
               </div>
             </div>
 
-            <div class="frame-caption">
-              <p>
-                The game stays on the home screen inside a sci-fi command frame, while the rest of the site reads like shipboard systems and briefing screens.
-              </p>
-              <span class="frame-caption__meta">Phaser 3 • TypeScript • Vite</span>
-            </div>
-          </div>
+            <div class="hero-copy-wrap panel-surface">
+              <div class="hero-copy hero-copy--full">
+                <span class="kicker">Playable Home Screen</span>
+                <h1>Run a freight empire from a polished orbital command deck.</h1>
+                <p>
+                  This one-page site turns the game itself into a full-width hero experience, then layers in a manual, fast help, and up-front AI asset disclosure without ever feeling like you left the bridge.
+                </p>
 
-          <div class="hero-copy">
-            <span class="kicker">Playable Home Screen</span>
-            <h1>Run a freight empire from a polished orbital command deck.</h1>
-            <p>
-              This one-page site turns the game itself into the hero section, then layers in a manual, fast help, and up-front AI asset disclosure without ever feeling like you left the bridge.
-            </p>
+                <div class="hero-actions">
+                  <a class="button-link" href="#manual">Read the manual</a>
+                  <a class="text-link" href="#help">Need quick-start help?</a>
+                  <a class="text-link" href="#ai-disclosure">AI disclosure</a>
+                </div>
 
-            <div class="hero-actions">
-              <a class="button-link" href="#manual">Read the manual</a>
-              <a class="text-link" href="#help">Need quick-start help?</a>
-              <a class="text-link" href="#ai-disclosure">AI disclosure</a>
-            </div>
+                <div class="hero-badges">
+                  <article class="badge">
+                    <span>Game Loop</span>
+                    <strong>Plan → Simulate → Review</strong>
+                  </article>
+                  <article class="badge">
+                    <span>Systems</span>
+                    <strong>Economy, routes, fleets, events</strong>
+                  </article>
+                  <article class="badge">
+                    <span>Style</span>
+                    <strong>Retro neon with cinematic framing</strong>
+                  </article>
+                </div>
 
-            <div class="hero-badges">
-              <article class="badge">
-                <span>Game Loop</span>
-                <strong>Plan → Simulate → Review</strong>
-              </article>
-              <article class="badge">
-                <span>Systems</span>
-                <strong>Economy, routes, fleets, events</strong>
-              </article>
-              <article class="badge">
-                <span>Style</span>
-                <strong>Retro neon with cinematic framing</strong>
-              </article>
-            </div>
-
-            <div class="hero-metrics">
-              <h2 class="hero-metrics__title">Current mission profile</h2>
-              <div class="metrics-grid">
-                ${renderHeroMetrics()}
+                <div class="hero-metrics">
+                  <h2 class="hero-metrics__title">Current mission profile</h2>
+                  <div class="metrics-grid">
+                    ${renderHeroMetrics()}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
