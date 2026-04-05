@@ -1,7 +1,6 @@
-// Re-exported from the @spacebiz/ui library package
-export { createStarfield } from "@spacebiz/ui";
-export type { StarfieldConfig } from "@spacebiz/ui";
-
+import Phaser from "phaser";
+import { lerpColor, getTheme } from "./Theme.ts";
+import { addTwinkleTween, registerAmbientCleanup } from "./AmbientFX.ts";
 
 export interface StarfieldConfig {
   count?: number; // default 120

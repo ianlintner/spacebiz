@@ -1,7 +1,5 @@
-// Re-exported from the @spacebiz/ui library package
-export { Label } from "@spacebiz/ui";
-export type { LabelConfig, LabelStyle } from "@spacebiz/ui";
-
+import Phaser from "phaser";
+import { getTheme, colorToString } from "./Theme.ts";
 
 export type LabelStyle = "heading" | "body" | "caption" | "value";
 
