@@ -17,6 +17,9 @@ import {
   flashScreen,
 } from "../ui/index.ts";
 import type { GameHUDScene } from "./GameHUDScene.ts";
+import type { GameState, TurnResult } from "../data/types.ts";
+import { EventCategory } from "../data/types.ts";
+import { getAudioDirector } from "../audio/AudioDirector.ts";
 
 function formatCash(amount: number): string {
   return "\u00A7" + amount.toLocaleString();

@@ -2,16 +2,20 @@ import Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
 import { CargoType } from "../data/types.ts";
 import type { Planet, CargoMarketEntry } from "../data/types.ts";
-import { getTheme } from "../ui/Theme.ts";
-import { Panel } from "../ui/Panel.ts";
-import { Label } from "../ui/Label.ts";
-import { Button } from "../ui/Button.ts";
-import { DataTable } from "../ui/DataTable.ts";
-import { Modal } from "../ui/Modal.ts";
-import { PortraitPanel } from "../ui/PortraitPanel.ts";
-import { openRouteBuilder } from "../ui/RouteBuilderPanel.ts";
-import { SceneUiDirector } from "../ui/SceneUiDirector.ts";
-import { GAME_WIDTH, GAME_HEIGHT, CONTENT_GAP } from "../ui/Layout.ts";
+import {
+  getTheme,
+  Panel,
+  Label,
+  Button,
+  DataTable,
+  Modal,
+  PortraitPanel,
+  openRouteBuilder,
+  SceneUiDirector,
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  CONTENT_GAP,
+} from "../ui/index.ts";
 
 const CARGO_TYPE_VALUES = Object.values(CargoType) as Array<
   (typeof CargoType)[keyof typeof CargoType]
