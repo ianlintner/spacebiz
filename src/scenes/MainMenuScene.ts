@@ -279,5 +279,19 @@ export class MainMenuScene extends Phaser.Scene {
         }
       },
     });
+
+    // Style Guide link — small caption-style button at bottom-right
+    const sgBtnW = 120;
+    const sgBtnH = 32;
+    new Button(this, {
+      x: GAME_WIDTH - sgBtnW - 16,
+      y: GAME_HEIGHT - sgBtnH - 8,
+      width: sgBtnW,
+      height: sgBtnH,
+      label: "Style Guide",
+      onClick: () => {
+        window.open("./styleguide/index.html", "_blank");
+      },
+    });
   }
 }
