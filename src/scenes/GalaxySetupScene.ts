@@ -1,11 +1,14 @@
 import Phaser from "phaser";
-import { createStarfield } from "../ui/Starfield.ts";
-import { Panel } from "../ui/Panel.ts";
-import { Button } from "../ui/Button.ts";
-import { Label } from "../ui/Label.ts";
-import { PortraitPanel } from "../ui/PortraitPanel.ts";
-import { getTheme } from "../ui/Theme.ts";
-import { GAME_WIDTH, MAX_CONTENT_WIDTH } from "../ui/Layout.ts";
+import {
+  createStarfield,
+  Panel,
+  Button,
+  Label,
+  PortraitPanel,
+  getTheme,
+  GAME_WIDTH,
+  MAX_CONTENT_WIDTH,
+} from "../ui/index.ts";
 import { gameStore } from "../data/GameStore.ts";
 import { createNewGame } from "../game/NewGameSetup.ts";
 import type { GameState, StarSystem } from "../data/types.ts";

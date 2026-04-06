@@ -3,20 +3,20 @@ import { gameStore } from "../data/GameStore.ts";
 import { CargoType } from "../data/types.ts";
 import type { CargoType as CargoTypeValue } from "../data/types.ts";
 import { BASE_CARGO_PRICES } from "../data/constants.ts";
-import { getTheme } from "../ui/Theme.ts";
-import { Label } from "../ui/Label.ts";
-import { DataTable } from "../ui/DataTable.ts";
-import { Panel } from "../ui/Panel.ts";
-import { PortraitPanel } from "../ui/PortraitPanel.ts";
-import { createStarfield } from "../ui/Starfield.ts";
 import {
+  getTheme,
+  Label,
+  DataTable,
+  Panel,
+  PortraitPanel,
+  createStarfield,
   CONTENT_TOP,
   CONTENT_HEIGHT,
   SIDEBAR_LEFT,
   SIDEBAR_WIDTH,
   MAIN_CONTENT_LEFT,
   MAIN_CONTENT_WIDTH,
-} from "../ui/Layout.ts";
+} from "../ui/index.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
