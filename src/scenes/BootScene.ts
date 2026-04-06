@@ -1,8 +1,7 @@
 import Phaser from "phaser";
-import type { ThemeConfig } from "../ui/Theme.ts";
-import { getTheme, lerpColor } from "../ui/Theme.ts";
+import type { ThemeConfig } from "../ui/index.ts";
+import { getTheme, lerpColor, registerUiSoundHandler } from "../ui/index.ts";
 import { getAudioDirector, type SfxKey } from "../audio/AudioDirector.ts";
-import { registerUiSoundHandler } from "@spacebiz/ui";
 
 export class BootScene extends Phaser.Scene {
   constructor() {

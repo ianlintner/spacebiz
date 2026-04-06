@@ -1,11 +1,19 @@
 import Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
-import { getTheme, colorToString } from "../ui/Theme.ts";
-import { Label } from "../ui/Label.ts";
-import { Button } from "../ui/Button.ts";
-import { Panel } from "../ui/Panel.ts";
-import { DataTable } from "../ui/DataTable.ts";
-import { createStarfield } from "../ui/Starfield.ts";
+import {
+  getTheme,
+  colorToString,
+  Label,
+  Button,
+  Panel,
+  DataTable,
+  createStarfield,
+  GAME_WIDTH,
+  CONTENT_TOP,
+  CONTENT_HEIGHT,
+  FULL_CONTENT_LEFT,
+  AdviserPanel,
+} from "../ui/index.ts";
 import { CargoType } from "../data/types.ts";
 import type { CargoType as CargoTypeT } from "../data/types.ts";
 import {
@@ -14,17 +22,8 @@ import {
   getHighScores,
 } from "../game/scoring/ScoreCalculator.ts";
 import { calculateShipValue } from "../game/fleet/FleetManager.ts";
-import {
-  GAME_WIDTH,
-  CONTENT_TOP,
-  CONTENT_HEIGHT,
-  FULL_CONTENT_LEFT,
-} from "../ui/Layout.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
-import { AdviserPanel } from "../ui/AdviserPanel.ts";
 import { buildRevealMessages } from "../game/adviser/AdviserEngine.ts";
-
-function formatCash(amount: number): string {
   const sign = amount < 0 ? "-" : "";
   const abs = Math.abs(Math.round(amount));
   return sign + "\u00A7" + abs.toLocaleString();

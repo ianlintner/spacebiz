@@ -2,23 +2,23 @@ import Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
 import type { PlanetType } from "../data/types.ts";
 import type { Planet } from "../data/types.ts";
-import { getTheme, colorToString } from "../ui/Theme.ts";
-import { Label } from "../ui/Label.ts";
-import { Button } from "../ui/Button.ts";
-import { PortraitPanel } from "../ui/PortraitPanel.ts";
-import { createStarfield } from "../ui/Starfield.ts";
-import { addPulseTween, addRotateTween } from "../ui/AmbientFX.ts";
-import { DEPTH_AMBIENT_MID } from "../ui/DepthLayers.ts";
-import { getAudioDirector } from "../audio/AudioDirector.ts";
-import { SeededRNG } from "../utils/SeededRNG.ts";
 import {
+  getTheme,
+  colorToString,
+  Label,
+  Button,
+  PortraitPanel,
+  createStarfield,
+  addPulseTween,
+  addRotateTween,
+  DEPTH_AMBIENT_MID,
   CONTENT_TOP,
   CONTENT_HEIGHT,
   SIDEBAR_LEFT,
   SIDEBAR_WIDTH,
   MAIN_CONTENT_LEFT,
   MAIN_CONTENT_WIDTH,
-} from "../ui/Layout.ts";
+} from "../ui/index.ts";
 
 import type { GameHUDScene } from "./GameHUDScene.ts";
 

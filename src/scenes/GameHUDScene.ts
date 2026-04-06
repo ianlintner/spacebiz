@@ -1,21 +1,22 @@
 import Phaser from "phaser";
-import { Button } from "../ui/Button.ts";
-import { Label } from "../ui/Label.ts";
-import { Panel } from "../ui/Panel.ts";
-import { getTheme, colorToString } from "../ui/Theme.ts";
 import {
+  Button,
+  Label,
+  Panel,
+  getTheme,
+  colorToString,
   GAME_WIDTH,
   GAME_HEIGHT,
   HUD_TOP_BAR_HEIGHT,
   HUD_BOTTOM_BAR_HEIGHT,
   NAV_SIDEBAR_WIDTH,
-} from "../ui/Layout.ts";
+  Tooltip,
+  FloatingText,
+  AdviserPanel,
+  TutorialOverlay,
+} from "../ui/index.ts";
 import { gameStore } from "../data/GameStore.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
-import { Tooltip } from "../ui/Tooltip.ts";
-import { FloatingText } from "../ui/FloatingText.ts";
-import { AdviserPanel } from "../ui/AdviserPanel.ts";
-import { TutorialOverlay } from "../ui/TutorialOverlay.ts";
 import { checkTutorialAdvancement } from "../game/adviser/AdviserEngine.ts";
 import type { TutorialTrigger } from "../data/types.ts";
 import { TUTORIAL_STEPS } from "../game/adviser/TutorialDefinitions.ts";

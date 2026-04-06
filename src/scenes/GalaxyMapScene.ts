@@ -1,10 +1,13 @@
 import Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
-import { getTheme, colorToString } from "../ui/Theme.ts";
-import { Label } from "../ui/Label.ts";
-import { CONTENT_TOP } from "../ui/Layout.ts";
-import { createStarfield } from "../ui/Starfield.ts";
-import { addPulseTween } from "../ui/AmbientFX.ts";
+import {
+  getTheme,
+  colorToString,
+  Label,
+  CONTENT_TOP,
+  createStarfield,
+  addPulseTween,
+} from "../ui/index.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 
 import type { GameHUDScene } from "./GameHUDScene.ts";
