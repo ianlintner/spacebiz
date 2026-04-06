@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
+import { autoButtonWidth } from "./TextMetrics.ts";
 
 export interface ModalConfig {
   title: string;
@@ -98,6 +99,10 @@ export class Modal extends Phaser.GameObjects.Container {
         fontSize: `${theme.fonts.heading.size}px`,
         fontFamily: theme.fonts.heading.family,
         color: colorToString(theme.colors.accent),
+        wordWrap: {
+          width:
+            modalWidth - theme.spacing.md * 3 - (theme.fonts.heading.size + 4),
+        },
       },
     );
     this.panel.add(titleText);
@@ -138,18 +143,39 @@ export class Modal extends Phaser.GameObjects.Container {
     );
     this.panel.add(bodyText);
 
-    // Buttons at bottom
+    // Buttons at bottom — auto-size to fit their labels
     const buttonY = modalHeight - theme.button.height - theme.spacing.md;
-    const buttonWidth = 100;
     const buttonHeight = theme.button.height;
     const buttonSpacing = theme.spacing.md;
 
-    // OK button
     const okText = config.okText ?? "OK";
-    const okX =
-      config.onCancel != null
-        ? modalWidth / 2 - buttonWidth - buttonSpacing / 2
-        : (modalWidth - buttonWidth) / 2;
+    const cancelText = config.cancelText ?? "Cancel";
+    const hasCancelBtn = config.onCancel != null;
+
+    // Measure both labels so buttons have consistent width when shown together
+    const okBtnW = autoButtonWidth(
+      scene,
+      okText,
+      theme.fonts.body.family,
+      theme.fonts.body.size,
+      80,
+    );
+    const cancelBtnW = hasCancelBtn
+      ? autoButtonWidth(
+          scene,
+          cancelText,
+          theme.fonts.body.family,
+          theme.fonts.body.size,
+          80,
+        )
+      : 0;
+    // Use the larger of the two so paired buttons are equal width
+    const buttonWidth = hasCancelBtn ? Math.max(okBtnW, cancelBtnW) : okBtnW;
+
+    // OK button
+    const okX = hasCancelBtn
+      ? modalWidth / 2 - buttonWidth - buttonSpacing / 2
+      : (modalWidth - buttonWidth) / 2;
 
     const okBg = scene.add
       .nineslice(
@@ -203,8 +229,7 @@ export class Modal extends Phaser.GameObjects.Container {
     this.panel.add([okBg, okLabel]);
 
     // Cancel button (optional)
-    if (config.onCancel != null) {
-      const cancelText = config.cancelText ?? "Cancel";
+    if (hasCancelBtn) {
       const cancelX = modalWidth / 2 + buttonSpacing / 2;
 
       const cancelBg = scene.add

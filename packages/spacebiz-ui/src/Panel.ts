@@ -100,6 +100,7 @@ export class Panel extends Phaser.GameObjects.Container {
           fontSize: `${theme.fonts.heading.size}px`,
           fontFamily: theme.fonts.heading.family,
           color: colorToString(theme.colors.accent),
+          wordWrap: { width: config.width - theme.spacing.md * 3 },
         },
       );
 

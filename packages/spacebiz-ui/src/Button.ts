@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 import { playUiSfx } from "./UiSound.ts";
+import { autoButtonWidth, fitTextWithEllipsis } from "./TextMetrics.ts";
 
 export interface ButtonConfig {
   x: number;
@@ -10,6 +11,28 @@ export interface ButtonConfig {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  /**
+   * When true and no explicit `width` is provided, the button will
+   * automatically size itself to fit the label text exactly.
+   * Defaults to false for backward compatibility.
+   */
+  autoWidth?: boolean;
+  /**
+   * Horizontal padding in pixels added to each side of the label when
+   * computing auto width. Ignored when an explicit `width` is given.
+   * Defaults to 20px per side.
+   */
+  paddingX?: number;
+  /**
+   * When true and the label text is wider than the button, the label is
+   * truncated with a trailing "…". Useful for fixed-width buttons.
+   * Defaults to false.
+   */
+  ellipsis?: boolean;
+  /**
+   * Override the default font size (theme.fonts.body.size) for the button label.
+   */
+  fontSize?: number;
 }
 
 export class Button extends Phaser.GameObjects.Container {
@@ -28,7 +51,26 @@ export class Button extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, config: ButtonConfig) {
     super(scene, config.x, config.y);
     const theme = getTheme();
-    const width = config.width ?? theme.button.minWidth;
+
+    const fontSize = config.fontSize ?? theme.fonts.body.size;
+
+    // Determine width: explicit > autoWidth measured > minWidth fallback
+    let width: number;
+    if (config.width !== undefined) {
+      width = config.width;
+    } else if (config.autoWidth) {
+      width = autoButtonWidth(
+        scene,
+        config.label,
+        theme.fonts.body.family,
+        fontSize,
+        theme.button.minWidth,
+        config.paddingX ?? 20,
+      );
+    } else {
+      width = theme.button.minWidth;
+    }
+
     const height = config.height ?? theme.button.height;
     this.widthPx = width;
     this.heightPx = height;
@@ -52,12 +94,24 @@ export class Button extends Phaser.GameObjects.Container {
       .nineslice(0, 0, textureKey, undefined, width, height, 10, 10, 10, 10)
       .setOrigin(0, 0);
 
+    // Optionally truncate label with ellipsis when it overflows fixed width
+    const displayLabel =
+      config.ellipsis === true
+        ? fitTextWithEllipsis(
+            scene,
+            config.label,
+            width - (config.paddingX ?? 20) * 2,
+            theme.fonts.body.family,
+            fontSize,
+          )
+        : config.label;
+
     const textColor = this.isDisabled
       ? colorToString(theme.colors.textDim)
       : colorToString(theme.colors.text);
     this.label = scene.add
-      .text(width / 2, height / 2, config.label, {
-        fontSize: `${theme.fonts.body.size}px`,
+      .text(width / 2, height / 2, displayLabel, {
+        fontSize: `${fontSize}px`,
         fontFamily: theme.fonts.body.family,
         color: textColor,
       })
@@ -213,11 +267,17 @@ export class Button extends Phaser.GameObjects.Container {
     super.destroy(fromScene);
   }
 
+  /**
+   * Keep the scene-level hitZone aligned with the button's world position,
+   * accounting for any parent container transforms (e.g. scroll offset).
+   */
   private syncHitZonePosition(): void {
     if (!this.hitZone) return;
-    this.hitZone.setPosition(
-      this.x + this.widthPx / 2,
-      this.y + this.heightPx / 2,
-    );
+    const m = this.getWorldTransformMatrix();
+    this.hitZone.setPosition(m.tx + this.widthPx / 2, m.ty + this.heightPx / 2);
+  }
+
+  preUpdate(): void {
+    this.syncHitZonePosition();
   }
 }

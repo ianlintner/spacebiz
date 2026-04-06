@@ -65,6 +65,8 @@ export class TabGroup extends Phaser.GameObjects.Container {
           color: colorToString(
             isActive ? theme.colors.accent : theme.colors.textDim,
           ),
+          wordWrap: { width: tabWidth - theme.spacing.sm * 2 },
+          align: "center",
         })
         .setOrigin(0.5);
 

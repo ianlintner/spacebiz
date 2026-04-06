@@ -14,6 +14,7 @@
 import Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 import { GAME_WIDTH, GAME_HEIGHT } from "./Layout.ts";
+import { fitFontSize } from "./TextMetrics.ts";
 
 export type MilestoneType =
   | "big_profit"
@@ -46,6 +47,7 @@ export class MilestoneOverlay {
     headline: string,
     subtext?: string,
     onComplete?: () => void,
+    options?: { holdDuration?: number },
   ): void {
     const theme = getTheme();
     const colors = TYPE_COLORS[type];
@@ -56,24 +58,40 @@ export class MilestoneOverlay {
 
     // Full-screen dim overlay
     const overlay = scene.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1)
       .setOrigin(0, 0)
-      .setDepth(depth);
+      .setDepth(depth)
+      .setAlpha(0);
 
     // Center banner background
     const bannerH = subtext ? 150 : 120;
     const bannerW = Math.min(GAME_WIDTH - 60, 740);
 
-    // Solid dark backing behind the tinted banner for full contrast
+    // Fully opaque dark backing so nothing bleeds through
     const bannerBacking = scene.add
-      .rectangle(cx, cy, bannerW + 4, bannerH + 4, 0x000000, 0)
+      .rectangle(cx, cy, bannerW + 6, bannerH + 6, 0x000000, 1)
       .setOrigin(0.5, 0.5)
-      .setDepth(depth + 1);
+      .setDepth(depth + 1)
+      .setAlpha(0);
 
     const banner = scene.add
-      .rectangle(cx, cy, bannerW, bannerH, colors.bg, 0)
+      .rectangle(cx, cy, bannerW, bannerH, colors.bg, 1)
       .setOrigin(0.5, 0.5)
-      .setDepth(depth + 1);
+      .setDepth(depth + 1)
+      .setAlpha(0);
+
+    // Inner glow / vignette around the banner edges
+    const innerGlow = scene.add
+      .graphics()
+      .setDepth(depth + 1)
+      .setAlpha(0);
+    innerGlow.lineStyle(8, colors.glow, 0.15);
+    innerGlow.strokeRect(
+      cx - bannerW / 2 + 4,
+      cy - bannerH / 2 + 4,
+      bannerW - 8,
+      bannerH - 8,
+    );
 
     // Glow border
     const border = scene.add.graphics().setDepth(depth + 1);
@@ -84,8 +102,14 @@ export class MilestoneOverlay {
     };
     drawBorder(0);
 
-    // Headline text
-    const headlineFontSize = headline.length > 20 ? 34 : 44;
+    // Headline text — pick the largest font size that fits the banner
+    const headlineFontSize = fitFontSize(
+      scene,
+      headline,
+      theme.fonts.heading.family,
+      bannerW - 48,
+      [54, 44, 34, 26, 20],
+    );
     const headlineTxt = scene.add
       .text(cx, cy - (subtext ? 28 : 0), headline, {
         fontSize: `${headlineFontSize}px`,
@@ -144,7 +168,7 @@ export class MilestoneOverlay {
     });
     scene.tweens.add({
       targets: bannerBacking,
-      alpha: 0.85,
+      alpha: 1,
       duration: 100,
       ease: "Linear",
     });
@@ -152,6 +176,12 @@ export class MilestoneOverlay {
       targets: banner,
       alpha: 0.95,
       duration: 120,
+      ease: "Linear",
+    });
+    scene.tweens.add({
+      targets: innerGlow,
+      alpha: 1,
+      duration: 200,
       ease: "Linear",
     });
     scene.tweens.add({
@@ -190,13 +220,14 @@ export class MilestoneOverlay {
       });
     }
 
-    // Phase 3: hold then fade out (after 1.4s total, fade over 400ms)
-    const holdDuration = 1400;
+    // Phase 3: hold then fade out
+    const holdDuration = options?.holdDuration ?? 1400;
     const fadeOutDuration = 380;
     const allObjects: Phaser.GameObjects.GameObject[] = [
       overlay,
       bannerBacking,
       banner,
+      innerGlow,
       border,
       headlineTxt,
       ...shimmerDots,

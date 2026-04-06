@@ -22,3 +22,12 @@ export {
   type PortraitData,
 } from "./PortraitGenerator.ts";
 export { PortraitPanel, type PortraitPanelConfig } from "./PortraitPanel.ts";
+export { AdviserPanel, type AdviserPanelConfig } from "./AdviserPanel.ts";
+export {
+  openRouteBuilder,
+  type RouteBuilderPanelConfig,
+} from "./RouteBuilderPanel.ts";
+export {
+  TutorialOverlay,
+  type TutorialOverlayConfig,
+} from "./TutorialOverlay.ts";

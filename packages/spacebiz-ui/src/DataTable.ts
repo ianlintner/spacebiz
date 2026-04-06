@@ -83,6 +83,7 @@ export class DataTable extends Phaser.GameObjects.Container {
       this.focus();
     });
     this.addAt(this.wheelHitArea, 0);
+    this.wheelHitArea.setData("consumesWheel", true);
 
     // Mask for body scrolling
     this.maskShape = scene.make.graphics({});
@@ -105,6 +106,9 @@ export class DataTable extends Phaser.GameObjects.Container {
         this.focus();
       }
     }
+
+    // Sync geometry mask position when inside a parent Container
+    this.scene.events.on("preupdate", this.syncMaskPosition, this);
 
     scene.add.existing(this);
   }
@@ -163,6 +167,7 @@ export class DataTable extends Phaser.GameObjects.Container {
             new Phaser.Geom.Rectangle(0, 0, col.width, this.headerHeight),
             Phaser.Geom.Rectangle.Contains,
           );
+        hitArea.setData("consumesWheel", true);
         if (hitArea.input) {
           hitArea.input.cursor = "pointer";
         }
@@ -324,6 +329,7 @@ export class DataTable extends Phaser.GameObjects.Container {
           new Phaser.Geom.Rectangle(0, 0, this.tableConfig.width, rowHeightPx),
           Phaser.Geom.Rectangle.Contains,
         );
+      rowBg.setData("consumesWheel", true);
       if (rowBg.input) {
         rowBg.input.cursor = "pointer";
       }
@@ -550,9 +556,16 @@ export class DataTable extends Phaser.GameObjects.Container {
     return this.selectedRowIndex;
   }
 
+  private syncMaskPosition(): void {
+    if (this.destroyed) return;
+    const matrix = this.getWorldTransformMatrix();
+    this.maskShape.setPosition(matrix.tx, matrix.ty);
+  }
+
   destroy(fromScene?: boolean): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.scene.events.off("preupdate", this.syncMaskPosition, this);
     if (this.keyboardNavigationEnabled) {
       this.scene.input.keyboard?.off("keydown", this.handleKeyDown, this);
     }

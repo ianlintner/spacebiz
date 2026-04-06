@@ -13,6 +13,12 @@ export default defineConfig({
   },
   build: {
     target: "esnext",
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        styleguide: path.resolve(__dirname, "styleguide/index.html"),
+      },
+    },
   },
   test: {
     globals: true,

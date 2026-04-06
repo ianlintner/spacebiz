@@ -58,6 +58,7 @@ export class ScrollableList extends Phaser.GameObjects.Container {
         Phaser.Geom.Rectangle.Contains,
       );
     this.addAt(this.wheelCapture, 0);
+    this.wheelCapture.setData("consumesWheel", true);
 
     this.wheelCapture.on(
       "wheel",
@@ -81,6 +82,9 @@ export class ScrollableList extends Phaser.GameObjects.Container {
         this.focus();
       }
     }
+
+    // Sync geometry mask position when inside a parent Container
+    this.scene.events.on("preupdate", this.syncMaskPosition, this);
 
     scene.add.existing(this);
   }
@@ -120,6 +124,7 @@ export class ScrollableList extends Phaser.GameObjects.Container {
       ),
       Phaser.Geom.Rectangle.Contains,
     );
+    container.setData("consumesWheel", true);
     if (container.input) {
       container.input.cursor = "pointer";
     }
@@ -380,9 +385,16 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     this.scrollThumb.setY(thumbY);
   }
 
+  private syncMaskPosition(): void {
+    if (this.destroyed) return;
+    const matrix = this.getWorldTransformMatrix();
+    this.maskGraphics.setPosition(matrix.tx, matrix.ty);
+  }
+
   destroy(fromScene?: boolean): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.scene.events.off("preupdate", this.syncMaskPosition, this);
     if (this.keyboardNavigationEnabled) {
       this.scene.input.keyboard?.off("keydown", this.handleKeyDown, this);
     }

@@ -26,5 +26,5 @@
     },
     "baseUrl": "."
   },
-  "include": ["src", "packages/spacebiz-ui/src"]
+  "include": ["src", "packages/spacebiz-ui/src", "styleguide"]
 }
