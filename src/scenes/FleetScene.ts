@@ -3,17 +3,18 @@ import { gameStore } from "../data/GameStore.ts";
 import { ShipClass } from "../data/types.ts";
 import type { Ship, ShipClass as ShipClassType } from "../data/types.ts";
 import { SHIP_TEMPLATES } from "../data/constants.ts";
-import { getTheme, colorToString } from "../ui/Theme.ts";
-import { Label } from "../ui/Label.ts";
-import { Button } from "../ui/Button.ts";
-import { DataTable } from "../ui/DataTable.ts";
-import { Modal } from "../ui/Modal.ts";
-import { ScrollableList } from "../ui/ScrollableList.ts";
-import { Panel } from "../ui/Panel.ts";
-import { PortraitPanel } from "../ui/PortraitPanel.ts";
-import { SceneUiDirector } from "../ui/SceneUiDirector.ts";
-import { createStarfield } from "../ui/Starfield.ts";
 import {
+  getTheme,
+  colorToString,
+  Label,
+  Button,
+  DataTable,
+  Modal,
+  ScrollableList,
+  Panel,
+  PortraitPanel,
+  SceneUiDirector,
+  createStarfield,
   GAME_WIDTH,
   GAME_HEIGHT,
   CONTENT_TOP,
@@ -22,7 +23,7 @@ import {
   SIDEBAR_WIDTH,
   MAIN_CONTENT_LEFT,
   MAIN_CONTENT_WIDTH,
-} from "../ui/Layout.ts";
+} from "../ui/index.ts";
 import {
   buyShip,
   sellShip,
