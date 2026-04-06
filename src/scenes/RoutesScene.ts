@@ -7,6 +7,7 @@ import {
   colorToString,
   Button,
   DataTable,
+  MiniMap,
   Modal,
   ScrollableList,
   Panel,
@@ -81,6 +82,9 @@ export class RoutesScene extends Phaser.Scene {
   private finderSummary!: Phaser.GameObjects.Text;
   private opportunities: RouteOpportunity[] = [];
 
+  // ── Sidebar mini-map ──
+  private miniMap!: MiniMap;
+
   constructor() {
     super({ key: "RoutesScene" });
   }
@@ -91,12 +95,26 @@ export class RoutesScene extends Phaser.Scene {
 
     createStarfield(this);
 
-    // Sidebar portrait — updates based on selected route/opportunity
+    // Sidebar portrait — shortened to leave room for mini-map below
+    const miniMapHeight = 150;
+    const miniMapGap = 8;
+    const portraitHeight = CONTENT_HEIGHT - miniMapHeight - miniMapGap;
+
     this.portrait = new PortraitPanel(this, {
       x: SIDEBAR_LEFT,
       y: CONTENT_TOP,
       width: SIDEBAR_WIDTH,
-      height: CONTENT_HEIGHT,
+      height: portraitHeight,
+    });
+
+    // Mini-map sits below the portrait panel in the sidebar
+    this.miniMap = new MiniMap({
+      scene: this,
+      x: SIDEBAR_LEFT,
+      y: CONTENT_TOP + portraitHeight + miniMapGap,
+      width: SIDEBAR_WIDTH,
+      height: miniMapHeight,
+      depth: 0,
     });
     this.portrait.updatePortrait("planet", 0, "Route Command", [], {
       planetType: "terran",
@@ -478,6 +496,20 @@ export class RoutesScene extends Phaser.Scene {
     );
     if (!dest) return;
 
+    const origin = state.galaxy.planets.find(
+      (p) => p.id === opp.originPlanetId,
+    );
+
+    // Update mini-map for this opportunity
+    if (origin && dest) {
+      this.updateMiniMapForRoute(
+        origin.systemId,
+        dest.systemId,
+        origin.id,
+        dest.id,
+      );
+    }
+
     const destIndex = state.galaxy.planets.indexOf(dest);
     const shipInfo =
       opp.shipSource === "autoBuy"
@@ -692,6 +724,7 @@ export class RoutesScene extends Phaser.Scene {
       this.portrait?.updatePortrait("planet", 0, "Route Command", [], {
         planetType: "terran",
       });
+      this.miniMap?.drawEmpty();
       return;
     }
 
@@ -723,6 +756,16 @@ export class RoutesScene extends Phaser.Scene {
           },
         ],
         { planetType: destination.type },
+      );
+    }
+
+    // Update mini-map for active route
+    if (origin && destination) {
+      this.updateMiniMapForRoute(
+        origin.systemId,
+        destination.systemId,
+        origin.id,
+        destination.id,
       );
     }
 
@@ -760,6 +803,41 @@ export class RoutesScene extends Phaser.Scene {
     }
 
     this.selectedRouteSummary.setColor(colorToString(theme.colors.accent));
+  }
+
+  private updateMiniMapForRoute(
+    originSystemId: string,
+    destSystemId: string,
+    originPlanetId: string,
+    destPlanetId: string,
+  ): void {
+    const state = gameStore.getState();
+    const isInterSystem = originSystemId !== destSystemId;
+
+    if (isInterSystem) {
+      this.miniMap.drawGalaxyRoute(
+        state.galaxy.systems,
+        originSystemId,
+        destSystemId,
+        state.activeRoutes,
+        state.galaxy.planets,
+      );
+    } else {
+      const system = state.galaxy.systems.find((s) => s.id === originSystemId);
+      if (!system) {
+        this.miniMap.drawEmpty();
+        return;
+      }
+      const systemPlanets = state.galaxy.planets.filter(
+        (p) => p.systemId === system.id,
+      );
+      this.miniMap.drawSystemRoute(
+        system,
+        systemPlanets,
+        originPlanetId,
+        destPlanetId,
+      );
+    }
   }
 
   private activateSelectedRoute(): void {

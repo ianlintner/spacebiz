@@ -20,6 +20,7 @@ import {
 import { GAME_HEIGHT, GAME_WIDTH } from "./Layout.ts";
 import { Button } from "./Button.ts";
 import { Label } from "./Label.ts";
+import { MiniMap } from "./MiniMap.ts";
 import { Panel } from "./Panel.ts";
 import { DEPTH_MODAL } from "./DepthLayers.ts";
 import type { SceneUiDirector } from "./SceneUiDirector.ts";
@@ -124,6 +125,7 @@ class RouteBuilderPanel {
   private hintValue!: Label;
   private fieldLabels = new Map<FieldKey, Label>();
   private fieldValues = new Map<FieldKey, Label>();
+  private miniMap: MiniMap | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -235,6 +237,23 @@ class RouteBuilderPanel {
     this.fuelValue = this.createSummaryLabel(content.x, rowY);
     rowY += 24;
     this.profitValue = this.createSummaryLabel(content.x, rowY);
+
+    // Mini-map: positioned bottom-right, above the confirm buttons
+    const miniMapWidth = 160;
+    const miniMapHeight = 120;
+    const miniMapX = this.panelX + this.panelWidth - miniMapWidth - 16;
+    const miniMapY = this.panelY + this.panelHeight - miniMapHeight - 58;
+    this.miniMap = new MiniMap({
+      scene,
+      x: miniMapX,
+      y: miniMapY,
+      width: miniMapWidth,
+      height: miniMapHeight,
+      depth: DEPTH_MODAL,
+    });
+    for (const obj of this.miniMap.getGameObjects()) {
+      layer.track(obj);
+    }
 
     const confirmButton = new Button(scene, {
       x: this.panelX + content.x,
@@ -538,6 +557,48 @@ class RouteBuilderPanel {
       );
       const value = this.fieldValues.get(field);
       value?.setLabelColor(isActive ? theme.colors.text : theme.colors.accent);
+    }
+
+    this.updateMiniMap();
+  }
+
+  private updateMiniMap(): void {
+    if (!this.miniMap) return;
+
+    const origin = this.getSelectedOrigin();
+    const destination = this.getSelectedDestination();
+    const state = gameStore.getState();
+
+    if (!origin || !destination || origin.id === destination.id) {
+      this.miniMap.drawEmpty();
+      return;
+    }
+
+    const isInterSystem = origin.systemId !== destination.systemId;
+
+    if (isInterSystem) {
+      this.miniMap.drawGalaxyRoute(
+        state.galaxy.systems,
+        origin.systemId,
+        destination.systemId,
+        state.activeRoutes,
+        state.galaxy.planets,
+      );
+    } else {
+      const system = state.galaxy.systems.find((s) => s.id === origin.systemId);
+      if (!system) {
+        this.miniMap.drawEmpty();
+        return;
+      }
+      const systemPlanets = state.galaxy.planets.filter(
+        (p) => p.systemId === system.id,
+      );
+      this.miniMap.drawSystemRoute(
+        system,
+        systemPlanets,
+        origin.id,
+        destination.id,
+      );
     }
   }
 
