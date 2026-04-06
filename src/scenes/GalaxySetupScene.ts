@@ -280,6 +280,14 @@ export class GalaxySetupScene extends Phaser.Scene {
         )
         .setInteractive({ useHandCursor: true });
 
+      hitRect.on("pointerover", () => {
+        if (this.selectedSystemIndex !== index) {
+          panel.setAlpha(0.9);
+        }
+      });
+      hitRect.on("pointerout", () => {
+        panel.setAlpha(1);
+      });
       hitRect.on("pointerdown", () => {
         this.selectedSystemIndex = index;
         this.updateSelectionHighlight();

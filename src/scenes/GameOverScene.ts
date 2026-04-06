@@ -189,18 +189,37 @@ export class GameOverScene extends Phaser.Scene {
     scorePanel.add(totalLabel);
 
     const totalValue = this.add
-      .text(
-        spContent.x + spContent.width - 8,
-        rowY,
-        finalScore.toLocaleString(),
-        {
-          fontSize: `${theme.fonts.heading.size}px`,
-          fontFamily: theme.fonts.heading.family,
-          color: colorToString(theme.colors.accent),
-        },
-      )
+      .text(spContent.x + spContent.width - 8, rowY, "0", {
+        fontSize: `${theme.fonts.heading.size}px`,
+        fontFamily: theme.fonts.heading.family,
+        color: colorToString(theme.colors.accent),
+      })
       .setOrigin(1, 0);
     scorePanel.add(totalValue);
+
+    // Animate score counter rolling up
+    const scoreCounter = { value: 0 };
+    this.tweens.add({
+      targets: scoreCounter,
+      value: finalScore,
+      duration: 1200,
+      delay: 400,
+      ease: "Cubic.easeOut",
+      onUpdate: () => {
+        totalValue.setText(Math.round(scoreCounter.value).toLocaleString());
+      },
+      onComplete: () => {
+        totalValue.setText(finalScore.toLocaleString());
+        this.tweens.add({
+          targets: totalValue,
+          scaleX: 1.15,
+          scaleY: 1.15,
+          duration: 150,
+          yoyo: true,
+          ease: "Back.easeOut",
+        });
+      },
+    });
 
     // -----------------------------------------------------------------------
     // Save high score
