@@ -1,10 +1,14 @@
 import Phaser from "phaser";
-import { addFloatTween, addPulseTween } from "../ui/AmbientFX.ts";
-import { Panel } from "../ui/Panel.ts";
-import { Label } from "../ui/Label.ts";
-import { Button } from "../ui/Button.ts";
-import { getTheme } from "../ui/Theme.ts";
-import { GAME_WIDTH, GAME_HEIGHT } from "../ui/Layout.ts";
+import {
+  addFloatTween,
+  addPulseTween,
+  Panel,
+  Label,
+  Button,
+  getTheme,
+  GAME_WIDTH,
+  GAME_HEIGHT,
+} from "../ui/index.ts";
 import { hasSaveGame, loadGameIntoStore } from "../game/SaveManager.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 

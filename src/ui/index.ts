@@ -25,7 +25,8 @@ export { PortraitPanel, type PortraitPanelConfig } from "./PortraitPanel.ts";
 export { AdviserPanel, type AdviserPanelConfig } from "./AdviserPanel.ts";
 export {
   openRouteBuilder,
-  type RouteBuilderPanelConfig,
+  type RouteBuilderResult,
+  type RouteBuilderOptions,
 } from "./RouteBuilderPanel.ts";
 export {
   TutorialOverlay,
