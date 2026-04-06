@@ -102,7 +102,7 @@ class RouteBuilderPanel {
   private readonly panelX: number;
   private readonly panelY: number;
   private readonly panelWidth = 620;
-  private readonly panelHeight = 470;
+  private readonly panelHeight = 620;
   private originIndex: number;
   private destinationIndex: number;
   private cargoIndex: number;
