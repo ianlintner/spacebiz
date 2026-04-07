@@ -49,6 +49,7 @@ export class DataTable extends Phaser.GameObjects.Container {
   private destroyed = false;
   private scrollTrack: Phaser.GameObjects.Rectangle;
   private scrollThumb: Phaser.GameObjects.Rectangle;
+  private canvasWheelHandler: ((e: WheelEvent) => void) | null = null;
 
   constructor(scene: Phaser.Scene, config: DataTableConfig) {
     super(scene, config.x, config.y);
@@ -69,18 +70,6 @@ export class DataTable extends Phaser.GameObjects.Container {
         new Phaser.Geom.Rectangle(0, 0, config.width, config.height),
         Phaser.Geom.Rectangle.Contains,
       );
-    this.wheelHitArea.on(
-      "wheel",
-      (
-        _pointer: Phaser.Input.Pointer,
-        _dx: number,
-        _dy: number,
-        dz: number,
-      ) => {
-        this.focus();
-        this.handleWheel(dz);
-      },
-    );
     this.wheelHitArea.on("pointerdown", () => {
       this.focus();
     });
@@ -140,9 +129,10 @@ export class DataTable extends Phaser.GameObjects.Container {
     // Sync geometry mask position when inside a parent Container
     this.scene.events.on("preupdate", this.syncMaskPosition, this);
 
-    // Scene-level wheel handler as fallback for nested Container hierarchies
-    // where per-object wheel events may not propagate across stacked scenes.
-    this.scene.input.on("wheel", this.handleSceneWheel, this);
+    // DOM-level wheel listener: bypasses Phaser scene stacking and
+    // Container nesting issues that prevent wheel events from reaching
+    // DataTables inside TabGroup / nested containers.
+    this.setupCanvasWheelListener();
 
     scene.add.existing(this);
   }
