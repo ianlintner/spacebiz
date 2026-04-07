@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createNewGame } from "../NewGameSetup.ts";
 import { ShipClass, PlanetType, CargoType } from "../../data/types.ts";
 import type { CargoType as CargoTypeT } from "../../data/types.ts";
-import { STARTING_CASH } from "../../data/constants.ts";
+import { GAME_SIZE_CONFIGS } from "../../data/constants.ts";
 
 const ALL_CARGO_TYPES: CargoTypeT[] = Object.values(CargoType);
 const ALL_PLANET_TYPES = Object.values(PlanetType);
@@ -35,9 +35,9 @@ describe("NewGameSetup", () => {
     expect(state.gameOverReason).toBeNull();
   });
 
-  it("starting cash equals STARTING_CASH constant", () => {
+  it("starting cash equals config startingCash for default size", () => {
     const result = createNewGame(42);
-    expect(result.state.cash).toBe(STARTING_CASH);
+    expect(result.state.cash).toBe(GAME_SIZE_CONFIGS.small.startingCash);
   });
 
   it("fleet has exactly 2 ships: 1 Cargo Shuttle + 1 Passenger Shuttle", () => {
