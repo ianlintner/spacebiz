@@ -132,8 +132,8 @@ function generateSectorCenters(
 ): Array<{ x: number; y: number }> {
   const cx = (bounds.minX + bounds.maxX) / 2;
   const cy = (bounds.minY + bounds.maxY) / 2;
-  const radiusX = (bounds.maxX - bounds.minX) * 0.3;
-  const radiusY = (bounds.maxY - bounds.minY) * 0.25;
+  const radiusX = (bounds.maxX - bounds.minX) * 0.32;
+  const radiusY = (bounds.maxY - bounds.minY) * 0.3;
   const startAngle = rng.nextFloat(0, Math.PI * 2);
   const centers: Array<{ x: number; y: number }> = [];
 
@@ -165,9 +165,9 @@ function generateSystemPoints(
   bounds: Bounds,
 ): Array<{ x: number; y: number }> {
   const points: Array<{ x: number; y: number }> = [];
-  const localRadiusX = 125;
-  const localRadiusY = 95;
-  const minDist = 56;
+  const localRadiusX = 220;
+  const localRadiusY = 180;
+  const minDist = 90;
 
   for (let i = 0; i < count; i++) {
     let placed = false;
@@ -233,10 +233,10 @@ export function generateGalaxy(
 
   const numSectors = config.empireCount;
   const mapBounds: Bounds = {
-    minX: 80,
-    maxX: 980,
-    minY: 70,
-    maxY: 630,
+    minX: 120,
+    maxX: 2280,
+    minY: 120,
+    maxY: 1480,
   };
   const sectorCenters = generateSectorCenters(rng, numSectors, mapBounds);
 

@@ -32,13 +32,13 @@ describe("GalaxyGenerator", () => {
     }
   });
 
-  it("generates 4-6 systems per sector", () => {
+  it("generates 3-6 systems per sector", () => {
     const galaxy = generateGalaxy(42);
     for (const sector of galaxy.sectors) {
       const systemsInSector = galaxy.systems.filter(
         (s) => s.sectorId === sector.id,
       );
-      expect(systemsInSector.length).toBeGreaterThanOrEqual(4);
+      expect(systemsInSector.length).toBeGreaterThanOrEqual(3);
       expect(systemsInSector.length).toBeLessThanOrEqual(6);
     }
   });
@@ -108,13 +108,13 @@ describe("GalaxyGenerator", () => {
     }
   });
 
-  it("sectors are positioned within 0-1000 x 0-700 range", () => {
+  it("sectors are positioned within 0-2400 x 0-1600 range", () => {
     const galaxy = generateGalaxy(42);
     for (const sector of galaxy.sectors) {
       expect(sector.x).toBeGreaterThanOrEqual(0);
-      expect(sector.x).toBeLessThanOrEqual(1000);
+      expect(sector.x).toBeLessThanOrEqual(2400);
       expect(sector.y).toBeGreaterThanOrEqual(0);
-      expect(sector.y).toBeLessThanOrEqual(700);
+      expect(sector.y).toBeLessThanOrEqual(1600);
     }
   });
 

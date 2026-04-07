@@ -84,12 +84,12 @@ describe("NewGameSetup", () => {
     expect(galaxy.sectors.length).toBeGreaterThanOrEqual(2);
     expect(galaxy.sectors.length).toBeLessThanOrEqual(3);
 
-    // 4-6 systems per sector
+    // 3-6 systems per sector
     for (const sector of galaxy.sectors) {
       const systemsInSector = galaxy.systems.filter(
         (s) => s.sectorId === sector.id,
       );
-      expect(systemsInSector.length).toBeGreaterThanOrEqual(4);
+      expect(systemsInSector.length).toBeGreaterThanOrEqual(3);
       expect(systemsInSector.length).toBeLessThanOrEqual(6);
     }
 

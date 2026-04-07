@@ -8,11 +8,26 @@ import {
   createStarfield,
   addPulseTween,
 } from "../ui/index.ts";
+import { drawEmpireBorders } from "../ui/EmpireBorders.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 
 import type { GameHUDScene } from "./GameHUDScene.ts";
 
+// ── Camera zoom / pan constants ─────────────────────────────────────────────
+
+const MIN_ZOOM = 0.35;
+const MAX_ZOOM = 1.6;
+const ZOOM_STEP = 0.08;
+const DEFAULT_ZOOM = 0.55;
+const DRAG_THRESHOLD = 5; // px before a click becomes a drag
+
 export class GalaxyMapScene extends Phaser.Scene {
+  private isDragging = false;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private camStartX = 0;
+  private camStartY = 0;
+
   constructor() {
     super({ key: "GalaxyMapScene" });
   }
@@ -21,26 +36,45 @@ export class GalaxyMapScene extends Phaser.Scene {
     const L = getLayout();
     const theme = getTheme();
     const state = gameStore.getState();
-    const { sectors, systems, planets, empires } = state.galaxy;
+    const { systems, planets, empires } = state.galaxy;
     const routes = state.activeRoutes;
 
-    // Starfield background
+    // ── World extents (from galaxy data) ──
+    let wMinX = Infinity;
+    let wMaxX = -Infinity;
+    let wMinY = Infinity;
+    let wMaxY = -Infinity;
+    for (const sys of systems) {
+      if (sys.x < wMinX) wMinX = sys.x;
+      if (sys.x > wMaxX) wMaxX = sys.x;
+      if (sys.y < wMinY) wMinY = sys.y;
+      if (sys.y > wMaxY) wMaxY = sys.y;
+    }
+
+    // ── Starfield background (fills visible area) ──
     createStarfield(this);
 
-    // Subtle title (caption style, top-left)
+    // ── Empire territory borders (Stellaris-inspired) ──
+    drawEmpireBorders(this, systems, empires, {
+      yOffset: L.contentTop,
+      influence: 130,
+      gridStep: 14,
+    });
+
+    // ── HUD overlay labels (fixed to camera via setScrollFactor) ──
     new Label(this, {
       x: 20,
       y: L.contentTop + 10,
       text: "Galaxy Map",
       style: "caption",
       color: theme.colors.textDim,
-    });
+    }).setScrollFactor(0);
 
     this.add
       .text(
-        1260,
+        L.gameWidth - 20,
         L.contentTop + 10,
-        "Star size = planets in system\nSector glow = regional influence\nLines = active trade routes",
+        "Scroll to zoom \u00b7 Drag to pan\nStar size = planets in system\nLines = active trade routes",
         {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
@@ -51,117 +85,20 @@ export class GalaxyMapScene extends Phaser.Scene {
         },
       )
       .setOrigin(1, 0)
-      .setAlpha(0.85);
+      .setAlpha(0.85)
+      .setScrollFactor(0);
 
-    // Sector visuals: empire-tinted influence fields
-    // centered from actual system positions so clusters read naturally.
-    const systemsBySector = new Map<string, typeof systems>();
-    for (const sector of sectors) {
-      systemsBySector.set(
-        sector.id,
-        systems.filter((s) => s.sectorId === sector.id),
-      );
-    }
-
-    // Build empire lookup for coloring
-    const empireMap = new Map<string, (typeof empires)[0]>();
-    for (const empire of empires) {
-      empireMap.set(empire.id, empire);
-    }
-
-    for (const sector of sectors) {
-      const inSector = systemsBySector.get(sector.id) ?? [];
-      if (inSector.length === 0) continue;
-
-      // Find the empire that owns most systems in this sector
-      const empireCounts = new Map<string, number>();
-      for (const s of inSector) {
-        empireCounts.set(s.empireId, (empireCounts.get(s.empireId) ?? 0) + 1);
-      }
-      let dominantEmpireId = "";
-      let maxCount = 0;
-      for (const [eId, count] of empireCounts) {
-        if (count > maxCount) {
-          maxCount = count;
-          dominantEmpireId = eId;
-        }
-      }
-      const empire = empireMap.get(dominantEmpireId);
-      const empireColor = empire?.color ?? sector.color;
-
-      let sumX = 0;
-      let sumY = 0;
-      for (const s of inSector) {
-        sumX += s.x;
-        sumY += s.y;
-      }
-      const centroidX = sumX / inSector.length;
-      const centroidY = sumY / inSector.length;
-
-      let maxDist = 50;
-      for (const s of inSector) {
-        const dx = s.x - centroidX;
-        const dy = s.y - centroidY;
-        maxDist = Math.max(maxDist, Math.sqrt(dx * dx + dy * dy));
-      }
-
-      const influenceRadius = Math.min(190, maxDist + 42);
-
-      const outer = this.add
-        .circle(
-          centroidX,
-          centroidY + L.contentTop,
-          influenceRadius,
-          empireColor,
-          0.035,
-        )
-        .setOrigin(0.5, 0.5);
-      addPulseTween(this, outer, {
-        minAlpha: 0.02,
-        maxAlpha: 0.055,
-        duration: 4200 + Math.random() * 1600,
-        delay: Math.random() * 1500,
-      });
-
-      const edge = this.add.graphics();
-      edge.lineStyle(1, empireColor, 0.18);
-      edge.strokeCircle(
-        centroidX,
-        centroidY + L.contentTop,
-        Math.max(36, influenceRadius - 4),
-      );
-
-      // Empire name label (replacing sector name)
-      const displayName = empire ? empire.name : sector.name;
-      this.add
-        .text(
-          centroidX,
-          centroidY + L.contentTop - influenceRadius - 14,
-          displayName,
-          {
-            fontSize: `${theme.fonts.caption.size}px`,
-            fontFamily: theme.fonts.caption.family,
-            color: colorToString(theme.colors.textDim),
-            stroke: "#000000",
-            strokeThickness: 2,
-          },
-        )
-        .setOrigin(0.5);
-    }
-
-    // Build a lookup: planetId -> systemId
+    // ── Build lookups ──
     const planetSystemMap = new Map<string, string>();
     for (const planet of planets) {
       planetSystemMap.set(planet.id, planet.systemId);
     }
-
-    // Build a lookup: systemId -> system
     const systemMap = new Map<string, { x: number; y: number }>();
     for (const sys of systems) {
       systemMap.set(sys.id, { x: sys.x, y: sys.y });
     }
 
-    // Draw active route lines between systems with breathing animation + flow pips
+    // ── Active route lines + flow pips ──
     const routeGraphics = this.add.graphics();
     routeGraphics.lineStyle(1, theme.colors.accent, 0.4);
     for (const route of routes) {
@@ -177,7 +114,6 @@ export class GalaxyMapScene extends Phaser.Scene {
       routeGraphics.lineTo(destSys.x, destSys.y + L.contentTop);
       routeGraphics.strokePath();
 
-      // Glow pip — tiny dot that glides along the route continuously
       const pip = this.add.circle(
         originSys.x,
         originSys.y + L.contentTop,
@@ -197,7 +133,6 @@ export class GalaxyMapScene extends Phaser.Scene {
       });
     }
 
-    // Enhanced route breathing using theme ambient values
     this.tweens.add({
       targets: routeGraphics,
       alpha: {
@@ -210,7 +145,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       ease: "Sine.easeInOut",
     });
 
-    // Precompute planet counts for system-size/readability cues
+    // ── Star systems ──
     const planetCountsBySystem = new Map<string, number>();
     for (const p of planets) {
       planetCountsBySystem.set(
@@ -219,14 +154,12 @@ export class GalaxyMapScene extends Phaser.Scene {
       );
     }
 
-    // Draw each star system
     for (const system of systems) {
       const sysX = system.x;
       const sysY = system.y + L.contentTop;
       const planetCount = planetCountsBySystem.get(system.id) ?? 0;
       const mainRadius = 4 + Math.min(4, planetCount);
 
-      // Glow halo behind the star dot — pulses with a faint heartbeat
       const halo = this.add
         .circle(sysX, sysY, mainRadius * 2.5, system.starColor)
         .setAlpha(0.18);
@@ -237,7 +170,6 @@ export class GalaxyMapScene extends Phaser.Scene {
         delay: Math.random() * 2000,
       });
 
-      // Star dot
       const star = this.add.circle(sysX, sysY, mainRadius, system.starColor);
       star.setInteractive(
         new Phaser.Geom.Circle(
@@ -251,7 +183,6 @@ export class GalaxyMapScene extends Phaser.Scene {
         star.input.cursor = "pointer";
       }
 
-      // Name label
       this.add
         .text(sysX, sysY + 12, system.name, {
           fontSize: `${theme.fonts.caption.size}px`,
@@ -262,14 +193,12 @@ export class GalaxyMapScene extends Phaser.Scene {
         })
         .setOrigin(0.5, 0);
 
-      // Click to drill into system — route through HUD
       star.on("pointerup", () => {
         getAudioDirector().sfx("map_star_select");
         const hud = this.scene.get("GameHUDScene") as GameHUDScene;
         hud.switchContentScene("SystemMapScene", { systemId: system.id });
       });
 
-      // Hover effect
       star.on("pointerover", () => {
         star.setRadius(mainRadius + 3);
         halo.setAlpha(0.34);
@@ -279,5 +208,59 @@ export class GalaxyMapScene extends Phaser.Scene {
         halo.setAlpha(0.18);
       });
     }
+
+    // ── Camera setup: zoom + pan ──
+    const cam = this.cameras.main;
+    // Don't use setBounds — at low zoom the viewport exceeds world size
+    // and Phaser locks the camera. We handle clamping manually in pan.
+    cam.setZoom(DEFAULT_ZOOM);
+
+    // Center camera on galaxy centroid
+    const galCx = (wMinX + wMaxX) / 2;
+    const galCy = (wMinY + wMaxY) / 2 + L.contentTop;
+    cam.centerOn(galCx, galCy);
+
+    // Mouse-wheel zoom (Phaser emits: pointer, currentlyOver, deltaX, deltaY, deltaZ)
+    this.input.on(
+      "wheel",
+      (
+        _pointer: Phaser.Input.Pointer,
+        _over: Phaser.GameObjects.GameObject[],
+        _dx: number,
+        dy: number,
+      ) => {
+        const newZoom = Phaser.Math.Clamp(
+          cam.zoom + (dy < 0 ? ZOOM_STEP : -ZOOM_STEP),
+          MIN_ZOOM,
+          MAX_ZOOM,
+        );
+        cam.setZoom(newZoom);
+      },
+    );
+
+    // Click-drag pan (with threshold so clicks on stars aren't treated as drags)
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      this.isDragging = false;
+      this.dragStartX = pointer.x;
+      this.dragStartY = pointer.y;
+      this.camStartX = cam.scrollX;
+      this.camStartY = cam.scrollY;
+    });
+
+    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.isDown) return;
+      const dx = pointer.x - this.dragStartX;
+      const dy = pointer.y - this.dragStartY;
+      if (!this.isDragging && Math.abs(dx) + Math.abs(dy) < DRAG_THRESHOLD) {
+        return;
+      }
+      this.isDragging = true;
+      cam.scrollX = this.camStartX - dx / cam.zoom;
+      cam.scrollY = this.camStartY - dy / cam.zoom;
+    });
+
+    this.input.on("pointerup", () => {
+      this.isDragging = false;
+    });
   }
 }
