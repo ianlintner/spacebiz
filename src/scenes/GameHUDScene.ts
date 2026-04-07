@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import {
   Button,
   Label,
+  Modal,
   Panel,
   getTheme,
   colorToString,
@@ -48,6 +49,9 @@ export class GameHUDScene extends Phaser.Scene {
   private adviserPanel!: AdviserPanel;
   private adviserBadge: Phaser.GameObjects.Text | null = null;
   private tutorialOverlay: TutorialOverlay | null = null;
+  private actionPromptLabel!: Label;
+  private navBadges = new Map<string, Phaser.GameObjects.Arc>();
+  private endTurnModal: Modal | null = null;
 
   private readonly contentSceneKeys = [
     "GalaxyMapScene",
@@ -317,7 +321,16 @@ export class GameHUDScene extends Phaser.Scene {
       this.navBackgrounds.set(item.scene, bg);
       this.navIcons.set(item.scene, icon);
       this.navHitAreas.set(item.scene, btnContainer);
+
+      // Attention badge (small colored dot, top-right of icon)
+      const badge = this.add
+        .circle(iconBtnSize / 2 - 4, -iconBtnSize / 2 + 4, 5, theme.colors.loss)
+        .setVisible(false);
+      btnContainer.add(badge);
+      this.navBadges.set(item.scene, badge);
     }
+
+    this.updateNavBadges();
 
     // ── Adviser button in nav sidebar ──
     const adviserBtnY =
@@ -469,6 +482,17 @@ export class GameHUDScene extends Phaser.Scene {
     });
     this.phaseLabel.setOrigin(0, 0.5);
 
+    // Action prompt (right of phase label)
+    this.actionPromptLabel = new Label(this, {
+      x: 100,
+      y: L.gameHeight - L.hudBottomBarHeight / 2,
+      text: "",
+      style: "caption",
+      color: theme.colors.textDim,
+    });
+    this.actionPromptLabel.setOrigin(0, 0.5);
+    this.updateActionPrompt();
+
     // End Turn button cluster (bottom right area)
     // Turn info display
     const currentQuarter = ((state.turn - 1) % 4) + 1;
@@ -490,7 +514,7 @@ export class GameHUDScene extends Phaser.Scene {
       height: endTurnSize,
       label: "▶",
       onClick: () => {
-        this.switchContentScene("SimPlaybackScene");
+        this.handleEndTurn();
       },
     });
     this.endTurnButton.setVisible(state.phase === "planning");
@@ -613,10 +637,16 @@ export class GameHUDScene extends Phaser.Scene {
 
     this.phaseLabel.setText(`Phase: ${state.phase}`);
     this.endTurnButton.setVisible(state.phase === "planning");
+    this.updateActionPrompt();
+    this.updateNavBadges();
 
     // Disable nav buttons during simulation and review phases
     const navEnabled = state.phase === "planning";
-    for (const [, hitArea] of this.navHitAreas) {
+    const disabledReason =
+      state.phase === "simulation"
+        ? "Locked during simulation"
+        : "Review results to continue";
+    for (const [scene, hitArea] of this.navHitAreas) {
       if (navEnabled) {
         hitArea.setInteractive(
           new Phaser.Geom.Rectangle(
@@ -630,8 +660,20 @@ export class GameHUDScene extends Phaser.Scene {
         if (hitArea.input) {
           hitArea.input.cursor = "pointer";
         }
+        // Restore original tooltip
+        const navItems: Record<string, string> = {
+          GalaxyMapScene: "Map",
+          FleetScene: "Fleet",
+          RoutesScene: "Routes",
+          FinanceScene: "Finance",
+          MarketScene: "Market",
+        };
+        if (navItems[scene]) {
+          this.navTooltip.attachTo(hitArea, navItems[scene]);
+        }
       } else {
         hitArea.disableInteractive();
+        this.navTooltip.attachTo(hitArea, disabledReason);
       }
     }
   }
@@ -1212,5 +1254,167 @@ export class GameHUDScene extends Phaser.Scene {
     gameStore.update({
       adviser: { ...state.adviser, tutorialSkipped: true },
     });
+  }
+
+  // ── Action prompt & nav badges ─────────────────────────────
+
+  private updateActionPrompt(): void {
+    const theme = getTheme();
+    const state = gameStore.getState();
+
+    if (state.phase === "simulation") {
+      const q = ((state.turn - 1) % 4) + 1;
+      const y = Math.ceil(state.turn / 4);
+      this.actionPromptLabel.setText(`▶ Simulating Q${q} Y${y}...`);
+      this.actionPromptLabel.setLabelColor(theme.colors.accent);
+      return;
+    }
+    if (state.phase === "review") {
+      this.actionPromptLabel.setText("📊 Reviewing results");
+      this.actionPromptLabel.setLabelColor(theme.colors.textDim);
+      return;
+    }
+
+    // Planning phase — context-sensitive prompt
+    if (state.activeRoutes.length === 0) {
+      this.actionPromptLabel.setText(
+        "💡 Open Routes to set up your first trade route",
+      );
+      this.actionPromptLabel.setLabelColor(theme.colors.warning);
+      return;
+    }
+
+    const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
+    if (unassigned.length > 0 && state.activeRoutes.length > 0) {
+      this.actionPromptLabel.setText(
+        `💡 ${unassigned.length} ship${unassigned.length > 1 ? "s" : ""} unassigned — check Fleet`,
+      );
+      this.actionPromptLabel.setLabelColor(theme.colors.warning);
+      return;
+    }
+
+    const avgCondition =
+      state.fleet.length > 0
+        ? state.fleet.reduce((sum, s) => sum + s.condition, 0) /
+          state.fleet.length
+        : 100;
+    if (avgCondition < 50 && state.fleet.length > 0) {
+      this.actionPromptLabel.setText(
+        "⚠️ Fleet needs maintenance — check Fleet",
+      );
+      this.actionPromptLabel.setLabelColor(theme.colors.loss);
+      return;
+    }
+
+    if (state.cash < 0 && state.storyteller.turnsInDebt >= 2) {
+      this.actionPromptLabel.setText(
+        "⚠️ In debt — sell ships or take a loan in Finance",
+      );
+      this.actionPromptLabel.setLabelColor(theme.colors.loss);
+      return;
+    }
+
+    this.actionPromptLabel.setText("✓ Ready — press ▶ to end turn");
+    this.actionPromptLabel.setLabelColor(theme.colors.profit);
+  }
+
+  private updateNavBadges(): void {
+    const theme = getTheme();
+    const state = gameStore.getState();
+
+    // Routes badge: red if no routes
+    const routesBadge = this.navBadges.get("RoutesScene");
+    if (routesBadge) {
+      routesBadge.setVisible(
+        state.phase === "planning" && state.activeRoutes.length === 0,
+      );
+      routesBadge.setFillStyle(theme.colors.loss);
+    }
+
+    // Fleet badge: yellow if unassigned ships or low condition
+    const fleetBadge = this.navBadges.get("FleetScene");
+    if (fleetBadge) {
+      const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
+      const avgCond =
+        state.fleet.length > 0
+          ? state.fleet.reduce((sum, s) => sum + s.condition, 0) /
+            state.fleet.length
+          : 100;
+      const needsAttention =
+        (unassigned.length > 0 && state.activeRoutes.length > 0) ||
+        (avgCond < 50 && state.fleet.length > 0);
+      fleetBadge.setVisible(state.phase === "planning" && needsAttention);
+      fleetBadge.setFillStyle(theme.colors.warning);
+    }
+
+    // Finance badge: red if cash negative
+    const financeBadge = this.navBadges.get("FinanceScene");
+    if (financeBadge) {
+      financeBadge.setVisible(state.phase === "planning" && state.cash < 0);
+      financeBadge.setFillStyle(theme.colors.loss);
+    }
+
+    // Hide all badges during sim/review
+    if (state.phase !== "planning") {
+      for (const [, badge] of this.navBadges) {
+        badge.setVisible(false);
+      }
+    }
+  }
+
+  private handleEndTurn(): void {
+    const state = gameStore.getState();
+    const issues: string[] = [];
+
+    if (state.activeRoutes.length === 0 && state.fleet.length > 0) {
+      issues.push("You have no active routes. Your ships will sit idle.");
+    }
+    if (state.fleet.length === 0) {
+      issues.push("You have no ships! Buy one from Fleet first.");
+    }
+    const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
+    if (unassigned.length > 0 && state.activeRoutes.length > 0) {
+      issues.push(
+        `${unassigned.length} ship${unassigned.length > 1 ? "s" : ""} not assigned to a route.`,
+      );
+    }
+
+    if (issues.length === 0) {
+      this.switchContentScene("SimPlaybackScene");
+      return;
+    }
+
+    // Show confirmation modal
+    if (this.endTurnModal) {
+      this.endTurnModal.destroy();
+      this.endTurnModal = null;
+    }
+
+    this.endTurnModal = new Modal(this, {
+      title: "Before You End Turn",
+      body: issues.join("\n") + "\n\nEnd turn anyway?",
+      okText: "End Turn",
+      cancelText: "Go Back",
+      onOk: () => {
+        this.endTurnModal?.destroy();
+        this.endTurnModal = null;
+        this.switchContentScene("SimPlaybackScene");
+      },
+      onCancel: () => {
+        this.endTurnModal?.destroy();
+        this.endTurnModal = null;
+      },
+    });
+    this.endTurnModal.setDepth(500);
+  }
+
+  /** Determine the best scene to show after a turn report, based on game state. */
+  getSmartPostTurnScene(): string {
+    const state = gameStore.getState();
+    if (state.activeRoutes.length === 0) return "RoutesScene";
+    const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
+    if (unassigned.length > 0) return "FleetScene";
+    if (state.cash < 0) return "FinanceScene";
+    return "GalaxyMapScene";
   }
 }

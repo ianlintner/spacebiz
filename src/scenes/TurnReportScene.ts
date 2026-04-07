@@ -661,7 +661,7 @@ export class TurnReportScene extends Phaser.Scene {
         } else {
           gameStore.update({ phase: "planning" });
           const hud = this.scene.get("GameHUDScene") as GameHUDScene;
-          hud.switchContentScene("GalaxyMapScene");
+          hud.switchContentScene(hud.getSmartPostTurnScene());
         }
       },
     });

@@ -58,6 +58,31 @@ export class SimPlaybackScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     const { systems, planets } = state.galaxy;
 
+    // Compute galaxy extents for camera framing
+    let wMinX = Infinity;
+    let wMaxX = -Infinity;
+    let wMinY = Infinity;
+    let wMaxY = -Infinity;
+    for (const sys of systems) {
+      if (sys.x < wMinX) wMinX = sys.x;
+      if (sys.x > wMaxX) wMaxX = sys.x;
+      if (sys.y < wMinY) wMinY = sys.y;
+      if (sys.y > wMaxY) wMaxY = sys.y;
+    }
+    const galCx = (wMinX + wMaxX) / 2;
+    const galCy = (wMinY + wMaxY) / 2;
+    const galW = wMaxX - wMinX;
+    const galH = wMaxY - wMinY;
+
+    // Zoom camera to fit the galaxy with some padding
+    const cam = this.cameras.main;
+    const zoomX = L.gameWidth / (galW + 200);
+    const zoomY =
+      (L.gameHeight - L.contentTop - L.hudBottomBarHeight) / (galH + 200);
+    const fitZoom = Math.min(zoomX, zoomY, 1);
+    cam.setZoom(fitZoom);
+    cam.centerOn(galCx, galCy);
+
     // Build planet -> system lookup
     const planetSystemMap = new Map<string, string>();
     for (const planet of planets) {
