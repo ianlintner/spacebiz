@@ -13,6 +13,7 @@ import { buyShip } from "../game/fleet/FleetManager.ts";
 import {
   assignShipToRoute,
   calculateDistance,
+  calculateLicenseFee,
   createRoute,
   estimateRouteFuelCost,
   estimateRouteRevenue,
@@ -746,11 +747,20 @@ class RouteBuilderPanel {
       destination,
       latestState.galaxy.systems,
     );
+    // Deduct route license fee
+    const licenseFee = calculateLicenseFee(
+      distance,
+      latestState.activeRoutes.length,
+    );
+    if (latestState.cash < licenseFee) {
+      return;
+    }
+
     const route = createRoute(origin.id, destination.id, distance, cargo);
 
     let updatedFleet = [...latestState.fleet];
     let updatedRoutes = [...latestState.activeRoutes, route];
-    let updatedCash = latestState.cash;
+    let updatedCash = latestState.cash - licenseFee;
     let assignedShipId: string | null = null;
     let assignedShipName: string | null = null;
     let autoBoughtShipName: string | null = null;

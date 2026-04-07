@@ -12,14 +12,27 @@ export const BASE_FUEL_PRICE = 10;
 export const MAX_LOAN_AMOUNT = 500000;
 export const LOAN_INTEREST_RATE_MIN = 0.05;
 export const LOAN_INTEREST_RATE_MAX = 0.08;
-export const SATURATION_DECAY_RATE = 0.15;
-export const SATURATION_PRICE_IMPACT = 0.6;
+export const SATURATION_DECAY_RATE = 0.08;
+export const SATURATION_PRICE_IMPACT = 0.8;
 export const CONDITION_DECAY_MIN = 2;
 export const CONDITION_DECAY_MAX = 5;
 export const OVERHAUL_COST_RATIO = 0.3;
 export const OVERHAUL_RESTORE_CONDITION = 90;
 export const BREAKDOWN_THRESHOLD = 50;
 export const TURN_DURATION = 100;
+
+// ── Route License Fees ─────────────────────────────────────────
+
+export const BASE_LICENSE_FEE = 5000;
+export const LICENSE_FEE_DISTANCE_DIVISOR = 100;
+export const LICENSE_FEE_ROUTE_ESCALATION = 0.25;
+
+// ── Fleet Overhead ─────────────────────────────────────────────
+
+/** Ships below this count incur no fleet overhead */
+export const FLEET_OVERHEAD_THRESHOLD = 4;
+/** Per-ship overhead rate above the threshold */
+export const FLEET_OVERHEAD_PER_SHIP = 0.05;
 
 // ── Game Size Presets ──────────────────────────────────────────
 
@@ -46,7 +59,7 @@ export const GAME_SIZE_CONFIGS: Record<GameSize, GameSizeConfig> = {
     planetsPerSystemMin: 1,
     planetsPerSystemMax: 3,
     aiCompanyCount: 4,
-    startingCash: 300000,
+    startingCash: 250000,
     startingShips: 2,
     mapScale: 1.0,
   },
@@ -58,7 +71,7 @@ export const GAME_SIZE_CONFIGS: Record<GameSize, GameSizeConfig> = {
     planetsPerSystemMin: 1,
     planetsPerSystemMax: 4,
     aiCompanyCount: 6,
-    startingCash: 350000,
+    startingCash: 300000,
     startingShips: 2,
     mapScale: 1.3,
   },
@@ -70,7 +83,7 @@ export const GAME_SIZE_CONFIGS: Record<GameSize, GameSizeConfig> = {
     planetsPerSystemMin: 1,
     planetsPerSystemMax: 4,
     aiCompanyCount: 8,
-    startingCash: 400000,
+    startingCash: 350000,
     startingShips: 3,
     mapScale: 1.6,
   },
@@ -89,7 +102,7 @@ export const TARIFF_HOSTILE_MAX = 0.2;
 
 export const AI_STARTING_CASH = 200000;
 export const AI_BUY_THRESHOLD_MULTIPLIER = 2; // buy when cash > 2× cheapest ship
-export const AI_MAX_ROUTES = 8; // cap routes to keep AI manageable
+export const AI_MAX_ROUTES = 12; // cap routes per AI company
 
 export const SHIP_TEMPLATES: Record<ShipClass, ShipTemplate> = {
   [ShipClass.CargoShuttle]: {
@@ -131,7 +144,7 @@ export const SHIP_TEMPLATES: Record<ShipClass, ShipTemplate> = {
     cargoCapacity: 30,
     passengerCapacity: 10,
     speed: 8,
-    fuelEfficiency: 1.8,
+    fuelEfficiency: 2.0,
     baseReliability: 85,
     purchaseCost: 80000,
     baseMaintenance: 5000,
@@ -139,46 +152,46 @@ export const SHIP_TEMPLATES: Record<ShipClass, ShipTemplate> = {
   [ShipClass.BulkFreighter]: {
     class: ShipClass.BulkFreighter,
     name: "Bulk Freighter",
-    cargoCapacity: 300,
+    cargoCapacity: 200,
     passengerCapacity: 0,
     speed: 2,
-    fuelEfficiency: 0.6,
+    fuelEfficiency: 1.0,
     baseReliability: 94,
-    purchaseCost: 150000,
-    baseMaintenance: 6000,
+    purchaseCost: 180000,
+    baseMaintenance: 8000,
   },
   [ShipClass.StarLiner]: {
     class: ShipClass.StarLiner,
     name: "Star Liner",
     cargoCapacity: 0,
-    passengerCapacity: 200,
+    passengerCapacity: 150,
     speed: 6,
-    fuelEfficiency: 1.4,
+    fuelEfficiency: 1.5,
     baseReliability: 88,
-    purchaseCost: 250000,
-    baseMaintenance: 10000,
+    purchaseCost: 280000,
+    baseMaintenance: 12000,
   },
   [ShipClass.MegaHauler]: {
     class: ShipClass.MegaHauler,
     name: "Mega Hauler",
-    cargoCapacity: 800,
+    cargoCapacity: 400,
     passengerCapacity: 0,
     speed: 2,
-    fuelEfficiency: 0.5,
+    fuelEfficiency: 1.2,
     baseReliability: 90,
     purchaseCost: 500000,
-    baseMaintenance: 15000,
+    baseMaintenance: 22000,
   },
   [ShipClass.LuxuryLiner]: {
     class: ShipClass.LuxuryLiner,
     name: "Luxury Liner",
     cargoCapacity: 20,
-    passengerCapacity: 150,
+    passengerCapacity: 120,
     speed: 7,
-    fuelEfficiency: 1.6,
+    fuelEfficiency: 1.8,
     baseReliability: 86,
     purchaseCost: 600000,
-    baseMaintenance: 20000,
+    baseMaintenance: 25000,
   },
 };
 
@@ -232,11 +245,11 @@ export const PLANET_PASSENGER_VOLUME: Record<PlanetType, number> = {
 };
 
 export const BASE_CARGO_PRICES: Record<CargoType, number> = {
-  [CargoType.Passengers]: 50,
-  [CargoType.RawMaterials]: 15,
-  [CargoType.Food]: 20,
-  [CargoType.Technology]: 45,
-  [CargoType.Luxury]: 60,
-  [CargoType.Hazmat]: 35,
-  [CargoType.Medical]: 55,
+  [CargoType.Passengers]: 45,
+  [CargoType.RawMaterials]: 12,
+  [CargoType.Food]: 18,
+  [CargoType.Technology]: 38,
+  [CargoType.Luxury]: 55,
+  [CargoType.Hazmat]: 40,
+  [CargoType.Medical]: 50,
 };

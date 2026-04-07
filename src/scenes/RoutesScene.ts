@@ -21,6 +21,7 @@ import {
 import {
   assignShipToRoute,
   calculateDistance,
+  calculateLicenseFee,
   createRoute,
   deleteRoute,
   estimateRouteRevenue,
@@ -559,11 +560,24 @@ export class RoutesScene extends Phaser.Scene {
     if (!origin || !dest) return;
 
     const distance = calculateDistance(origin, dest, state.galaxy.systems);
+
+    // Deduct route license fee
+    const licenseFee = calculateLicenseFee(distance, state.activeRoutes.length);
+    if (state.cash < licenseFee) {
+      const m2 = new Modal(this, {
+        title: "Insufficient Funds",
+        body: `License fee: $${licenseFee.toLocaleString()}. You only have $${Math.floor(state.cash).toLocaleString()}.`,
+        onOk: () => m2.destroy(),
+      });
+      m2.show();
+      return;
+    }
+
     const route = createRoute(origin.id, dest.id, distance, opp.bestCargoType);
 
     let updatedFleet = [...state.fleet];
     let updatedRoutes = [...state.activeRoutes, route];
-    let updatedCash = state.cash;
+    let updatedCash = state.cash - licenseFee;
 
     // Find best available ship for this cargo
     const isPassenger = opp.bestCargoType === "passengers";

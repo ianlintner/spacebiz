@@ -136,7 +136,7 @@ function updateSaturation(
       const entry = planetMarket[cargoType];
       if (!entry) continue;
 
-      const saturationIncrease = amount / (entry.baseDemand * 10);
+      const saturationIncrease = amount / (entry.baseDemand * 5);
       const newSaturation = Math.min(
         1,
         Math.max(0, entry.saturation + saturationIncrease),

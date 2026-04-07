@@ -5,6 +5,8 @@ import {
   OVERHAUL_RESTORE_CONDITION,
   CONDITION_DECAY_MIN,
   CONDITION_DECAY_MAX,
+  FLEET_OVERHEAD_THRESHOLD,
+  FLEET_OVERHEAD_PER_SHIP,
 } from "../../data/constants.ts";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 
@@ -95,12 +97,26 @@ export function ageFleet(fleet: Ship[], rng: SeededRNG): Ship[] {
 /**
  * Calculate total maintenance cost for the entire fleet.
  * Each ship's cost: baseMaintenance * (1 + age * 0.01)
+ * Fleet overhead applied when fleet exceeds FLEET_OVERHEAD_THRESHOLD ships.
  */
 export function calculateMaintenanceCosts(fleet: Ship[]): number {
-  return fleet.reduce((total, ship) => {
+  const baseCost = fleet.reduce((total, ship) => {
     const ageFactor = 1 + ship.age * 0.01;
     return total + ship.maintenanceCost * ageFactor;
   }, 0);
+  const overheadRate = calculateFleetOverhead(fleet.length);
+  return baseCost * (1 + overheadRate);
+}
+
+/**
+ * Calculate the fleet overhead multiplier.
+ * 0% for fleets ≤ threshold, +5% per ship above threshold.
+ */
+export function calculateFleetOverhead(fleetSize: number): number {
+  return Math.max(
+    0,
+    (fleetSize - FLEET_OVERHEAD_THRESHOLD) * FLEET_OVERHEAD_PER_SHIP,
+  );
 }
 
 /**

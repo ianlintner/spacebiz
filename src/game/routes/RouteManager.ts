@@ -8,7 +8,13 @@ import type {
   CargoMarketEntry,
 } from "../../data/types.ts";
 import { CargoType as CargoTypeEnum } from "../../data/types.ts";
-import { TURN_DURATION, SHIP_TEMPLATES } from "../../data/constants.ts";
+import {
+  TURN_DURATION,
+  SHIP_TEMPLATES,
+  BASE_LICENSE_FEE,
+  LICENSE_FEE_DISTANCE_DIVISOR,
+  LICENSE_FEE_ROUTE_ESCALATION,
+} from "../../data/constants.ts";
 import type { ShipClass } from "../../data/types.ts";
 
 /**
@@ -54,6 +60,21 @@ export function calculateTripsPerTurn(
   const roundTripTime = (distance * 2) / shipSpeed;
   if (roundTripTime <= 0) return 1;
   return Math.max(1, Math.floor(TURN_DURATION / roundTripTime));
+}
+
+/**
+ * Calculate the one-time license fee to open a new route.
+ * Scales with distance and escalates with each additional route.
+ *
+ * Fee = BASE_LICENSE_FEE × max(1, distance / 100) × (1 + existingRoutes × 0.25)
+ */
+export function calculateLicenseFee(
+  distance: number,
+  existingRouteCount: number,
+): number {
+  const distMult = Math.max(1.0, distance / LICENSE_FEE_DISTANCE_DIVISOR);
+  const routeMult = 1.0 + existingRouteCount * LICENSE_FEE_ROUTE_ESCALATION;
+  return Math.round(BASE_LICENSE_FEE * distMult * routeMult);
 }
 
 /**
@@ -211,6 +232,7 @@ export interface RouteOpportunity {
   shipClass: string;
   shipSource: "owned" | "autoBuy" | "none";
   shipCost: number;
+  licenseFee: number;
   alreadyActive: boolean;
 }
 
@@ -336,6 +358,7 @@ export function scanAllRouteOpportunities(
           shipClass: "—",
           shipSource: "none",
           shipCost: 0,
+          licenseFee: calculateLicenseFee(distance, activeRoutes.length),
           alreadyActive: activeRouteKeys.has(`${origin.id}→${dest.id}`),
         });
         continue;
@@ -358,6 +381,7 @@ export function scanAllRouteOpportunities(
         shipClass: bestResult.shipClass,
         shipSource: bestResult.shipSource,
         shipCost: bestResult.shipCost,
+        licenseFee: calculateLicenseFee(distance, activeRoutes.length),
         alreadyActive: activeRouteKeys.has(`${origin.id}→${dest.id}`),
       });
     }

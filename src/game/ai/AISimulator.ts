@@ -15,7 +15,10 @@ import {
   AI_BUY_THRESHOLD_MULTIPLIER,
   AI_MAX_ROUTES,
 } from "../../data/constants.ts";
-import { calculateTripsPerTurn } from "../routes/RouteManager.ts";
+import {
+  calculateTripsPerTurn,
+  calculateLicenseFee,
+} from "../routes/RouteManager.ts";
 import { calculatePrice } from "../economy/PriceCalculator.ts";
 import {
   ageFleet,
@@ -244,7 +247,7 @@ function applyAISaturation(
       const entry = planetMarket[cargoType];
       if (!entry) continue;
 
-      const saturationIncrease = amount / (entry.baseDemand * 10);
+      const saturationIncrease = amount / (entry.baseDemand * 5);
       planetMarket[cargoType] = {
         ...entry,
         saturation: Math.min(
@@ -340,8 +343,17 @@ function makeAIDecisions(
         rng,
       );
       if (routeResult) {
-        currentRoutes = routeResult.routes;
-        currentFleet = routeResult.fleet;
+        // Deduct license fee for the new route
+        const newRoute = routeResult.routes[routeResult.routes.length - 1];
+        const licenseFee = calculateLicenseFee(
+          newRoute.distance,
+          currentRoutes.length,
+        );
+        if (currentCash >= licenseFee) {
+          currentRoutes = routeResult.routes;
+          currentFleet = routeResult.fleet;
+          currentCash -= licenseFee;
+        }
       }
     }
   }
