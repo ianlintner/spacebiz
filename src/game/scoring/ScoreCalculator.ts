@@ -5,6 +5,7 @@ import type {
   AICompany,
 } from "../../data/types.ts";
 import { calculateShipValue } from "../fleet/FleetManager.ts";
+import { CARGO_DIVERSITY_BONUS } from "../../data/constants.ts";
 
 // ---------------------------------------------------------------------------
 // High score types

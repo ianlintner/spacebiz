@@ -238,7 +238,8 @@ export interface RouteOpportunity {
 
 /**
  * Scan all origin→destination pairs and rank by estimated profit.
- * For each pair, finds the best cargo type and best available ship.
+ * For each pair, shows ALL profitable cargo types so players can discover
+ * passenger routes, food runs, etc. alongside high-value luxury hauls.
  */
 export function scanAllRouteOpportunities(
   planets: Planet[],
@@ -267,22 +268,10 @@ export function scanAllRouteOpportunities(
       const destMarket = market.planetMarkets[dest.id];
       if (!destMarket) continue;
 
-      // Find best cargo type for this pair
-      let bestProfit = -Infinity;
-      let bestResult: {
-        cargoType: CargoType;
-        revenue: number;
-        fuelCost: number;
-        profit: number;
-        trips: number;
-        shipName: string;
-        shipClass: string;
-        shipSource: "owned" | "autoBuy" | "none";
-        shipCost: number;
-        destPrice: number;
-        destTrend: CargoMarketEntry["trend"];
-      } | null = null;
+      const alreadyActive = activeRouteKeys.has(`${origin.id}→${dest.id}`);
+      const licenseFee = calculateLicenseFee(distance, activeRoutes.length);
 
+      // Emit an entry for EACH profitable cargo type on this pair
       for (const cargoType of cargoTypes) {
         const destEntry = destMarket[cargoType];
         const price = destEntry.currentPrice;
@@ -310,36 +299,8 @@ export function scanAllRouteOpportunities(
           ) / 100;
         const profit = revenue - fuelCost;
 
-        if (profit > bestProfit) {
-          bestProfit = profit;
-          bestResult = {
-            cargoType,
-            revenue,
-            fuelCost,
-            profit,
-            trips,
-            shipName: candidate.name,
-            shipClass: candidate.class,
-            shipSource: ship ? "owned" : "autoBuy",
-            shipCost: ship ? 0 : (candidate.purchaseCost ?? 0),
-            destPrice: price,
-            destTrend: destEntry.trend,
-          };
-        }
-      }
-
-      if (!bestResult) {
-        // No ship available at all — still show the opportunity with "none"
-        // Pick the highest-priced cargo as recommendation
-        let topCargo = cargoTypes[0];
-        let topPrice = 0;
-        for (const ct of cargoTypes) {
-          const p = destMarket[ct].currentPrice;
-          if (p > topPrice) {
-            topPrice = p;
-            topCargo = ct;
-          }
-        }
+        // Only include profitable or near-break-even options
+        if (profit <= 0) continue;
 
         opportunities.push({
           originPlanetId: origin.id,
@@ -347,50 +308,28 @@ export function scanAllRouteOpportunities(
           destinationPlanetId: dest.id,
           destinationName: dest.name,
           distance,
-          bestCargoType: topCargo,
-          destPrice: topPrice,
-          destTrend: destMarket[topCargo].trend,
-          estRevenue: 0,
-          estFuelCost: 0,
-          estProfit: 0,
-          tripsPerTurn: 0,
-          shipName: "—",
-          shipClass: "—",
-          shipSource: "none",
-          shipCost: 0,
-          licenseFee: calculateLicenseFee(distance, activeRoutes.length),
-          alreadyActive: activeRouteKeys.has(`${origin.id}→${dest.id}`),
+          bestCargoType: cargoType,
+          destPrice: price,
+          destTrend: destEntry.trend,
+          estRevenue: revenue,
+          estFuelCost: fuelCost,
+          estProfit: profit,
+          tripsPerTurn: trips,
+          shipName: candidate.name,
+          shipClass: candidate.class,
+          shipSource: ship ? "owned" : "autoBuy",
+          shipCost: ship ? 0 : (candidate.purchaseCost ?? 0),
+          licenseFee,
+          alreadyActive,
         });
-        continue;
       }
-
-      opportunities.push({
-        originPlanetId: origin.id,
-        originName: origin.name,
-        destinationPlanetId: dest.id,
-        destinationName: dest.name,
-        distance,
-        bestCargoType: bestResult.cargoType,
-        destPrice: bestResult.destPrice,
-        destTrend: bestResult.destTrend,
-        estRevenue: bestResult.revenue,
-        estFuelCost: bestResult.fuelCost,
-        estProfit: bestResult.profit,
-        tripsPerTurn: bestResult.trips,
-        shipName: bestResult.shipName,
-        shipClass: bestResult.shipClass,
-        shipSource: bestResult.shipSource,
-        shipCost: bestResult.shipCost,
-        licenseFee: calculateLicenseFee(distance, activeRoutes.length),
-        alreadyActive: activeRouteKeys.has(`${origin.id}→${dest.id}`),
-      });
     }
   }
 
-  // Sort by profit descending and limit to top 100 for performance
+  // Sort by profit descending and limit to top 200 for performance
   opportunities.sort((a, b) => b.estProfit - a.estProfit);
-  if (opportunities.length > 100) {
-    opportunities.length = 100;
+  if (opportunities.length > 200) {
+    opportunities.length = 200;
   }
   return opportunities;
 }

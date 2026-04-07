@@ -245,11 +245,16 @@ export const PLANET_PASSENGER_VOLUME: Record<PlanetType, number> = {
 };
 
 export const BASE_CARGO_PRICES: Record<CargoType, number> = {
-  [CargoType.Passengers]: 45,
-  [CargoType.RawMaterials]: 12,
-  [CargoType.Food]: 18,
-  [CargoType.Technology]: 38,
-  [CargoType.Luxury]: 55,
-  [CargoType.Hazmat]: 40,
+  [CargoType.Passengers]: 65,
+  [CargoType.RawMaterials]: 18,
+  [CargoType.Food]: 24,
+  [CargoType.Technology]: 40,
+  [CargoType.Luxury]: 50,
+  [CargoType.Hazmat]: 46,
   [CargoType.Medical]: 50,
 };
+
+// ── Cargo diversity scoring bonus ──────────────────────────────
+
+/** Bonus points per distinct cargo type delivered across all turns */
+export const CARGO_DIVERSITY_BONUS = 2000;
