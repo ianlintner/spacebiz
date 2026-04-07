@@ -15,6 +15,7 @@ import {
   getCargoColor,
   getCargoLabel,
 } from "../ui/index.ts";
+import type { ColumnDef } from "../ui/index.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -87,7 +88,7 @@ export class MarketScene extends Phaser.Scene {
         CARGO_TYPE_VALUES.length,
     );
 
-    const columns = [
+    const columns: ColumnDef[] = [
       {
         key: "planet",
         label: "Planet",
