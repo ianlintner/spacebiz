@@ -25,6 +25,7 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     reputation: 55,
     companyName: "Test Corp",
     gameSize: "small",
+    galaxyShape: "spiral",
     playerEmpireId: "",
     galaxy: { sectors: [], empires: [], systems: [], planets: [] },
     fleet: [],

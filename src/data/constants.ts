@@ -33,41 +33,46 @@ export interface GameSizeConfig {
   aiCompanyCount: number;
   startingCash: number;
   startingShips: number;
+  /** Map coordinate bounds scale factor (1.0 = base 2400×1600) */
+  mapScale: number;
 }
 
 export const GAME_SIZE_CONFIGS: Record<GameSize, GameSizeConfig> = {
   [GameSize.Small]: {
-    maxTurns: 20,
-    empireCount: 4,
-    systemsPerEmpireMin: 4,
-    systemsPerEmpireMax: 5,
-    planetsPerSystemMin: 1,
-    planetsPerSystemMax: 3,
-    aiCompanyCount: 2,
-    startingCash: 200000,
-    startingShips: 2,
-  },
-  [GameSize.Medium]: {
-    maxTurns: 40,
-    empireCount: 6,
-    systemsPerEmpireMin: 5,
-    systemsPerEmpireMax: 7,
-    planetsPerSystemMin: 1,
-    planetsPerSystemMax: 3,
-    aiCompanyCount: 4,
-    startingCash: 250000,
-    startingShips: 2,
-  },
-  [GameSize.Large]: {
     maxTurns: 60,
     empireCount: 8,
     systemsPerEmpireMin: 6,
     systemsPerEmpireMax: 8,
     planetsPerSystemMin: 1,
     planetsPerSystemMax: 3,
-    aiCompanyCount: 6,
+    aiCompanyCount: 4,
     startingCash: 300000,
+    startingShips: 2,
+    mapScale: 1.0,
+  },
+  [GameSize.Medium]: {
+    maxTurns: 80,
+    empireCount: 10,
+    systemsPerEmpireMin: 7,
+    systemsPerEmpireMax: 9,
+    planetsPerSystemMin: 1,
+    planetsPerSystemMax: 4,
+    aiCompanyCount: 6,
+    startingCash: 350000,
+    startingShips: 2,
+    mapScale: 1.3,
+  },
+  [GameSize.Large]: {
+    maxTurns: 100,
+    empireCount: 12,
+    systemsPerEmpireMin: 8,
+    systemsPerEmpireMax: 10,
+    planetsPerSystemMin: 1,
+    planetsPerSystemMax: 4,
+    aiCompanyCount: 8,
+    startingCash: 400000,
     startingShips: 3,
+    mapScale: 1.6,
   },
 };
 

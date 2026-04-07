@@ -10,7 +10,12 @@ import {
 } from "../ui/index.ts";
 import { gameStore } from "../data/GameStore.ts";
 import { createNewGame } from "../game/NewGameSetup.ts";
-import type { GameState, StarSystem, GameSize } from "../data/types.ts";
+import type {
+  GameState,
+  StarSystem,
+  GameSize,
+  GalaxyShape,
+} from "../data/types.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 
 const PRESET_NAMES = [
@@ -26,9 +31,11 @@ export class GalaxySetupScene extends Phaser.Scene {
   private nameIndex = 0;
   private selectedSystemIndex = 0;
   private gameSize: GameSize = "small";
+  private galaxyShape: GalaxyShape = "spiral";
   private seedLabel!: Label;
   private nameLabel!: Label;
   private sizeButtons: Button[] = [];
+  private shapeButtons: Button[] = [];
   private cardObjects: Phaser.GameObjects.GameObject[] = [];
   private systemCards: Panel[] = [];
   private startingOptions: StarSystem[] = [];
@@ -54,9 +61,11 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.nameIndex = 0;
     this.selectedSystemIndex = 0;
     this.gameSize = "small";
+    this.galaxyShape = "spiral";
     this.cardObjects = [];
     this.systemCards = [];
     this.sizeButtons = [];
+    this.shapeButtons = [];
 
     // 1. Starfield background
     createStarfield(this);
@@ -168,9 +177,9 @@ export class GalaxySetupScene extends Phaser.Scene {
     });
 
     const sizes: { label: string; value: GameSize; desc: string }[] = [
-      { label: "Small", value: "small", desc: "20 turns" },
-      { label: "Medium", value: "medium", desc: "40 turns" },
-      { label: "Large", value: "large", desc: "60 turns" },
+      { label: "Small", value: "small", desc: "60 turns" },
+      { label: "Medium", value: "medium", desc: "80 turns" },
+      { label: "Large", value: "large", desc: "100 turns" },
     ];
     const sizeBtnW = 90;
     const sizeBtnGap = 10;
@@ -192,6 +201,43 @@ export class GalaxySetupScene extends Phaser.Scene {
       sizeBtnX += sizeBtnW + sizeBtnGap;
     }
     this.updateSizeHighlight();
+
+    rowY += 50;
+
+    // Galaxy Shape row
+    new Label(this, {
+      x: innerX,
+      y: rowY,
+      text: "Shape:",
+      style: "body",
+    });
+
+    const shapes: { label: string; value: GalaxyShape }[] = [
+      { label: "Spiral", value: "spiral" },
+      { label: "Elliptical", value: "elliptical" },
+      { label: "Ring", value: "ring" },
+      { label: "Irregular", value: "irregular" },
+    ];
+    const shapeBtnW = 90;
+    const shapeBtnGap = 8;
+    let shapeBtnX = innerX + 130;
+    for (const shapeOpt of shapes) {
+      const btn = new Button(this, {
+        x: shapeBtnX,
+        y: rowY - 4,
+        width: shapeBtnW,
+        height: 36,
+        label: shapeOpt.label,
+        onClick: () => {
+          this.galaxyShape = shapeOpt.value;
+          this.updateShapeHighlight();
+          this.regenerate();
+        },
+      });
+      this.shapeButtons.push(btn);
+      shapeBtnX += shapeBtnW + shapeBtnGap;
+    }
+    this.updateShapeHighlight();
 
     rowY += 60;
 
@@ -243,6 +289,7 @@ export class GalaxySetupScene extends Phaser.Scene {
       this.seed,
       PRESET_NAMES[this.nameIndex],
       this.gameSize,
+      this.galaxyShape,
     );
     this.currentState = result.state;
     this.startingOptions = result.startingSystemOptions;
@@ -255,6 +302,18 @@ export class GalaxySetupScene extends Phaser.Scene {
     const sizeValues: GameSize[] = ["small", "medium", "large"];
     this.sizeButtons.forEach((btn, i) => {
       btn.setActive(sizeValues[i] === this.gameSize);
+    });
+  }
+
+  private updateShapeHighlight(): void {
+    const shapeValues: GalaxyShape[] = [
+      "spiral",
+      "elliptical",
+      "ring",
+      "irregular",
+    ];
+    this.shapeButtons.forEach((btn, i) => {
+      btn.setActive(shapeValues[i] === this.galaxyShape);
     });
   }
 

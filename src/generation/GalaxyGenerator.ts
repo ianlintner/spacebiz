@@ -1,12 +1,13 @@
 import { SeededRNG } from "../utils/SeededRNG.ts";
 import { NameGenerator } from "./NameGenerator.ts";
-import { PlanetType, EmpireDisposition } from "../data/types.ts";
+import { PlanetType, EmpireDisposition, GalaxyShape } from "../data/types.ts";
 import type {
   Sector,
   Empire,
   StarSystem,
   Planet,
   GameSize,
+  GalaxyShape as GalaxyShapeT,
   PlanetType as PlanetTypeT,
   EmpireDisposition as EmpireDispositionT,
 } from "../data/types.ts";
@@ -73,13 +74,17 @@ function weightedPick(
   return weights[weights.length - 1][0];
 }
 
-const SECTOR_COLORS = [0x4488cc, 0xcc6644, 0x66cc88, 0xbb88cc, 0xcccc44];
+const SECTOR_COLORS = [
+  0x4488cc, 0xcc6644, 0x66cc88, 0xbb88cc, 0xcccc44, 0xcc4466, 0x44cccc,
+  0x88cc44, 0xcc8844, 0x4466cc, 0xcc44bb, 0x44cc66,
+];
 const STAR_COLORS = [
   0xffffee, 0xffcc88, 0xff8866, 0x88aaff, 0xffffff, 0xffaa44,
 ];
 
 const EMPIRE_COLORS = [
   0x4488cc, 0xcc6644, 0x66cc88, 0xbb88cc, 0xcccc44, 0xcc4466, 0x44cccc,
+  0x88cc44, 0xcc8844, 0x4466cc, 0xcc44bb, 0x44cc66,
 ];
 
 const EMPIRE_NAME_PREFIXES = [
@@ -93,6 +98,8 @@ const EMPIRE_NAME_PREFIXES = [
   "Rekthan",
   "Omathi",
   "Zenthari",
+  "Pyrathi",
+  "Lorathi",
 ];
 
 const EMPIRE_NAME_SUFFIXES = [
@@ -125,33 +132,200 @@ function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
 }
 
+// ── Shape-aware sector center placement ──────────────────────
+
 function generateSectorCenters(
+  rng: SeededRNG,
+  count: number,
+  bounds: Bounds,
+  shape: GalaxyShapeT,
+): Array<{ x: number; y: number }> {
+  switch (shape) {
+    case GalaxyShape.Spiral:
+      return generateSpiralCenters(rng, count, bounds);
+    case GalaxyShape.Elliptical:
+      return generateEllipticalCenters(rng, count, bounds);
+    case GalaxyShape.Ring:
+      return generateRingCenters(rng, count, bounds);
+    case GalaxyShape.Irregular:
+      return generateIrregularCenters(rng, count, bounds);
+    default:
+      return generateSpiralCenters(rng, count, bounds);
+  }
+}
+
+/** Spiral: place empires along 2–4 logarithmic spiral arms */
+function generateSpiralCenters(
   rng: SeededRNG,
   count: number,
   bounds: Bounds,
 ): Array<{ x: number; y: number }> {
   const cx = (bounds.minX + bounds.maxX) / 2;
   const cy = (bounds.minY + bounds.maxY) / 2;
-  const radiusX = (bounds.maxX - bounds.minX) * 0.28;
-  const radiusY = (bounds.maxY - bounds.minY) * 0.26;
+  const radiusX = (bounds.maxX - bounds.minX) * 0.42;
+  const radiusY = (bounds.maxY - bounds.minY) * 0.42;
+  const arms = count <= 6 ? 2 : count <= 9 ? 3 : 4;
+  const startAngle = rng.nextFloat(0, Math.PI * 2);
+  const centers: Array<{ x: number; y: number }> = [];
+
+  for (let i = 0; i < count; i++) {
+    const arm = i % arms;
+    const t = (Math.floor(i / arms) + 1) / (Math.ceil(count / arms) + 1);
+    // Logarithmic spiral: r grows with angle
+    const spiralAngle =
+      startAngle + (arm / arms) * Math.PI * 2 + t * Math.PI * 1.2;
+    const r = 0.2 + t * 0.8;
+    const jitterR = rng.nextFloat(-0.06, 0.06);
+    const jitterA = rng.nextFloat(-0.15, 0.15);
+    const x = clamp(
+      cx + Math.cos(spiralAngle + jitterA) * radiusX * (r + jitterR),
+      bounds.minX,
+      bounds.maxX,
+    );
+    const y = clamp(
+      cy + Math.sin(spiralAngle + jitterA) * radiusY * (r + jitterR),
+      bounds.minY,
+      bounds.maxY,
+    );
+    centers.push({ x, y });
+  }
+
+  return centers;
+}
+
+/** Elliptical: gaussian-like cluster toward center */
+function generateEllipticalCenters(
+  rng: SeededRNG,
+  count: number,
+  bounds: Bounds,
+): Array<{ x: number; y: number }> {
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cy = (bounds.minY + bounds.maxY) / 2;
+  const radiusX = (bounds.maxX - bounds.minX) * 0.38;
+  const radiusY = (bounds.maxY - bounds.minY) * 0.34;
+  const centers: Array<{ x: number; y: number }> = [];
+  const minDist = Math.min(radiusX, radiusY) * 0.25;
+
+  for (let i = 0; i < count; i++) {
+    let placed = false;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      // Box-Muller approximation via averaging uniform samples
+      const u1 = (rng.next() + rng.next() + rng.next()) / 3;
+      const u2 = (rng.next() + rng.next() + rng.next()) / 3;
+      const angle = rng.nextFloat(0, Math.PI * 2);
+      const r = Math.sqrt(u1 * u2) * 1.4;
+      const px = clamp(
+        cx + Math.cos(angle) * radiusX * r,
+        bounds.minX,
+        bounds.maxX,
+      );
+      const py = clamp(
+        cy + Math.sin(angle) * radiusY * r,
+        bounds.minY,
+        bounds.maxY,
+      );
+      const overlaps = centers.some((c) => {
+        const dx = c.x - px;
+        const dy = c.y - py;
+        return Math.sqrt(dx * dx + dy * dy) < minDist;
+      });
+      if (!overlaps) {
+        centers.push({ x: px, y: py });
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      // Fallback: place on ring
+      const angle = (i / count) * Math.PI * 2;
+      centers.push({
+        x: clamp(
+          cx + Math.cos(angle) * radiusX * 0.6,
+          bounds.minX,
+          bounds.maxX,
+        ),
+        y: clamp(
+          cy + Math.sin(angle) * radiusY * 0.6,
+          bounds.minY,
+          bounds.maxY,
+        ),
+      });
+    }
+  }
+
+  return centers;
+}
+
+/** Ring: empires distributed around a ring (original layout, refined) */
+function generateRingCenters(
+  rng: SeededRNG,
+  count: number,
+  bounds: Bounds,
+): Array<{ x: number; y: number }> {
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cy = (bounds.minY + bounds.maxY) / 2;
+  const radiusX = (bounds.maxX - bounds.minX) * 0.32;
+  const radiusY = (bounds.maxY - bounds.minY) * 0.3;
   const startAngle = rng.nextFloat(0, Math.PI * 2);
   const centers: Array<{ x: number; y: number }> = [];
 
   for (let i = 0; i < count; i++) {
     const base = startAngle + (i / count) * Math.PI * 2;
-    const jitter = rng.nextFloat(-0.22, 0.22);
-    const angle = base + jitter;
+    const jitter = rng.nextFloat(-0.18, 0.18);
+    const rVar = rng.nextFloat(0.85, 1.15);
     const x = clamp(
-      cx + Math.cos(angle) * radiusX + rng.nextFloat(-30, 30),
+      cx + Math.cos(base + jitter) * radiusX * rVar + rng.nextFloat(-20, 20),
       bounds.minX,
       bounds.maxX,
     );
     const y = clamp(
-      cy + Math.sin(angle) * radiusY + rng.nextFloat(-24, 24),
+      cy + Math.sin(base + jitter) * radiusY * rVar + rng.nextFloat(-16, 16),
       bounds.minY,
       bounds.maxY,
     );
     centers.push({ x, y });
+  }
+
+  return centers;
+}
+
+/** Irregular: random clusters scattered across the map */
+function generateIrregularCenters(
+  rng: SeededRNG,
+  count: number,
+  bounds: Bounds,
+): Array<{ x: number; y: number }> {
+  const w = bounds.maxX - bounds.minX;
+  const h = bounds.maxY - bounds.minY;
+  const margin = Math.min(w, h) * 0.1;
+  const minDist = Math.min(w, h) * 0.15;
+  const centers: Array<{ x: number; y: number }> = [];
+
+  for (let i = 0; i < count; i++) {
+    let placed = false;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      const px = rng.nextFloat(bounds.minX + margin, bounds.maxX - margin);
+      const py = rng.nextFloat(bounds.minY + margin, bounds.maxY - margin);
+      const overlaps = centers.some((c) => {
+        const dx = c.x - px;
+        const dy = c.y - py;
+        return Math.sqrt(dx * dx + dy * dy) < minDist;
+      });
+      if (!overlaps) {
+        centers.push({ x: px, y: py });
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      const angle = (i / count) * Math.PI * 2;
+      const cx = (bounds.minX + bounds.maxX) / 2;
+      const cy = (bounds.minY + bounds.maxY) / 2;
+      centers.push({
+        x: clamp(cx + Math.cos(angle) * w * 0.3, bounds.minX, bounds.maxX),
+        y: clamp(cy + Math.sin(angle) * h * 0.3, bounds.minY, bounds.maxY),
+      });
+    }
   }
 
   return centers;
@@ -163,11 +337,12 @@ function generateSystemPoints(
   centerX: number,
   centerY: number,
   bounds: Bounds,
+  mapScale: number,
 ): Array<{ x: number; y: number }> {
   const points: Array<{ x: number; y: number }> = [];
-  const localRadiusX = 180;
-  const localRadiusY = 150;
-  const minDist = 70;
+  const localRadiusX = 180 * Math.sqrt(mapScale);
+  const localRadiusY = 150 * Math.sqrt(mapScale);
+  const minDist = 70 * Math.sqrt(mapScale);
 
   for (let i = 0; i < count; i++) {
     let placed = false;
@@ -220,6 +395,7 @@ function generateSystemPoints(
 export function generateGalaxy(
   seed: number,
   gameSize: GameSize = "small",
+  galaxyShape: GalaxyShapeT = "spiral",
 ): GalaxyData {
   const rng = new SeededRNG(seed);
   const nameGen = new NameGenerator(rng);
@@ -232,13 +408,21 @@ export function generateGalaxy(
   const planets: Planet[] = [];
 
   const numSectors = config.empireCount;
+  const scale = config.mapScale;
+  const baseW = 2160; // 2280 - 120
+  const baseH = 1360; // 1480 - 120
   const mapBounds: Bounds = {
     minX: 120,
-    maxX: 2280,
+    maxX: 120 + baseW * scale,
     minY: 120,
-    maxY: 1480,
+    maxY: 120 + baseH * scale,
   };
-  const sectorCenters = generateSectorCenters(rng, numSectors, mapBounds);
+  const sectorCenters = generateSectorCenters(
+    rng,
+    numSectors,
+    mapBounds,
+    galaxyShape,
+  );
 
   // Shuffle dispositions — first empire always friendly (player home candidate)
   const usedPrefixes = new Set<number>();
@@ -302,6 +486,7 @@ export function generateGalaxy(
       sectorX,
       sectorY,
       mapBounds,
+      scale,
     );
 
     let homeSystemId = "";

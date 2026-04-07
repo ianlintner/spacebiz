@@ -51,6 +51,14 @@ export const GameSize = {
 } as const;
 export type GameSize = (typeof GameSize)[keyof typeof GameSize];
 
+export const GalaxyShape = {
+  Spiral: "spiral",
+  Elliptical: "elliptical",
+  Ring: "ring",
+  Irregular: "irregular",
+} as const;
+export type GalaxyShape = (typeof GalaxyShape)[keyof typeof GalaxyShape];
+
 export const EmpireDisposition = {
   Friendly: "friendly",
   Neutral: "neutral",
@@ -303,6 +311,7 @@ export interface GameState {
   maxTurns: number;
   phase: GamePhase;
   gameSize: GameSize;
+  galaxyShape: GalaxyShape;
   cash: number;
   loans: Loan[];
   reputation: number;

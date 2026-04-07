@@ -24,33 +24,32 @@ describe("GalaxyGenerator", () => {
     }
   });
 
-  it("generates 2-3 sectors", () => {
+  it("generates 4 sectors (small map)", () => {
     for (const seed of [1, 42, 100, 999, 7777]) {
       const galaxy = generateGalaxy(seed);
-      expect(galaxy.sectors.length).toBeGreaterThanOrEqual(2);
-      expect(galaxy.sectors.length).toBeLessThanOrEqual(3);
+      expect(galaxy.sectors.length).toBe(4);
     }
   });
 
-  it("generates 3-6 systems per sector", () => {
+  it("generates 4-5 systems per sector (small map)", () => {
     const galaxy = generateGalaxy(42);
     for (const sector of galaxy.sectors) {
       const systemsInSector = galaxy.systems.filter(
         (s) => s.sectorId === sector.id,
       );
-      expect(systemsInSector.length).toBeGreaterThanOrEqual(3);
-      expect(systemsInSector.length).toBeLessThanOrEqual(6);
+      expect(systemsInSector.length).toBeGreaterThanOrEqual(4);
+      expect(systemsInSector.length).toBeLessThanOrEqual(5);
     }
   });
 
-  it("generates 3-6 planets per system", () => {
+  it("generates 1-3 planets per system", () => {
     const galaxy = generateGalaxy(42);
     for (const system of galaxy.systems) {
       const planetsInSystem = galaxy.planets.filter(
         (p) => p.systemId === system.id,
       );
-      expect(planetsInSystem.length).toBeGreaterThanOrEqual(3);
-      expect(planetsInSystem.length).toBeLessThanOrEqual(6);
+      expect(planetsInSystem.length).toBeGreaterThanOrEqual(1);
+      expect(planetsInSystem.length).toBeLessThanOrEqual(3);
     }
   });
 
@@ -71,11 +70,11 @@ describe("GalaxyGenerator", () => {
     }
   });
 
-  it("total planets in expected range (24-90)", () => {
+  it("total planets in expected range (16-60)", () => {
     for (const seed of [1, 42, 100, 999, 7777]) {
       const galaxy = generateGalaxy(seed);
-      expect(galaxy.planets.length).toBeGreaterThanOrEqual(24);
-      expect(galaxy.planets.length).toBeLessThanOrEqual(90);
+      expect(galaxy.planets.length).toBeGreaterThanOrEqual(16);
+      expect(galaxy.planets.length).toBeLessThanOrEqual(60);
     }
   });
 

@@ -1,7 +1,12 @@
 import { SeededRNG } from "../utils/SeededRNG.ts";
 import { generateGalaxy } from "../generation/GalaxyGenerator.ts";
 import { initializeMarkets } from "../generation/MarketInitializer.ts";
-import { ShipClass, GameSize, AIPersonality } from "../data/types.ts";
+import {
+  ShipClass,
+  GameSize,
+  AIPersonality,
+  GalaxyShape,
+} from "../data/types.ts";
 import type {
   GameState,
   Ship,
@@ -10,6 +15,7 @@ import type {
   AICompany,
   ActiveRoute,
   GameSize as GameSizeT,
+  GalaxyShape as GalaxyShapeT,
 } from "../data/types.ts";
 import { initAdviserState } from "./adviser/AdviserEngine.ts";
 import {
@@ -170,13 +176,14 @@ export function createNewGame(
   seed: number,
   companyName: string = "Star Freight Corp",
   gameSize: GameSizeT = GameSize.Small,
+  galaxyShape: GalaxyShapeT = GalaxyShape.Spiral,
 ): NewGameResult {
   const rng = new SeededRNG(seed);
 
   const config = GAME_SIZE_CONFIGS[gameSize];
 
   // Generate galaxy with empires
-  const galaxyData = generateGalaxy(seed, gameSize);
+  const galaxyData = generateGalaxy(seed, gameSize, galaxyShape);
 
   // Initialize markets (use a new RNG derived from the seed so market
   // generation doesn't depend on galaxy generation RNG state)
@@ -227,6 +234,7 @@ export function createNewGame(
     maxTurns: config.maxTurns,
     phase: "planning",
     gameSize,
+    galaxyShape,
     cash: config.startingCash,
     loans: [],
     reputation: 50,

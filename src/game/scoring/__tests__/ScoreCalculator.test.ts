@@ -131,6 +131,7 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
     reputation: 50,
     companyName: "Test Corp",
     gameSize: "small",
+    galaxyShape: "spiral",
     playerEmpireId: "",
     galaxy: {
       sectors: [{ id: "sec-1", name: "Sector 1", x: 0, y: 0, color: 0xffffff }],

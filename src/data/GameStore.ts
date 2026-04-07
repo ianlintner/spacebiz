@@ -14,6 +14,7 @@ function createDefaultState(): GameState {
     reputation: 50,
     companyName: "New Ventures Inc.",
     gameSize: "small",
+    galaxyShape: "spiral",
     playerEmpireId: "",
     galaxy: { sectors: [], empires: [], systems: [], planets: [] },
     fleet: [],
