@@ -244,6 +244,7 @@ export class SimPlaybackScene extends Phaser.Scene {
       height: 130,
       showGlow: false,
     });
+    tickerPanel.setScrollFactor(0);
     const tc = tickerPanel.getContentArea();
 
     const tickerTitle = new Label(this, {
@@ -349,7 +350,7 @@ export class SimPlaybackScene extends Phaser.Scene {
     const totalBtnWidth = btnWidth * 4 + 30;
     const startX = L.gameWidth / 2 - totalBtnWidth / 2;
 
-    new Button(this, {
+    const btn1x = new Button(this, {
       x: startX,
       y: btnY,
       width: btnWidth,
@@ -357,8 +358,9 @@ export class SimPlaybackScene extends Phaser.Scene {
       label: "1x",
       onClick: () => this.setSpeed(1),
     });
+    btn1x.setScrollFactor(0);
 
-    new Button(this, {
+    const btn2x = new Button(this, {
       x: startX + btnWidth + 10,
       y: btnY,
       width: btnWidth,
@@ -366,8 +368,9 @@ export class SimPlaybackScene extends Phaser.Scene {
       label: "2x",
       onClick: () => this.setSpeed(2),
     });
+    btn2x.setScrollFactor(0);
 
-    new Button(this, {
+    const btn4x = new Button(this, {
       x: startX + (btnWidth + 10) * 2,
       y: btnY,
       width: btnWidth,
@@ -375,8 +378,9 @@ export class SimPlaybackScene extends Phaser.Scene {
       label: "4x",
       onClick: () => this.setSpeed(4),
     });
+    btn4x.setScrollFactor(0);
 
-    new Button(this, {
+    const btnSkip = new Button(this, {
       x: startX + (btnWidth + 10) * 3,
       y: btnY,
       width: btnWidth,
@@ -384,6 +388,7 @@ export class SimPlaybackScene extends Phaser.Scene {
       label: "Skip",
       onClick: () => this.skipAnimation(),
     });
+    btnSkip.setScrollFactor(0);
   }
 
   // -------------------------------------------------------------------------
@@ -406,6 +411,7 @@ export class SimPlaybackScene extends Phaser.Scene {
     category?: string,
   ): void {
     const theme = getTheme();
+    const L = getLayout();
     const popupY = 200 + index * 70;
 
     const isHazard = category === EventCategory.Hazard;
@@ -431,7 +437,8 @@ export class SimPlaybackScene extends Phaser.Scene {
       audio.sfx("ui_click_secondary");
     }
 
-    const container = this.add.container(1280, popupY);
+    const container = this.add.container(L.gameWidth + 310, popupY);
+    container.setScrollFactor(0);
 
     // Glass-styled background rectangle using theme colors
     const bg = this.add
@@ -464,7 +471,7 @@ export class SimPlaybackScene extends Phaser.Scene {
     // Slide in from the right edge
     this.tweens.add({
       targets: container,
-      x: 960,
+      x: L.gameWidth - 320,
       duration: 400,
       ease: "Back.easeOut",
     });

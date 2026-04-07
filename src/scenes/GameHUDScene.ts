@@ -482,9 +482,9 @@ export class GameHUDScene extends Phaser.Scene {
     });
     this.phaseLabel.setOrigin(0, 0.5);
 
-    // Action prompt (right of phase label)
+    // Action prompt (right of phase label, with enough clearance)
     this.actionPromptLabel = new Label(this, {
-      x: 100,
+      x: 200,
       y: L.gameHeight - L.hudBottomBarHeight / 2,
       text: "",
       style: "caption",
