@@ -13,6 +13,9 @@ import {
   openRouteBuilder,
   SceneUiDirector,
   getLayout,
+  getCargoIconKey,
+  getCargoColor,
+  getCargoLabel,
 } from "../ui/index.ts";
 
 const CARGO_TYPE_VALUES = Object.values(CargoType) as Array<
@@ -143,6 +146,9 @@ export class PlanetDetailScene extends Phaser.Scene {
           label: "Cargo Type",
           width: Math.floor(130 * colScale),
           sortable: true,
+          format: (v) => getCargoLabel(v as string),
+          iconFn: (v) => getCargoIconKey(v as string),
+          iconTintFn: (v) => getCargoColor(v as string),
         },
         {
           key: "supply",

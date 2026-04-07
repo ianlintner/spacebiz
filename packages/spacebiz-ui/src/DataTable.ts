@@ -10,6 +10,14 @@ export interface ColumnDef {
   sortable?: boolean;
   format?: (value: unknown) => string;
   colorFn?: (value: unknown) => number | null;
+  /** Texture key for an icon displayed in the column header (left of label). */
+  headerIcon?: string;
+  /** Optional tint color for the header icon (defaults to accent). */
+  headerIconTint?: number;
+  /** Return a texture key to display an icon in each cell (left of text). */
+  iconFn?: (value: unknown) => string | null;
+  /** Return a tint color for the cell icon (defaults to text color). */
+  iconTintFn?: (value: unknown) => number | null;
 }
 
 export interface DataTableConfig {
@@ -221,7 +229,20 @@ export class DataTable extends Phaser.GameObjects.Container {
 
     let x = 0;
     for (const col of this.columns) {
-      const text = this.scene.add.text(x + 8, 8, col.label, {
+      let textX = x + 8;
+
+      // Optional header icon (left of label text)
+      if (col.headerIcon && this.scene.textures.exists(col.headerIcon)) {
+        const iconSize = this.headerHeight - 16;
+        const icon = this.scene.add
+          .image(x + 8 + iconSize / 2, this.headerHeight / 2, col.headerIcon)
+          .setDisplaySize(iconSize, iconSize)
+          .setTint(col.headerIconTint ?? theme.colors.accent);
+        this.headerContainer.add(icon);
+        textX = x + 8 + iconSize + 4;
+      }
+
+      const text = this.scene.add.text(textX, 8, col.label, {
         fontSize: `${theme.fonts.caption.size}px`,
         fontFamily: theme.fonts.caption.family,
         color: colorToString(theme.colors.accent),
@@ -348,8 +369,9 @@ export class DataTable extends Phaser.GameObjects.Container {
       const rowTop = yCursor;
       const bgColor = i % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd;
 
-      // Build texts first so we can measure wrapped height and size the row correctly.
+      // Build texts (and optional cell icons) first so we can measure wrapped height.
       const rowTexts: Phaser.GameObjects.Text[] = [];
+      const rowIcons: Phaser.GameObjects.Image[] = [];
       let maxTextHeight = theme.fonts.body.size;
 
       let x = 0;
@@ -358,11 +380,31 @@ export class DataTable extends Phaser.GameObjects.Container {
         const display = col.format ? col.format(raw) : String(raw ?? "");
         const color = col.colorFn ? col.colorFn(raw) : theme.colors.text;
 
-        const text = this.scene.add.text(x + 8, rowTop + 8, display, {
+        let cellTextX = x + 8;
+        const iconSize = theme.fonts.body.size;
+
+        // Cell icon (left of text in the cell)
+        if (col.iconFn) {
+          const iconKey = col.iconFn(raw);
+          if (iconKey && this.scene.textures.exists(iconKey)) {
+            const icon = this.scene.add
+              .image(x + 8 + iconSize / 2, rowTop + 8 + iconSize / 2, iconKey)
+              .setDisplaySize(iconSize, iconSize)
+              .setTint(
+                (col.iconTintFn ? col.iconTintFn(raw) : null) ??
+                  color ??
+                  theme.colors.text,
+              );
+            rowIcons.push(icon);
+            cellTextX = x + 8 + iconSize + 4;
+          }
+        }
+
+        const text = this.scene.add.text(cellTextX, rowTop + 8, display, {
           fontSize: `${theme.fonts.body.size}px`,
           fontFamily: theme.fonts.body.family,
           color: colorToString(color ?? theme.colors.text),
-          wordWrap: { width: col.width - 16 },
+          wordWrap: { width: col.width - 16 - (cellTextX - (x + 8)) },
         });
 
         if (col.align === "right") {
@@ -411,6 +453,9 @@ export class DataTable extends Phaser.GameObjects.Container {
 
       this.bodyContainer.add(rowBg);
 
+      for (const icon of rowIcons) {
+        this.bodyContainer.add(icon);
+      }
       for (const text of rowTexts) {
         this.bodyContainer.add(text);
       }

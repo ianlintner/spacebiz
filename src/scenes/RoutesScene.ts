@@ -17,6 +17,9 @@ import {
   SceneUiDirector,
   createStarfield,
   getLayout,
+  getCargoIconKey,
+  getCargoColor,
+  getCargoLabel,
 } from "../ui/index.ts";
 import {
   assignShipToRoute,
@@ -226,7 +229,15 @@ export class RoutesScene extends Phaser.Scene {
       columns: [
         { key: "origin", label: "From", width: 110, sortable: true },
         { key: "destination", label: "To", width: 110, sortable: true },
-        { key: "cargo", label: "Cargo", width: 75, sortable: true },
+        {
+          key: "cargo",
+          label: "Cargo",
+          width: 75,
+          sortable: true,
+          format: (v) => getCargoLabel(v as string),
+          iconFn: (v) => getCargoIconKey(v as string),
+          iconTintFn: (v) => getCargoColor(v as string),
+        },
         {
           key: "price",
           label: "Price",
@@ -371,7 +382,21 @@ export class RoutesScene extends Phaser.Scene {
           align: "center",
           sortable: true,
         },
-        { key: "cargoType", label: "Cargo", width: 90, sortable: true },
+        {
+          key: "cargoType",
+          label: "Cargo",
+          width: 90,
+          sortable: true,
+          format: (v) => getCargoLabel(v as string),
+          iconFn: (v) => {
+            const val = v as string;
+            return val && val !== "None" ? getCargoIconKey(val) : null;
+          },
+          iconTintFn: (v) => {
+            const val = v as string;
+            return val && val !== "None" ? getCargoColor(val) : null;
+          },
+        },
         {
           key: "revenue",
           label: "Revenue",
@@ -522,7 +547,7 @@ export class RoutesScene extends Phaser.Scene {
         _index: origIdx,
         origin: opp.originName,
         destination: opp.destinationName,
-        cargo: humanizeCargo(opp.bestCargoType),
+        cargo: opp.bestCargoType,
         price: opp.destPrice,
         trend: trendArrow(opp.destTrend),
         dist: opp.distance.toFixed(1),

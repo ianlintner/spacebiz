@@ -11,6 +11,9 @@ import {
   PortraitPanel,
   createStarfield,
   getLayout,
+  getCargoIconKey,
+  getCargoColor,
+  getCargoLabel,
 } from "../ui/index.ts";
 
 function formatCash(n: number): string {
@@ -97,9 +100,11 @@ export class MarketScene extends Phaser.Scene {
     for (const ct of CARGO_TYPE_VALUES) {
       columns.push({
         key: ct,
-        label: ct.charAt(0).toUpperCase() + ct.slice(1),
+        label: getCargoLabel(ct),
         width: cargoColWidth,
         sortable: true,
+        headerIcon: getCargoIconKey(ct),
+        headerIconTint: getCargoColor(ct),
       });
     }
 
