@@ -547,7 +547,7 @@ export class RoutesScene extends Phaser.Scene {
         _index: origIdx,
         origin: opp.originName,
         destination: opp.destinationName,
-        cargo: opp.bestCargoType,
+        cargo: humanizeCargo(opp.bestCargoType),
         price: opp.destPrice,
         trend: trendArrow(opp.destTrend),
         dist: opp.distance.toFixed(1),
