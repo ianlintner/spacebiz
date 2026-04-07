@@ -40,9 +40,6 @@ export class SimPlaybackScene extends Phaser.Scene {
     const L = getLayout();
     this.animationComplete = false;
 
-    // Starfield background (depth -100 by default)
-    createStarfield(this);
-
     // -----------------------------------------------------------------------
     // Step 1: Run simulation immediately — animation is purely cosmetic
     // -----------------------------------------------------------------------
@@ -82,6 +79,15 @@ export class SimPlaybackScene extends Phaser.Scene {
     const fitZoom = Math.min(zoomX, zoomY, 1);
     cam.setZoom(fitZoom);
     cam.centerOn(galCx, galCy);
+
+    // Starfield background — scale & reposition to cover the full galaxy area
+    const starfield = createStarfield(this);
+    const spreadScale = Math.max((galW + 400) / 1280, (galH + 400) / 720, 1);
+    starfield.setScale(spreadScale);
+    starfield.setPosition(
+      galCx - (1280 * spreadScale) / 2,
+      galCy - (720 * spreadScale) / 2,
+    );
 
     // Build planet -> system lookup
     const planetSystemMap = new Map<string, string>();
