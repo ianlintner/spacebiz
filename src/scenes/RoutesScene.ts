@@ -16,14 +16,7 @@ import {
   openRouteBuilder,
   SceneUiDirector,
   createStarfield,
-  GAME_WIDTH,
-  GAME_HEIGHT,
-  CONTENT_TOP,
-  CONTENT_HEIGHT,
-  SIDEBAR_LEFT,
-  SIDEBAR_WIDTH,
-  MAIN_CONTENT_LEFT,
-  MAIN_CONTENT_WIDTH,
+  getLayout,
 } from "../ui/index.ts";
 import {
   assignShipToRoute,
@@ -92,27 +85,28 @@ export class RoutesScene extends Phaser.Scene {
   create(): void {
     this.selectedRouteId = null;
     this.ui = new SceneUiDirector(this);
+    const L = getLayout();
 
     createStarfield(this);
 
     // Sidebar portrait — shortened to leave room for mini-map below
     const miniMapHeight = 150;
     const miniMapGap = 8;
-    const portraitHeight = CONTENT_HEIGHT - miniMapHeight - miniMapGap;
+    const portraitHeight = L.contentHeight - miniMapHeight - miniMapGap;
 
     this.portrait = new PortraitPanel(this, {
-      x: SIDEBAR_LEFT,
-      y: CONTENT_TOP,
-      width: SIDEBAR_WIDTH,
+      x: L.sidebarLeft,
+      y: L.contentTop,
+      width: L.sidebarWidth,
       height: portraitHeight,
     });
 
     // Mini-map sits below the portrait panel in the sidebar
     this.miniMap = new MiniMap({
       scene: this,
-      x: SIDEBAR_LEFT,
-      y: CONTENT_TOP + portraitHeight + miniMapGap,
-      width: SIDEBAR_WIDTH,
+      x: L.sidebarLeft,
+      y: L.contentTop + portraitHeight + miniMapGap,
+      width: L.sidebarWidth,
       height: miniMapHeight,
       depth: 0,
     });
@@ -125,10 +119,10 @@ export class RoutesScene extends Phaser.Scene {
     const activeContent = this.add.container(0, 0);
 
     // ── Main Panel with TabGroup ──
-    const panelX = MAIN_CONTENT_LEFT;
-    const panelY = CONTENT_TOP;
-    const panelW = MAIN_CONTENT_WIDTH;
-    const panelH = CONTENT_HEIGHT;
+    const panelX = L.mainContentLeft;
+    const panelY = L.contentTop;
+    const panelW = L.mainContentWidth;
+    const panelH = L.contentHeight;
 
     // Background panel
     new Panel(this, {
@@ -941,10 +935,11 @@ export class RoutesScene extends Phaser.Scene {
       closeOnPointerUp: true,
     });
 
+    const L = getLayout();
     const panelW = 450;
     const panelH = 400;
-    const panelX = (GAME_WIDTH - panelW) / 2;
-    const panelY = (GAME_HEIGHT - panelH) / 2;
+    const panelX = (L.gameWidth - panelW) / 2;
+    const panelY = (L.gameHeight - panelH) / 2;
 
     const shipPanel = layer.track(
       new Panel(this, {
@@ -1054,10 +1049,11 @@ export class RoutesScene extends Phaser.Scene {
       closeOnPointerUp: true,
     });
 
+    const L = getLayout();
     const panelW = 350;
     const panelH = 400;
-    const panelX = (GAME_WIDTH - panelW) / 2;
-    const panelY = (GAME_HEIGHT - panelH) / 2;
+    const panelX = (L.gameWidth - panelW) / 2;
+    const panelY = (L.gameHeight - panelH) / 2;
 
     const cargoPanel = layer.track(
       new Panel(this, {

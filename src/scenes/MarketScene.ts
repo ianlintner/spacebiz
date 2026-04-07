@@ -10,12 +10,7 @@ import {
   Panel,
   PortraitPanel,
   createStarfield,
-  CONTENT_TOP,
-  CONTENT_HEIGHT,
-  SIDEBAR_LEFT,
-  SIDEBAR_WIDTH,
-  MAIN_CONTENT_LEFT,
-  MAIN_CONTENT_WIDTH,
+  getLayout,
 } from "../ui/index.ts";
 
 function formatCash(n: number): string {
@@ -40,6 +35,7 @@ export class MarketScene extends Phaser.Scene {
   }
 
   create(): void {
+    const L = getLayout();
     const theme = getTheme();
     const state = gameStore.getState();
 
@@ -48,10 +44,10 @@ export class MarketScene extends Phaser.Scene {
 
     // --- Left sidebar: Planet portrait (updates on row select) ---
     this.portrait = new PortraitPanel(this, {
-      x: SIDEBAR_LEFT,
-      y: CONTENT_TOP,
-      width: SIDEBAR_WIDTH,
-      height: CONTENT_HEIGHT,
+      x: L.sidebarLeft,
+      y: L.contentTop,
+      width: L.sidebarWidth,
+      height: L.contentHeight,
     });
     // Default state: no planet selected
     this.portrait.updatePortrait("planet", 0, "Galaxy Market", [], {
@@ -60,15 +56,15 @@ export class MarketScene extends Phaser.Scene {
 
     // --- Main content panel ---
     const contentPanel = new Panel(this, {
-      x: MAIN_CONTENT_LEFT,
-      y: CONTENT_TOP,
-      width: MAIN_CONTENT_WIDTH,
-      height: CONTENT_HEIGHT,
+      x: L.mainContentLeft,
+      y: L.contentTop,
+      width: L.mainContentWidth,
+      height: L.contentHeight,
       title: "Galaxy Market Overview",
     });
     const content = contentPanel.getContentArea();
-    const absX = MAIN_CONTENT_LEFT + content.x;
-    const absY = CONTENT_TOP + content.y;
+    const absX = L.mainContentLeft + content.x;
+    const absY = L.contentTop + content.y;
 
     // Fuel price display inside content panel
     const fuelTrendStr = trendArrow(state.market.fuelTrend);

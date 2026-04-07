@@ -8,7 +8,7 @@ import type {
   PortraitData,
   AlienRole,
 } from "./PortraitGenerator.ts";
-import { SIDEBAR_WIDTH, CONTENT_HEIGHT } from "./Layout.ts";
+import { getLayout } from "./Layout.ts";
 import type { Planet, Ship, StarSystem, GameEvent } from "../data/types.ts";
 import { SHIP_TEMPLATES } from "../data/constants.ts";
 
@@ -35,8 +35,9 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     super(scene, config.x, config.y);
 
     const theme = getTheme();
-    this.panelWidth = config.width ?? SIDEBAR_WIDTH;
-    const panelHeight = config.height ?? CONTENT_HEIGHT;
+    const L = getLayout();
+    this.panelWidth = config.width ?? L.sidebarWidth;
+    const panelHeight = config.height ?? L.contentHeight;
 
     this.portraitWidth = this.panelWidth - theme.spacing.sm * 2;
     this.portraitHeight = Math.floor(panelHeight * 0.55);

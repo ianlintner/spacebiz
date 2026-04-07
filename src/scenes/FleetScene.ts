@@ -15,14 +15,7 @@ import {
   PortraitPanel,
   SceneUiDirector,
   createStarfield,
-  GAME_WIDTH,
-  GAME_HEIGHT,
-  CONTENT_TOP,
-  CONTENT_HEIGHT,
-  SIDEBAR_LEFT,
-  SIDEBAR_WIDTH,
-  MAIN_CONTENT_LEFT,
-  MAIN_CONTENT_WIDTH,
+  getLayout,
 } from "../ui/index.ts";
 import {
   buyShip,
@@ -57,6 +50,7 @@ export class FleetScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
+    const L = getLayout();
     this.selectedShipId = null;
     this.ui = new SceneUiDirector(this);
 
@@ -65,29 +59,29 @@ export class FleetScene extends Phaser.Scene {
 
     // Sidebar portrait
     this.portrait = new PortraitPanel(this, {
-      x: SIDEBAR_LEFT,
-      y: CONTENT_TOP,
-      width: SIDEBAR_WIDTH,
-      height: CONTENT_HEIGHT,
+      x: L.sidebarLeft,
+      y: L.contentTop,
+      width: L.sidebarWidth,
+      height: L.contentHeight,
     });
     this.portrait.updatePortrait("ship", 0, "Select a Ship", []);
 
     // Content panel
     const contentPanel = new Panel(this, {
-      x: MAIN_CONTENT_LEFT,
-      y: CONTENT_TOP,
-      width: MAIN_CONTENT_WIDTH,
-      height: CONTENT_HEIGHT,
+      x: L.mainContentLeft,
+      y: L.contentTop,
+      width: L.mainContentWidth,
+      height: L.contentHeight,
       title: "Fleet Management",
     });
     const content = contentPanel.getContentArea();
-    const absX = MAIN_CONTENT_LEFT + content.x;
-    const absY = CONTENT_TOP + content.y;
+    const absX = L.mainContentLeft + content.x;
+    const absY = L.contentTop + content.y;
 
     // Cash display inside content panel header area
     const state = gameStore.getState();
     const cashLabel = new Label(this, {
-      x: MAIN_CONTENT_LEFT + MAIN_CONTENT_WIDTH - 16,
+      x: L.mainContentLeft + L.mainContentWidth - 16,
       y: absY + 2,
       text: `Cash: ${formatCash(state.cash)}`,
       style: "value",
@@ -247,6 +241,7 @@ export class FleetScene extends Phaser.Scene {
 
   private showBuyShipPanel(): void {
     const theme = getTheme();
+    const L = getLayout();
     const state = gameStore.getState();
     const layer = this.ui.openLayer({ key: "fleet-buy-ship" });
     layer.createOverlay({
@@ -257,8 +252,8 @@ export class FleetScene extends Phaser.Scene {
 
     const panelW = 600;
     const panelH = 500;
-    const panelX = (GAME_WIDTH - panelW) / 2;
-    const panelY = (GAME_HEIGHT - panelH) / 2;
+    const panelX = (L.gameWidth - panelW) / 2;
+    const panelY = (L.gameHeight - panelH) / 2;
 
     const buyPanel = layer.track(
       new Panel(this, {

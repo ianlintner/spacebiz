@@ -5,7 +5,6 @@
  * Use registerAmbientCleanup() to auto-stop a batch of tweens on scene shutdown.
  */
 import Phaser from "phaser";
-import { GAME_WIDTH, GAME_HEIGHT } from "./Layout.ts";
 
 // ─── Config interfaces ─────────────────────────────────────────────────────
 
@@ -156,8 +155,9 @@ export function flashScreen(
   peakAlpha = 0.35,
   duration = 600,
 ): void {
+  const cam = scene.cameras.main;
   const flash = scene.add
-    .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, color, 0)
+    .rectangle(0, 0, cam.width, cam.height, color, 0)
     .setOrigin(0, 0)
     .setDepth(950);
 

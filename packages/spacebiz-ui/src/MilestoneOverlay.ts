@@ -13,7 +13,6 @@
  */
 import Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
-import { GAME_WIDTH, GAME_HEIGHT } from "./Layout.ts";
 import { fitFontSize } from "./TextMetrics.ts";
 
 export type MilestoneType =
@@ -51,6 +50,9 @@ export class MilestoneOverlay {
   ): void {
     const theme = getTheme();
     const colors = TYPE_COLORS[type];
+    const cam = scene.cameras.main;
+    const GAME_WIDTH = cam.width;
+    const GAME_HEIGHT = cam.height;
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
 

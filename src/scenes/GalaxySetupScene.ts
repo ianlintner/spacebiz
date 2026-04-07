@@ -6,8 +6,7 @@ import {
   Label,
   PortraitPanel,
   getTheme,
-  GAME_WIDTH,
-  MAX_CONTENT_WIDTH,
+  getLayout,
 } from "../ui/index.ts";
 import { gameStore } from "../data/GameStore.ts";
 import { createNewGame } from "../game/NewGameSetup.ts";
@@ -42,6 +41,7 @@ export class GalaxySetupScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
+    const L = getLayout();
     this.cameras.main.setBackgroundColor(theme.colors.background);
     getAudioDirector().setMusicState("setup");
 
@@ -56,12 +56,12 @@ export class GalaxySetupScene extends Phaser.Scene {
     // 1. Starfield background
     createStarfield(this);
 
-    // Centering offset for MAX_CONTENT_WIDTH
-    const contentLeft = Math.floor((GAME_WIDTH - MAX_CONTENT_WIDTH) / 2);
+    // Centering offset for maxContentWidth
+    const contentLeft = Math.floor((L.gameWidth - L.maxContentWidth) / 2);
 
     // 2. Title with glow
     const titleLabel = new Label(this, {
-      x: GAME_WIDTH / 2,
+      x: L.gameWidth / 2,
       y: 40,
       text: "NEW GALAXY",
       style: "heading",
@@ -86,7 +86,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     // 4. Config panel (right side, glass)
     const configGap = 20;
     const configX = portraitX + portraitW + configGap;
-    const configW = MAX_CONTENT_WIDTH - portraitW - configGap;
+    const configW = L.maxContentWidth - portraitW - configGap;
     const configY = portraitY;
     const configH = portraitH;
     new Panel(this, {
@@ -249,11 +249,12 @@ export class GalaxySetupScene extends Phaser.Scene {
     if (this.startingOptions.length === 0) return;
 
     const theme = getTheme();
-    const contentLeft = Math.floor((GAME_WIDTH - MAX_CONTENT_WIDTH) / 2);
+    const L = getLayout();
+    const contentLeft = Math.floor((L.gameWidth - L.maxContentWidth) / 2);
     const portraitW = 260;
     const configGap = 20;
     const configX = contentLeft + portraitW + configGap;
-    const configW = MAX_CONTENT_WIDTH - portraitW - configGap;
+    const configW = L.maxContentWidth - portraitW - configGap;
 
     const cardW = 200;
     const cardH = 200;

@@ -6,8 +6,7 @@ import {
   Label,
   Button,
   getTheme,
-  GAME_WIDTH,
-  GAME_HEIGHT,
+  getLayout,
 } from "../ui/index.ts";
 import { hasSaveGame, loadGameIntoStore } from "../game/SaveManager.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
@@ -61,12 +60,13 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    const L = getLayout();
     const theme = getTheme();
     this.cameras.main.setBackgroundColor(theme.colors.background);
     const audio = getAudioDirector();
     audio.setMusicState("menu");
 
-    const cx = GAME_WIDTH / 2;
+    const cx = L.gameWidth / 2;
     const canContinue = hasSaveGame();
     const heroConfig = Phaser.Utils.Array.GetRandom([...HERO_CONFIGS]);
     const heroTexture = this.textures.get(heroConfig.key).getSourceImage() as {
@@ -75,14 +75,14 @@ export class MainMenuScene extends Phaser.Scene {
     };
     const coverScale =
       Math.max(
-        (GAME_WIDTH + 120) / heroTexture.width,
-        (GAME_HEIGHT + 110) / heroTexture.height,
+        (L.gameWidth + 120) / heroTexture.width,
+        (L.gameHeight + 110) / heroTexture.height,
       ) * heroConfig.zoom;
 
     const hero = this.add
       .image(
-        GAME_WIDTH * heroConfig.anchorX,
-        GAME_HEIGHT * heroConfig.anchorY,
+        L.gameWidth * heroConfig.anchorX,
+        L.gameHeight * heroConfig.anchorY,
         heroConfig.key,
       )
       .setOrigin(heroConfig.focusX, heroConfig.focusY)
@@ -92,8 +92,8 @@ export class MainMenuScene extends Phaser.Scene {
       targets: hero,
       scaleX: coverScale * 1.035,
       scaleY: coverScale * 1.035,
-      x: GAME_WIDTH * heroConfig.anchorX + heroConfig.driftX,
-      y: GAME_HEIGHT * heroConfig.anchorY + heroConfig.driftY,
+      x: L.gameWidth * heroConfig.anchorX + heroConfig.driftX,
+      y: L.gameHeight * heroConfig.anchorY + heroConfig.driftY,
       duration: 16000,
       yoyo: true,
       repeat: -1,
@@ -103,9 +103,9 @@ export class MainMenuScene extends Phaser.Scene {
     const heroSheen = this.add
       .rectangle(
         -220,
-        GAME_HEIGHT * 0.42,
+        L.gameHeight * 0.42,
         220,
-        GAME_HEIGHT * 1.2,
+        L.gameHeight * 1.2,
         theme.colors.accent,
         0.08,
       )
@@ -113,7 +113,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setBlendMode(Phaser.BlendModes.SCREEN);
     this.tweens.add({
       targets: heroSheen,
-      x: GAME_WIDTH + 220,
+      x: L.gameWidth + 220,
       duration: 9000,
       repeat: -1,
       ease: "Sine.easeInOut",
@@ -122,20 +122,20 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Top and bottom readability scrims so the art stays visible while UI remains legible.
     this.add
-      .rectangle(0, 0, GAME_WIDTH, 220, theme.colors.background, 0.54)
+      .rectangle(0, 0, L.gameWidth, 220, theme.colors.background, 0.54)
       .setOrigin(0, 0);
     this.add
       .rectangle(
         0,
-        GAME_HEIGHT - 270,
-        GAME_WIDTH,
+        L.gameHeight - 270,
+        L.gameWidth,
         270,
         theme.colors.background,
         0.78,
       )
       .setOrigin(0, 0);
     this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.background, 0.16)
+      .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 0.16)
       .setOrigin(0, 0);
 
     const depthCircle = this.add.circle(
@@ -198,7 +198,7 @@ export class MainMenuScene extends Phaser.Scene {
     const panelW = 760;
     const panelH = 182;
     const panelX = cx - panelW / 2;
-    const panelY = GAME_HEIGHT - panelH - 22;
+    const panelY = L.gameHeight - panelH - 22;
     const btnWidth = 220;
     const btnHeight = 52;
     const btnGap = 18;
@@ -284,8 +284,8 @@ export class MainMenuScene extends Phaser.Scene {
     const sgBtnW = 120;
     const sgBtnH = 32;
     new Button(this, {
-      x: GAME_WIDTH - sgBtnW - 16,
-      y: GAME_HEIGHT - sgBtnH - 8,
+      x: L.gameWidth - sgBtnW - 16,
+      y: L.gameHeight - sgBtnH - 8,
       width: sgBtnW,
       height: sgBtnH,
       label: "Style Guide",

@@ -4,7 +4,7 @@ import {
   getTheme,
   colorToString,
   Label,
-  CONTENT_TOP,
+  getLayout,
   createStarfield,
   addPulseTween,
 } from "../ui/index.ts";
@@ -18,6 +18,7 @@ export class GalaxyMapScene extends Phaser.Scene {
   }
 
   create(): void {
+    const L = getLayout();
     const theme = getTheme();
     const state = gameStore.getState();
     const { sectors, systems, planets, empires } = state.galaxy;
@@ -29,7 +30,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     // Subtle title (caption style, top-left)
     new Label(this, {
       x: 20,
-      y: CONTENT_TOP + 10,
+      y: L.contentTop + 10,
       text: "Galaxy Map",
       style: "caption",
       color: theme.colors.textDim,
@@ -38,7 +39,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.add
       .text(
         1260,
-        CONTENT_TOP + 10,
+        L.contentTop + 10,
         "Star size = planets in system\nSector glow = regional influence\nLines = active trade routes",
         {
           fontSize: `${theme.fonts.caption.size}px`,
@@ -109,7 +110,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       const outer = this.add
         .circle(
           centroidX,
-          centroidY + CONTENT_TOP,
+          centroidY + L.contentTop,
           influenceRadius,
           empireColor,
           0.035,
@@ -126,7 +127,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       edge.lineStyle(1, empireColor, 0.18);
       edge.strokeCircle(
         centroidX,
-        centroidY + CONTENT_TOP,
+        centroidY + L.contentTop,
         Math.max(36, influenceRadius - 4),
       );
 
@@ -135,7 +136,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       this.add
         .text(
           centroidX,
-          centroidY + CONTENT_TOP - influenceRadius - 14,
+          centroidY + L.contentTop - influenceRadius - 14,
           displayName,
           {
             fontSize: `${theme.fonts.caption.size}px`,
@@ -172,14 +173,14 @@ export class GalaxyMapScene extends Phaser.Scene {
       if (!originSys || !destSys) continue;
 
       routeGraphics.beginPath();
-      routeGraphics.moveTo(originSys.x, originSys.y + CONTENT_TOP);
-      routeGraphics.lineTo(destSys.x, destSys.y + CONTENT_TOP);
+      routeGraphics.moveTo(originSys.x, originSys.y + L.contentTop);
+      routeGraphics.lineTo(destSys.x, destSys.y + L.contentTop);
       routeGraphics.strokePath();
 
       // Glow pip — tiny dot that glides along the route continuously
       const pip = this.add.circle(
         originSys.x,
-        originSys.y + CONTENT_TOP,
+        originSys.y + L.contentTop,
         2,
         theme.colors.accent,
         0.7,
@@ -187,7 +188,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       this.tweens.add({
         targets: pip,
         x: destSys.x,
-        y: destSys.y + CONTENT_TOP,
+        y: destSys.y + L.contentTop,
         duration: theme.ambient.routeFlowDuration,
         yoyo: true,
         repeat: -1,
@@ -221,7 +222,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     // Draw each star system
     for (const system of systems) {
       const sysX = system.x;
-      const sysY = system.y + CONTENT_TOP;
+      const sysY = system.y + L.contentTop;
       const planetCount = planetCountsBySystem.get(system.id) ?? 0;
       const mainRadius = 4 + Math.min(4, planetCount);
 

@@ -12,9 +12,7 @@ import {
   PortraitPanel,
   openRouteBuilder,
   SceneUiDirector,
-  GAME_WIDTH,
-  GAME_HEIGHT,
-  CONTENT_GAP,
+  getLayout,
 } from "../ui/index.ts";
 
 const CARGO_TYPE_VALUES = Object.values(CargoType) as Array<
@@ -62,6 +60,7 @@ export class PlanetDetailScene extends Phaser.Scene {
     this.scene.bringToTop();
     this.ui = new SceneUiDirector(this);
 
+    const L = getLayout();
     const theme = getTheme();
     const state = gameStore.getState();
     const planet = state.galaxy.planets.find((p) => p.id === this.planetId);
@@ -71,18 +70,25 @@ export class PlanetDetailScene extends Phaser.Scene {
 
     // Overlay background
     this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.7)
+      .rectangle(
+        0,
+        0,
+        L.gameWidth,
+        L.gameHeight,
+        theme.colors.modalOverlay,
+        0.7,
+      )
       .setOrigin(0, 0)
       .setInteractive();
 
     // Overlay layout: sidebar (PortraitPanel) + content panel
     const overlayWidth = 900;
     const overlayHeight = 580;
-    const overlayX = (GAME_WIDTH - overlayWidth) / 2;
-    const overlayY = (GAME_HEIGHT - overlayHeight) / 2;
+    const overlayX = (L.gameWidth - overlayWidth) / 2;
+    const overlayY = (L.gameHeight - overlayHeight) / 2;
     const portraitWidth = 200;
-    const contentX = overlayX + portraitWidth + CONTENT_GAP;
-    const contentWidth = overlayWidth - portraitWidth - CONTENT_GAP;
+    const contentX = overlayX + portraitWidth + L.contentGap;
+    const contentWidth = overlayWidth - portraitWidth - L.contentGap;
 
     // Portrait panel (left sidebar)
     const portraitPanel = new PortraitPanel(this, {

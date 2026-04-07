@@ -17,14 +17,7 @@ import {
   PortraitPanel,
   SceneUiDirector,
   createStarfield,
-  GAME_WIDTH,
-  GAME_HEIGHT,
-  CONTENT_TOP,
-  CONTENT_HEIGHT,
-  SIDEBAR_LEFT,
-  SIDEBAR_WIDTH,
-  MAIN_CONTENT_LEFT,
-  MAIN_CONTENT_WIDTH,
+  getLayout,
 } from "../ui/index.ts";
 import { calculateShipValue } from "../game/fleet/FleetManager.ts";
 
@@ -43,6 +36,7 @@ export class FinanceScene extends Phaser.Scene {
   }
 
   create(): void {
+    const L = getLayout();
     this.selectedLoanId = null;
     this.ui = new SceneUiDirector(this);
 
@@ -63,10 +57,10 @@ export class FinanceScene extends Phaser.Scene {
     const netWorth = state.cash + fleetValue - totalLoans;
 
     const portrait = new PortraitPanel(this, {
-      x: SIDEBAR_LEFT,
-      y: CONTENT_TOP,
-      width: SIDEBAR_WIDTH,
-      height: CONTENT_HEIGHT,
+      x: L.sidebarLeft,
+      y: L.contentTop,
+      width: L.sidebarWidth,
+      height: L.contentHeight,
     });
     portrait.updatePortrait(
       "event",
@@ -83,10 +77,10 @@ export class FinanceScene extends Phaser.Scene {
 
     // --- Main content panel with title ---
     const mainPanel = new Panel(this, {
-      x: MAIN_CONTENT_LEFT,
-      y: CONTENT_TOP,
-      width: MAIN_CONTENT_WIDTH,
-      height: CONTENT_HEIGHT,
+      x: L.mainContentLeft,
+      y: L.contentTop,
+      width: L.mainContentWidth,
+      height: L.contentHeight,
       title: "Finance",
     });
 
@@ -99,8 +93,8 @@ export class FinanceScene extends Phaser.Scene {
 
     // Tab group positioned inside the main content panel
     new TabGroup(this, {
-      x: MAIN_CONTENT_LEFT + contentArea.x,
-      y: CONTENT_TOP + contentArea.y,
+      x: L.mainContentLeft + contentArea.x,
+      y: L.contentTop + contentArea.y,
       width: contentArea.width,
       tabs: [
         { label: "P&L", content: plContent },
@@ -288,6 +282,7 @@ export class FinanceScene extends Phaser.Scene {
   }
 
   private buildLoansTab(): Phaser.GameObjects.Container {
+    const L = getLayout();
     const theme = getTheme();
     const container = this.add.container(0, 0);
     const state = gameStore.getState();
@@ -296,7 +291,7 @@ export class FinanceScene extends Phaser.Scene {
     const loanTable = new DataTable(this, {
       x: 0,
       y: 20,
-      width: MAIN_CONTENT_WIDTH - 20,
+      width: L.mainContentWidth - 20,
       height: 280,
       columns: [
         {
@@ -369,6 +364,7 @@ export class FinanceScene extends Phaser.Scene {
   }
 
   private showTakeLoan(loanTable: DataTable): void {
+    const L = getLayout();
     const theme = getTheme();
     const loanAmounts = [50000, 100000, 200000];
     const rate =
@@ -384,8 +380,8 @@ export class FinanceScene extends Phaser.Scene {
 
     const panelW = 400;
     const panelH = 350;
-    const panelX = (GAME_WIDTH - panelW) / 2;
-    const panelY = (GAME_HEIGHT - panelH) / 2;
+    const panelX = (L.gameWidth - panelW) / 2;
+    const panelY = (L.gameHeight - panelH) / 2;
 
     const loanPanel = layer.track(
       new Panel(this, {

@@ -16,4 +16,10 @@ export {
   MAIN_CONTENT_WIDTH,
   FULL_CONTENT_LEFT,
   FULL_CONTENT_WIDTH,
+  BASE_HEIGHT,
+  MIN_WIDTH,
+  MAX_WIDTH,
+  getLayout,
+  updateLayout,
 } from "@spacebiz/ui";
+export type { LayoutMetrics } from "@spacebiz/ui";

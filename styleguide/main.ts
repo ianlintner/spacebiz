@@ -1,12 +1,13 @@
 import Phaser from "phaser";
 import { StyleguideBootScene } from "./scenes/StyleguideBootScene.ts";
 import { StyleguideScene } from "./scenes/StyleguideScene.ts";
-import { GAME_WIDTH, GAME_HEIGHT } from "@spacebiz/ui";
+import { getLayout } from "@spacebiz/ui";
 
+const L = getLayout();
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: GAME_WIDTH,
-  height: GAME_HEIGHT,
+  width: L.gameWidth,
+  height: L.gameHeight,
   parent: document.body,
   backgroundColor: "#0a0a12",
   scale: {

@@ -8,10 +8,7 @@ import {
   Panel,
   DataTable,
   createStarfield,
-  GAME_WIDTH,
-  CONTENT_TOP,
-  CONTENT_HEIGHT,
-  FULL_CONTENT_LEFT,
+  getLayout,
   AdviserPanel,
 } from "../ui/index.ts";
 import { CargoType } from "../data/types.ts";
@@ -38,6 +35,7 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   create(): void {
+    const L = getLayout();
     const theme = getTheme();
     const state = gameStore.getState();
     getAudioDirector().setMusicState("gameover");
@@ -56,8 +54,8 @@ export class GameOverScene extends Phaser.Scene {
     const headingColor = isVictory ? theme.colors.profit : theme.colors.loss;
 
     const heading = new Label(this, {
-      x: GAME_WIDTH / 2,
-      y: CONTENT_TOP + 10,
+      x: L.gameWidth / 2,
+      y: L.contentTop + 10,
       text: headingText,
       style: "heading",
       color: headingColor,
@@ -72,12 +70,12 @@ export class GameOverScene extends Phaser.Scene {
       ? `Congratulations, ${state.companyName}! You survived all ${state.maxTurns} turns.`
       : `${state.companyName} has gone bankrupt after ${state.turn - 1} turns.`;
     const subtitle = new Label(this, {
-      x: GAME_WIDTH / 2,
-      y: CONTENT_TOP + 60,
+      x: L.gameWidth / 2,
+      y: L.contentTop + 60,
       text: subtitleText,
       style: "body",
       color: theme.colors.text,
-      maxWidth: GAME_WIDTH - 80,
+      maxWidth: L.gameWidth - 80,
     });
     subtitle.setOrigin(0.5, 0);
 
@@ -130,8 +128,8 @@ export class GameOverScene extends Phaser.Scene {
     // Score breakdown panel (left side, glass panel)
     // -----------------------------------------------------------------------
     const scorePanel = new Panel(this, {
-      x: FULL_CONTENT_LEFT,
-      y: CONTENT_TOP + 90,
+      x: L.fullContentLeft,
+      y: L.contentTop + 90,
       width: 520,
       height: 280,
       title: "Score Breakdown",
@@ -253,8 +251,8 @@ export class GameOverScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     // High score table (right side, glass panel)
     // -----------------------------------------------------------------------
-    const hsPanelX = FULL_CONTENT_LEFT + 540;
-    const hsPanelY = CONTENT_TOP + 90;
+    const hsPanelX = L.fullContentLeft + 540;
+    const hsPanelY = L.contentTop + 90;
     const hsPanelWidth = 520;
     const hsPanelHeight = 280;
 
@@ -314,20 +312,20 @@ export class GameOverScene extends Phaser.Scene {
     // Company Rankings panel (full width below score + high score panels)
     // -----------------------------------------------------------------------
     const rankings = rankCompanies(state);
-    const rankPanelY = CONTENT_TOP + 380;
+    const rankPanelY = L.contentTop + 380;
     const rankPanelHeight = 160;
     new Panel(this, {
-      x: FULL_CONTENT_LEFT,
+      x: L.fullContentLeft,
       y: rankPanelY,
-      width: hsPanelX + hsPanelWidth - FULL_CONTENT_LEFT,
+      width: hsPanelX + hsPanelWidth - L.fullContentLeft,
       height: rankPanelHeight,
       title: "Company Rankings",
     });
 
     const rankTable = new DataTable(this, {
-      x: FULL_CONTENT_LEFT + 10,
+      x: L.fullContentLeft + 10,
       y: rankPanelY + 40,
-      width: hsPanelX + hsPanelWidth - FULL_CONTENT_LEFT - 20,
+      width: hsPanelX + hsPanelWidth - L.fullContentLeft - 20,
       height: rankPanelHeight - 50,
       columns: [
         { key: "rank", label: "#", width: 50, align: "center" },
@@ -378,7 +376,7 @@ export class GameOverScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     const btnWidth = 180;
     const btnHeight = 48;
-    const btnY = CONTENT_TOP + CONTENT_HEIGHT - 100;
+    const btnY = L.contentTop + L.contentHeight - 100;
 
     // -----------------------------------------------------------------------
     // Rex's Reveal — the adviser reveals their true role
@@ -387,9 +385,9 @@ export class GameOverScene extends Phaser.Scene {
       const revealMsgs = buildRevealMessages(state);
       if (revealMsgs.length > 0) {
         const revealPanel = new AdviserPanel(this, {
-          x: FULL_CONTENT_LEFT,
+          x: L.fullContentLeft,
           y: btnY - 120,
-          width: GAME_WIDTH - FULL_CONTENT_LEFT * 2,
+          width: L.gameWidth - L.fullContentLeft * 2,
         });
         revealPanel.setDepth(150);
         revealPanel.showMessages(revealMsgs);
@@ -400,7 +398,7 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     new Button(this, {
-      x: GAME_WIDTH / 2 - btnWidth - 20,
+      x: L.gameWidth / 2 - btnWidth - 20,
       y: btnY,
       width: btnWidth,
       height: btnHeight,
@@ -411,7 +409,7 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     new Button(this, {
-      x: GAME_WIDTH / 2 + 20,
+      x: L.gameWidth / 2 + 20,
       y: btnY,
       width: btnWidth,
       height: btnHeight,

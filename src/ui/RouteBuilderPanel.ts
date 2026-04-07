@@ -17,7 +17,7 @@ import {
   estimateRouteFuelCost,
   estimateRouteRevenue,
 } from "../game/routes/RouteManager.ts";
-import { GAME_HEIGHT, GAME_WIDTH } from "./Layout.ts";
+import { getLayout } from "./Layout.ts";
 import { Button } from "./Button.ts";
 import { Label } from "./Label.ts";
 import { MiniMap } from "./MiniMap.ts";
@@ -138,8 +138,9 @@ class RouteBuilderPanel {
     this.planets = [...gameStore.getState().galaxy.planets];
     this.autoBuy = options.allowAutoBuy ?? true;
 
-    this.panelX = Math.floor((GAME_WIDTH - this.panelWidth) / 2);
-    this.panelY = Math.floor((GAME_HEIGHT - this.panelHeight) / 2);
+    const L = getLayout();
+    this.panelX = Math.floor((L.gameWidth - this.panelWidth) / 2);
+    this.panelY = Math.floor((L.gameHeight - this.panelHeight) / 2);
 
     this.originIndex = this.getInitialOriginIndex();
     this.destinationIndex = this.getInitialDestinationIndex();

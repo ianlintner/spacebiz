@@ -12,12 +12,7 @@ import {
   addPulseTween,
   addRotateTween,
   DEPTH_AMBIENT_MID,
-  CONTENT_TOP,
-  CONTENT_HEIGHT,
-  SIDEBAR_LEFT,
-  SIDEBAR_WIDTH,
-  MAIN_CONTENT_LEFT,
-  MAIN_CONTENT_WIDTH,
+  getLayout,
 } from "../ui/index.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { SeededRNG } from "../utils/SeededRNG.ts";
@@ -68,6 +63,7 @@ export class SystemMapScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
+    const L = getLayout();
     const state = gameStore.getState();
     const system = state.galaxy.systems.find((s) => s.id === this.systemId);
     if (!system) return;
@@ -88,21 +84,21 @@ export class SystemMapScene extends Phaser.Scene {
 
     // PortraitPanel as left sidebar showing system portrait
     this.portraitPanel = new PortraitPanel(this, {
-      x: SIDEBAR_LEFT,
-      y: CONTENT_TOP,
-      width: SIDEBAR_WIDTH,
-      height: CONTENT_HEIGHT,
+      x: L.sidebarLeft,
+      y: L.contentTop,
+      width: L.sidebarWidth,
+      height: L.contentHeight,
     });
     this.portraitPanel.showSystem(system, planets.length);
 
     // Center the solar system visualization within the main content area
-    const cx = MAIN_CONTENT_LEFT + MAIN_CONTENT_WIDTH / 2;
-    const cy = CONTENT_TOP + CONTENT_HEIGHT / 2;
+    const cx = L.mainContentLeft + L.mainContentWidth / 2;
+    const cy = L.contentTop + L.contentHeight / 2;
 
     // Title: small caption label at top center of content area
     new Label(this, {
       x: cx,
-      y: CONTENT_TOP + 10,
+      y: L.contentTop + 10,
       text: system.name,
       style: "caption",
       color: theme.colors.textDim,
@@ -110,8 +106,8 @@ export class SystemMapScene extends Phaser.Scene {
 
     this.add
       .text(
-        MAIN_CONTENT_LEFT + MAIN_CONTENT_WIDTH - 8,
-        CONTENT_TOP + 10,
+        L.mainContentLeft + L.mainContentWidth - 8,
+        L.contentTop + 10,
         "Click a planet for local market details and route setup\nConcentric orbits: inner industry → outer leisure/hubs\nPlanet size scales with population",
         {
           fontSize: `${theme.fonts.caption.size}px`,
@@ -125,8 +121,8 @@ export class SystemMapScene extends Phaser.Scene {
 
     // Back button: glass styled, using Layout constants
     new Button(this, {
-      x: MAIN_CONTENT_LEFT,
-      y: CONTENT_TOP + CONTENT_HEIGHT - 50,
+      x: L.mainContentLeft,
+      y: L.contentTop + L.contentHeight - 50,
       width: 160,
       label: "Back to Galaxy",
       onClick: () => {
@@ -172,8 +168,8 @@ export class SystemMapScene extends Phaser.Scene {
     });
 
     const maxOrbitRadius = Math.min(
-      MAIN_CONTENT_WIDTH / 2 - 64,
-      CONTENT_HEIGHT / 2 - 56,
+      L.mainContentWidth / 2 - 64,
+      L.contentHeight / 2 - 56,
     );
     const minOrbitRadius = 86;
     const orbitStep =

@@ -9,9 +9,7 @@ import {
   Label,
   Panel,
   createStarfield,
-  GAME_WIDTH,
-  GAME_HEIGHT,
-  CONTENT_TOP,
+  getLayout,
   FloatingText,
   MilestoneOverlay,
   flashScreen,
@@ -39,6 +37,7 @@ export class SimPlaybackScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
+    const L = getLayout();
     this.animationComplete = false;
 
     // Starfield background (depth -100 by default)
@@ -214,8 +213,8 @@ export class SimPlaybackScene extends Phaser.Scene {
     // Step 3: Revenue / Cost ticker (top-right) — Panel component
     // -----------------------------------------------------------------------
     const tickerPanel = new Panel(this, {
-      x: GAME_WIDTH - 230,
-      y: CONTENT_TOP + 10,
+      x: L.gameWidth - 230,
+      y: L.contentTop + 10,
       width: 220,
       height: 130,
       showGlow: false,
@@ -319,11 +318,11 @@ export class SimPlaybackScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     // Step 5: Speed control buttons — centered horizontally
     // -----------------------------------------------------------------------
-    const btnY = GAME_HEIGHT - 50;
+    const btnY = L.gameHeight - 50;
     const btnWidth = 80;
     const btnHeight = 32;
     const totalBtnWidth = btnWidth * 4 + 30;
-    const startX = GAME_WIDTH / 2 - totalBtnWidth / 2;
+    const startX = L.gameWidth / 2 - totalBtnWidth / 2;
 
     new Button(this, {
       x: startX,

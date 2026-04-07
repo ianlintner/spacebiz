@@ -11,14 +11,7 @@ import {
   createStarfield,
   AdviserPanel,
   MilestoneOverlay,
-  GAME_WIDTH,
-  GAME_HEIGHT,
-  CONTENT_TOP,
-  CONTENT_HEIGHT,
-  SIDEBAR_LEFT,
-  SIDEBAR_WIDTH,
-  MAIN_CONTENT_LEFT,
-  MAIN_CONTENT_WIDTH,
+  getLayout,
 } from "../ui/index.ts";
 import { autoSave } from "../game/SaveManager.ts";
 import { consumeMessages } from "../game/adviser/AdviserEngine.ts";
@@ -53,6 +46,7 @@ export class TurnReportScene extends Phaser.Scene {
   }
 
   create(): void {
+    const L = getLayout();
     const theme = getTheme();
     const state = gameStore.getState();
     getAudioDirector().setMusicState("report");
@@ -86,10 +80,10 @@ export class TurnReportScene extends Phaser.Scene {
       lastTurn.netProfit >= 0 ? theme.colors.profit : theme.colors.loss;
 
     const portrait = new PortraitPanel(this, {
-      x: SIDEBAR_LEFT,
-      y: CONTENT_TOP,
-      width: SIDEBAR_WIDTH,
-      height: CONTENT_HEIGHT,
+      x: L.sidebarLeft,
+      y: L.contentTop,
+      width: L.sidebarWidth,
+      height: L.contentHeight,
     });
     portrait.updatePortrait(
       "event",
@@ -111,9 +105,9 @@ export class TurnReportScene extends Phaser.Scene {
     // P&L Panel (top of main content area)
     // -----------------------------------------------------------------------
     const plPanel = new Panel(this, {
-      x: MAIN_CONTENT_LEFT,
-      y: CONTENT_TOP,
-      width: MAIN_CONTENT_WIDTH,
+      x: L.mainContentLeft,
+      y: L.contentTop,
+      width: L.mainContentWidth,
       height: 200,
       title: "Profit & Loss",
     });
@@ -368,17 +362,17 @@ export class TurnReportScene extends Phaser.Scene {
     }
 
     new Panel(this, {
-      x: MAIN_CONTENT_LEFT,
-      y: CONTENT_TOP + 210,
-      width: MAIN_CONTENT_WIDTH,
+      x: L.mainContentLeft,
+      y: L.contentTop + 210,
+      width: L.mainContentWidth,
       height: 180,
       title: "Route Performance",
     });
 
     const routeTable = new DataTable(this, {
-      x: MAIN_CONTENT_LEFT + 10,
-      y: CONTENT_TOP + 250,
-      width: MAIN_CONTENT_WIDTH - 20,
+      x: L.mainContentLeft + 10,
+      y: L.contentTop + 250,
+      width: L.mainContentWidth - 20,
       height: 130,
       columns: [
         {
@@ -442,17 +436,17 @@ export class TurnReportScene extends Phaser.Scene {
     if (aiSummaries.length > 0) {
       aiPanelHeight = 110;
       new Panel(this, {
-        x: MAIN_CONTENT_LEFT,
-        y: CONTENT_TOP + 400,
-        width: MAIN_CONTENT_WIDTH,
+        x: L.mainContentLeft,
+        y: L.contentTop + 400,
+        width: L.mainContentWidth,
         height: aiPanelHeight,
         title: "Rival Companies",
       });
 
       const aiTable = new DataTable(this, {
-        x: MAIN_CONTENT_LEFT + 10,
-        y: CONTENT_TOP + 440,
-        width: MAIN_CONTENT_WIDTH - 20,
+        x: L.mainContentLeft + 10,
+        y: L.contentTop + 440,
+        width: L.mainContentWidth - 20,
         height: aiPanelHeight - 50,
         columns: [
           { key: "name", label: "Company", width: 200 },
@@ -505,12 +499,12 @@ export class TurnReportScene extends Phaser.Scene {
     // Bottom row: News Digest (left) + Market Changes (right)
     // -----------------------------------------------------------------------
     const bottomY =
-      CONTENT_TOP + 400 + aiPanelHeight + (aiPanelHeight > 0 ? 10 : 0);
-    const halfWidth = MAIN_CONTENT_WIDTH / 2 - 5;
+      L.contentTop + 400 + aiPanelHeight + (aiPanelHeight > 0 ? 10 : 0);
+    const halfWidth = L.mainContentWidth / 2 - 5;
 
     // News Digest (bottom-left)
     new Panel(this, {
-      x: MAIN_CONTENT_LEFT,
+      x: L.mainContentLeft,
       y: bottomY,
       width: halfWidth,
       height: 200,
@@ -518,7 +512,7 @@ export class TurnReportScene extends Phaser.Scene {
     });
 
     const newsList = new ScrollableList(this, {
-      x: MAIN_CONTENT_LEFT + 10,
+      x: L.mainContentLeft + 10,
       y: bottomY + 40,
       width: halfWidth - 20,
       height: 150,
@@ -562,7 +556,7 @@ export class TurnReportScene extends Phaser.Scene {
 
     // Market Changes (bottom-right)
     const marketPanel = new Panel(this, {
-      x: MAIN_CONTENT_LEFT + MAIN_CONTENT_WIDTH / 2 + 5,
+      x: L.mainContentLeft + L.mainContentWidth / 2 + 5,
       y: bottomY,
       width: halfWidth,
       height: 200,
@@ -639,9 +633,9 @@ export class TurnReportScene extends Phaser.Scene {
     const adviserMsgs = state.adviser?.pendingMessages ?? [];
     if (adviserMsgs.length > 0) {
       const advPanel = new AdviserPanel(this, {
-        x: MAIN_CONTENT_LEFT,
-        y: CONTENT_TOP + CONTENT_HEIGHT - 160,
-        width: MAIN_CONTENT_WIDTH,
+        x: L.mainContentLeft,
+        y: L.contentTop + L.contentHeight - 160,
+        width: L.mainContentWidth,
       });
       advPanel.setDepth(150);
       advPanel.showMessages(adviserMsgs);
@@ -655,8 +649,8 @@ export class TurnReportScene extends Phaser.Scene {
     // Continue button — centered at bottom
     // -----------------------------------------------------------------------
     new Button(this, {
-      x: GAME_WIDTH / 2 - 80,
-      y: GAME_HEIGHT - 60,
+      x: L.gameWidth / 2 - 80,
+      y: L.gameHeight - 60,
       width: 160,
       height: 40,
       label: state.gameOver ? "View Results" : "Continue",

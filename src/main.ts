@@ -1,6 +1,7 @@
 import "./site.css";
 import Phaser from "phaser";
-import { createGameConfig } from "./game/config.ts";
+import { createGameConfig, calculateGameSize } from "./game/config.ts";
+import { updateLayout } from "./ui/Layout.ts";
 import { BootScene } from "./scenes/BootScene.ts";
 import { MainMenuScene } from "./scenes/MainMenuScene.ts";
 import { GalaxySetupScene } from "./scenes/GalaxySetupScene.ts";
@@ -558,6 +559,19 @@ function mountGame(): void {
   activeGame = new Phaser.Game(config);
   window.requestAnimationFrame(() => {
     activeGame?.scale.refresh();
+  });
+
+  // Recalculate virtual resolution on significant viewport changes (orientation flip)
+  let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+  window.addEventListener("resize", () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (!activeGame) return;
+      const size = calculateGameSize();
+      updateLayout(size.width, size.height);
+      activeGame.scale.resize(size.width, size.height);
+      activeGame.scale.refresh();
+    }, 250);
   });
 }
 

@@ -5,11 +5,7 @@ import {
   Panel,
   getTheme,
   colorToString,
-  GAME_WIDTH,
-  GAME_HEIGHT,
-  HUD_TOP_BAR_HEIGHT,
-  HUD_BOTTOM_BAR_HEIGHT,
-  NAV_SIDEBAR_WIDTH,
+  getLayout,
   Tooltip,
   FloatingText,
   AdviserPanel,
@@ -74,6 +70,7 @@ export class GameHUDScene extends Phaser.Scene {
   }
 
   create(): void {
+    const L = getLayout();
     const theme = getTheme();
     const state = gameStore.getState();
     const audio = getAudioDirector();
@@ -89,8 +86,8 @@ export class GameHUDScene extends Phaser.Scene {
         0,
         "hud-bar-bg",
         undefined,
-        GAME_WIDTH,
-        HUD_TOP_BAR_HEIGHT,
+        L.gameWidth,
+        L.hudTopBarHeight,
         10,
         10,
         10,
@@ -102,7 +99,7 @@ export class GameHUDScene extends Phaser.Scene {
     // Company name (left-aligned)
     this.companyLabel = new Label(this, {
       x: 20,
-      y: HUD_TOP_BAR_HEIGHT / 2,
+      y: L.hudTopBarHeight / 2,
       text: state.companyName,
       style: "body",
     });
@@ -124,8 +121,8 @@ export class GameHUDScene extends Phaser.Scene {
     const quarter = ((state.turn - 1) % 4) + 1;
     const year = Math.ceil(state.turn / 4);
     this.turnLabel = new Label(this, {
-      x: GAME_WIDTH / 2,
-      y: HUD_TOP_BAR_HEIGHT / 2,
+      x: L.gameWidth / 2,
+      y: L.hudTopBarHeight / 2,
       text: `Q${quarter} Year ${year}`,
       style: "value",
     });
@@ -145,8 +142,8 @@ export class GameHUDScene extends Phaser.Scene {
 
     // Cash display (right-aligned, green/red conditional)
     this.cashLabel = new Label(this, {
-      x: GAME_WIDTH - 20,
-      y: HUD_TOP_BAR_HEIGHT / 2,
+      x: L.gameWidth - 20,
+      y: L.hudTopBarHeight / 2,
       text: formatCash(state.cash),
       style: "value",
       color: state.cash >= 0 ? theme.colors.profit : theme.colors.loss,
@@ -168,8 +165,8 @@ export class GameHUDScene extends Phaser.Scene {
     // Streak counter (left of cash, hidden until streak >= 2)
     const initStreak = state.storyteller?.consecutiveProfitTurns ?? 0;
     this.streakLabel = new Label(this, {
-      x: GAME_WIDTH - 20,
-      y: HUD_TOP_BAR_HEIGHT / 2 + 1,
+      x: L.gameWidth - 20,
+      y: L.hudTopBarHeight / 2 + 1,
       text: initStreak >= 2 ? `\uD83D\uDD25 ${initStreak}` : "",
       style: "caption",
       color: theme.colors.accent,
@@ -186,9 +183,8 @@ export class GameHUDScene extends Phaser.Scene {
       { label: "Market", scene: "MarketScene", icon: "icon-market" },
     ];
 
-    const navSidebarTop = HUD_TOP_BAR_HEIGHT;
-    const navSidebarH =
-      GAME_HEIGHT - HUD_TOP_BAR_HEIGHT - HUD_BOTTOM_BAR_HEIGHT;
+    const navSidebarTop = L.hudTopBarHeight;
+    const navSidebarH = L.gameHeight - L.hudTopBarHeight - L.hudBottomBarHeight;
 
     // Sidebar background strip
     this.add
@@ -197,7 +193,7 @@ export class GameHUDScene extends Phaser.Scene {
         navSidebarTop,
         "hud-bar-bg",
         undefined,
-        NAV_SIDEBAR_WIDTH,
+        L.navSidebarWidth,
         navSidebarH,
         10,
         10,
@@ -210,7 +206,7 @@ export class GameHUDScene extends Phaser.Scene {
     // Right edge accent line
     this.add
       .rectangle(
-        NAV_SIDEBAR_WIDTH - 1,
+        L.navSidebarWidth - 1,
         navSidebarTop,
         1,
         navSidebarH,
@@ -227,19 +223,19 @@ export class GameHUDScene extends Phaser.Scene {
     const iconBtnSize = 46;
     const iconSpacing = 8;
     const navStartY = navSidebarTop + 12;
-    const navCenterX = NAV_SIDEBAR_WIDTH / 2;
+    const navCenterX = L.navSidebarWidth / 2;
 
     for (let i = 0; i < navItems.length; i++) {
       const item = navItems[i];
       const btnY =
         navStartY + i * (iconBtnSize + iconSpacing) + iconBtnSize / 2;
       const btnContainer = this.add.container(navCenterX, btnY);
-      btnContainer.setSize(NAV_SIDEBAR_WIDTH, iconBtnSize + iconSpacing + 4);
+      btnContainer.setSize(L.navSidebarWidth, iconBtnSize + iconSpacing + 4);
       btnContainer.setInteractive(
         new Phaser.Geom.Rectangle(
-          -NAV_SIDEBAR_WIDTH / 2,
+          -L.navSidebarWidth / 2,
           -(iconBtnSize + iconSpacing + 4) / 2,
-          NAV_SIDEBAR_WIDTH,
+          L.navSidebarWidth,
           iconBtnSize + iconSpacing + 4,
         ),
         Phaser.Geom.Rectangle.Contains,
@@ -326,7 +322,7 @@ export class GameHUDScene extends Phaser.Scene {
       .rectangle(
         0,
         0,
-        NAV_SIDEBAR_WIDTH,
+        L.navSidebarWidth,
         iconBtnSize + iconSpacing,
         0x000000,
         0,
@@ -336,7 +332,7 @@ export class GameHUDScene extends Phaser.Scene {
         new Phaser.Geom.Rectangle(
           0,
           0,
-          NAV_SIDEBAR_WIDTH,
+          L.navSidebarWidth,
           iconBtnSize + iconSpacing,
         ),
         Phaser.Geom.Rectangle.Contains,
@@ -395,7 +391,7 @@ export class GameHUDScene extends Phaser.Scene {
       .rectangle(
         0,
         0,
-        NAV_SIDEBAR_WIDTH,
+        L.navSidebarWidth,
         iconBtnSize + iconSpacing,
         0x000000,
         0,
@@ -405,7 +401,7 @@ export class GameHUDScene extends Phaser.Scene {
         new Phaser.Geom.Rectangle(
           0,
           0,
-          NAV_SIDEBAR_WIDTH,
+          L.navSidebarWidth,
           iconBtnSize + iconSpacing,
         ),
         Phaser.Geom.Rectangle.Contains,
@@ -440,7 +436,7 @@ export class GameHUDScene extends Phaser.Scene {
     });
 
     // ── Bottom Bar ───────────────────────────────────────────
-    const bottomBarY = GAME_HEIGHT - HUD_BOTTOM_BAR_HEIGHT;
+    const bottomBarY = L.gameHeight - L.hudBottomBarHeight;
 
     this.add
       .nineslice(
@@ -448,8 +444,8 @@ export class GameHUDScene extends Phaser.Scene {
         bottomBarY,
         "hud-bar-bg",
         undefined,
-        GAME_WIDTH,
-        HUD_BOTTOM_BAR_HEIGHT,
+        L.gameWidth,
+        L.hudBottomBarHeight,
         10,
         10,
         10,
@@ -461,7 +457,7 @@ export class GameHUDScene extends Phaser.Scene {
     // Phase indicator (left side of bottom bar)
     this.phaseLabel = new Label(this, {
       x: 20,
-      y: GAME_HEIGHT - HUD_BOTTOM_BAR_HEIGHT / 2,
+      y: L.gameHeight - L.hudBottomBarHeight / 2,
       text: `Phase: ${state.phase}`,
       style: "caption",
     });
@@ -472,7 +468,7 @@ export class GameHUDScene extends Phaser.Scene {
     const currentQuarter = ((state.turn - 1) % 4) + 1;
     const currentYear = Math.ceil(state.turn / 4);
     this.bottomTurnInfoLabel = new Label(this, {
-      x: GAME_WIDTH - 12,
+      x: L.gameWidth - 12,
       y: bottomBarY - 2,
       text: `Q${currentQuarter} Y${currentYear}`,
       style: "caption",
@@ -482,7 +478,7 @@ export class GameHUDScene extends Phaser.Scene {
     // End Turn button (rounded, bottom-right corner)
     const endTurnSize = 52;
     this.endTurnButton = new Button(this, {
-      x: GAME_WIDTH - endTurnSize - 12,
+      x: L.gameWidth - endTurnSize - 12,
       y: bottomBarY,
       width: endTurnSize,
       height: endTurnSize,
@@ -495,8 +491,8 @@ export class GameHUDScene extends Phaser.Scene {
 
     // ── Adviser Panel (compact, positioned above bottom bar) ──
     const advPanelW = 440;
-    const advPanelX = NAV_SIDEBAR_WIDTH + 8;
-    const advPanelY = GAME_HEIGHT - HUD_BOTTOM_BAR_HEIGHT - 96;
+    const advPanelX = L.navSidebarWidth + 8;
+    const advPanelY = L.gameHeight - L.hudBottomBarHeight - 96;
     this.adviserPanel = new AdviserPanel(this, {
       x: advPanelX,
       y: advPanelY,
@@ -530,6 +526,7 @@ export class GameHUDScene extends Phaser.Scene {
   }
 
   private updateHUD(): void {
+    const L = getLayout();
     const theme = getTheme();
     const state = gameStore.getState();
     const audio = getAudioDirector();
@@ -569,8 +566,8 @@ export class GameHUDScene extends Phaser.Scene {
       const deltaStr = sign + formatCash(delta);
       new FloatingText(
         this,
-        GAME_WIDTH - 24,
-        HUD_TOP_BAR_HEIGHT / 2 - 8,
+        L.gameWidth - 24,
+        L.hudTopBarHeight / 2 - 8,
         deltaStr,
         isGain ? theme.colors.profit : theme.colors.loss,
         { size: "small", riseDistance: 36, driftX: -12 },
@@ -598,9 +595,9 @@ export class GameHUDScene extends Phaser.Scene {
       if (navEnabled) {
         hitArea.setInteractive(
           new Phaser.Geom.Rectangle(
-            -NAV_SIDEBAR_WIDTH / 2,
+            -L.navSidebarWidth / 2,
             -29,
-            NAV_SIDEBAR_WIDTH,
+            L.navSidebarWidth,
             58,
           ),
           Phaser.Geom.Rectangle.Contains,
@@ -726,12 +723,20 @@ export class GameHUDScene extends Phaser.Scene {
   private openAudioPanel(): void {
     if (this.audioPanelOpen) return;
 
+    const L = getLayout();
     const audio = getAudioDirector();
     const settings = audio.getSettings();
 
     const theme = getTheme();
     const overlay = this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, theme.colors.modalOverlay, 0.35)
+      .rectangle(
+        0,
+        0,
+        L.gameWidth,
+        L.gameHeight,
+        theme.colors.modalOverlay,
+        0.35,
+      )
       .setOrigin(0, 0)
       .setInteractive();
     overlay.on("pointerup", () => {
@@ -741,8 +746,8 @@ export class GameHUDScene extends Phaser.Scene {
 
     const panelW = 420;
     const panelH = 456;
-    const panelX = Math.floor((GAME_WIDTH - panelW) / 2);
-    const panelY = Math.floor((GAME_HEIGHT - panelH) / 2);
+    const panelX = Math.floor((L.gameWidth - panelW) / 2);
+    const panelY = Math.floor((L.gameHeight - panelH) / 2);
     const panel = new Panel(this, {
       x: panelX,
       y: panelY,
