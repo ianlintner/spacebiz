@@ -159,7 +159,8 @@ export function flashScreen(
   const flash = scene.add
     .rectangle(0, 0, cam.width, cam.height, color, 0)
     .setOrigin(0, 0)
-    .setDepth(950);
+    .setDepth(950)
+    .setScrollFactor(0);
 
   scene.tweens.add({
     targets: flash,

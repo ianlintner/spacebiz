@@ -63,7 +63,8 @@ export class MilestoneOverlay {
       .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1)
       .setOrigin(0, 0)
       .setDepth(depth)
-      .setAlpha(0);
+      .setAlpha(0)
+      .setScrollFactor(0);
 
     // Center banner background
     const bannerH = subtext ? 150 : 120;
@@ -74,19 +75,22 @@ export class MilestoneOverlay {
       .rectangle(cx, cy, bannerW + 6, bannerH + 6, 0x000000, 1)
       .setOrigin(0.5, 0.5)
       .setDepth(depth + 1)
-      .setAlpha(0);
+      .setAlpha(0)
+      .setScrollFactor(0);
 
     const banner = scene.add
       .rectangle(cx, cy, bannerW, bannerH, colors.bg, 1)
       .setOrigin(0.5, 0.5)
       .setDepth(depth + 1)
-      .setAlpha(0);
+      .setAlpha(0)
+      .setScrollFactor(0);
 
     // Inner glow / vignette around the banner edges
     const innerGlow = scene.add
       .graphics()
       .setDepth(depth + 1)
-      .setAlpha(0);
+      .setAlpha(0)
+      .setScrollFactor(0);
     innerGlow.lineStyle(8, colors.glow, 0.15);
     innerGlow.strokeRect(
       cx - bannerW / 2 + 4,
@@ -96,7 +100,10 @@ export class MilestoneOverlay {
     );
 
     // Glow border
-    const border = scene.add.graphics().setDepth(depth + 1);
+    const border = scene.add
+      .graphics()
+      .setDepth(depth + 1)
+      .setScrollFactor(0);
     const drawBorder = (alpha: number) => {
       border.clear();
       border.lineStyle(2, colors.glow, alpha);
@@ -131,7 +138,8 @@ export class MilestoneOverlay {
       .setOrigin(0.5, 0.5)
       .setDepth(depth + 2)
       .setAlpha(0)
-      .setScale(0.5);
+      .setScale(0.5)
+      .setScrollFactor(0);
 
     // Subtext
     let subtextObj: Phaser.GameObjects.Text | null = null;
@@ -148,7 +156,8 @@ export class MilestoneOverlay {
         })
         .setOrigin(0.5, 0.5)
         .setDepth(depth + 2)
-        .setAlpha(0);
+        .setAlpha(0)
+        .setScrollFactor(0);
     }
 
     // Shimmer particles — 8 radial dots bursting outward
@@ -156,7 +165,8 @@ export class MilestoneOverlay {
     for (let i = 0; i < 10; i++) {
       const dot = scene.add
         .circle(cx, cy, 4, colors.glow, 0)
-        .setDepth(depth + 1);
+        .setDepth(depth + 1)
+        .setScrollFactor(0);
       shimmerDots.push(dot);
     }
 
