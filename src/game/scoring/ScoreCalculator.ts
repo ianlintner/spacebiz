@@ -34,6 +34,7 @@ const MAX_HIGH_SCORES = 10;
  *   + totalCargoDelivered * 0.5
  *   + routeCount * 500
  *   + empiresTraded * 1000
+ *   + distinctCargoTypesDelivered * CARGO_DIVERSITY_BONUS
  */
 export function calculateScore(state: GameState): number {
   // Net worth: cash + fleet value - loan balances
@@ -50,15 +51,24 @@ export function calculateScore(state: GameState): number {
   // Reputation bonus
   const reputationBonus = state.reputation * 100;
 
-  // Total cargo delivered across all turns
+  // Total cargo delivered across all turns + count distinct cargo types
   const allCargoTypes: CargoTypeT[] = Object.values(CargoType);
   let totalCargoDelivered = 0;
+  const cargoTypeTotals = new Map<CargoTypeT, number>();
   for (const turnResult of state.history) {
     for (const ct of allCargoTypes) {
-      totalCargoDelivered += turnResult.cargoDelivered[ct] ?? 0;
+      const amount = turnResult.cargoDelivered[ct] ?? 0;
+      totalCargoDelivered += amount;
+      if (amount > 0) {
+        cargoTypeTotals.set(ct, (cargoTypeTotals.get(ct) ?? 0) + amount);
+      }
     }
   }
   const cargoBonus = totalCargoDelivered * 0.5;
+
+  // Cargo diversity bonus: reward trading many different cargo types
+  const distinctCargoTypes = cargoTypeTotals.size;
+  const diversityBonus = distinctCargoTypes * CARGO_DIVERSITY_BONUS;
 
   // Route count bonus
   const routeBonus = state.activeRoutes.length * 500;
@@ -68,7 +78,12 @@ export function calculateScore(state: GameState): number {
   const empireBonus = empiresTraded * 1000;
 
   const score =
-    netWorth + reputationBonus + cargoBonus + routeBonus + empireBonus;
+    netWorth +
+    reputationBonus +
+    cargoBonus +
+    routeBonus +
+    empireBonus +
+    diversityBonus;
   return Math.round(score);
 }
 
