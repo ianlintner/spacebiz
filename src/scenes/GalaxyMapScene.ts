@@ -51,8 +51,8 @@ export class GalaxyMapScene extends Phaser.Scene {
       if (sys.y > wMaxY) wMaxY = sys.y;
     }
 
-    // ── Starfield background (fills visible area) ──
-    createStarfield(this);
+    // ── Starfield background (fixed to viewport so it always fills the screen) ──
+    createStarfield(this).setScrollFactor(0);
 
     // ── Empire territory borders (Stellaris-inspired) ──
     drawEmpireBorders(this, systems, empires, {

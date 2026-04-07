@@ -103,10 +103,8 @@ export function drawEmpireBorders(
         }
       }
 
-      // Only claim cells within the influence radius of the nearest system
-      if (bestDist <= (cfg.influence + 40) * (cfg.influence + 40)) {
-        ownership[row * cols + col] = bestEmpire;
-      }
+      // Every cell is assigned to the nearest empire — no gaps between territories
+      ownership[row * cols + col] = bestEmpire;
     }
   }
 
