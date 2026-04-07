@@ -155,10 +155,17 @@ export class RoutesScene extends Phaser.Scene {
     const contentInnerW = panelW - 24;
     const tabBarHeight = 40; // theme.button.height
     const summaryHeight = 50;
+    const filterRowHeight = 32; // cargo filter buttons
     const buttonAreaHeight = 52; // 8px gap + 40px button + 4px pad
-    const tableTop = tabContentY + summaryHeight;
+    const tableTop = tabContentY + summaryHeight + filterRowHeight;
     const tableHeight =
-      panelH - 38 - tabBarHeight - summaryHeight - buttonAreaHeight - 8; // 8px bottom pad
+      panelH -
+      38 -
+      tabBarHeight -
+      summaryHeight -
+      filterRowHeight -
+      buttonAreaHeight -
+      8; // 8px bottom pad
 
     // ════════════════════════════════════════════════════════════════
     // TAB 0 — ROUTE FINDER
