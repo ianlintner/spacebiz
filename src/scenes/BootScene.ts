@@ -1,6 +1,11 @@
 import Phaser from "phaser";
 import type { ThemeConfig } from "../ui/index.ts";
-import { getTheme, lerpColor, registerUiSoundHandler } from "../ui/index.ts";
+import {
+  getTheme,
+  lerpColor,
+  registerUiSoundHandler,
+  generateCargoIcons,
+} from "../ui/index.ts";
 import { getAudioDirector, type SfxKey } from "../audio/AudioDirector.ts";
 
 export class BootScene extends Phaser.Scene {
@@ -29,6 +34,7 @@ export class BootScene extends Phaser.Scene {
     this.generateGlowDot();
     this.generatePixelWhite();
     this.generateNavIcons();
+    generateCargoIcons(this.textures);
 
     // Proceed to main menu after textures are ready
     this.scene.start("MainMenuScene");
