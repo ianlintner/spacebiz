@@ -85,3 +85,16 @@ export type { IconButtonConfig } from "./IconButton.ts";
 
 export { StatusBadge } from "./StatusBadge.ts";
 export type { StatusBadgeConfig, BadgeVariant } from "./StatusBadge.ts";
+
+// Cargo icon utilities
+export {
+  generateCargoIcons,
+  getCargoIconKey,
+  getCargoColor,
+  getCargoLabel,
+  CARGO_COLORS,
+  CARGO_LABELS,
+  CARGO_ICON_PREFIX,
+  CARGO_TYPE_LIST,
+} from "./CargoIcons.ts";
+export type { CargoTypeValue } from "./CargoIcons.ts";
