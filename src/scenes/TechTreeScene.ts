@@ -101,10 +101,9 @@ export class TechTreeScene extends Phaser.Scene {
       height: L.contentHeight,
     });
     this.portrait.updatePortrait("event", 0, "Research Lab", [
-      "Select a technology to view details.",
-      "",
-      "Research provides route slots,",
-      "cost reductions, and special abilities.",
+      { label: "Info", value: "Select a technology to view details." },
+      { label: "", value: "Research provides route slots," },
+      { label: "", value: "cost reductions, and special abilities." },
     ]);
 
     // Main panel
