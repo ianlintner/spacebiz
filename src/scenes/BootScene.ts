@@ -5,6 +5,7 @@ import {
   lerpColor,
   registerUiSoundHandler,
   generateCargoIcons,
+  generateShipIcons,
 } from "../ui/index.ts";
 import { getAudioDirector, type SfxKey } from "../audio/AudioDirector.ts";
 
@@ -35,6 +36,7 @@ export class BootScene extends Phaser.Scene {
     this.generatePixelWhite();
     this.generateNavIcons();
     generateCargoIcons(this.textures);
+    generateShipIcons(this.textures);
 
     // Proceed to main menu after textures are ready
     this.scene.start("MainMenuScene");

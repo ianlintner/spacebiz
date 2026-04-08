@@ -8,6 +8,8 @@ import {
   addPulseTween,
   addTwinkleTween,
   registerAmbientCleanup,
+  getShipIconKey,
+  getShipColor,
 } from "../ui/index.ts";
 import { drawEmpireBorders } from "../ui/EmpireBorders.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
@@ -191,9 +193,10 @@ export class GalaxyMapScene extends Phaser.Scene {
       systemMap.set(sys.id, { x: sys.x, y: sys.y });
     }
 
-    // ── Active route lines + flow pips ──
+    // ── Active route lines + ship sprites ──
     const routeGraphics = this.add.graphics();
     routeGraphics.lineStyle(1, theme.colors.accent, 0.4);
+    const { fleet } = state;
     for (const route of routes) {
       const originSysId = planetSystemMap.get(route.originPlanetId);
       const destSysId = planetSystemMap.get(route.destinationPlanetId);
@@ -207,23 +210,65 @@ export class GalaxyMapScene extends Phaser.Scene {
       routeGraphics.lineTo(destSys.x, destSys.y + L.contentTop);
       routeGraphics.strokePath();
 
-      const pip = this.add.circle(
-        originSys.x,
-        originSys.y + L.contentTop,
-        2,
-        theme.colors.accent,
-        0.7,
-      );
-      this.tweens.add({
-        targets: pip,
-        x: destSys.x,
-        y: destSys.y + L.contentTop,
-        duration: theme.ambient.routeFlowDuration,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-        delay: Math.random() * theme.ambient.routeFlowDuration,
-      });
+      // Determine ship class for icon — use first assigned ship, fallback to pip
+      const firstShipId = route.assignedShipIds[0];
+      const firstShip = firstShipId
+        ? fleet.find((s) => s.id === firstShipId)
+        : undefined;
+      const shipIconKey = firstShip
+        ? getShipIconKey(firstShip.class)
+        : undefined;
+      const shipTint = firstShip
+        ? getShipColor(firstShip.class)
+        : theme.colors.accent;
+
+      const ox = originSys.x;
+      const oy = originSys.y + L.contentTop;
+      const dx = destSys.x;
+      const dy = destSys.y + L.contentTop;
+
+      // Calculate angle from origin to destination for rotation
+      const angle = Math.atan2(dy - oy, dx - ox);
+
+      if (shipIconKey && this.textures.exists(shipIconKey)) {
+        // Ship sprite traveling the route
+        const shipSprite = this.add
+          .image(ox, oy, shipIconKey)
+          .setDisplaySize(16, 16)
+          .setTint(shipTint)
+          .setAlpha(0.85)
+          .setRotation(angle);
+
+        this.tweens.add({
+          targets: shipSprite,
+          x: dx,
+          y: dy,
+          duration: theme.ambient.routeFlowDuration,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+          delay: Math.random() * theme.ambient.routeFlowDuration,
+          onYoyo: () => {
+            shipSprite.setRotation(angle + Math.PI);
+          },
+          onRepeat: () => {
+            shipSprite.setRotation(angle);
+          },
+        });
+      } else {
+        // Fallback circle pip for routes without assigned ships
+        const pip = this.add.circle(ox, oy, 2, theme.colors.accent, 0.7);
+        this.tweens.add({
+          targets: pip,
+          x: dx,
+          y: dy,
+          duration: theme.ambient.routeFlowDuration,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+          delay: Math.random() * theme.ambient.routeFlowDuration,
+        });
+      }
     }
 
     this.tweens.add({

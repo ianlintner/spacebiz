@@ -15,9 +15,9 @@ export interface ColumnDef {
   /** Optional tint color for the header icon (defaults to accent). */
   headerIconTint?: number;
   /** Return a texture key to display an icon in each cell (left of text). */
-  iconFn?: (value: unknown) => string | null;
+  iconFn?: (value: unknown, row?: Record<string, unknown>) => string | null;
   /** Return a tint color for the cell icon (defaults to text color). */
-  iconTintFn?: (value: unknown) => number | null;
+  iconTintFn?: (value: unknown, row?: Record<string, unknown>) => number | null;
 }
 
 export interface DataTableConfig {
@@ -385,13 +385,13 @@ export class DataTable extends Phaser.GameObjects.Container {
 
         // Cell icon (left of text in the cell)
         if (col.iconFn) {
-          const iconKey = col.iconFn(raw);
+          const iconKey = col.iconFn(raw, row);
           if (iconKey && this.scene.textures.exists(iconKey)) {
             const icon = this.scene.add
               .image(x + 8 + iconSize / 2, rowTop + 8 + iconSize / 2, iconKey)
               .setDisplaySize(iconSize, iconSize)
               .setTint(
-                (col.iconTintFn ? col.iconTintFn(raw) : null) ??
+                (col.iconTintFn ? col.iconTintFn(raw, row) : null) ??
                   color ??
                   theme.colors.text,
               );

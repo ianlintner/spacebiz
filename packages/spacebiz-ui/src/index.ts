@@ -98,3 +98,16 @@ export {
   CARGO_TYPE_LIST,
 } from "./CargoIcons.ts";
 export type { CargoTypeValue } from "./CargoIcons.ts";
+
+// Ship icon utilities
+export {
+  generateShipIcons,
+  getShipIconKey,
+  getShipColor,
+  getShipLabel,
+  SHIP_COLORS,
+  SHIP_LABELS,
+  SHIP_ICON_PREFIX,
+  SHIP_CLASS_LIST,
+} from "./ShipIcons.ts";
+export type { ShipClassValue } from "./ShipIcons.ts";

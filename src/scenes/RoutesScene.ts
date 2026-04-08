@@ -20,6 +20,8 @@ import {
   getCargoIconKey,
   getCargoColor,
   getCargoLabel,
+  getShipIconKey,
+  getShipColor,
 } from "../ui/index.ts";
 import {
   assignShipToRoute,
@@ -294,6 +296,14 @@ export class RoutesScene extends Phaser.Scene {
           label: "Ship",
           width: 130,
           sortable: true,
+          iconFn: (_v, row) => {
+            const sc = row?.["shipClass"] as string | undefined;
+            return sc ? getShipIconKey(sc) : null;
+          },
+          iconTintFn: (_v, row) => {
+            const sc = row?.["shipClass"] as string | undefined;
+            return sc ? getShipColor(sc) : null;
+          },
         },
       ],
       keyboardNavigation: true,
@@ -390,9 +400,17 @@ export class RoutesScene extends Phaser.Scene {
         {
           key: "ships",
           label: "Ships",
-          width: 50,
+          width: 70,
           align: "center",
           sortable: true,
+          iconFn: (_v, row) => {
+            const sc = row?.["shipClass"] as string | undefined;
+            return sc ? getShipIconKey(sc) : null;
+          },
+          iconTintFn: (_v, row) => {
+            const sc = row?.["shipClass"] as string | undefined;
+            return sc ? getShipColor(sc) : null;
+          },
         },
         {
           key: "cargoType",
@@ -564,6 +582,7 @@ export class RoutesScene extends Phaser.Scene {
         trend: trendArrow(opp.destTrend),
         dist: opp.distance.toFixed(1),
         profit: opp.estProfit,
+        shipClass: opp.shipClass,
         ship: opp.alreadyActive
           ? `\u2713 ${opp.shipName}`
           : opp.shipSource === "autoBuy"
@@ -807,6 +826,7 @@ export class RoutesScene extends Phaser.Scene {
           planetMap.get(route.destinationPlanetId) ?? route.destinationPlanetId,
         distance: route.distance,
         ships: route.assignedShipIds.length,
+        shipClass: firstShip?.class ?? null,
         cargoType: route.cargoType ?? "None",
         revenue,
         fuelCost,

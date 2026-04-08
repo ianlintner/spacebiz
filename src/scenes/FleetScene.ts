@@ -16,6 +16,9 @@ import {
   SceneUiDirector,
   createStarfield,
   getLayout,
+  getShipIconKey,
+  getShipColor,
+  getShipLabel,
 } from "../ui/index.ts";
 import {
   buyShip,
@@ -97,7 +100,15 @@ export class FleetScene extends Phaser.Scene {
       height: content.height - 80,
       columns: [
         { key: "name", label: "Name", width: 110, sortable: true },
-        { key: "class", label: "Class", width: 100, sortable: true },
+        {
+          key: "class",
+          label: "Class",
+          width: 120,
+          sortable: true,
+          format: (v) => getShipLabel(v as string),
+          iconFn: (v) => getShipIconKey(v as string),
+          iconTintFn: (v) => getShipColor(v as string),
+        },
         {
           key: "cargo",
           label: "Cargo",
@@ -317,7 +328,17 @@ export class FleetScene extends Phaser.Scene {
       const canAfford = state.cash >= template.purchaseCost;
       const itemContainer = this.add.container(0, 0);
 
-      const nameText = this.add.text(10, 6, template.name, {
+      // Ship class icon
+      const iconKey = getShipIconKey(sc);
+      if (this.textures.exists(iconKey)) {
+        const icon = this.add
+          .image(18, 22, iconKey)
+          .setDisplaySize(20, 20)
+          .setTint(getShipColor(sc));
+        itemContainer.add(icon);
+      }
+
+      const nameText = this.add.text(34, 6, template.name, {
         fontSize: `${theme.fonts.body.size}px`,
         fontFamily: theme.fonts.body.family,
         color: colorToString(
@@ -326,7 +347,7 @@ export class FleetScene extends Phaser.Scene {
       });
 
       const statsText = this.add.text(
-        10,
+        34,
         26,
         `Cargo: ${template.cargoCapacity}  Pax: ${template.passengerCapacity}  Spd: ${template.speed}  Cost: ${formatCash(template.purchaseCost)}`,
         {
