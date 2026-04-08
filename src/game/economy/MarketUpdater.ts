@@ -62,9 +62,9 @@ export function updateMarket(market: MarketState, rng: SeededRNG): MarketState {
     newPlanetMarkets[planetId] = newEntries as PlanetMarket;
   }
 
-  // Step 4: Fluctuate fuel price
-  const fuelChange = rng.nextFloat(-0.05, 0.05);
-  const newFuelPrice = market.fuelPrice * (1 + fuelChange);
+  // Step 4: Fluctuate fuel price (additive walk to avoid drift)
+  const fuelChange = rng.nextFloat(-0.5, 0.5);
+  const newFuelPrice = market.fuelPrice + fuelChange;
   const minFuel = BASE_FUEL_PRICE * 0.5;
   const maxFuel = BASE_FUEL_PRICE * 1.5;
   const clampedFuelPrice = Math.min(maxFuel, Math.max(minFuel, newFuelPrice));

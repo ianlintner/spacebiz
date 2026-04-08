@@ -9,12 +9,10 @@ import {
   ScrollableList,
   PortraitPanel,
   createStarfield,
-  AdviserPanel,
   MilestoneOverlay,
   getLayout,
 } from "../ui/index.ts";
 import { autoSave } from "../game/SaveManager.ts";
-import { consumeMessages } from "../game/adviser/AdviserEngine.ts";
 import type { TurnResult } from "../data/types.ts";
 import type { GameHUDScene } from "./GameHUDScene.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
@@ -50,6 +48,14 @@ export class TurnReportScene extends Phaser.Scene {
     const theme = getTheme();
     const state = gameStore.getState();
     getAudioDirector().setMusicState("report");
+
+    // Flow constants: ensure all panels fit in contentHeight (612px)
+    const TR_GAP = 4;
+    const TR_ROUTE_H = 125;
+    const TR_AI_H = 116;
+    const TR_BOTTOM_H = 115;
+    const TR_ROUTE_Y = L.contentTop + 200 + TR_GAP;
+    const TR_AI_Y = TR_ROUTE_Y + TR_ROUTE_H + TR_GAP;
 
     const history = state.history;
     const lastTurn: TurnResult | undefined = history[history.length - 1];
@@ -363,17 +369,17 @@ export class TurnReportScene extends Phaser.Scene {
 
     new Panel(this, {
       x: L.mainContentLeft,
-      y: L.contentTop + 210,
+      y: TR_ROUTE_Y,
       width: L.mainContentWidth,
-      height: 180,
+      height: TR_ROUTE_H,
       title: "Route Performance",
     });
 
     const routeTable = new DataTable(this, {
       x: L.mainContentLeft + 10,
-      y: L.contentTop + 250,
+      y: TR_ROUTE_Y + 38,
       width: L.mainContentWidth - 20,
-      height: 130,
+      height: TR_ROUTE_H - 44,
       columns: [
         {
           key: "route",
@@ -432,22 +438,20 @@ export class TurnReportScene extends Phaser.Scene {
     // AI Rivals Summary (below route performance)
     // -----------------------------------------------------------------------
     const aiSummaries = lastTurn.aiSummaries ?? [];
-    let aiPanelHeight = 0;
     if (aiSummaries.length > 0) {
-      aiPanelHeight = 110;
       new Panel(this, {
         x: L.mainContentLeft,
-        y: L.contentTop + 400,
+        y: TR_AI_Y,
         width: L.mainContentWidth,
-        height: aiPanelHeight,
+        height: TR_AI_H,
         title: "Rival Companies",
       });
 
       const aiTable = new DataTable(this, {
         x: L.mainContentLeft + 10,
-        y: L.contentTop + 440,
+        y: TR_AI_Y + 38,
         width: L.mainContentWidth - 20,
-        height: aiPanelHeight - 50,
+        height: TR_AI_H - 44,
         columns: [
           { key: "name", label: "Company", width: 200 },
           {
@@ -499,7 +503,7 @@ export class TurnReportScene extends Phaser.Scene {
     // Bottom row: News Digest (left) + Market Changes (right)
     // -----------------------------------------------------------------------
     const bottomY =
-      L.contentTop + 400 + aiPanelHeight + (aiPanelHeight > 0 ? 10 : 0);
+      aiSummaries.length > 0 ? TR_AI_Y + TR_AI_H + TR_GAP : TR_AI_Y;
     const halfWidth = L.mainContentWidth / 2 - 5;
 
     // News Digest (bottom-left)
@@ -507,7 +511,7 @@ export class TurnReportScene extends Phaser.Scene {
       x: L.mainContentLeft,
       y: bottomY,
       width: halfWidth,
-      height: 200,
+      height: TR_BOTTOM_H,
       title: "News Digest",
     });
 
@@ -515,7 +519,7 @@ export class TurnReportScene extends Phaser.Scene {
       x: L.mainContentLeft + 10,
       y: bottomY + 40,
       width: halfWidth - 20,
-      height: 150,
+      height: TR_BOTTOM_H - 44,
       itemHeight: 60,
     });
 
@@ -559,7 +563,7 @@ export class TurnReportScene extends Phaser.Scene {
       x: L.mainContentLeft + L.mainContentWidth / 2 + 5,
       y: bottomY,
       width: halfWidth,
-      height: 200,
+      height: TR_BOTTOM_H,
       title: "Market Changes",
     });
     const mpContent = marketPanel.getContentArea();
@@ -630,7 +634,7 @@ export class TurnReportScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     // Continue button — centered above bottom HUD bar
     // -----------------------------------------------------------------------
-    const btnY = L.contentTop + L.contentHeight - 50;
+    const btnY = bottomY + TR_BOTTOM_H + TR_GAP;
     new Button(this, {
       x: L.gameWidth / 2 - 80,
       y: btnY,
@@ -648,23 +652,5 @@ export class TurnReportScene extends Phaser.Scene {
         }
       },
     });
-
-    // -----------------------------------------------------------------------
-    // Adviser panel — Rex's commentary on the turn (above continue button)
-    // -----------------------------------------------------------------------
-    const adviserMsgs = state.adviser?.pendingMessages ?? [];
-    if (adviserMsgs.length > 0) {
-      const advPanel = new AdviserPanel(this, {
-        x: L.mainContentLeft,
-        y: btnY - 10,
-        width: L.mainContentWidth,
-      });
-      advPanel.setDepth(150);
-      advPanel.showMessages(adviserMsgs);
-
-      // Consume messages from state so they aren't shown again
-      const { adviser: updatedAdviser } = consumeMessages(state.adviser);
-      gameStore.update({ adviser: updatedAdviser });
-    }
   }
 }

@@ -152,14 +152,30 @@ function createAICompanies(
     const empireId = empireQueue[i];
     const personality = AI_PERSONALITIES[i % AI_PERSONALITIES.length];
 
-    // AI companies start with no fleet — they auto-purchase ships
-    const aiFleet: Ship[] = [];
+    // AI companies start with one CargoShuttle so they can open routes immediately
+    const starterTemplate = SHIP_TEMPLATES[ShipClass.CargoShuttle];
+    const starterShip: Ship = {
+      id: `ai-${i}-ship-0`,
+      name: starterTemplate.name,
+      class: starterTemplate.class,
+      cargoCapacity: starterTemplate.cargoCapacity,
+      passengerCapacity: starterTemplate.passengerCapacity,
+      speed: starterTemplate.speed,
+      fuelEfficiency: starterTemplate.fuelEfficiency,
+      reliability: starterTemplate.baseReliability,
+      age: 0,
+      condition: 100,
+      purchaseCost: starterTemplate.purchaseCost,
+      maintenanceCost: starterTemplate.baseMaintenance,
+      assignedRouteId: null,
+    };
+    const aiFleet: Ship[] = [starterShip];
 
     const company: AICompany = {
       id: `ai-${i}`,
       name,
       empireId,
-      cash: AI_STARTING_CASH,
+      cash: AI_STARTING_CASH - starterTemplate.purchaseCost,
       fleet: aiFleet,
       activeRoutes: [] as ActiveRoute[],
       reputation: 50,

@@ -139,8 +139,10 @@ export const TARIFF_HOSTILE_MAX = 0.2;
 // ── AI Constants ───────────────────────────────────────────────
 
 export const AI_STARTING_CASH = 200000;
-export const AI_BUY_THRESHOLD_MULTIPLIER = 2; // buy when cash > 2× cheapest ship
+export const AI_BUY_THRESHOLD_MULTIPLIER = 1.5; // buy when cash > 1.5× cheapest ship
 export const AI_MAX_ROUTES = 12; // cap routes per AI company
+export const AI_MAX_FLEET = 15; // cap fleet size per AI company
+export const AI_MAX_PURCHASES_PER_TURN = 2; // max ships bought per turn
 
 export const SHIP_TEMPLATES: Record<ShipClass, ShipTemplate> = {
   [ShipClass.CargoShuttle]: {
@@ -527,7 +529,7 @@ export const AI_PERSONALITY_SLOTS: Record<
   string,
   { baseSlots: number; maxSlots: number }
 > = {
-  aggressiveExpander: { baseSlots: 5, maxSlots: 10 },
-  steadyHauler: { baseSlots: 4, maxSlots: 7 },
+  aggressiveExpander: { baseSlots: 5, maxSlots: 12 },
+  steadyHauler: { baseSlots: 4, maxSlots: 9 },
   cherryPicker: { baseSlots: 4, maxSlots: 8 },
 };

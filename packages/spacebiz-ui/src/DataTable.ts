@@ -160,7 +160,7 @@ export class DataTable extends Phaser.GameObjects.Container {
     const scrollBarWidth = 4;
     const usableWidth = tableWidth - scrollBarWidth;
     const totalDefined = columns.reduce((sum, c) => sum + c.width, 0);
-    if (totalDefined >= usableWidth) return columns;
+    if (totalDefined === 0 || totalDefined === usableWidth) return columns;
     const scale = usableWidth / totalDefined;
     return columns.map((c) => ({ ...c, width: Math.floor(c.width * scale) }));
   }

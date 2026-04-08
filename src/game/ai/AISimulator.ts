@@ -14,6 +14,8 @@ import {
   BREAKDOWN_THRESHOLD,
   AI_BUY_THRESHOLD_MULTIPLIER,
   AI_MAX_ROUTES,
+  AI_MAX_FLEET,
+  AI_MAX_PURCHASES_PER_TURN,
   AI_PERSONALITY_SLOTS,
   AI_SLOT_GROWTH_INTERVAL,
 } from "../../data/constants.ts";
@@ -309,14 +311,15 @@ function makeAIDecisions(
     ...Object.values(SHIP_TEMPLATES).map((t) => t.purchaseCost),
   );
 
-  // ── Buy ships ──
+  // ── Buy ships (may buy multiple per turn) ──
   const buyThreshold = cheapestShipCost * AI_BUY_THRESHOLD_MULTIPLIER;
-  const idleShips = currentFleet.filter((s) => !s.assignedRouteId);
+  let purchasesMade = 0;
 
-  if (
+  while (
     currentCash > buyThreshold &&
-    idleShips.length < 2 &&
-    currentFleet.length < 10
+    purchasesMade < AI_MAX_PURCHASES_PER_TURN &&
+    currentFleet.filter((s) => !s.assignedRouteId).length < 2 &&
+    currentFleet.length < AI_MAX_FLEET
   ) {
     // Pick a ship class based on personality
     const shipClass = pickShipClassForPersonality(
@@ -324,56 +327,78 @@ function makeAIDecisions(
       currentCash,
       rng,
     );
-    if (shipClass) {
-      const template = SHIP_TEMPLATES[shipClass];
-      if (template.purchaseCost <= currentCash) {
-        const newShip: Ship = {
-          id: `${company.id}-ship-${currentFleet.length}`,
-          name: template.name,
-          class: template.class,
-          cargoCapacity: template.cargoCapacity,
-          passengerCapacity: template.passengerCapacity,
-          speed: template.speed,
-          fuelEfficiency: template.fuelEfficiency,
-          reliability: template.baseReliability,
-          age: 0,
-          condition: 100,
-          purchaseCost: template.purchaseCost,
-          maintenanceCost: template.baseMaintenance,
-          assignedRouteId: null,
-        };
-        currentFleet = [...currentFleet, newShip];
-        currentCash -= template.purchaseCost;
-      }
-    }
+    if (!shipClass) break;
+
+    const template = SHIP_TEMPLATES[shipClass];
+    if (template.purchaseCost > currentCash) break;
+
+    const newShip: Ship = {
+      id: `${company.id}-ship-${currentFleet.length}`,
+      name: template.name,
+      class: template.class,
+      cargoCapacity: template.cargoCapacity,
+      passengerCapacity: template.passengerCapacity,
+      speed: template.speed,
+      fuelEfficiency: template.fuelEfficiency,
+      reliability: template.baseReliability,
+      age: 0,
+      condition: 100,
+      purchaseCost: template.purchaseCost,
+      maintenanceCost: template.baseMaintenance,
+      assignedRouteId: null,
+    };
+    currentFleet = [...currentFleet, newShip];
+    currentCash -= template.purchaseCost;
+    purchasesMade++;
   }
 
-  // ── Open routes ──
+  // ── Open routes (may open multiple per turn) ──
   const aiSlotLimit = getAISlotLimit(company.personality, state.turn);
-  if (currentRoutes.length < aiSlotLimit) {
+  let routeAttempts = 0;
+  const maxRouteAttempts = 2;
+  while (
+    currentRoutes.length < aiSlotLimit &&
+    routeAttempts < maxRouteAttempts
+  ) {
     const newIdleShips = currentFleet.filter((s) => !s.assignedRouteId);
-    if (newIdleShips.length > 0) {
-      const routeResult = openAIRoute(
-        company,
-        newIdleShips,
-        currentRoutes,
-        state,
-        market,
-        rng,
-      );
-      if (routeResult) {
-        // Deduct license fee for the new route
-        const newRoute = routeResult.routes[routeResult.routes.length - 1];
-        const licenseFee = calculateLicenseFee(
-          newRoute.distance,
-          currentRoutes.length,
-        );
-        if (currentCash >= licenseFee) {
-          currentRoutes = routeResult.routes;
-          currentFleet = routeResult.fleet;
-          currentCash -= licenseFee;
-        }
-      }
+    if (newIdleShips.length === 0) break;
+
+    const routeResult = openAIRoute(
+      company,
+      newIdleShips,
+      currentRoutes,
+      state,
+      market,
+      rng,
+    );
+    if (!routeResult) break;
+
+    // Deduct license fee for the new route
+    const newRoute = routeResult.routes[routeResult.routes.length - 1];
+    const licenseFee = calculateLicenseFee(
+      newRoute.distance,
+      currentRoutes.length,
+    );
+    if (currentCash >= licenseFee) {
+      currentRoutes = routeResult.routes;
+      currentFleet = routeResult.fleet;
+      currentCash -= licenseFee;
+    } else {
+      break;
+    }
+    routeAttempts++;
+  }
+
+  // ── Sell idle ships when cash is critically low ──
+  if (currentCash < 0) {
+    const idleToSell = currentFleet
+      .filter((s) => !s.assignedRouteId)
+      .sort((a, b) => calculateShipValue(b) - calculateShipValue(a));
+    for (const ship of idleToSell) {
+      if (currentCash >= 0) break;
+      const salePrice = calculateShipValue(ship);
+      currentFleet = currentFleet.filter((s) => s.id !== ship.id);
+      currentCash += salePrice;
     }
   }
 
@@ -392,21 +417,24 @@ function pickShipClassForPersonality(
 
   switch (personality) {
     case AIPersonality.AggressiveExpander:
-      // Buy the most expensive ship affordable — max capacity
+      // Buy upper-mid range ship — aggressive but not reckless
       affordable.sort(
         (a, b) =>
           SHIP_TEMPLATES[b].purchaseCost - SHIP_TEMPLATES[a].purchaseCost,
       );
-      return affordable[0];
+      // Pick from upper third, not always the most expensive
+      return affordable[
+        Math.min(Math.floor(affordable.length / 3), affordable.length - 1)
+      ];
 
     case AIPersonality.SteadyHauler:
-      // Buy a mid-range cargo ship
+      // Buy the highest-capacity cargo ship affordable
       affordable.sort(
         (a, b) =>
           SHIP_TEMPLATES[b].cargoCapacity - SHIP_TEMPLATES[a].cargoCapacity,
       );
-      // Pick from the middle range
-      return affordable[Math.floor(affordable.length / 2)];
+      // Pick the best cargo hauler, not the middle
+      return affordable[0];
 
     case AIPersonality.CherryPicker:
       // Buy fast ships for high-margin routes
@@ -448,9 +476,9 @@ function openAIRoute(
 
   switch (company.personality) {
     case AIPersonality.SteadyHauler:
-      // Prefer intra-empire routes
+      // Prefer home empire origins, but look at all destinations
       candidateOrigins = homePlanets;
-      candidateDestinations = homePlanets;
+      candidateDestinations = planets;
       break;
 
     case AIPersonality.CherryPicker:
@@ -487,11 +515,11 @@ function openAIRoute(
   } | null = null;
 
   // Sample routes (don't evaluate all — too expensive for AI)
-  const sampleSize = Math.min(candidateOrigins.length, 8);
+  const sampleSize = Math.min(candidateOrigins.length, 12);
   const sampledOrigins = rng
     .shuffle([...candidateOrigins])
     .slice(0, sampleSize);
-  const destSampleSize = Math.min(candidateDestinations.length, 8);
+  const destSampleSize = Math.min(candidateDestinations.length, 12);
   const sampledDests = rng
     .shuffle([...candidateDestinations])
     .slice(0, destSampleSize);
