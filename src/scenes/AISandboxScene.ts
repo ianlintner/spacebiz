@@ -443,7 +443,7 @@ export class AISandboxScene extends Phaser.Scene {
         routes: c.routeCount,
         status: c.bankrupt ? "BANKRUPT" : "Active",
       }));
-    this.rankingsTable.setData(rows);
+    this.rankingsTable.setRows(rows);
 
     // Activity feed — add notable events for this turn
     const th = getTheme();

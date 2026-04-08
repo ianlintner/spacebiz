@@ -197,8 +197,8 @@ export class GameHUDScene extends Phaser.Scene {
       { label: "Map", scene: "GalaxyMapScene", icon: "icon-map" },
       { label: "Fleet", scene: "FleetScene", icon: "icon-fleet" },
       { label: "Routes", scene: "RoutesScene", icon: "icon-routes" },
-      { label: "Contracts", scene: "ContractsScene", icon: "icon-routes" },
-      { label: "Research", scene: "TechTreeScene", icon: "icon-finance" },
+      { label: "Contracts", scene: "ContractsScene", icon: "icon-contracts" },
+      { label: "Research", scene: "TechTreeScene", icon: "icon-research" },
       { label: "Finance", scene: "FinanceScene", icon: "icon-finance" },
       { label: "Market", scene: "MarketScene", icon: "icon-market" },
     ];

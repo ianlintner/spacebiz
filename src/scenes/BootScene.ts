@@ -419,6 +419,50 @@ export class BootScene extends Phaser.Scene {
       tex.refresh();
     }
 
+    // ── icon-contracts: Clipboard / document with lines ──
+    {
+      const { tex, ctx } = this.makeCanvas("icon-contracts", s, s);
+      ctx.strokeStyle = col;
+      ctx.fillStyle = col;
+      ctx.lineWidth = 1.5;
+      // Clipboard outline
+      ctx.strokeRect(5, 4, 14, 18);
+      // Clip at top
+      ctx.fillRect(9, 2, 6, 4);
+      // Lines on page
+      ctx.fillRect(8, 10, 8, 1.5);
+      ctx.fillRect(8, 14, 8, 1.5);
+      ctx.fillRect(8, 18, 5, 1.5);
+      tex.refresh();
+    }
+
+    // ── icon-research: Atom / orbital rings ──
+    {
+      const { tex, ctx } = this.makeCanvas("icon-research", s, s);
+      ctx.strokeStyle = col;
+      ctx.fillStyle = col;
+      ctx.lineWidth = 1.5;
+      const cx = s / 2,
+        cy = s / 2;
+      // Center nucleus
+      ctx.beginPath();
+      ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Orbital ring 1 (horizontal ellipse)
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 9, 4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      // Orbital ring 2 (tilted)
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 9, 4, Math.PI / 3, 0, Math.PI * 2);
+      ctx.stroke();
+      // Orbital ring 3 (tilted other way)
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 9, 4, -Math.PI / 3, 0, Math.PI * 2);
+      ctx.stroke();
+      tex.refresh();
+    }
+
     // ── icon-end-turn: Play/forward arrow ──
     {
       const { tex, ctx } = this.makeCanvas("icon-end-turn", s, s);

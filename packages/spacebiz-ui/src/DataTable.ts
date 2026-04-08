@@ -405,12 +405,26 @@ export class DataTable extends Phaser.GameObjects.Container {
           fontFamily: theme.fonts.body.family,
           color: colorToString(color ?? theme.colors.text),
           wordWrap: { width: col.width - 16 - (cellTextX - (x + 8)) },
+          maxLines: 1,
         });
 
         if (col.align === "right") {
           text.setOrigin(1, 0).setX(x + col.width - 8);
         } else if (col.align === "center") {
           text.setOrigin(0.5, 0).setX(x + col.width / 2);
+        }
+
+        // Crop text to column bounds to prevent overflow into adjacent columns
+        const textLeft =
+          col.align === "right"
+            ? x + col.width - 8 - text.width
+            : col.align === "center"
+              ? x + col.width / 2 - text.width / 2
+              : cellTextX;
+        const colRight = x + col.width;
+        const overflow = textLeft + text.width - colRight;
+        if (overflow > 0) {
+          text.setCrop(0, 0, text.width - overflow, text.height);
         }
 
         maxTextHeight = Math.max(maxTextHeight, text.height);
