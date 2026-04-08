@@ -316,7 +316,7 @@ export class RoutesScene extends Phaser.Scene {
     const createSelectedBtn = new Button(this, {
       x: contentInnerX,
       y: finderButtonY,
-      width: 160,
+      autoWidth: true,
       label: "Create Route [Enter]",
       onClick: () => {
         const idx = this.finderTable.getSelectedRowIndex();
@@ -328,9 +328,9 @@ export class RoutesScene extends Phaser.Scene {
     finderContent.add(createSelectedBtn);
 
     const customRouteBtn = new Button(this, {
-      x: contentInnerX + 180,
+      x: contentInnerX + createSelectedBtn.width + 12,
       y: finderButtonY,
-      width: 160,
+      autoWidth: true,
       label: "Custom Route...",
       onClick: () => this.startCreateRoute(),
     });
