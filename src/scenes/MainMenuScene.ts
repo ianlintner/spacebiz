@@ -203,7 +203,9 @@ export class MainMenuScene extends Phaser.Scene {
     const btnHeight = 52;
     const btnGap = 18;
     const btnY = panelY + panelH - btnHeight - 28;
-    const btnStartX = panelX + panelW - btnWidth * 2 - btnGap - 28;
+    const totalBtns = 3;
+    const btnStartX =
+      panelX + panelW - btnWidth * totalBtns - btnGap * (totalBtns - 1) - 28;
     const textLeftX = panelX + 28;
     const textRightLimit = btnStartX - 24;
     const textColumnWidth = Math.max(220, textRightLimit - textLeftX);
@@ -277,6 +279,17 @@ export class MainMenuScene extends Phaser.Scene {
         if (loadGameIntoStore()) {
           this.scene.start("GameHUDScene");
         }
+      },
+    });
+
+    new Button(this, {
+      x: btnStartX + (btnWidth + btnGap) * 2,
+      y: btnY,
+      width: btnWidth,
+      height: btnHeight,
+      label: "AI Sandbox",
+      onClick: () => {
+        this.scene.start("SandboxSetupScene");
       },
     });
 

@@ -1,0 +1,364 @@
+import Phaser from "phaser";
+import {
+  createStarfield,
+  Panel,
+  Button,
+  Label,
+  getTheme,
+  getLayout,
+} from "../ui/index.ts";
+import { getAudioDirector } from "../audio/AudioDirector.ts";
+
+export class SandboxSetupScene extends Phaser.Scene {
+  private seed = 0;
+  private selectedSize: "small" | "medium" | "large" = "medium";
+  private selectedShape: "spiral" | "elliptical" | "ring" | "irregular" =
+    "spiral";
+  private selectedCompanyCount = 6;
+  private selectedSpeed: "normal" | "fast" | "instant" = "normal";
+  private selectedLogLevel: "summary" | "standard" | "verbose" = "standard";
+
+  private seedLabel!: Label;
+  private sizeButtons: Button[] = [];
+  private shapeButtons: Button[] = [];
+  private companyButtons: Button[] = [];
+  private speedButtons: Button[] = [];
+  private logButtons: Button[] = [];
+
+  constructor() {
+    super({ key: "SandboxSetupScene" });
+  }
+
+  create(): void {
+    const theme = getTheme();
+    const L = getLayout();
+    this.cameras.main.setBackgroundColor(theme.colors.background);
+    getAudioDirector().setMusicState("setup");
+
+    this.seed = Math.floor(Math.random() * 1000000);
+    this.selectedSize = "medium";
+    this.selectedShape = "spiral";
+    this.selectedCompanyCount = 6;
+    this.selectedSpeed = "normal";
+    this.selectedLogLevel = "standard";
+    this.sizeButtons = [];
+    this.shapeButtons = [];
+    this.companyButtons = [];
+    this.speedButtons = [];
+    this.logButtons = [];
+
+    createStarfield(this);
+
+    const cx = L.gameWidth / 2;
+    const padding = 24;
+    const sectionGap = 28;
+    const btnGap = 12;
+
+    // ── Title ──
+    const titleLabel = new Label(this, {
+      x: cx,
+      y: 40,
+      text: "AI SANDBOX",
+      style: "heading",
+      color: theme.colors.accent,
+      glow: true,
+    });
+    titleLabel.setOrigin(0.5);
+    titleLabel.setFontSize(32);
+
+    const subtitleLabel = new Label(this, {
+      x: cx,
+      y: 82,
+      text: "Configure AI-vs-AI Simulation",
+      style: "caption",
+      color: theme.colors.textDim,
+    });
+    subtitleLabel.setOrigin(0.5);
+
+    // ── Config panel ──
+    const panelW = L.maxContentWidth;
+    const panelH = 420;
+    const panelX = Math.floor((L.gameWidth - panelW) / 2);
+    const panelY = 116;
+    new Panel(this, {
+      x: panelX,
+      y: panelY,
+      width: panelW,
+      height: panelH,
+    });
+
+    const innerX = panelX + padding;
+    const innerCx = panelX + panelW / 2;
+    let rowY = panelY + padding;
+
+    // ── Seed ──
+    new Label(this, {
+      x: innerX,
+      y: rowY,
+      text: "Seed:",
+      style: "caption",
+      color: theme.colors.accent,
+    });
+
+    this.seedLabel = new Label(this, {
+      x: innerX + 80,
+      y: rowY,
+      text: String(this.seed),
+      style: "value",
+      color: theme.colors.text,
+    });
+
+    new Button(this, {
+      x: innerX + 200,
+      y: rowY - 4,
+      width: 120,
+      height: 38,
+      label: "Randomize",
+      onClick: () => {
+        this.seed = Math.floor(Math.random() * 1000000);
+        this.seedLabel.setText(String(this.seed));
+      },
+    });
+
+    rowY += sectionGap + 16;
+
+    // ── Galaxy Size ──
+    new Label(this, {
+      x: innerX,
+      y: rowY,
+      text: "Galaxy Size",
+      style: "caption",
+      color: theme.colors.accent,
+    });
+
+    rowY += 24;
+    const sizes: { label: string; value: "small" | "medium" | "large" }[] = [
+      { label: "Small", value: "small" },
+      { label: "Medium", value: "medium" },
+      { label: "Large", value: "large" },
+    ];
+    const sizeBtnW = 120;
+    let sizeBtnX =
+      innerCx - (sizes.length * sizeBtnW + (sizes.length - 1) * btnGap) / 2;
+    for (const opt of sizes) {
+      const btn = new Button(this, {
+        x: sizeBtnX,
+        y: rowY,
+        width: sizeBtnW,
+        height: 38,
+        label: opt.label,
+        onClick: () => {
+          this.selectedSize = opt.value;
+          for (const b of this.sizeButtons) b.setActive(false);
+          btn.setActive(true);
+        },
+      });
+      if (opt.value === this.selectedSize) btn.setActive(true);
+      this.sizeButtons.push(btn);
+      sizeBtnX += sizeBtnW + btnGap;
+    }
+
+    rowY += 38 + sectionGap;
+
+    // ── Galaxy Shape ──
+    new Label(this, {
+      x: innerX,
+      y: rowY,
+      text: "Galaxy Shape",
+      style: "caption",
+      color: theme.colors.accent,
+    });
+
+    rowY += 24;
+    const shapes: {
+      label: string;
+      value: "spiral" | "elliptical" | "ring" | "irregular";
+    }[] = [
+      { label: "Spiral", value: "spiral" },
+      { label: "Elliptical", value: "elliptical" },
+      { label: "Ring", value: "ring" },
+      { label: "Irregular", value: "irregular" },
+    ];
+    const shapeBtnW = 112;
+    let shapeBtnX =
+      innerCx - (shapes.length * shapeBtnW + (shapes.length - 1) * btnGap) / 2;
+    for (const opt of shapes) {
+      const btn = new Button(this, {
+        x: shapeBtnX,
+        y: rowY,
+        width: shapeBtnW,
+        height: 38,
+        label: opt.label,
+        onClick: () => {
+          this.selectedShape = opt.value;
+          for (const b of this.shapeButtons) b.setActive(false);
+          btn.setActive(true);
+        },
+      });
+      if (opt.value === this.selectedShape) btn.setActive(true);
+      this.shapeButtons.push(btn);
+      shapeBtnX += shapeBtnW + btnGap;
+    }
+
+    rowY += 38 + sectionGap;
+
+    // ── AI Companies ──
+    new Label(this, {
+      x: innerX,
+      y: rowY,
+      text: "AI Companies",
+      style: "caption",
+      color: theme.colors.accent,
+    });
+
+    rowY += 24;
+    const companyCounts = [4, 6, 8, 10];
+    const compBtnW = 60;
+    let compBtnX =
+      innerCx -
+      (companyCounts.length * compBtnW + (companyCounts.length - 1) * btnGap) /
+        2;
+    for (const count of companyCounts) {
+      const btn = new Button(this, {
+        x: compBtnX,
+        y: rowY,
+        width: compBtnW,
+        height: 38,
+        label: String(count),
+        onClick: () => {
+          this.selectedCompanyCount = count;
+          for (const b of this.companyButtons) b.setActive(false);
+          btn.setActive(true);
+        },
+      });
+      if (count === this.selectedCompanyCount) btn.setActive(true);
+      this.companyButtons.push(btn);
+      compBtnX += compBtnW + btnGap;
+    }
+
+    rowY += 38 + sectionGap;
+
+    // ── Playback Speed ──
+    new Label(this, {
+      x: innerX,
+      y: rowY,
+      text: "Playback Speed",
+      style: "caption",
+      color: theme.colors.accent,
+    });
+
+    rowY += 24;
+    const speeds: { label: string; value: "normal" | "fast" | "instant" }[] = [
+      { label: "Normal", value: "normal" },
+      { label: "Fast", value: "fast" },
+      { label: "Instant", value: "instant" },
+    ];
+    const speedBtnW = 110;
+    let speedBtnX =
+      innerCx - (speeds.length * speedBtnW + (speeds.length - 1) * btnGap) / 2;
+    for (const opt of speeds) {
+      const btn = new Button(this, {
+        x: speedBtnX,
+        y: rowY,
+        width: speedBtnW,
+        height: 38,
+        label: opt.label,
+        onClick: () => {
+          this.selectedSpeed = opt.value;
+          for (const b of this.speedButtons) b.setActive(false);
+          btn.setActive(true);
+        },
+      });
+      if (opt.value === this.selectedSpeed) btn.setActive(true);
+      this.speedButtons.push(btn);
+      speedBtnX += speedBtnW + btnGap;
+    }
+
+    rowY += 38 + sectionGap;
+
+    // ── Log Detail ──
+    new Label(this, {
+      x: innerX,
+      y: rowY,
+      text: "Log Detail",
+      style: "caption",
+      color: theme.colors.accent,
+    });
+
+    rowY += 24;
+    const logLevels: {
+      label: string;
+      value: "summary" | "standard" | "verbose";
+    }[] = [
+      { label: "Summary", value: "summary" },
+      { label: "Standard", value: "standard" },
+      { label: "Verbose", value: "verbose" },
+    ];
+    const logBtnW = 110;
+    let logBtnX =
+      innerCx -
+      (logLevels.length * logBtnW + (logLevels.length - 1) * btnGap) / 2;
+    for (const opt of logLevels) {
+      const btn = new Button(this, {
+        x: logBtnX,
+        y: rowY,
+        width: logBtnW,
+        height: 38,
+        label: opt.label,
+        onClick: () => {
+          this.selectedLogLevel = opt.value;
+          for (const b of this.logButtons) b.setActive(false);
+          btn.setActive(true);
+        },
+      });
+      if (opt.value === this.selectedLogLevel) btn.setActive(true);
+      this.logButtons.push(btn);
+      logBtnX += logBtnW + btnGap;
+    }
+
+    // ── Action buttons ──
+    const actionBtnW = 220;
+    const actionBtnH = 52;
+    const actionBtnGap = 18;
+    const actionY = panelY + panelH + 28;
+    const actionStartX = cx - (actionBtnW * 2 + actionBtnGap) / 2;
+
+    new Button(this, {
+      x: actionStartX,
+      y: actionY,
+      width: actionBtnW,
+      height: actionBtnH,
+      label: "Launch Simulation",
+      onClick: () => {
+        this.scene.start("AISandboxScene", {
+          seed: this.seed,
+          gameSize: this.selectedSize,
+          galaxyShape: this.selectedShape,
+          companyCount: this.selectedCompanyCount,
+          speed: this.selectedSpeed,
+          logLevel: this.selectedLogLevel,
+        });
+      },
+    });
+
+    new Button(this, {
+      x: actionStartX + actionBtnW + actionBtnGap,
+      y: actionY,
+      width: actionBtnW,
+      height: actionBtnH,
+      label: "Back to Menu",
+      onClick: () => {
+        this.scene.start("MainMenuScene");
+      },
+    });
+
+    // ── Resize handler ──
+    const onResize = () => {
+      this.scene.restart();
+    };
+    this.scale.on("resize", onResize);
+    this.events.once("shutdown", () => {
+      this.scale.off("resize", onResize);
+    });
+  }
+}

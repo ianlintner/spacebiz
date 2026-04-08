@@ -18,6 +18,8 @@ import { TurnReportScene } from "./scenes/TurnReportScene.ts";
 import { GameOverScene } from "./scenes/GameOverScene.ts";
 import { ContractsScene } from "./scenes/ContractsScene.ts";
 import { TechTreeScene } from "./scenes/TechTreeScene.ts";
+import { SandboxSetupScene } from "./scenes/SandboxSetupScene.ts";
+import { AISandboxScene } from "./scenes/AISandboxScene.ts";
 import {
   CARGO_CHEAT_SHEET,
   DISCLOSURE_CARDS,
@@ -558,6 +560,8 @@ function mountGame(): void {
     SimPlaybackScene,
     TurnReportScene,
     GameOverScene,
+    SandboxSetupScene,
+    AISandboxScene,
   ]);
 
   activeGame = new Phaser.Game(config);
