@@ -227,7 +227,33 @@ const EXTERNAL_BGM_PLAYLIST: ExternalBgmTrack[] = [
     url: "/concepts/audio/approachingparsecseven.mp3",
     label: "Approaching Parsec Seven",
   },
+  {
+    url: "/concepts/audio/Terminal_Sunrise.mp3",
+    label: "Terminal Sunrise",
+  },
+  {
+    url: "/concepts/audio/highscore.mp3",
+    label: "High Score",
+  },
+  {
+    url: "/concepts/audio/holdingorbit.mp3",
+    label: "Holding Orbit",
+  },
+  {
+    url: "/concepts/audio/lastport.mp3",
+    label: "Last Port",
+  },
 ];
+
+/** Fisher-Yates shuffle (in-place). */
+function shufflePlaylist(list: ExternalBgmTrack[]): void {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+}
+
+shufflePlaylist(EXTERNAL_BGM_PLAYLIST);
 
 class AudioDirector {
   private ctx: AudioContext | null = null;
@@ -976,9 +1002,10 @@ class AudioDirector {
       const bgm = new Audio(
         EXTERNAL_BGM_PLAYLIST[this.externalBgmTrackIndex].url,
       );
-      bgm.loop = true;
+      bgm.loop = false;
       bgm.preload = "auto";
       bgm.volume = 0;
+      bgm.addEventListener("ended", () => this.onExternalTrackEnded());
       this.externalBgm = bgm;
       this.usingExternalBgm = true;
     } catch {
@@ -1005,6 +1032,10 @@ class AudioDirector {
     this.externalBgmTrackIndex =
       (this.externalBgmTrackIndex + delta + total) % total;
     this.switchExternalTrack();
+  }
+
+  private onExternalTrackEnded(): void {
+    this.stepExternalTrack(1);
   }
 
   private switchExternalTrack(): void {

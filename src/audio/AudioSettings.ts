@@ -14,9 +14,13 @@ interface AudioSettingsEnvelope {
   settings: AudioSettings;
 }
 
+const IS_DEV =
+  typeof import.meta !== "undefined" &&
+  (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV === true;
+
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
-  musicVolume: 0.7,
-  sfxVolume: 0.8,
+  musicVolume: IS_DEV ? 0.5 : 0.7,
+  sfxVolume: IS_DEV ? 0.5 : 0.8,
   reducedUiSfx: false,
   musicStyle: "ftl",
 };

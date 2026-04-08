@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createNewGame } from "../NewGameSetup.ts";
-import { ShipClass, PlanetType, CargoType } from "../../data/types.ts";
+import { PlanetType, CargoType } from "../../data/types.ts";
 import type { CargoType as CargoTypeT } from "../../data/types.ts";
 import { GAME_SIZE_CONFIGS } from "../../data/constants.ts";
 
@@ -24,7 +24,7 @@ describe("NewGameSetup", () => {
     expect(state.galaxy.sectors.length).toBeGreaterThan(0);
     expect(state.galaxy.systems.length).toBeGreaterThan(0);
     expect(state.galaxy.planets.length).toBeGreaterThan(0);
-    expect(state.fleet.length).toBe(2);
+    expect(state.fleet.length).toBe(0);
     expect(state.activeRoutes).toEqual([]);
     expect(state.market).toBeDefined();
     expect(state.activeEvents).toEqual([]);
@@ -40,19 +40,11 @@ describe("NewGameSetup", () => {
     expect(result.state.cash).toBe(GAME_SIZE_CONFIGS.small.startingCash);
   });
 
-  it("fleet has exactly 2 ships: 1 Cargo Shuttle + 1 Passenger Shuttle", () => {
+  it("fleet starts empty (players auto-buy ships)", () => {
     const result = createNewGame(42);
     const { fleet } = result.state;
 
-    expect(fleet.length).toBe(2);
-
-    const cargoShuttle = fleet.find((s) => s.class === ShipClass.CargoShuttle);
-    const passengerShuttle = fleet.find(
-      (s) => s.class === ShipClass.PassengerShuttle,
-    );
-
-    expect(cargoShuttle).toBeDefined();
-    expect(passengerShuttle).toBeDefined();
+    expect(fleet.length).toBe(0);
   });
 
   it("ships have full condition and age 0", () => {

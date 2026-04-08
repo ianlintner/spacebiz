@@ -152,11 +152,8 @@ function createAICompanies(
     const empireId = empireQueue[i];
     const personality = AI_PERSONALITIES[i % AI_PERSONALITIES.length];
 
-    // Create starting fleet for AI (same as player)
-    const aiFleet: Ship[] = [
-      createShipFromTemplate(ShipClass.CargoShuttle, `ai-${i}-ship-0`),
-      createShipFromTemplate(ShipClass.PassengerShuttle, `ai-${i}-ship-1`),
-    ];
+    // AI companies start with no fleet — they auto-purchase ships
+    const aiFleet: Ship[] = [];
 
     const company: AICompany = {
       id: `ai-${i}`,

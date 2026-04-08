@@ -20,6 +20,16 @@ import type {
 import type { SimulationProgress } from "../game/simulation/SimulationRunner.ts";
 import type { SimLogLevel } from "../game/simulation/SimulationLogger.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
+import type { GameState } from "../data/types.ts";
+import {
+  generateSaveId,
+  createSandboxSaveData,
+  updateSandboxSaveData,
+  saveSandbox,
+  setActiveSandbox,
+  AUTOSAVE_INTERVAL,
+} from "../game/simulation/SandboxSaveManager.ts";
+import type { SandboxSaveData } from "../game/simulation/SandboxSaveManager.ts";
 
 // ── Speed mapping (turn delay in ms) ──────────────────────────
 
@@ -41,13 +51,15 @@ function truncate(text: string, maxLen: number): string {
 
 // ── Scene ──────────────────────────────────────────────────────
 
-interface SandboxSceneData {
+export interface SandboxSceneData {
   seed: number;
   gameSize: "small" | "medium" | "large";
   galaxyShape: "spiral" | "elliptical" | "ring" | "irregular";
   companyCount: number;
   speed: string;
   logLevel: SimLogLevel;
+  // Resume fields (present when loading a saved sandbox)
+  resumeFrom?: SandboxSaveData;
 }
 
 export class AISandboxScene extends Phaser.Scene {
@@ -59,6 +71,15 @@ export class AISandboxScene extends Phaser.Scene {
   private maxTurns = 0;
   private speed = "normal";
   private running = false;
+
+  // Save state
+  private saveId = "";
+  private config!: SimulationConfig;
+  private latestGameState: GameState | null = null;
+  private latestRngState = 0;
+  private accumulatedTurnLogs: TurnLog[] = [];
+  private previousTurnLogs: TurnLog[] = [];
+  private lastAutoSaveTurn = 0;
 
   // UI
   private turnLabel!: Label;
@@ -75,7 +96,6 @@ export class AISandboxScene extends Phaser.Scene {
   private stepBtn!: Button;
   private speedBtn!: Button;
   private summaryBtn!: Button;
-
   // State for step mode
   private stepResolve: (() => void) | null = null;
 
@@ -94,6 +114,23 @@ export class AISandboxScene extends Phaser.Scene {
     this.result = null;
     this.currentTurn = 0;
     this.speed = data.speed ?? "normal";
+    this.accumulatedTurnLogs = [];
+    this.previousTurnLogs = [];
+    this.lastAutoSaveTurn = 0;
+    this.latestGameState = null;
+    this.latestRngState = 0;
+
+    // Set up save identity
+    if (data.resumeFrom) {
+      this.saveId = data.resumeFrom.meta.id;
+      this.previousTurnLogs = data.resumeFrom.turnLogs;
+      this.lastAutoSaveTurn = data.resumeFrom.meta.turn;
+    } else {
+      this.saveId = generateSaveId();
+    }
+
+    // Mark this session as active for browser refresh recovery
+    setActiveSandbox(this.saveId);
 
     // ── Background ───────────────────────────────────────────
     createStarfield(this);
@@ -280,7 +317,7 @@ export class AISandboxScene extends Phaser.Scene {
       height: bottomBarH,
     });
 
-    const btnW = 110;
+    const btnW = 96;
     const btnH = 40;
     const btnY = L.gameHeight - bottomBarH + 12;
     let btnX = padding;
@@ -293,7 +330,7 @@ export class AISandboxScene extends Phaser.Scene {
       label: "Pause",
       onClick: () => this.togglePause(),
     });
-    btnX += btnW + 10;
+    btnX += btnW + 8;
 
     this.stepBtn = new Button(this, {
       x: btnX,
@@ -304,7 +341,7 @@ export class AISandboxScene extends Phaser.Scene {
       disabled: true,
       onClick: () => this.stepOneTurn(),
     });
-    btnX += btnW + 10;
+    btnX += btnW + 8;
 
     this.speedBtn = new Button(this, {
       x: btnX,
@@ -314,17 +351,27 @@ export class AISandboxScene extends Phaser.Scene {
       label: `Speed: ${this.speed}`,
       onClick: () => this.cycleSpeed(),
     });
-    btnX += btnW + 10;
+    btnX += btnW + 8;
 
     new Button(this, {
       x: btnX,
       y: btnY,
       width: btnW,
       height: btnH,
-      label: "Export Log",
+      label: "Save",
+      onClick: () => this.manualSave(),
+    });
+    btnX += btnW + 8;
+
+    new Button(this, {
+      x: btnX,
+      y: btnY,
+      width: btnW,
+      height: btnH,
+      label: "Export",
       onClick: () => this.exportLog(),
     });
-    btnX += btnW + 10;
+    btnX += btnW + 8;
 
     new Button(this, {
       x: btnX,
@@ -334,7 +381,7 @@ export class AISandboxScene extends Phaser.Scene {
       label: "Back",
       onClick: () => this.exitToMenu(),
     });
-    btnX += btnW + 10;
+    btnX += btnW + 8;
 
     this.summaryBtn = new Button(this, {
       x: btnX,
@@ -374,16 +421,21 @@ export class AISandboxScene extends Phaser.Scene {
       maxTurns: 0, // derive from game size
       logLevel: data.logLevel,
     };
+    this.config = config;
 
-    this.runner.on("turnComplete", (data: unknown) => {
-      const progress = data as SimulationProgress;
+    this.runner.on("turnComplete", (evt: unknown) => {
+      const progress = evt as SimulationProgress;
       this.currentTurn = progress.turn;
       this.maxTurns = progress.maxTurns;
+      this.latestGameState = progress.state;
+      this.latestRngState = progress.rngState;
+      this.accumulatedTurnLogs.push(progress.turnLog);
       this.updateUI(progress.turnLog);
+      this.tryAutoSave();
     });
 
-    this.runner.on("simulationComplete", (data: unknown) => {
-      const r = data as SimulationResult;
+    this.runner.on("simulationComplete", (evt: unknown) => {
+      const r = evt as SimulationResult;
       this.result = r;
       this.running = false;
       this.statusLabel.setText(
@@ -392,6 +444,9 @@ export class AISandboxScene extends Phaser.Scene {
       this.pauseBtn.setDisabled(true);
       this.stepBtn.setDisabled(true);
       this.summaryBtn.setDisabled(false);
+
+      // Save completed state
+      this.saveCurrentState("complete");
 
       // Add final summary to feed
       const th = getTheme();
@@ -409,14 +464,32 @@ export class AISandboxScene extends Phaser.Scene {
       }
     });
 
-    // Use custom step-aware delay for pausing
     const baseDelay = SPEED_DELAYS[this.speed] ?? 400;
+    const isResume = !!data.resumeFrom;
 
-    // Run async — the delay lambda handles pausing
-    this.runner.runAsync(config, baseDelay).catch(() => {
-      // Aborted or error — silently handle
-      this.running = false;
-    });
+    if (isResume) {
+      const save = data.resumeFrom!;
+      this.statusLabel.setText("Resuming\u2026");
+      this.runner
+        .resumeAsync(
+          config,
+          save.gameState,
+          save.rngState,
+          save.turnLogs,
+          baseDelay,
+        )
+        .catch((err) => {
+          console.error("[AISandbox] resumeAsync error:", err);
+          this.running = false;
+          this.statusLabel.setText("Error \u2014 see console");
+        });
+    } else {
+      this.runner.runAsync(config, baseDelay).catch((err) => {
+        console.error("[AISandbox] runAsync error:", err);
+        this.running = false;
+        this.statusLabel.setText("Error \u2014 see console");
+      });
+    }
   }
 
   // ── UI Update ────────────────────────────────────────────────
@@ -532,6 +605,71 @@ export class AISandboxScene extends Phaser.Scene {
     this.speedBtn.setLabel(`Speed: ${this.speed}`);
   }
 
+  // ── Save / Auto-save ────────────────────────────────────────
+
+  private buildSaveData(
+    status: "running" | "paused" | "complete",
+  ): SandboxSaveData | null {
+    if (!this.latestGameState) return null;
+
+    const allLogs = [...this.previousTurnLogs, ...this.accumulatedTurnLogs];
+    const label = `Sandbox ${this.config.seed} T${this.currentTurn}`;
+
+    // If we already have a save for this ID, update it; otherwise create fresh
+    const data = createSandboxSaveData(
+      this.saveId,
+      label,
+      this.config,
+      this.latestGameState,
+      this.latestRngState,
+      this.speed,
+    );
+    return updateSandboxSaveData(
+      data,
+      this.latestGameState,
+      this.latestRngState,
+      allLogs,
+      this.speed,
+      status,
+      this.result,
+    );
+  }
+
+  private saveCurrentState(status: "running" | "paused" | "complete"): void {
+    try {
+      const data = this.buildSaveData(status);
+      if (!data) return;
+      saveSandbox(data);
+    } catch (err) {
+      // localStorage might be full or data non-serializable — non-critical
+      console.warn("[AISandbox] save failed:", err);
+    }
+  }
+
+  private tryAutoSave(): void {
+    try {
+      if (
+        this.currentTurn > 0 &&
+        this.currentTurn - this.lastAutoSaveTurn >= AUTOSAVE_INTERVAL
+      ) {
+        this.saveCurrentState(this.paused ? "paused" : "running");
+        this.lastAutoSaveTurn = this.currentTurn;
+      }
+    } catch (err) {
+      console.warn("[AISandbox] auto-save error:", err);
+    }
+  }
+
+  private manualSave(): void {
+    const status = this.running
+      ? this.paused
+        ? "paused"
+        : "running"
+      : "complete";
+    this.saveCurrentState(status);
+    this.statusLabel.setText(`Saved (turn ${this.currentTurn})`);
+  }
+
   // ── Export ───────────────────────────────────────────────────
 
   private exportLog(): void {
@@ -554,6 +692,10 @@ export class AISandboxScene extends Phaser.Scene {
   // ── Navigation ───────────────────────────────────────────────
 
   private exitToMenu(): void {
+    // Save before exiting if simulation was in progress
+    if (this.running && this.latestGameState) {
+      this.saveCurrentState(this.paused ? "paused" : "running");
+    }
     this.cleanup();
     this.scene.start("MainMenuScene");
   }
@@ -571,5 +713,7 @@ export class AISandboxScene extends Phaser.Scene {
     this.running = false;
     this.paused = false;
     this.stepResolve = null;
+    // Don't clear active sandbox here — only clear on explicit "Back" to SandboxSetupScene
+    // This allows browser refresh to detect and resume
   }
 }

@@ -46,6 +46,7 @@ export interface SimulationProgress {
   maxTurns: number;
   state: GameState;
   turnLog: TurnLog;
+  rngState: number;
 }
 
 /**
@@ -134,6 +135,7 @@ export class SimulationRunner extends GameEventEmitter {
         maxTurns: state.maxTurns,
         state,
         turnLog,
+        rngState: rng.getState(),
       };
       this.emit("turnComplete", progress);
     }
@@ -220,6 +222,7 @@ export class SimulationRunner extends GameEventEmitter {
         maxTurns: state.maxTurns,
         state,
         turnLog,
+        rngState: rng.getState(),
       };
       this.emit("turnComplete", progress);
 
@@ -238,6 +241,69 @@ export class SimulationRunner extends GameEventEmitter {
     const result: SimulationResult = {
       config,
       turnLogs,
+      summary,
+      wallTimeMs,
+    };
+
+    this.emit("simulationComplete", result);
+    return result;
+  }
+
+  /**
+   * Resume a previously-saved simulation from a known state.
+   * The RNG is restored from the saved internal state so outcomes
+   * remain deterministic.  Pre-existing turnLogs are prepended to
+   * the final result so charts / summary cover the full run.
+   */
+  async resumeAsync(
+    config: SimulationConfig,
+    savedState: GameState,
+    rngState: number,
+    previousTurnLogs: TurnLog[],
+    turnDelay: number = 0,
+  ): Promise<SimulationResult> {
+    const startTime = performance.now();
+    this.aborted = false;
+
+    let state = savedState;
+    const logger = new SimulationLogger(config);
+    const rng = new SeededRNG(rngState);
+
+    while (!state.gameOver && !this.aborted) {
+      const prevTurn = state.turn;
+
+      state = simulateTurn(state, rng);
+
+      const turnResult = state.history[state.history.length - 1];
+      if (!turnResult) break;
+
+      const turnLog = logger.logTurn(state, turnResult);
+
+      const progress: SimulationProgress = {
+        turn: prevTurn,
+        maxTurns: state.maxTurns,
+        state,
+        turnLog,
+        rngState: rng.getState(),
+      };
+      this.emit("turnComplete", progress);
+
+      if (turnDelay > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, turnDelay));
+      } else {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      }
+    }
+
+    // Merge previous turn logs with newly-generated ones
+    const newTurnLogs = logger.getTurnLogs();
+    const allTurnLogs = [...previousTurnLogs, ...newTurnLogs];
+    const summary = this.buildSummary(state, allTurnLogs, logger);
+    const wallTimeMs = performance.now() - startTime;
+
+    const result: SimulationResult = {
+      config,
+      turnLogs: allTurnLogs,
       summary,
       wallTimeMs,
     };

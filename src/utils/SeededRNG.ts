@@ -5,6 +5,11 @@ export class SeededRNG {
     this.state = seed | 0;
   }
 
+  /** Expose internal state so it can be saved and restored for deterministic resume. */
+  getState(): number {
+    return this.state;
+  }
+
   next(): number {
     this.state = (this.state + 0x6d2b79f5) | 0;
     let t = Math.imul(this.state ^ (this.state >>> 15), 1 | this.state);

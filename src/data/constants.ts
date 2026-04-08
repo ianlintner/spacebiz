@@ -98,7 +98,7 @@ export const GAME_SIZE_CONFIGS: Record<GameSize, GameSizeConfig> = {
     planetsPerSystemMax: 3,
     aiCompanyCount: 4,
     startingCash: 250000,
-    startingShips: 2,
+    startingShips: 0,
     mapScale: 1.0,
   },
   [GameSize.Medium]: {
@@ -110,7 +110,7 @@ export const GAME_SIZE_CONFIGS: Record<GameSize, GameSizeConfig> = {
     planetsPerSystemMax: 4,
     aiCompanyCount: 6,
     startingCash: 300000,
-    startingShips: 2,
+    startingShips: 0,
     mapScale: 1.3,
   },
   [GameSize.Large]: {
@@ -122,7 +122,7 @@ export const GAME_SIZE_CONFIGS: Record<GameSize, GameSizeConfig> = {
     planetsPerSystemMax: 4,
     aiCompanyCount: 8,
     startingCash: 350000,
-    startingShips: 3,
+    startingShips: 0,
     mapScale: 1.6,
   },
 };

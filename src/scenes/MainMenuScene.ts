@@ -10,6 +10,10 @@ import {
 } from "../ui/index.ts";
 import { hasSaveGame, loadGameIntoStore } from "../game/SaveManager.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
+import {
+  hasResumableSandbox,
+  getActiveSandboxData,
+} from "../game/simulation/SandboxSaveManager.ts";
 
 type HeroConfig = {
   key: "hero-freight" | "hero-passenger";
@@ -199,10 +203,11 @@ export class MainMenuScene extends Phaser.Scene {
     const panelH = 260;
     const panelX = cx - panelW / 2;
     const panelY = L.gameHeight - panelH - 22;
-    const btnWidth = 220;
     const btnHeight = 52;
     const btnGap = 18;
-    const totalBtns = 3;
+    const canResumeSandbox = hasResumableSandbox();
+    const totalBtns = canResumeSandbox ? 4 : 3;
+    const btnWidth = canResumeSandbox ? 168 : 220;
     const totalBtnWidth = btnWidth * totalBtns + btnGap * (totalBtns - 1);
     const btnStartX = panelX + (panelW - totalBtnWidth) / 2;
     const btnY = panelY + panelH - btnHeight - 28;
@@ -234,12 +239,15 @@ export class MainMenuScene extends Phaser.Scene {
     });
     promptLabel.setOrigin(0, 0);
 
+    const statusText = canResumeSandbox
+      ? "Sandbox in progress — resume or start fresh."
+      : canContinue
+        ? "Save detected — continue your company from orbit."
+        : "No save on record — start a fresh company charter.";
     const statusLabel = new Label(this, {
       x: textLeftX,
       y: panelY + 80,
-      text: canContinue
-        ? "Save detected — continue your company from orbit."
-        : "No save on record — start a fresh company charter.",
+      text: statusText,
       style: "caption",
       color: theme.colors.textDim,
       maxWidth: textColumnWidth,
@@ -291,6 +299,29 @@ export class MainMenuScene extends Phaser.Scene {
         this.scene.start("SandboxSetupScene");
       },
     });
+
+    if (canResumeSandbox) {
+      new Button(this, {
+        x: btnStartX + (btnWidth + btnGap) * 3,
+        y: btnY,
+        width: btnWidth,
+        height: btnHeight,
+        label: "Resume Sandbox",
+        onClick: () => {
+          const data = getActiveSandboxData();
+          if (!data) return;
+          this.scene.start("AISandboxScene", {
+            seed: data.config.seed,
+            gameSize: data.config.gameSize,
+            galaxyShape: data.config.galaxyShape,
+            companyCount: data.config.companyCount,
+            speed: data.speed,
+            logLevel: data.config.logLevel,
+            resumeFrom: data,
+          });
+        },
+      });
+    }
 
     // Style Guide link — small caption-style button at bottom-right
     const sgBtnW = 120;

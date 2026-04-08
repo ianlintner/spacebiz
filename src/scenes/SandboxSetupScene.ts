@@ -6,8 +6,18 @@ import {
   Label,
   getTheme,
   getLayout,
+  ScrollableList,
 } from "../ui/index.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
+import {
+  listSandboxSaves,
+  loadSandbox,
+  deleteSandboxSave,
+  hasResumableSandbox,
+  getActiveSandboxData,
+  clearActiveSandbox,
+} from "../game/simulation/SandboxSaveManager.ts";
+import type { SaveSlotMeta } from "../game/simulation/SandboxSaveManager.ts";
 
 export class SandboxSetupScene extends Phaser.Scene {
   private seed = 0;
@@ -321,15 +331,25 @@ export class SandboxSetupScene extends Phaser.Scene {
     const actionBtnH = 52;
     const actionBtnGap = 18;
     const actionY = panelY + panelH + 28;
-    const actionStartX = cx - (actionBtnW * 2 + actionBtnGap) / 2;
+
+    // Check for resumable sandbox
+    const canResume = hasResumableSandbox();
+    const saves = listSandboxSaves();
+    const hasSaves = saves.length > 0;
+
+    // Determine how many buttons to show
+    const totalBtns = canResume ? 3 : 2;
+    const totalBtnW = actionBtnW * totalBtns + actionBtnGap * (totalBtns - 1);
+    let actionX = cx - totalBtnW / 2;
 
     new Button(this, {
-      x: actionStartX,
+      x: actionX,
       y: actionY,
       width: actionBtnW,
       height: actionBtnH,
       label: "Launch Simulation",
       onClick: () => {
+        clearActiveSandbox();
         this.scene.start("AISandboxScene", {
           seed: this.seed,
           gameSize: this.selectedSize,
@@ -340,9 +360,34 @@ export class SandboxSetupScene extends Phaser.Scene {
         });
       },
     });
+    actionX += actionBtnW + actionBtnGap;
+
+    if (canResume) {
+      new Button(this, {
+        x: actionX,
+        y: actionY,
+        width: actionBtnW,
+        height: actionBtnH,
+        label: "Resume Sandbox",
+        onClick: () => {
+          const data = getActiveSandboxData();
+          if (!data) return;
+          this.scene.start("AISandboxScene", {
+            seed: data.config.seed,
+            gameSize: data.config.gameSize,
+            galaxyShape: data.config.galaxyShape,
+            companyCount: data.config.companyCount,
+            speed: data.speed,
+            logLevel: data.config.logLevel,
+            resumeFrom: data,
+          });
+        },
+      });
+      actionX += actionBtnW + actionBtnGap;
+    }
 
     new Button(this, {
-      x: actionStartX + actionBtnW + actionBtnGap,
+      x: actionX,
       y: actionY,
       width: actionBtnW,
       height: actionBtnH,
@@ -352,6 +397,49 @@ export class SandboxSetupScene extends Phaser.Scene {
       },
     });
 
+    // ── Saved Games Panel ──
+    if (hasSaves) {
+      const savePanelY = actionY + actionBtnH + 24;
+      const savePanelH = Math.min(220, L.gameHeight - savePanelY - 16);
+      const savePanelW = panelW;
+      const savePanelX = panelX;
+
+      new Panel(this, {
+        x: savePanelX,
+        y: savePanelY,
+        width: savePanelW,
+        height: savePanelH,
+      });
+
+      new Label(this, {
+        x: savePanelX + padding,
+        y: savePanelY + 8,
+        text: "Saved Sandboxes",
+        style: "caption",
+        color: theme.colors.accent,
+      });
+
+      const saveList = new ScrollableList(this, {
+        x: savePanelX + padding,
+        y: savePanelY + 32,
+        width: savePanelW - padding * 2,
+        height: savePanelH - 48,
+        itemHeight: 36,
+      });
+
+      for (const slot of saves) {
+        const itemContainer = this.add.container(0, 0);
+        this.buildSaveSlotRow(
+          itemContainer,
+          slot,
+          savePanelW - padding * 2,
+          saveList,
+          saves,
+        );
+        saveList.addItem(itemContainer);
+      }
+    }
+
     // ── Resize handler ──
     const onResize = () => {
       this.scene.restart();
@@ -360,5 +448,72 @@ export class SandboxSetupScene extends Phaser.Scene {
     this.events.once("shutdown", () => {
       this.scale.off("resize", onResize);
     });
+  }
+
+  private buildSaveSlotRow(
+    container: Phaser.GameObjects.Container,
+    slot: SaveSlotMeta,
+    rowWidth: number,
+    _saveList: ScrollableList,
+    _saves: SaveSlotMeta[],
+  ): void {
+    const theme = getTheme();
+    const dateStr = new Date(slot.timestamp).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const statusColor =
+      slot.status === "complete"
+        ? theme.colors.profit
+        : slot.status === "paused"
+          ? theme.colors.warning
+          : theme.colors.text;
+
+    const info = new Label(this, {
+      x: 4,
+      y: 4,
+      text: `${slot.configSummary}  T${slot.turn}/${slot.maxTurns}  ${dateStr}`,
+      style: "caption",
+      color: statusColor,
+    });
+    info.setFontSize(12);
+    container.add(info);
+
+    const loadBtn = new Button(this, {
+      x: rowWidth - 140,
+      y: 0,
+      width: 64,
+      height: 28,
+      label: "Load",
+      onClick: () => {
+        const data = loadSandbox(slot.id);
+        if (!data) return;
+        this.scene.start("AISandboxScene", {
+          seed: data.config.seed,
+          gameSize: data.config.gameSize,
+          galaxyShape: data.config.galaxyShape,
+          companyCount: data.config.companyCount,
+          speed: data.speed,
+          logLevel: data.config.logLevel,
+          resumeFrom: data,
+        });
+      },
+    });
+    container.add(loadBtn);
+
+    const delBtn = new Button(this, {
+      x: rowWidth - 68,
+      y: 0,
+      width: 64,
+      height: 28,
+      label: "Delete",
+      onClick: () => {
+        deleteSandboxSave(slot.id);
+        this.scene.restart();
+      },
+    });
+    container.add(delBtn);
   }
 }
