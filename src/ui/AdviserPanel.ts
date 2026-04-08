@@ -27,7 +27,10 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   private msgLabel: Phaser.GameObjects.Text;
   private bg: Phaser.GameObjects.NineSlice;
   private accentBar: Phaser.GameObjects.Rectangle;
+  private shadow: Phaser.GameObjects.Rectangle;
+  private solidBg: Phaser.GameObjects.Rectangle;
   private navLabel: Phaser.GameObjects.Text | null = null;
+  private hitZone: Phaser.GameObjects.Zone | null = null;
   private isCompact: boolean;
 
   private messages: AdviserMessage[] = [];
@@ -37,29 +40,35 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   private charIndex = 0;
   private currentMood: AdviserMood = "standby";
   private portraitSize: number;
+  private panelWidth: number;
+  private panelHeight: number;
+  private minPanelHeight: number;
 
   constructor(scene: Phaser.Scene, config: AdviserPanelConfig) {
     super(scene, config.x, config.y);
     const theme = getTheme();
     this.isCompact = config.compact ?? false;
     this.portraitSize = this.isCompact ? COMPACT_PORTRAIT : PORTRAIT_SIZE;
-    const panelHeight = this.isCompact
+    this.panelWidth = config.width;
+    this.minPanelHeight = this.isCompact
       ? this.portraitSize + MSG_PADDING * 2
       : this.portraitSize + MSG_PADDING * 3 + 24; // extra for nav
+    this.panelHeight = this.minPanelHeight;
+    const panelHeight = this.panelHeight;
 
     // Drop shadow (offset dark rect behind everything)
-    const shadow = scene.add
+    this.shadow = scene.add
       .rectangle(4, 4, config.width, panelHeight, theme.colors.modalOverlay)
       .setOrigin(0, 0)
       .setAlpha(0.5);
-    this.add(shadow);
+    this.add(this.shadow);
 
     // Solid dark backing for contrast (behind the nineslice)
-    const solidBg = scene.add
+    this.solidBg = scene.add
       .rectangle(0, 0, config.width, panelHeight, theme.colors.background)
       .setOrigin(0, 0)
       .setAlpha(0.94);
-    this.add(solidBg);
+    this.add(this.solidBg);
 
     // Background
     this.bg = scene.add
@@ -168,7 +177,7 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
 
     // Click anywhere to advance in full mode
     if (!this.isCompact) {
-      const hitZone = scene.add
+      this.hitZone = scene.add
         .zone(0, 0, config.width, panelHeight)
         .setOrigin(0, 0)
         .setInteractive({ useHandCursor: true })
@@ -180,7 +189,7 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
             this.nextMessage();
           }
         });
-      this.add(hitZone);
+      this.add(this.hitZone);
     }
 
     this.setVisible(false);
@@ -233,6 +242,7 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     this.stopTypewriter();
     this.messages = [];
     this.currentIndex = 0;
+    this.resizePanel(this.minPanelHeight);
     this.setVisible(false);
   }
 
@@ -284,7 +294,19 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     this.stopTypewriter();
     this.fullText = text;
     this.charIndex = 0;
+
+    // Measure full text to auto-size panel height
+    this.msgLabel.setText(text);
+    const textHeight = this.msgLabel.height;
     this.msgLabel.setText("");
+
+    const msgY = MSG_PADDING + NAME_HEIGHT + 2;
+    const bottomPad = this.isCompact ? MSG_PADDING : MSG_PADDING + 24;
+    const neededHeight = Math.max(
+      this.minPanelHeight,
+      msgY + textHeight + bottomPad,
+    );
+    this.resizePanel(neededHeight);
 
     this.typewriterTimer = this.scene.time.addEvent({
       delay: TYPEWRITER_MS,
@@ -294,6 +316,26 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
         this.msgLabel.setText(this.fullText.substring(0, this.charIndex));
       },
     });
+  }
+
+  /** Resize panel height, growing upward so bottom edge stays fixed. */
+  private resizePanel(newHeight: number): void {
+    const delta = newHeight - this.panelHeight;
+    if (delta === 0) return;
+
+    this.y -= delta;
+    this.panelHeight = newHeight;
+
+    this.shadow.setSize(this.panelWidth, newHeight);
+    this.solidBg.setSize(this.panelWidth, newHeight);
+    this.bg.setSize(this.panelWidth, newHeight);
+    this.accentBar.setSize(4, newHeight);
+    if (this.hitZone) {
+      this.hitZone.setSize(this.panelWidth, newHeight);
+    }
+    if (this.navLabel) {
+      this.navLabel.setY(newHeight - MSG_PADDING - 4);
+    }
   }
 
   private finishTypewriter(): void {
