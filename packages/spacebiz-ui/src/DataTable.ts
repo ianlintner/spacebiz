@@ -62,7 +62,7 @@ export class DataTable extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, config: DataTableConfig) {
     super(scene, config.x, config.y);
     this.tableConfig = config;
-    this.columns = config.columns;
+    this.columns = this.expandColumns(config.columns, config.width);
     this.keyboardNavigationEnabled = config.keyboardNavigation ?? false;
 
     this.headerContainer = scene.add.container(0, 0);
@@ -153,6 +153,16 @@ export class DataTable extends Phaser.GameObjects.Container {
       node = node.parentContainer ?? undefined;
     }
     return true;
+  }
+
+  /** Expand column widths proportionally to fill the available table width. */
+  private expandColumns(columns: ColumnDef[], tableWidth: number): ColumnDef[] {
+    const scrollBarWidth = 4;
+    const usableWidth = tableWidth - scrollBarWidth;
+    const totalDefined = columns.reduce((sum, c) => sum + c.width, 0);
+    if (totalDefined >= usableWidth) return columns;
+    const scale = usableWidth / totalDefined;
+    return columns.map((c) => ({ ...c, width: Math.floor(c.width * scale) }));
   }
 
   /**

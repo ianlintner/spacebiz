@@ -77,7 +77,7 @@ export class SandboxSetupScene extends Phaser.Scene {
 
     // ── Config panel ──
     const panelW = L.maxContentWidth;
-    const panelH = 420;
+    const panelH = 520;
     const panelX = Math.floor((L.gameWidth - panelW) / 2);
     const panelY = 116;
     new Panel(this, {

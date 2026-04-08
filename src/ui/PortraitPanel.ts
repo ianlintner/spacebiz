@@ -204,12 +204,12 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
 
   private createStatRows(stats: Array<{ label: string; value: string }>): void {
     const theme = getTheme();
-    const startY =
+    const nameLabelBottom =
       theme.spacing.sm +
       this.portraitHeight +
       theme.spacing.md +
-      theme.fonts.heading.size +
-      theme.spacing.md;
+      this.nameLabel.height;
+    const startY = nameLabelBottom + theme.spacing.sm;
     const rowSpacing = 24;
     const leftX = theme.spacing.md;
     const rightX = this.panelWidth - theme.spacing.md;

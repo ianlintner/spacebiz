@@ -190,6 +190,77 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     }
   }
 
+  /** Insert an item at the top, shifting existing items down. */
+  prependItem(container: Phaser.GameObjects.Container): void {
+    // Shift existing items down
+    const ih = this.listConfig.itemHeight;
+    for (let i = 0; i < this.items.length; i++) {
+      this.items[i].setPosition(0, (i + 1) * ih);
+    }
+
+    container.setPosition(0, 0);
+
+    const theme = getTheme();
+    const hitBg = this.scene.add
+      .rectangle(
+        0,
+        0,
+        this.listConfig.width,
+        ih,
+        0 % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd,
+      )
+      .setOrigin(0, 0);
+
+    // Re-color all backgrounds for alternating rows
+    this.items.unshift(container);
+    this.itemBackgrounds.unshift(hitBg);
+    for (let i = 0; i < this.itemBackgrounds.length; i++) {
+      this.itemBackgrounds[i].setFillStyle(
+        i % 2 === 0 ? theme.colors.rowEven : theme.colors.rowOdd,
+      );
+    }
+
+    this.contentContainer.add(container);
+    this.maxScroll = Math.max(
+      0,
+      this.items.length * ih - this.listConfig.height,
+    );
+
+    container.setSize(this.listConfig.width, ih);
+    container.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, this.listConfig.width, ih),
+      Phaser.Geom.Rectangle.Contains,
+    );
+    container.setData("consumesWheel", true);
+    if (container.input) {
+      container.input.cursor = "pointer";
+    }
+
+    container.on(
+      "wheel",
+      (
+        _pointer: Phaser.Input.Pointer,
+        _dx: number,
+        _dy: number,
+        dz: number,
+      ) => {
+        this.scrollBy(dz * 0.5);
+      },
+    );
+
+    container.addAt(hitBg, 0);
+
+    const selectionIndicator = this.scene.add
+      .rectangle(0, 0, 3, ih, theme.colors.accent)
+      .setOrigin(0, 0)
+      .setAlpha(0.8)
+      .setVisible(false);
+    container.add(selectionIndicator);
+    this.selectionIndicators.unshift(selectionIndicator);
+
+    this.updateScrollbar();
+  }
+
   clearItems(): void {
     this.items.forEach((item) => item.destroy());
     this.items = [];
