@@ -439,15 +439,12 @@ export class TechTreeScene extends Phaser.Scene {
       statusLine = "\uD83D\uDD12 Locked (complete prior tier)";
     }
 
-    const details: string[] = [
-      `Branch: ${BRANCH_LABELS[tech.branch]}`,
-      `Tier: ${tech.tier}`,
-      `Cost: ${tech.rpCost} RP`,
-      "",
-      statusLine,
-      "",
-      "Effect:",
-      tech.description,
+    const details: Array<{ label: string; value: string }> = [
+      { label: "Branch", value: BRANCH_LABELS[tech.branch] },
+      { label: "Tier", value: `${tech.tier}` },
+      { label: "Cost", value: `${tech.rpCost} RP` },
+      { label: "Status", value: statusLine },
+      { label: "Effect", value: tech.description },
     ];
 
     this.portrait.updatePortrait("event", 0, tech.name, details, {});
