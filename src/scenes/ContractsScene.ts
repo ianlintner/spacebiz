@@ -75,22 +75,6 @@ function contractStatusLabel(c: Contract): string {
   return c.status;
 }
 
-function statusColor(c: Contract): number {
-  const t = getTheme();
-  if (c.status === ContractStatus.Completed) return t.colors.profit;
-  if (c.status === ContractStatus.Failed || c.status === ContractStatus.Expired)
-    return t.colors.loss;
-  if (c.status === ContractStatus.Active) {
-    if (c.linkedRouteId) {
-      const state = gameStore.getState();
-      const route = state.activeRoutes.find((r) => r.id === c.linkedRouteId);
-      if (route && route.assignedShipIds.length === 0) return t.colors.warning;
-    }
-    return t.colors.profit;
-  }
-  return t.colors.textDim;
-}
-
 function rewardSummary(c: Contract): string {
   const parts: string[] = [];
   if (c.rewardCash > 0) parts.push(formatCompact(c.rewardCash));
