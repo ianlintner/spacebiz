@@ -12,7 +12,7 @@ import type {
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 import { EVENT_TEMPLATES } from "./EventDefinitions.ts";
 import type { EventTemplate } from "./EventDefinitions.ts";
-import { MOTHBALL_FEE_RATIO } from "../../data/constants.ts";
+import { MOTHBALL_FEE_RATIO, BASE_FUEL_PRICE } from "../../data/constants.ts";
 import { getEmpireForPlanet } from "../empire/EmpireAccessManager.ts";
 import { hasTechEffect } from "../tech/TechEffects.ts";
 
@@ -264,11 +264,14 @@ export function applyEventEffects(
         // If no cargoType, this modifies fuel price
         if (!effect.cargoType) {
           const newFuelPrice = nextState.market.fuelPrice * (1 + effect.value);
+          // Clamp to same range as MarketUpdater: [50%, 150%] of BASE_FUEL_PRICE
+          const minFuel = BASE_FUEL_PRICE * 0.5;
+          const maxFuel = BASE_FUEL_PRICE * 1.5;
           nextState = {
             ...nextState,
             market: {
               ...nextState.market,
-              fuelPrice: Math.max(1, newFuelPrice),
+              fuelPrice: Math.min(maxFuel, Math.max(minFuel, newFuelPrice)),
             },
           };
         } else {

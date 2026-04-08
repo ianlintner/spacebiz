@@ -18,6 +18,8 @@ import {
   AI_MAX_PURCHASES_PER_TURN,
   AI_PERSONALITY_SLOTS,
   AI_SLOT_GROWTH_INTERVAL,
+  OVERHAUL_COST_RATIO,
+  OVERHAUL_RESTORE_CONDITION,
 } from "../../data/constants.ts";
 import {
   calculateTripsPerTurn,

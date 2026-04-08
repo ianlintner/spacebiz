@@ -143,6 +143,8 @@ export const AI_BUY_THRESHOLD_MULTIPLIER = 1.5; // buy when cash > 1.5× cheapes
 export const AI_MAX_ROUTES = 12; // cap routes per AI company
 export const AI_MAX_FLEET = 15; // cap fleet size per AI company
 export const AI_MAX_PURCHASES_PER_TURN = 2; // max ships bought per turn
+export const AI_OVERHAUL_CONDITION = 60; // overhaul ships below this condition
+export const AI_MAX_SHIP_SPEND_RATIO = 0.4; // SteadyHauler won't spend more than 40% cash on one ship
 
 export const SHIP_TEMPLATES: Record<ShipClass, ShipTemplate> = {
   [ShipClass.CargoShuttle]: {
