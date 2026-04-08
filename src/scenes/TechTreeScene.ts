@@ -75,12 +75,9 @@ interface TechNode {
 
 export class TechTreeScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
-  private ui!: SceneUiDirector;
   private nodes: TechNode[] = [];
   private selectedTechId: string | null = null;
   private researchButton!: Button;
-  private rpSummary!: Phaser.GameObjects.Text;
-  private currentResearchLabel!: Phaser.GameObjects.Text;
   private progressBar!: ProgressBar;
 
   constructor() {
@@ -90,7 +87,7 @@ export class TechTreeScene extends Phaser.Scene {
   create(): void {
     this.selectedTechId = null;
     this.nodes = [];
-    this.ui = new SceneUiDirector(this);
+    new SceneUiDirector(this);
     const L = getLayout();
     const theme = getTheme();
 

@@ -188,9 +188,7 @@ describe("Empire Access", () => {
     it("returns the empire ID for a planet", () => {
       const systems = [makeSystem("system-1", "empire-1", 0, 0)];
       const planets = [{ id: "planet-1", systemId: "system-1" }];
-      expect(getEmpireForPlanet("planet-1", systems, planets)).toBe(
-        "empire-1",
-      );
+      expect(getEmpireForPlanet("planet-1", systems, planets)).toBe("empire-1");
     });
 
     it("returns null for unknown planet", () => {

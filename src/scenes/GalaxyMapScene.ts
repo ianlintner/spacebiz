@@ -13,9 +13,7 @@ import {
 } from "../ui/index.ts";
 import { drawEmpireBorders } from "../ui/EmpireBorders.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
-import {
-  isEmpireAccessible,
-} from "../game/empire/EmpireAccessManager.ts";
+import { isEmpireAccessible } from "../game/empire/EmpireAccessManager.ts";
 import {
   getAvailableRouteSlots,
   getUsedRouteSlots,

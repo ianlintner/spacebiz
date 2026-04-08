@@ -246,9 +246,7 @@ describe("AdviserEngine", () => {
         ],
       });
       const msgs = generateTurnMessages(state, makeTurnResult());
-      const slotWarning = msgs.find(
-        (m) => m.id === "warn_route_slots_full",
-      );
+      const slotWarning = msgs.find((m) => m.id === "warn_route_slots_full");
       expect(slotWarning).toBeDefined();
     });
 
@@ -262,9 +260,7 @@ describe("AdviserEngine", () => {
         },
       });
       const msgs = generateTurnMessages(state, makeTurnResult());
-      const researchWarning = msgs.find(
-        (m) => m.id === "warn_no_research",
-      );
+      const researchWarning = msgs.find((m) => m.id === "warn_no_research");
       expect(researchWarning).toBeDefined();
     });
 
@@ -279,9 +275,7 @@ describe("AdviserEngine", () => {
         },
       });
       const msgs = generateTurnMessages(state, makeTurnResult());
-      const researchWarning = msgs.find(
-        (m) => m.id === "warn_no_research",
-      );
+      const researchWarning = msgs.find((m) => m.id === "warn_no_research");
       expect(researchWarning).toBeUndefined();
     });
 
@@ -295,9 +289,7 @@ describe("AdviserEngine", () => {
         },
       });
       const msgs = generateTurnMessages(state, makeTurnResult());
-      const researchWarning = msgs.find(
-        (m) => m.id === "warn_no_research",
-      );
+      const researchWarning = msgs.find((m) => m.id === "warn_no_research");
       expect(researchWarning).toBeUndefined();
     });
   });
@@ -330,11 +322,7 @@ describe("AdviserEngine", () => {
         ...initAdviserState(),
         tutorialStepIndex: 10,
       };
-      const result = checkTutorialAdvancement(
-        adviser,
-        "firstEmpireUnlock",
-        5,
-      );
+      const result = checkTutorialAdvancement(adviser, "firstEmpireUnlock", 5);
       expect(result.tutorialStepIndex).toBe(11);
       expect(result.pendingMessages.length).toBe(1);
       expect(result.pendingMessages[0].id).toBe("tut_first_empire_unlock");

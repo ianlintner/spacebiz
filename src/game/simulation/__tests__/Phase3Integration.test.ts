@@ -62,9 +62,7 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
     galaxyShape: "spiral",
     playerEmpireId: "emp-1",
     galaxy: {
-      sectors: [
-        { id: "sec-1", name: "Sector 1", x: 0, y: 0, color: 0xffffff },
-      ],
+      sectors: [{ id: "sec-1", name: "Sector 1", x: 0, y: 0, color: 0xffffff }],
       empires: [
         {
           id: "emp-1",

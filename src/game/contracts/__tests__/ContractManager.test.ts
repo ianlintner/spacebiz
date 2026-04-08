@@ -5,11 +5,13 @@ import {
   processContracts,
 } from "../ContractManager.ts";
 import type { GameState, Contract, ActiveRoute } from "../../../data/types.ts";
-import { ContractType, ContractStatus, CargoType } from "../../../data/types.ts";
-import { initAdviserState } from "../../adviser/AdviserEngine.ts";
 import {
-  CONTRACT_UNASSIGNED_SHIP_LIMIT,
-} from "../../../data/constants.ts";
+  ContractType,
+  ContractStatus,
+  CargoType,
+} from "../../../data/types.ts";
+import { initAdviserState } from "../../adviser/AdviserEngine.ts";
+import { CONTRACT_UNASSIGNED_SHIP_LIMIT } from "../../../data/constants.ts";
 
 function createTestState(overrides: Partial<GameState> = {}): GameState {
   return {

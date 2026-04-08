@@ -142,15 +142,15 @@ export function generateTurnMessages(
     messages.push(makeMessage(w, turn));
   }
   // Route slots full
-  if (
-    state.activeRoutes.length >= state.routeSlots &&
-    state.routeSlots > 0
-  ) {
+  if (state.activeRoutes.length >= state.routeSlots && state.routeSlots > 0) {
     const w = WARNING_MESSAGES.find((m) => m.id === "warn_route_slots_full")!;
     if (!shown.has(w.id)) messages.push(makeMessage(w, turn));
   }
   // No active research
-  if (!state.tech.currentResearchId && state.tech.completedTechIds.length < 20) {
+  if (
+    !state.tech.currentResearchId &&
+    state.tech.completedTechIds.length < 20
+  ) {
     const w = WARNING_MESSAGES.find((m) => m.id === "warn_no_research")!;
     if (!shown.has(w.id)) messages.push(makeMessage(w, turn));
   }

@@ -314,7 +314,8 @@ export class ContractsScene extends Phaser.Scene {
             const status = v as string;
             const t = getTheme();
             if (status === "Completed") return t.colors.profit;
-            if (status === "Failed" || status === "Expired") return t.colors.loss;
+            if (status === "Failed" || status === "Expired")
+              return t.colors.loss;
             if (status === "Active") return t.colors.profit;
             return t.colors.textDim;
           },
@@ -413,8 +414,14 @@ export class ContractsScene extends Phaser.Scene {
 
     const details: Array<{ label: string; value: string }> = [
       { label: "Type", value: contractTypeLabel(c.type) },
-      { label: "From", value: `${origin?.name ?? "?"} (${originEmpire?.name ?? "?"})` },
-      { label: "To", value: `${dest?.name ?? "?"} (${destEmpire?.name ?? "?"})` },
+      {
+        label: "From",
+        value: `${origin?.name ?? "?"} (${originEmpire?.name ?? "?"})`,
+      },
+      {
+        label: "To",
+        value: `${dest?.name ?? "?"} (${destEmpire?.name ?? "?"})`,
+      },
       { label: "Cargo", value: getCargoLabel(c.cargoType) },
       { label: "Duration", value: `${c.durationTurns} turns` },
       { label: "Deposit", value: formatCash(c.depositPaid) },
@@ -482,7 +489,11 @@ export class ContractsScene extends Phaser.Scene {
           this.refreshAvailableTable();
           this.refreshActiveTable();
           this.portrait.updatePortrait("event", 0, "Contract Accepted!", [
-            { label: "Status", value: "Route created. Assign a ship to start fulfilling the contract." },
+            {
+              label: "Status",
+              value:
+                "Route created. Assign a ship to start fulfilling the contract.",
+            },
           ]);
         }
       },
@@ -543,12 +554,18 @@ export class ContractsScene extends Phaser.Scene {
 
     const details: Array<{ label: string; value: string }> = [
       { label: "Type", value: contractTypeLabel(c.type) },
-      { label: "Route", value: `${origin?.name ?? "?"} \u2192 ${dest?.name ?? "?"}` },
+      {
+        label: "Route",
+        value: `${origin?.name ?? "?"} \u2192 ${dest?.name ?? "?"}`,
+      },
       { label: "Empire", value: destEmpire?.name ?? "?" },
       { label: "Cargo", value: getCargoLabel(c.cargoType) },
       { label: "Turns Left", value: `${c.turnsRemaining}` },
       { label: "Ships", value: `${shipCount}` },
-      { label: "Status", value: hasShip ? "\u2713 On Track" : "\u26A0 No ship assigned!" },
+      {
+        label: "Status",
+        value: hasShip ? "\u2713 On Track" : "\u26A0 No ship assigned!",
+      },
       { label: "Reward", value: rewardSummary(c) },
     ];
 
@@ -598,7 +615,10 @@ export class ContractsScene extends Phaser.Scene {
           this.refreshActiveTable();
           this.refreshAvailableTable();
           this.portrait.updatePortrait("event", 0, "Contract Abandoned", [
-            { label: "Status", value: "The contract has been abandoned. Penalties applied." },
+            {
+              label: "Status",
+              value: "The contract has been abandoned. Penalties applied.",
+            },
           ]);
         }
       },
