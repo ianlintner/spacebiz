@@ -24,6 +24,7 @@ import {
   AI_REPLACEMENT_DELAY,
   AI_REPLACEMENT_CASH_RATIO,
   AI_OVERHAUL_CONDITION,
+  AI_MAX_SHIP_SPEND_RATIO,
 } from "../../data/constants.ts";
 import {
   calculateTripsPerTurn,
@@ -589,20 +590,35 @@ function pickShipClassForPersonality(
         Math.min(Math.floor(affordable.length / 3), affordable.length - 1)
       ];
 
-    case AIPersonality.SteadyHauler:
-      // Buy the highest-capacity cargo ship affordable
-      affordable.sort(
+    case AIPersonality.SteadyHauler: {
+      // Limit spend to AI_MAX_SHIP_SPEND_RATIO of current cash — avoid going broke on one ship
+      const maxSpend = cash * AI_MAX_SHIP_SPEND_RATIO;
+      const prudent = affordable.filter(
+        (sc) => SHIP_TEMPLATES[sc].purchaseCost <= maxSpend,
+      );
+      const pool = prudent.length > 0 ? prudent : affordable;
+      // Buy the highest-capacity cargo ship affordable within budget
+      pool.sort(
         (a, b) =>
           SHIP_TEMPLATES[b].cargoCapacity - SHIP_TEMPLATES[a].cargoCapacity,
       );
-      // Pick the best cargo hauler, not the middle
-      return affordable[0];
+      return pool[0];
+    }
 
     case AIPersonality.CherryPicker:
-      // Buy fast ships for high-margin routes
-      affordable.sort(
-        (a, b) => SHIP_TEMPLATES[b].speed - SHIP_TEMPLATES[a].speed,
-      );
+      // Pick ships by efficiency ratio: (speed × cargoCapacity) / cost
+      // This balances speed with earning potential per credit spent
+      affordable.sort((a, b) => {
+        const ta = SHIP_TEMPLATES[a];
+        const tb = SHIP_TEMPLATES[b];
+        const effA =
+          (ta.speed * Math.max(ta.cargoCapacity, ta.passengerCapacity)) /
+          ta.purchaseCost;
+        const effB =
+          (tb.speed * Math.max(tb.cargoCapacity, tb.passengerCapacity)) /
+          tb.purchaseCost;
+        return effB - effA;
+      });
       return affordable[0];
 
     default:
@@ -754,7 +770,15 @@ function openAIRoute(
     }
   }
 
-  if (!bestRoute || bestRoute.profit <= 0) return null;
+  // Accept profitable routes always. When most ships are idle (desperate),
+  // also accept marginal routes that aren't deeply unprofitable — better
+  // than sitting idle earning nothing.
+  const totalShips = company.fleet.length;
+  const idleRatio = totalShips > 0 ? idleShips.length / totalShips : 0;
+  const desperate = idleRatio > 0.5;
+  const profitFloor = desperate ? -500 : 0;
+
+  if (!bestRoute || bestRoute.profit <= profitFloor) return null;
 
   // Create the route and assign the best idle ship
   const isPassenger = bestRoute.cargoType === CargoType.Passengers;
