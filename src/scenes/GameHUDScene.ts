@@ -125,12 +125,21 @@ export class GameHUDScene extends Phaser.Scene {
         .setOrigin(0.5, 0.5);
       // Round mask
       const mask = this.add
-        .circle(6 + portraitSize / 2, L.hudTopBarHeight / 2, portraitSize / 2, 0xffffff)
+        .circle(
+          6 + portraitSize / 2,
+          L.hudTopBarHeight / 2,
+          portraitSize / 2,
+          0xffffff,
+        )
         .setVisible(false);
       portraitImg.setMask(mask.createGeometryMask());
       // Subtle border ring
       this.add
-        .circle(6 + portraitSize / 2, L.hudTopBarHeight / 2, portraitSize / 2 + 1)
+        .circle(
+          6 + portraitSize / 2,
+          L.hudTopBarHeight / 2,
+          portraitSize / 2 + 1,
+        )
         .setStrokeStyle(1, theme.colors.panelBorder)
         .setFillStyle(0x000000, 0);
     }

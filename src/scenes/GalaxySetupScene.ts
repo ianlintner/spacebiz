@@ -16,6 +16,7 @@ import type {
   GalaxyShape,
 } from "../data/types.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
+import { CEO_PORTRAITS, getPortraitTextureKey } from "../data/portraits.ts";
 
 const PRESET_NAMES = [
   "Stellar Shipping Co.",
@@ -28,6 +29,7 @@ const PRESET_NAMES = [
 export class GalaxySetupScene extends Phaser.Scene {
   private seed = 0;
   private nameIndex = 0;
+  private portraitIndex = 0;
   private selectedSystemIndex = 0;
   private gameSize: GameSize = "small";
   private galaxyShape: GalaxyShape = "spiral";
@@ -39,6 +41,9 @@ export class GalaxySetupScene extends Phaser.Scene {
   private systemCards: Panel[] = [];
   private startingOptions: StarSystem[] = [];
   private currentState!: GameState;
+  private portraitImage: Phaser.GameObjects.Image | null = null;
+  private portraitLabel: Label | null = null;
+  private portraitMask: Phaser.GameObjects.Graphics | null = null;
   /** Layout values needed by buildSystemCards, set in create() */
   private configX = 0;
   private configW = 0;
@@ -57,6 +62,7 @@ export class GalaxySetupScene extends Phaser.Scene {
 
     this.seed = Math.floor(Math.random() * 1000000);
     this.nameIndex = 0;
+    this.portraitIndex = 0;
     this.selectedSystemIndex = 0;
     this.gameSize = "small";
     this.galaxyShape = "spiral";
@@ -276,7 +282,10 @@ export class GalaxySetupScene extends Phaser.Scene {
     const gap = 16;
     const count = this.startingOptions.length;
     const availW = this.configW - theme.spacing.lg * 2;
-    const cardW = Math.min(240, Math.floor((availW - gap * (count - 1)) / count));
+    const cardW = Math.min(
+      240,
+      Math.floor((availW - gap * (count - 1)) / count),
+    );
     const totalW = cardW * count + gap * (count - 1);
     const startX = this.configX + (this.configW - totalW) / 2;
     const cardsY = this.cardsTopY;
