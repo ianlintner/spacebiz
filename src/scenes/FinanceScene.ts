@@ -20,6 +20,7 @@ import {
   getLayout,
 } from "../ui/index.ts";
 import { calculateShipValue } from "../game/fleet/FleetManager.ts";
+import { getPortraitTextureKey } from "../data/portraits.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -37,6 +38,7 @@ export class FinanceScene extends Phaser.Scene {
 
   create(): void {
     const L = getLayout();
+    const theme = getTheme();
     this.selectedLoanId = null;
     this.ui = new SceneUiDirector(this);
 
@@ -74,6 +76,30 @@ export class FinanceScene extends Phaser.Scene {
       ],
       { eventCategory: "market" },
     );
+
+    // Overlay CEO portrait image on the sidebar panel
+    const ceoPortraitKey = getPortraitTextureKey(state.ceoPortrait.portraitId);
+    if (this.textures.exists(ceoPortraitKey)) {
+      const pSize = Math.min(L.sidebarWidth - 24, 120);
+      const pX = L.sidebarLeft + L.sidebarWidth / 2;
+      const pY = L.contentTop + 16 + pSize / 2;
+      const ceoImg = this.add
+        .image(pX, pY, ceoPortraitKey)
+        .setDisplaySize(pSize, pSize)
+        .setOrigin(0.5, 0.5)
+        .setDepth(10);
+      // Round mask
+      const mask = this.add
+        .circle(pX, pY, pSize / 2, 0xffffff)
+        .setVisible(false);
+      ceoImg.setMask(mask.createGeometryMask());
+      // Border
+      this.add
+        .circle(pX, pY, pSize / 2 + 1)
+        .setStrokeStyle(2, theme.colors.accent)
+        .setFillStyle(0x000000, 0)
+        .setDepth(11);
+    }
 
     // --- Main content panel with title ---
     const mainPanel = new Panel(this, {

@@ -43,6 +43,7 @@ import {
   AI_PERSONALITIES,
 } from "../NewGameSetup.ts";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
+import { pickRandomPortrait } from "../../data/portraits.ts";
 
 // ---------------------------------------------------------------------------
 // AI turn simulation
@@ -250,7 +251,7 @@ function replaceBankruptCompanies(
       bankruptTurn: undefined,
       generation: (company.generation ?? 0) + 1,
       ceoName: name,
-      ceoPortrait: { portraitId: `ceo-${company.id}`, category: "human" },
+      ceoPortrait: pickRandomPortrait(rng),
     };
 
     return replacement;
