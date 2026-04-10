@@ -3,3 +3,6 @@ dist/
 *.local
 .vite/
 coverage/
+
+# MCP server clones and storage (contains API keys in .env)
+.mcp/
