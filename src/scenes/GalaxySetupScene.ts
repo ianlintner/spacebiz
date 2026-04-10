@@ -4,7 +4,6 @@ import {
   Panel,
   Button,
   Label,
-  PortraitPanel,
   getTheme,
   getLayout,
 } from "../ui/index.ts";
@@ -40,7 +39,6 @@ export class GalaxySetupScene extends Phaser.Scene {
   private systemCards: Panel[] = [];
   private startingOptions: StarSystem[] = [];
   private currentState!: GameState;
-  private portraitPanel!: PortraitPanel;
   /** Layout values needed by buildSystemCards, set in create() */
   private configX = 0;
   private configW = 0;
@@ -70,60 +68,31 @@ export class GalaxySetupScene extends Phaser.Scene {
     // 1. Starfield background
     createStarfield(this);
 
-    // Centering offset for maxContentWidth
-    const contentLeft = Math.floor((L.gameWidth - L.maxContentWidth) / 2);
-
-    // 2. Title with glow
-    const titleLabel = new Label(this, {
-      x: L.gameWidth / 2,
-      y: 40,
-      text: "NEW GALAXY",
-      style: "heading",
-      color: theme.colors.accent,
-      glow: true,
-    });
-    titleLabel.setOrigin(0.5);
-    titleLabel.setFontSize(32);
-
-    // 3. System portrait panel (left side)
-    const portraitX = contentLeft;
-    const portraitY = 100;
-    const portraitW = 260;
-    const portraitH = 520;
-    this.portraitPanel = new PortraitPanel(this, {
-      x: portraitX,
-      y: portraitY,
-      width: portraitW,
-      height: portraitH,
-    });
-
-    // 4. Config panel (right side, glass)
-    const configGap = 20;
-    const configX = portraitX + portraitW + configGap;
-    const configW = L.maxContentWidth - portraitW - configGap;
-    const configY = portraitY;
-    const configH = portraitH;
+    // 2. Centered setup panel
+    const panelW = Math.min(780, L.gameWidth - 60);
+    const panelH = Math.min(640, L.gameHeight - 60);
+    const panelX = Math.floor((L.gameWidth - panelW) / 2);
+    const panelY = Math.floor((L.gameHeight - panelH) / 2);
     new Panel(this, {
-      x: configX,
-      y: configY,
-      width: configW,
-      height: configH,
+      x: panelX,
+      y: panelY,
+      width: panelW,
+      height: panelH,
+      title: "NEW GALAXY",
     });
 
-    // Content insets within config panel
-    const innerX = configX + theme.spacing.lg;
-    let rowY = configY + theme.spacing.lg;
+    // Form layout
+    const pad = theme.spacing.lg;
+    const innerX = panelX + pad;
+    const labelW = 110;
+    const valueX = innerX + labelW;
+    const rowH = 48;
+    let rowY = panelY + theme.panel.titleHeight + pad;
 
-    // Company name row
-    new Label(this, {
-      x: innerX,
-      y: rowY,
-      text: "Company:",
-      style: "body",
-    });
-
+    // ── Company name ──
+    new Label(this, { x: innerX, y: rowY, text: "Company:", style: "body" });
     this.nameLabel = new Label(this, {
-      x: innerX + 130,
+      x: valueX,
       y: rowY,
       text: PRESET_NAMES[0],
       style: "value",
@@ -135,29 +104,22 @@ export class GalaxySetupScene extends Phaser.Scene {
       this.nameLabel.setText(PRESET_NAMES[this.nameIndex]);
     });
 
-    rowY += 50;
+    rowY += rowH;
 
-    // Seed row
-    new Label(this, {
-      x: innerX,
-      y: rowY,
-      text: "Seed:",
-      style: "body",
-    });
-
+    // ── Seed ──
+    new Label(this, { x: innerX, y: rowY, text: "Seed:", style: "body" });
     this.seedLabel = new Label(this, {
-      x: innerX + 130,
+      x: valueX,
       y: rowY,
       text: String(this.seed),
       style: "value",
       color: theme.colors.accent,
     });
-
     new Button(this, {
-      x: innerX + 340,
-      y: rowY - 4,
-      width: 140,
-      height: 36,
+      x: valueX + 180,
+      y: rowY - 2,
+      autoWidth: true,
+      height: 34,
       label: "Randomize",
       onClick: () => {
         this.seed = Math.floor(Math.random() * 1000000);
@@ -166,31 +128,23 @@ export class GalaxySetupScene extends Phaser.Scene {
       },
     });
 
-    rowY += 60;
+    rowY += rowH + 4;
 
-    // Game Size row
-    new Label(this, {
-      x: innerX,
-      y: rowY,
-      text: "Size:",
-      style: "body",
-    });
-
-    const sizes: { label: string; value: GameSize; desc: string }[] = [
-      { label: "Small", value: "small", desc: "60 turns" },
-      { label: "Medium", value: "medium", desc: "80 turns" },
-      { label: "Large", value: "large", desc: "100 turns" },
+    // ── Game Size ──
+    new Label(this, { x: innerX, y: rowY, text: "Size:", style: "body" });
+    const sizes: { label: string; value: GameSize }[] = [
+      { label: "Small", value: "small" },
+      { label: "Medium", value: "medium" },
+      { label: "Large", value: "large" },
     ];
-    const sizeBtnW = 90;
-    const sizeBtnGap = 10;
-    let sizeBtnX = innerX + 130;
+    let btnX = valueX;
     for (const sizeOpt of sizes) {
       const btn = new Button(this, {
-        x: sizeBtnX,
+        x: btnX,
         y: rowY - 4,
-        width: sizeBtnW,
-        height: 36,
-        label: `${sizeOpt.label}`,
+        autoWidth: true,
+        height: 34,
+        label: sizeOpt.label,
         onClick: () => {
           this.gameSize = sizeOpt.value;
           this.updateSizeHighlight();
@@ -198,35 +152,27 @@ export class GalaxySetupScene extends Phaser.Scene {
         },
       });
       this.sizeButtons.push(btn);
-      sizeBtnX += sizeBtnW + sizeBtnGap;
+      btnX += (btn.width || 90) + 10;
     }
     this.updateSizeHighlight();
 
-    rowY += 50;
+    rowY += rowH;
 
-    // Galaxy Shape row
-    new Label(this, {
-      x: innerX,
-      y: rowY,
-      text: "Shape:",
-      style: "body",
-    });
-
+    // ── Galaxy Shape ──
+    new Label(this, { x: innerX, y: rowY, text: "Shape:", style: "body" });
     const shapes: { label: string; value: GalaxyShape }[] = [
       { label: "Spiral", value: "spiral" },
       { label: "Elliptical", value: "elliptical" },
       { label: "Ring", value: "ring" },
       { label: "Irregular", value: "irregular" },
     ];
-    const shapeBtnW = 90;
-    const shapeBtnGap = 8;
-    let shapeBtnX = innerX + 130;
+    btnX = valueX;
     for (const shapeOpt of shapes) {
       const btn = new Button(this, {
-        x: shapeBtnX,
+        x: btnX,
         y: rowY - 4,
-        width: shapeBtnW,
-        height: 36,
+        autoWidth: true,
+        height: 34,
         label: shapeOpt.label,
         onClick: () => {
           this.galaxyShape = shapeOpt.value;
@@ -235,38 +181,37 @@ export class GalaxySetupScene extends Phaser.Scene {
         },
       });
       this.shapeButtons.push(btn);
-      shapeBtnX += shapeBtnW + shapeBtnGap;
+      btnX += (btn.width || 100) + 10;
     }
     this.updateShapeHighlight();
 
-    rowY += 60;
+    rowY += rowH + 12;
 
-    // Section header
+    // ── Starting System section ──
     new Label(this, {
       x: innerX,
       y: rowY,
       text: "Select Starting System:",
       style: "body",
+      color: theme.colors.accent,
     });
 
     // Store layout for buildSystemCards
-    this.configX = configX;
-    this.configW = configW;
-    this.cardsTopY = rowY + 30;
-    this.cardsBottomY = configY + configH - 90;
+    this.configX = panelX;
+    this.configW = panelW;
+    this.cardsTopY = rowY + 32;
+    this.cardsBottomY = panelY + panelH - 76;
 
     // Generate initial game data and build cards
     this.regenerate();
 
-    // Launch button at bottom of config panel
-    const launchBtnW = 220;
-    const launchBtnX = configX + (configW - launchBtnW) / 2;
-    const launchBtnY = configY + configH - 70;
+    // ── Launch button ──
+    const launchW = 220;
     new Button(this, {
-      x: launchBtnX,
-      y: launchBtnY,
-      width: launchBtnW,
-      height: 48,
+      x: panelX + (panelW - launchW) / 2,
+      y: panelY + panelH - 62,
+      width: launchW,
+      height: 44,
       label: "Launch",
       onClick: () => {
         gameStore.setState(this.currentState);
@@ -295,7 +240,6 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.startingOptions = result.startingSystemOptions;
     this.selectedSystemIndex = 0;
     this.buildSystemCards();
-    this.updatePortraitPanel();
   }
 
   private updateSizeHighlight(): void {
@@ -329,9 +273,10 @@ export class GalaxySetupScene extends Phaser.Scene {
 
     const theme = getTheme();
 
-    const cardW = 200;
     const gap = 16;
     const count = this.startingOptions.length;
+    const availW = this.configW - theme.spacing.lg * 2;
+    const cardW = Math.min(240, Math.floor((availW - gap * (count - 1)) / count));
     const totalW = cardW * count + gap * (count - 1);
     const startX = this.configX + (this.configW - totalW) / 2;
     const cardsY = this.cardsTopY;
@@ -423,7 +368,6 @@ export class GalaxySetupScene extends Phaser.Scene {
       hitRect.on("pointerdown", () => {
         this.selectedSystemIndex = index;
         this.updateSelectionHighlight();
-        this.updatePortraitPanel();
       });
       this.cardObjects.push(hitRect);
     });
@@ -436,14 +380,5 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.systemCards.forEach((panel, index) => {
       panel.setActive(index === this.selectedSystemIndex);
     });
-  }
-
-  private updatePortraitPanel(): void {
-    if (this.startingOptions.length === 0) return;
-    const system = this.startingOptions[this.selectedSystemIndex];
-    const planetCount = this.currentState.galaxy.planets.filter(
-      (p) => p.systemId === system.id,
-    ).length;
-    this.portraitPanel.showSystem(system, planetCount);
   }
 }

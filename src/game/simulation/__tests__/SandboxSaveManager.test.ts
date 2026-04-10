@@ -74,6 +74,8 @@ function createTestGameState(overrides: Partial<GameState> = {}): GameState {
     loans: [],
     reputation: 0,
     companyName: "AI Sandbox Corp",
+    ceoName: "Commander",
+    ceoPortrait: { portraitId: "ceo-01", category: "human" },
     gameSize: "medium",
     galaxyShape: "spiral",
     playerEmpireId: "",

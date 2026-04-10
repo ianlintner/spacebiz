@@ -249,6 +249,8 @@ function replaceBankruptCompanies(
       bankrupt: false,
       bankruptTurn: undefined,
       generation: (company.generation ?? 0) + 1,
+      ceoName: name,
+      ceoPortrait: { portraitId: `ceo-${company.id}`, category: "human" },
     };
 
     return replacement;

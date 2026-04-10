@@ -28,6 +28,7 @@ import {
 } from "../data/constants.ts";
 import { findAdjacentEmpires } from "./empire/EmpireAccessManager.ts";
 import { generateEmpireTradePolicies } from "./empire/EmpirePolicyGenerator.ts";
+import { generateCEOName, pickRandomPortrait } from "../data/portraits.ts";
 
 export interface NewGameResult {
   state: GameState;
@@ -183,6 +184,8 @@ function createAICompanies(
       totalCargoDelivered: 0,
       personality,
       bankrupt: false,
+      ceoName: generateCEOName(rng),
+      ceoPortrait: pickRandomPortrait(rng),
     };
 
     companies.push(company);
@@ -283,6 +286,8 @@ export function createNewGame(
     loans: [],
     reputation: 50,
     companyName,
+    ceoName: "Commander",
+    ceoPortrait: { portraitId: "ceo-01", category: "human" },
     playerEmpireId,
     galaxy: {
       sectors: galaxyData.sectors,

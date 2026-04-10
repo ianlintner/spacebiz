@@ -24,6 +24,8 @@ function makeEmpire(id: string, homeSystemId: string): Empire {
     color: 0xffffff,
     tariffRate: 0.1,
     disposition: "neutral",
+    leaderName: `Leader ${id}`,
+    leaderPortrait: { portraitId: "leader-01", category: "human" },
   };
 }
 
@@ -54,6 +56,8 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     loans: [],
     reputation: 55,
     companyName: "Test Corp",
+    ceoName: "Commander",
+    ceoPortrait: { portraitId: "ceo-01", category: "human" },
     gameSize: "small",
     galaxyShape: "spiral",
     playerEmpireId: "empire-1",

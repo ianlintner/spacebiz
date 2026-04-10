@@ -21,6 +21,7 @@ import {
   getAvailableRouteSlots,
   getUsedRouteSlots,
 } from "../game/routes/RouteManager.ts";
+import { getPortraitTextureKey } from "../data/portraits.ts";
 
 function formatCash(amount: number): string {
   return "\u00A7" + amount.toLocaleString();
@@ -114,9 +115,30 @@ export class GameHUDScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setAlpha(0.92);
 
-    // Company name (left-aligned)
+    // CEO portrait (small, left of company name)
+    const portraitSize = L.hudTopBarHeight - 12;
+    const portraitKey = getPortraitTextureKey(state.ceoPortrait.portraitId);
+    if (this.textures.exists(portraitKey)) {
+      const portraitImg = this.add
+        .image(6 + portraitSize / 2, L.hudTopBarHeight / 2, portraitKey)
+        .setDisplaySize(portraitSize, portraitSize)
+        .setOrigin(0.5, 0.5);
+      // Round mask
+      const mask = this.add
+        .circle(6 + portraitSize / 2, L.hudTopBarHeight / 2, portraitSize / 2, 0xffffff)
+        .setVisible(false);
+      portraitImg.setMask(mask.createGeometryMask());
+      // Subtle border ring
+      this.add
+        .circle(6 + portraitSize / 2, L.hudTopBarHeight / 2, portraitSize / 2 + 1)
+        .setStrokeStyle(1, theme.colors.panelBorder)
+        .setFillStyle(0x000000, 0);
+    }
+
+    // Company name (left-aligned, shifted right for portrait)
+    const nameOffsetX = 6 + portraitSize + 10;
     this.companyLabel = new Label(this, {
-      x: 20,
+      x: nameOffsetX,
       y: L.hudTopBarHeight / 2,
       text: state.companyName,
       style: "body",

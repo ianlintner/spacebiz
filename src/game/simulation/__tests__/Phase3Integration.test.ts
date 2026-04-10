@@ -58,6 +58,8 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
     loans: [],
     reputation: 50,
     companyName: "Test Corp",
+    ceoName: "Commander",
+    ceoPortrait: { portraitId: "ceo-01", category: "human" },
     gameSize: "small",
     galaxyShape: "spiral",
     playerEmpireId: "emp-1",
@@ -71,6 +73,8 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
           color: 0x3388ff,
           tariffRate: 0.1,
           homeSystemId: "sys-1",
+          leaderName: "Sol Leader",
+          leaderPortrait: { portraitId: "leader-01", category: "human" },
         },
         {
           id: "emp-2",
@@ -79,6 +83,8 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
           color: 0xff3333,
           tariffRate: 0.15,
           homeSystemId: "sys-2",
+          leaderName: "Zeta Leader",
+          leaderPortrait: { portraitId: "leader-02", category: "alien" },
         },
       ],
       systems: [

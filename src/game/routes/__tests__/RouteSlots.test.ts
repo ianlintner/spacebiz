@@ -17,6 +17,8 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     loans: [],
     reputation: 55,
     companyName: "Test Corp",
+    ceoName: "Commander",
+    ceoPortrait: { portraitId: "ceo-01", category: "human" },
     gameSize: "small",
     galaxyShape: "spiral",
     playerEmpireId: "empire-1",

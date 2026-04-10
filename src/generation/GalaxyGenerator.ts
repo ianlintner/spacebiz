@@ -1,6 +1,7 @@
 import { SeededRNG } from "../utils/SeededRNG.ts";
 import { NameGenerator } from "./NameGenerator.ts";
 import { PlanetType, EmpireDisposition, GalaxyShape } from "../data/types.ts";
+import { generateLeaderName, pickRandomPortrait } from "../data/portraits.ts";
 import type {
   Sector,
   Empire,
@@ -552,6 +553,8 @@ export function generateGalaxy(
       tariffRate: Math.round(tariffRate * 1000) / 1000,
       disposition,
       homeSystemId,
+      leaderName: generateLeaderName(rng),
+      leaderPortrait: pickRandomPortrait(rng),
     };
     empires.push(empire);
   }

@@ -46,6 +46,8 @@ export function convertToFullAIState(state: GameState): GameState {
     totalCargoDelivered: 0,
     personality: AIPersonality.SteadyHauler,
     bankrupt: false,
+    ceoName: state.ceoName,
+    ceoPortrait: state.ceoPortrait,
   };
 
   return {

@@ -126,6 +126,8 @@ export interface Empire {
   tariffRate: number;
   disposition: EmpireDisposition;
   homeSystemId: string;
+  leaderName: string;
+  leaderPortrait: CharacterPortrait;
 }
 
 export interface StarSystem {
@@ -353,6 +355,8 @@ export interface AICompany {
   bankruptTurn?: number;
   /** Generation counter — 0 for original companies, incremented for replacements */
   generation?: number;
+  ceoName: string;
+  ceoPortrait: CharacterPortrait;
 }
 
 // ── Contract types ─────────────────────────────────────────
@@ -441,6 +445,49 @@ export interface TechState {
   researchProgress: number;
 }
 
+// ── Character / Portrait types ─────────────────────────────
+
+export const PortraitCategory = {
+  Human: "human",
+  Alien: "alien",
+  Cyborg: "cyborg",
+} as const;
+export type PortraitCategory =
+  (typeof PortraitCategory)[keyof typeof PortraitCategory];
+
+export const CEOTrait = {
+  Aggressive: "aggressive",
+  Diplomatic: "diplomatic",
+  Cunning: "cunning",
+  Visionary: "visionary",
+  Ruthless: "ruthless",
+  Cautious: "cautious",
+  Charismatic: "charismatic",
+  Eccentric: "eccentric",
+  Stoic: "stoic",
+  Resourceful: "resourceful",
+} as const;
+export type CEOTrait = (typeof CEOTrait)[keyof typeof CEOTrait];
+
+export const CEOBackground = {
+  Military: "military",
+  Merchant: "merchant",
+  Scientist: "scientist",
+  Pirate: "pirate",
+  Noble: "noble",
+  Explorer: "explorer",
+  Engineer: "engineer",
+  Diplomat: "diplomat",
+  Smuggler: "smuggler",
+  ColonyFounder: "colonyFounder",
+} as const;
+export type CEOBackground = (typeof CEOBackground)[keyof typeof CEOBackground];
+
+export interface CharacterPortrait {
+  portraitId: string;
+  category: PortraitCategory;
+}
+
 export interface GameState {
   seed: number;
   turn: number;
@@ -452,6 +499,8 @@ export interface GameState {
   loans: Loan[];
   reputation: number;
   companyName: string;
+  ceoName: string;
+  ceoPortrait: CharacterPortrait;
   playerEmpireId: string;
   galaxy: {
     sectors: Sector[];

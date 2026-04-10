@@ -8,6 +8,11 @@ import {
   generateShipIcons,
 } from "../ui/index.ts";
 import { getAudioDirector, type SfxKey } from "../audio/AudioDirector.ts";
+import {
+  CEO_PORTRAITS,
+  getPortraitAssetPath,
+  getPortraitTextureKey,
+} from "../data/portraits.ts";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -17,6 +22,11 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     this.load.image("hero-freight", "concepts/hero/freight-menu.jpg");
     this.load.image("hero-passenger", "concepts/hero/passenger-menu.jpg");
+
+    // Preload CEO portrait images
+    for (const def of CEO_PORTRAITS) {
+      this.load.image(getPortraitTextureKey(def.id), getPortraitAssetPath(def));
+    }
   }
 
   create(): void {
