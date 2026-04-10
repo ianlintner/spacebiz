@@ -29,6 +29,9 @@ export type { PanelConfig } from "./Panel.ts";
 export { Button } from "./Button.ts";
 export type { ButtonConfig } from "./Button.ts";
 
+export { Dropdown } from "./Dropdown.ts";
+export type { DropdownConfig, DropdownOption } from "./Dropdown.ts";
+
 export { Label } from "./Label.ts";
 export type { LabelConfig, LabelStyle } from "./Label.ts";
 
