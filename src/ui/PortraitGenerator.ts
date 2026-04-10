@@ -3,7 +3,14 @@ import { SeededRNG } from "../utils/SeededRNG.ts";
 import type { EventCategory, PlanetType, ShipClass } from "../data/types.ts";
 import { getTheme, lerpColor } from "./Theme.ts";
 
-export type PortraitType = "planet" | "ship" | "system" | "event" | "alien";
+export type PortraitType =
+  | "planet"
+  | "ship"
+  | "system"
+  | "event"
+  | "alien"
+  | "empire"
+  | "company";
 export type AlienRole =
   | "broker"
   | "miner"

@@ -486,6 +486,54 @@ export class BootScene extends Phaser.Scene {
       tex.refresh();
     }
 
+    // ── icon-empire: Crown (3 points) ──
+    {
+      const { tex, ctx } = this.makeCanvas("icon-empire", s, s);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(3, 20);
+      ctx.lineTo(3, 10);
+      ctx.lineTo(8, 14);
+      ctx.lineTo(12, 4);
+      ctx.lineTo(16, 14);
+      ctx.lineTo(21, 10);
+      ctx.lineTo(21, 20);
+      ctx.closePath();
+      ctx.fill();
+      tex.refresh();
+    }
+
+    // ── icon-rival: Two crossed swords ──
+    {
+      const { tex, ctx } = this.makeCanvas("icon-rival", s, s);
+      ctx.strokeStyle = col;
+      ctx.fillStyle = col;
+      ctx.lineWidth = 2;
+      // Sword 1 (top-left to bottom-right)
+      ctx.beginPath();
+      ctx.moveTo(4, 4);
+      ctx.lineTo(20, 20);
+      ctx.stroke();
+      ctx.fillRect(2, 2, 4, 4);
+      // Sword 2 (top-right to bottom-left)
+      ctx.beginPath();
+      ctx.moveTo(20, 4);
+      ctx.lineTo(4, 20);
+      ctx.stroke();
+      ctx.fillRect(18, 2, 4, 4);
+      // Guard lines
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(8, 16);
+      ctx.lineTo(16, 16);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(8, 8);
+      ctx.lineTo(16, 8);
+      ctx.stroke();
+      tex.refresh();
+    }
+
     // ── icon-end-turn: Play/forward arrow ──
     {
       const { tex, ctx } = this.makeCanvas("icon-end-turn", s, s);

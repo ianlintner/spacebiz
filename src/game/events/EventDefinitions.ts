@@ -465,6 +465,88 @@ const smugglingOpportunity: EventTemplate = {
 };
 
 // ---------------------------------------------------------------------------
+// Phase 4 — Diplomacy & Hyperlane Events (6)
+// ---------------------------------------------------------------------------
+
+const warDeclaration: EventTemplate = {
+  id: "war_declaration",
+  name: "War Declaration",
+  description:
+    "Hostilities have erupted between {target}! All border ports between the warring empires are now closed.",
+  category: EventCategory.Empire,
+  duration: 4,
+  effects: [{ type: "declareWar", value: 1 }],
+  weight: 3,
+  headwindWeight: 10,
+  tailwindWeight: 0,
+};
+
+const peaceTreaty: EventTemplate = {
+  id: "peace_treaty",
+  name: "Peace Treaty",
+  description:
+    "After prolonged tensions, {target} have signed a peace treaty. Border ports are reopening!",
+  category: EventCategory.Empire,
+  duration: 1,
+  effects: [{ type: "signPeace", value: 1 }],
+  weight: 4,
+  headwindWeight: 0,
+  tailwindWeight: 8,
+};
+
+const diplomaticIncident: EventTemplate = {
+  id: "diplomatic_incident",
+  name: "Diplomatic Incident",
+  description:
+    "A border skirmish near {target} has strained relations between neighboring empires. Trade may be disrupted.",
+  category: EventCategory.Empire,
+  duration: 2,
+  effects: [{ type: "degradeRelation", value: 1 }],
+  weight: 6,
+  headwindWeight: 5,
+  tailwindWeight: 0,
+};
+
+const allianceFormed: EventTemplate = {
+  id: "alliance_formed",
+  name: "Alliance Formed",
+  description:
+    "A historic alliance has been signed between {target}! Borders fully open and all tariffs eliminated.",
+  category: EventCategory.Empire,
+  duration: 1,
+  effects: [{ type: "formAlliance", value: 1 }],
+  weight: 2,
+  headwindWeight: 0,
+  tailwindWeight: 10,
+};
+
+const tradePactSigned: EventTemplate = {
+  id: "trade_pact_signed",
+  name: "Trade Pact Signed",
+  description:
+    "A trade pact has been established between {target}. Tariffs halved and all border ports opened!",
+  category: EventCategory.Empire,
+  duration: 1,
+  effects: [{ type: "formTradePact", value: 1 }],
+  weight: 4,
+  headwindWeight: 0,
+  tailwindWeight: 6,
+};
+
+const borderClosure: EventTemplate = {
+  id: "border_closure",
+  name: "Border Closure",
+  description:
+    "Rising tensions have led {target} to close their borders entirely. Routes through their territory are blocked!",
+  category: EventCategory.Empire,
+  duration: 3,
+  effects: [{ type: "closeBorders", value: 1 }],
+  weight: 4,
+  headwindWeight: 8,
+  tailwindWeight: 0,
+};
+
+// ---------------------------------------------------------------------------
 // All templates exported as an array
 // ---------------------------------------------------------------------------
 
@@ -505,4 +587,11 @@ export const EVENT_TEMPLATES: EventTemplate[] = [
   freeTradeSummit,
   tariffWar,
   smugglingOpportunity,
+  // Phase 4 — Diplomacy & Hyperlane Events
+  warDeclaration,
+  peaceTreaty,
+  diplomaticIncident,
+  allianceFormed,
+  tradePactSigned,
+  borderClosure,
 ];

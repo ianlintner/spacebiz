@@ -5,6 +5,7 @@ import {
   CargoType,
   GameSize,
   TechBranch,
+  HyperlaneDensity,
   type Technology,
 } from "./types";
 
@@ -66,7 +67,65 @@ export const MOTHBALL_FEE_RATIO = 0.5;
 // ── Inter-empire Trade ─────────────────────────────────────────
 
 export const BASE_CARGO_TYPES_PER_PAIR = 1;
+// ── Hyperlane Config ───────────────────────────────────────
 
+/** Maximum hyperlane connections any single system can have */
+export const HYPERLANE_MAX_CONNECTIONS = 5;
+/** Minimum connections to keep from Delaunay triangulation */
+export const HYPERLANE_MIN_CONNECTIONS = 2;
+/** Maximum ships assignable to a single route */
+export const MAX_SHIPS_PER_ROUTE = 5;
+
+/** Density presets — fraction of Delaunay edges to keep */
+export const HYPERLANE_DENSITY_CONFIGS: Record<
+  HyperlaneDensity,
+  { keepRatio: number; maxConn: number }
+> = {
+  [HyperlaneDensity.Low]: { keepRatio: 0.45, maxConn: 3 },
+  [HyperlaneDensity.Medium]: { keepRatio: 0.6, maxConn: 4 },
+  [HyperlaneDensity.High]: { keepRatio: 0.75, maxConn: 5 },
+};
+
+/** Shape-specific edge bias when pruning (fraction favoring along-shape edges) */
+export const HYPERLANE_SHAPE_BIAS = {
+  spiral: 0.7,
+  elliptical: 0.5,
+  ring: 0.8,
+  irregular: 0.4,
+} as const;
+
+// ── Diplomacy Config ───────────────────────────────────────
+
+/** Turns of war before ceasefire can occur */
+export const WAR_MIN_DURATION = 3;
+/** Maximum turns a war can last before forced ceasefire */
+export const WAR_MAX_DURATION = 8;
+/** Turns of peace required before trade pact can be proposed */
+export const TRADE_PACT_PEACE_REQUIREMENT = 3;
+/** Turns of trade pact required before alliance can form */
+export const ALLIANCE_PACT_REQUIREMENT = 5;
+/** Chance per turn that relations drift (improve or degrade) */
+export const DIPLOMACY_DRIFT_CHANCE = 0.08;
+/** Per-turn chance of war between cold-war empires */
+export const COLD_WAR_ESCALATION_CHANCE = 0.06;
+
+/** Open border ports by diplomatic status */
+export const BORDER_PORTS_BY_STATUS = {
+  war: 0,
+  coldWar: 0,
+  peace: 1,
+  tradePact: -1, // -1 means all
+  alliance: -1, // -1 means all
+} as const;
+
+/** Tariff multiplier by diplomatic status (applied on top of empire base tariff) */
+export const TARIFF_DIPLOMATIC_MULTIPLIER = {
+  war: 0, // no trade
+  coldWar: 1.5, // 50% surcharge
+  peace: 1.0,
+  tradePact: 0.5, // 50% discount
+  alliance: 0, // free
+} as const;
 // ── AI Slot Progression ────────────────────────────────────────
 
 export const AI_SLOT_GROWTH_INTERVAL = 10;

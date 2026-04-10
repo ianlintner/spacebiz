@@ -38,6 +38,10 @@ import {
   getUsedRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import type { RouteOpportunity } from "../game/routes/RouteManager.ts";
+import {
+  findPath,
+  countBorderCrossings,
+} from "../game/routes/HyperlaneRouter.ts";
 import { buyShip } from "../game/fleet/FleetManager.ts";
 import { SHIP_TEMPLATES } from "../data/constants.ts";
 import type { ShipClass } from "../data/types.ts";
@@ -801,7 +805,13 @@ export class RoutesScene extends Phaser.Scene {
     );
     if (!origin || !dest) return;
 
-    const distance = calculateDistance(origin, dest, state.galaxy.systems);
+    const distance = calculateDistance(
+      origin,
+      dest,
+      state.galaxy.systems,
+      state.hyperlanes,
+      state.borderPorts,
+    );
 
     // Deduct route license fee
     const licenseFee = calculateLicenseFee(distance, state.activeRoutes.length);
@@ -1005,6 +1015,17 @@ export class RoutesScene extends Phaser.Scene {
       : undefined;
 
     if (destination) {
+      const path = origin
+        ? findPath(
+            origin.systemId,
+            destination.systemId,
+            state.hyperlanes ?? [],
+            state.borderPorts ?? [],
+          )
+        : null;
+      const hops = path ? path.systems.length - 1 : 0;
+      const crossings =
+        path && origin ? countBorderCrossings(path, state.galaxy.systems) : 0;
       this.portrait.updatePortrait(
         "planet",
         destinationIndex,
@@ -1012,6 +1033,8 @@ export class RoutesScene extends Phaser.Scene {
         [
           { label: "Type", value: destination.type },
           { label: "Distance", value: route.distance.toFixed(1) },
+          { label: "Hops", value: hops.toString() },
+          { label: "Crossings", value: crossings.toString() },
           { label: "Cargo", value: route.cargoType ?? "None" },
           {
             label: "Ships",

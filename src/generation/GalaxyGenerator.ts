@@ -1,14 +1,21 @@
 import { SeededRNG } from "../utils/SeededRNG.ts";
 import { NameGenerator } from "./NameGenerator.ts";
-import { PlanetType, EmpireDisposition, GalaxyShape } from "../data/types.ts";
+import {
+  PlanetType,
+  EmpireDisposition,
+  GalaxyShape,
+  HyperlaneDensity,
+} from "../data/types.ts";
 import { generateLeaderName, pickRandomPortrait } from "../data/portraits.ts";
 import type {
   Sector,
   Empire,
   StarSystem,
   Planet,
+  Hyperlane,
   GameSize,
   GalaxyShape as GalaxyShapeT,
+  HyperlaneDensity as HyperlaneDensityT,
   PlanetType as PlanetTypeT,
   EmpireDisposition as EmpireDispositionT,
 } from "../data/types.ts";
@@ -20,6 +27,9 @@ import {
   TARIFF_NEUTRAL_MAX,
   TARIFF_HOSTILE_MIN,
   TARIFF_HOSTILE_MAX,
+  HYPERLANE_DENSITY_CONFIGS,
+  HYPERLANE_SHAPE_BIAS,
+  HYPERLANE_MIN_CONNECTIONS,
 } from "../data/constants.ts";
 
 export interface GalaxyData {
@@ -27,6 +37,7 @@ export interface GalaxyData {
   empires: Empire[];
   systems: StarSystem[];
   planets: Planet[];
+  hyperlanes: Hyperlane[];
 }
 
 // Planet type weights by orbital zone (inner / middle / outer)
@@ -397,6 +408,7 @@ export function generateGalaxy(
   seed: number,
   gameSize: GameSize = "small",
   galaxyShape: GalaxyShapeT = "spiral",
+  hyperlaneDensity: HyperlaneDensityT = HyperlaneDensity.Medium,
 ): GalaxyData {
   const rng = new SeededRNG(seed);
   const nameGen = new NameGenerator(rng);
@@ -562,7 +574,16 @@ export function generateGalaxy(
   // Ensure at least 1 of each planet type exists
   ensureAllPlanetTypes(rng, planets);
 
-  return { sectors, empires, systems, planets };
+  // Generate hyperlane connections between systems
+  const hyperlanes = generateHyperlanes(
+    rng,
+    systems,
+    galaxyShape,
+    hyperlaneDensity,
+    mapBounds,
+  );
+
+  return { sectors, empires, systems, planets, hyperlanes };
 }
 
 function generatePopulation(rng: SeededRNG, type: PlanetTypeT): number {
@@ -611,5 +632,188 @@ function ensureAllPlanetTypes(rng: SeededRNG, planets: Planet[]): void {
       typeCounts.set(target.type, (typeCounts.get(target.type) ?? 0) - 1);
       typeCounts.set(missingType, (typeCounts.get(missingType) ?? 0) + 1);
     }
+  }
+}
+
+// ── Hyperlane Generation ─────────────────────────────────────
+
+interface Edge {
+  a: number;
+  b: number;
+  dist: number;
+}
+
+/**
+ * Delaunay-approximation via sorted-distance neighbor graph.
+ * For each system, connect to nearest neighbors, then prune by density config.
+ */
+function generateHyperlanes(
+  rng: SeededRNG,
+  systems: StarSystem[],
+  shape: GalaxyShapeT,
+  density: HyperlaneDensityT,
+  bounds: Bounds,
+): Hyperlane[] {
+  if (systems.length < 2) return [];
+
+  const densityCfg = HYPERLANE_DENSITY_CONFIGS[density];
+  const shapeBias = HYPERLANE_SHAPE_BIAS[shape] ?? 0.5;
+  const maxConn = densityCfg.maxConn;
+
+  // 1. Compute all pairwise distances
+  const allEdges: Edge[] = [];
+  for (let i = 0; i < systems.length; i++) {
+    for (let j = i + 1; j < systems.length; j++) {
+      const dx = systems[i].x - systems[j].x;
+      const dy = systems[i].y - systems[j].y;
+      allEdges.push({ a: i, b: j, dist: Math.sqrt(dx * dx + dy * dy) });
+    }
+  }
+  allEdges.sort((a, b) => a.dist - b.dist);
+
+  // 2. Build MST first (Kruskal's) to guarantee connectivity
+  const parent = new Int32Array(systems.length);
+  for (let i = 0; i < systems.length; i++) parent[i] = i;
+  function find(x: number): number {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  }
+  function union(a: number, b: number): boolean {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra === rb) return false;
+    parent[ra] = rb;
+    return true;
+  }
+
+  const keptEdges = new Set<string>();
+  const connCount = new Int32Array(systems.length);
+  const edgeKey = (a: number, b: number) => (a < b ? `${a}-${b}` : `${b}-${a}`);
+
+  // MST edges (always kept)
+  for (const e of allEdges) {
+    if (union(e.a, e.b)) {
+      keptEdges.add(edgeKey(e.a, e.b));
+      connCount[e.a]++;
+      connCount[e.b]++;
+    }
+  }
+
+  // 3. Add extra edges based on density and shape bias
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cy = (bounds.minY + bounds.maxY) / 2;
+
+  for (const e of allEdges) {
+    const key = edgeKey(e.a, e.b);
+    if (keptEdges.has(key)) continue;
+    if (connCount[e.a] >= maxConn || connCount[e.b] >= maxConn) continue;
+
+    // Shape-aware scoring: prefer edges that align with the galaxy shape
+    const edgeScore = scoreEdgeForShape(
+      systems[e.a],
+      systems[e.b],
+      shape,
+      cx,
+      cy,
+    );
+
+    // Keep edge if shape-compatible or random chance based on density
+    const keepChance =
+      edgeScore * shapeBias + (1 - shapeBias) * densityCfg.keepRatio;
+    if (rng.next() < keepChance) {
+      keptEdges.add(key);
+      connCount[e.a]++;
+      connCount[e.b]++;
+    }
+  }
+
+  // 4. Ensure minimum connections
+  for (let i = 0; i < systems.length; i++) {
+    if (connCount[i] >= HYPERLANE_MIN_CONNECTIONS) continue;
+    // Find nearest unconnected systems
+    const candidates = allEdges
+      .filter(
+        (e) => (e.a === i || e.b === i) && !keptEdges.has(edgeKey(e.a, e.b)),
+      )
+      .sort((a, b) => a.dist - b.dist);
+    for (const c of candidates) {
+      if (connCount[i] >= HYPERLANE_MIN_CONNECTIONS) break;
+      const other = c.a === i ? c.b : c.a;
+      if (connCount[other] >= maxConn) continue;
+      keptEdges.add(edgeKey(c.a, c.b));
+      connCount[c.a]++;
+      connCount[c.b]++;
+    }
+  }
+
+  // 5. Convert to Hyperlane objects
+  const hyperlanes: Hyperlane[] = [];
+  let hIdx = 0;
+  for (const key of keptEdges) {
+    const [aStr, bStr] = key.split("-");
+    const a = Number(aStr);
+    const b = Number(bStr);
+    const dx = systems[a].x - systems[b].x;
+    const dy = systems[a].y - systems[b].y;
+    hyperlanes.push({
+      id: `hl-${hIdx++}`,
+      systemA: systems[a].id,
+      systemB: systems[b].id,
+      distance: Math.sqrt(dx * dx + dy * dy),
+    });
+  }
+
+  return hyperlanes;
+}
+
+/**
+ * Score how well an edge fits the galaxy shape (0..1).
+ * Higher = more aligned with the shape's characteristic connectivity.
+ */
+function scoreEdgeForShape(
+  sysA: StarSystem,
+  sysB: StarSystem,
+  shape: GalaxyShapeT,
+  cx: number,
+  cy: number,
+): number {
+  const midX = (sysA.x + sysB.x) / 2;
+  const midY = (sysA.y + sysB.y) / 2;
+  const dx = sysB.x - sysA.x;
+  const dy = sysB.y - sysA.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  switch (shape) {
+    case GalaxyShape.Spiral: {
+      // Prefer along-arm (tangential) connections over radial crossings
+      const toCenter = Math.atan2(midY - cy, midX - cx);
+      const edgeAngle = Math.atan2(dy, dx);
+      const angleDiff = Math.abs(Math.sin(edgeAngle - toCenter - Math.PI / 2));
+      return 0.3 + 0.7 * angleDiff; // tangential gets higher score
+    }
+    case GalaxyShape.Ring: {
+      // Prefer circumferential over radial
+      const toCenter = Math.atan2(midY - cy, midX - cx);
+      const edgeAngle = Math.atan2(dy, dx);
+      const angleDiff = Math.abs(Math.sin(edgeAngle - toCenter - Math.PI / 2));
+      return 0.2 + 0.8 * angleDiff;
+    }
+    case GalaxyShape.Elliptical: {
+      // Prefer shorter edges (denser core)
+      const maxDist = Math.max(
+        Math.abs(sysA.x - cx) + Math.abs(sysB.x - cx),
+        200,
+      );
+      return Math.max(0.2, 1 - dist / maxDist);
+    }
+    case GalaxyShape.Irregular: {
+      // Prefer same-empire connections (cluster coherence)
+      return sysA.empireId === sysB.empireId ? 0.8 : 0.3;
+    }
+    default:
+      return 0.5;
   }
 }

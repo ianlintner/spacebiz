@@ -69,6 +69,8 @@ export class GameHUDScene extends Phaser.Scene {
     "TechTreeScene",
     "FinanceScene",
     "MarketScene",
+    "EmpireScene",
+    "CompetitionScene",
     "SimPlaybackScene",
     "TurnReportScene",
   ];
@@ -232,6 +234,8 @@ export class GameHUDScene extends Phaser.Scene {
       { label: "Research", scene: "TechTreeScene", icon: "icon-research" },
       { label: "Finance", scene: "FinanceScene", icon: "icon-finance" },
       { label: "Market", scene: "MarketScene", icon: "icon-market" },
+      { label: "Empires", scene: "EmpireScene", icon: "icon-empire" },
+      { label: "Rivals", scene: "CompetitionScene", icon: "icon-rival" },
     ];
 
     const navSidebarTop = L.hudTopBarHeight;

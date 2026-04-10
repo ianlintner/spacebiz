@@ -8,6 +8,8 @@ import type {
   CargoMarketEntry,
   GameState,
   InterEmpireCargoLock,
+  Hyperlane,
+  BorderPort,
 } from "../../data/types.ts";
 import { CargoType as CargoTypeEnum } from "../../data/types.ts";
 import {
@@ -25,16 +27,24 @@ import {
   checkTradePolicyViolation,
   checkCargoLockViolation,
 } from "../empire/EmpireAccessManager.ts";
+import {
+  calculateHyperlaneDistance,
+  getReachableSystems,
+} from "./HyperlaneRouter.ts";
 
 /**
  * Calculate distance between two planets.
  * If planets are in the same system, use planet positions (short distance).
- * If in different systems, use system positions (long distance).
+ * If hyperlanes are provided, use path-based distance through the hyperlane graph.
+ * Otherwise, fall back to Euclidean system positions (legacy behavior).
+ * Returns -1 if hyperlanes are provided but no path exists.
  */
 export function calculateDistance(
   planet1: Planet,
   planet2: Planet,
   systems: StarSystem[],
+  hyperlanes?: Hyperlane[],
+  borderPorts?: BorderPort[],
 ): number {
   if (planet1.systemId === planet2.systemId) {
     // Same system: use planet positions
@@ -43,7 +53,18 @@ export function calculateDistance(
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  // Different systems: use system positions
+  // Use hyperlane routing if available
+  if (hyperlanes && hyperlanes.length > 0) {
+    return calculateHyperlaneDistance(
+      planet1,
+      planet2,
+      systems,
+      hyperlanes,
+      borderPorts ?? [],
+    );
+  }
+
+  // Legacy fallback: Euclidean distance between systems
   const system1 = systems.find((s) => s.id === planet1.systemId);
   const system2 = systems.find((s) => s.id === planet2.systemId);
 
@@ -310,7 +331,8 @@ export interface RouteOpportunity {
  * For each pair, shows ALL profitable cargo types so players can discover
  * passenger routes, food runs, etc. alongside high-value luxury hauls.
  *
- * Filters by empire access, trade policies, cargo locks, and route slots.
+ * Filters by empire access, trade policies, cargo locks, route slots,
+ * and hyperlane reachability.
  */
 export function scanAllRouteOpportunities(
   planets: Planet[],
@@ -329,6 +351,23 @@ export function scanAllRouteOpportunities(
     activeRoutes.map((r) => `${r.originPlanetId}→${r.destinationPlanetId}`),
   );
 
+  // Pre-compute reachable systems via hyperlanes if available
+  const hyperlanes = state?.hyperlanes ?? [];
+  const borderPorts = state?.borderPorts ?? [];
+  const hasHyperlanes = hyperlanes.length > 0;
+  const reachableBySystem = new Map<string, Set<string>>();
+  if (hasHyperlanes) {
+    const systemIds = new Set(systems.map((s) => s.id));
+    for (const sid of systemIds) {
+      if (!reachableBySystem.has(sid)) {
+        reachableBySystem.set(
+          sid,
+          getReachableSystems(sid, hyperlanes, borderPorts),
+        );
+      }
+    }
+  }
+
   const opportunities: RouteOpportunity[] = [];
 
   for (const origin of planets) {
@@ -344,8 +383,20 @@ export function scanAllRouteOpportunities(
         if (destEmpireId && !isEmpireAccessible(destEmpireId, state)) continue;
       }
 
-      const distance = calculateDistance(origin, dest, systems);
-      if (distance < 1) continue; // skip trivially close planets
+      // Filter by hyperlane reachability
+      if (hasHyperlanes && origin.systemId !== dest.systemId) {
+        const reachable = reachableBySystem.get(origin.systemId);
+        if (reachable && !reachable.has(dest.systemId)) continue;
+      }
+
+      const distance = calculateDistance(
+        origin,
+        dest,
+        systems,
+        state?.hyperlanes,
+        state?.borderPorts,
+      );
+      if (distance < 1 || distance === -1) continue; // skip trivially close or unreachable
       const destMarket = market.planetMarkets[dest.id];
       if (!destMarket) continue;
 

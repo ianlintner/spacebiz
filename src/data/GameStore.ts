@@ -46,6 +46,10 @@ function createDefaultState(): GameState {
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],
+    hyperlanes: [],
+    borderPorts: [],
+    diplomaticRelations: [],
+    hyperlaneDensity: "medium",
   };
 }
 

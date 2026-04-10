@@ -27,6 +27,7 @@ import {
   AI_MAX_SHIP_SPEND_RATIO,
 } from "../../data/constants.ts";
 import {
+  calculateDistance,
   calculateTripsPerTurn,
   calculateLicenseFee,
 } from "../routes/RouteManager.ts";
@@ -714,20 +715,15 @@ function openAIRoute(
       const destMarket = market.planetMarkets[dest.id];
       if (!destMarket) continue;
 
-      // Calculate distance
-      let distance: number;
-      if (origin.systemId === dest.systemId) {
-        const dx = origin.x - dest.x;
-        const dy = origin.y - dest.y;
-        distance = Math.sqrt(dx * dx + dy * dy);
-      } else {
-        const sys1 = systems.find((s) => s.id === origin.systemId);
-        const sys2 = systems.find((s) => s.id === dest.systemId);
-        if (!sys1 || !sys2) continue;
-        const dx = sys1.x - sys2.x;
-        const dy = sys1.y - sys2.y;
-        distance = Math.sqrt(dx * dx + dy * dy);
-      }
+      // Calculate distance (uses hyperlane routing when available)
+      const distance = calculateDistance(
+        origin,
+        dest,
+        systems,
+        state.hyperlanes,
+        state.borderPorts,
+      );
+      if (distance < 1 || distance === -1) continue;
 
       // Find best cargo for this route
       for (const cargoType of cargoTypes) {

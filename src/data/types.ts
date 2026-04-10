@@ -67,6 +67,32 @@ export const EmpireDisposition = {
 export type EmpireDisposition =
   (typeof EmpireDisposition)[keyof typeof EmpireDisposition];
 
+export const DiplomaticStatus = {
+  War: "war",
+  ColdWar: "coldWar",
+  Peace: "peace",
+  TradePact: "tradePact",
+  Alliance: "alliance",
+} as const;
+export type DiplomaticStatus =
+  (typeof DiplomaticStatus)[keyof typeof DiplomaticStatus];
+
+export const BorderPortStatus = {
+  Open: "open",
+  Closed: "closed",
+  Restricted: "restricted",
+} as const;
+export type BorderPortStatus =
+  (typeof BorderPortStatus)[keyof typeof BorderPortStatus];
+
+export const HyperlaneDensity = {
+  Low: "low",
+  Medium: "medium",
+  High: "high",
+} as const;
+export type HyperlaneDensity =
+  (typeof HyperlaneDensity)[keyof typeof HyperlaneDensity];
+
 export const AIPersonality = {
   AggressiveExpander: "aggressiveExpander",
   SteadyHauler: "steadyHauler",
@@ -228,7 +254,14 @@ export interface EventEffect {
     | "groundEmpireRoutes"
     | "blockImport"
     | "removeBans"
-    | "modifyTariff";
+    | "modifyTariff"
+    | "closeBorders"
+    | "openBorders"
+    | "declareWar"
+    | "signPeace"
+    | "formAlliance"
+    | "formTradePact"
+    | "degradeRelation";
   targetId?: string;
   cargoType?: CargoType;
   value: number;
@@ -400,6 +433,43 @@ export interface InterEmpireCargoLock {
   routeId: string;
 }
 
+// ── Hyperlane types ────────────────────────────────────────
+
+export interface Hyperlane {
+  id: string;
+  systemA: string;
+  systemB: string;
+  distance: number;
+}
+
+export interface BorderPort {
+  id: string;
+  empireId: string;
+  hyperlaneId: string;
+  systemId: string;
+  status: BorderPortStatus;
+}
+
+export interface DiplomaticRelation {
+  empireA: string;
+  empireB: string;
+  status: DiplomaticStatus;
+  turnsInCurrentStatus: number;
+}
+
+export interface DiplomaticIncident {
+  turn: number;
+  description: string;
+  empireA: string;
+  empireB: string;
+}
+
+export interface HyperlanePath {
+  segments: Hyperlane[];
+  totalDistance: number;
+  systems: string[];
+}
+
 // ── Tech tree types ────────────────────────────────────────
 
 export interface TechEffect {
@@ -527,4 +597,10 @@ export interface GameState {
   tech: TechState;
   empireTradePolicies: Record<string, EmpireTradePolicyEntry>;
   interEmpireCargoLocks: InterEmpireCargoLock[];
+
+  // Phase 4: Hyperlane & Diplomacy
+  hyperlanes?: Hyperlane[];
+  borderPorts?: BorderPort[];
+  diplomaticRelations?: DiplomaticRelation[];
+  hyperlaneDensity?: HyperlaneDensity;
 }

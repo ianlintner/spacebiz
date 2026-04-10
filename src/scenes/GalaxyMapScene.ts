@@ -221,6 +221,76 @@ export class GalaxyMapScene extends Phaser.Scene {
       systemMap.set(sys.id, { x: sys.x, y: sys.y });
     }
 
+    // ── Hyperlane network ──
+    const hyperlanes = state.hyperlanes ?? [];
+    const borderPorts = state.borderPorts ?? [];
+    if (hyperlanes.length > 0) {
+      const hlGraphics = this.add.graphics();
+
+      // Border port lookup: hyperlane → status
+      const portStatusMap = new Map<string, string>();
+      for (const bp of borderPorts) {
+        // If any port on a hyperlane is closed, mark the lane as closed
+        const existing = portStatusMap.get(bp.hyperlaneId);
+        if (bp.status === "closed" || existing === "closed") {
+          portStatusMap.set(bp.hyperlaneId, "closed");
+        } else if (bp.status === "restricted" && existing !== "closed") {
+          portStatusMap.set(bp.hyperlaneId, "restricted");
+        } else if (!existing) {
+          portStatusMap.set(bp.hyperlaneId, bp.status);
+        }
+      }
+
+      for (const hl of hyperlanes) {
+        const sysA = systemMap.get(hl.systemA);
+        const sysB = systemMap.get(hl.systemB);
+        if (!sysA || !sysB) continue;
+
+        const portStatus = portStatusMap.get(hl.id);
+
+        // Color lanes by status: closed=red dim, restricted=yellow dim, open=cyan dim
+        if (portStatus === "closed") {
+          hlGraphics.lineStyle(1, 0xff4444, 0.15);
+        } else if (portStatus === "restricted") {
+          hlGraphics.lineStyle(1, 0xffaa00, 0.2);
+        } else {
+          hlGraphics.lineStyle(1, theme.colors.accent, 0.18);
+        }
+
+        hlGraphics.beginPath();
+        hlGraphics.moveTo(sysA.x, sysA.y + L.contentTop);
+        hlGraphics.lineTo(sysB.x, sysB.y + L.contentTop);
+        hlGraphics.strokePath();
+      }
+
+      // Draw border port markers (small diamonds at border crossings)
+      const drawnPorts = new Set<string>();
+      for (const bp of borderPorts) {
+        if (drawnPorts.has(bp.hyperlaneId)) continue;
+        drawnPorts.add(bp.hyperlaneId);
+
+        const hl = hyperlanes.find((h) => h.id === bp.hyperlaneId);
+        if (!hl) continue;
+        const sysA = systemMap.get(hl.systemA);
+        const sysB = systemMap.get(hl.systemB);
+        if (!sysA || !sysB) continue;
+
+        // Draw small marker at midpoint
+        const mx = (sysA.x + sysB.x) / 2;
+        const my = (sysA.y + sysB.y) / 2 + L.contentTop;
+
+        const markerColor =
+          bp.status === "closed"
+            ? 0xff4444
+            : bp.status === "restricted"
+              ? 0xffaa00
+              : 0x44ff88;
+
+        hlGraphics.fillStyle(markerColor, 0.6);
+        hlGraphics.fillCircle(mx, my, 2);
+      }
+    }
+
     // ── Active route lines + ship sprites ──
     const routeGraphics = this.add.graphics();
     routeGraphics.lineStyle(1, theme.colors.accent, 0.4);
