@@ -388,7 +388,11 @@ export function applyEventEffects(
       }
 
       case "declareWar": {
-        if (effect.empireId && effect.empireId2 && nextState.diplomaticRelations) {
+        if (
+          effect.empireId &&
+          effect.empireId2 &&
+          nextState.diplomaticRelations
+        ) {
           nextState = {
             ...nextState,
             diplomaticRelations: setDiplomaticStatus(
@@ -413,7 +417,11 @@ export function applyEventEffects(
       }
 
       case "signPeace": {
-        if (effect.empireId && effect.empireId2 && nextState.diplomaticRelations) {
+        if (
+          effect.empireId &&
+          effect.empireId2 &&
+          nextState.diplomaticRelations
+        ) {
           nextState = {
             ...nextState,
             diplomaticRelations: setDiplomaticStatus(
@@ -438,7 +446,11 @@ export function applyEventEffects(
       }
 
       case "formAlliance": {
-        if (effect.empireId && effect.empireId2 && nextState.diplomaticRelations) {
+        if (
+          effect.empireId &&
+          effect.empireId2 &&
+          nextState.diplomaticRelations
+        ) {
           nextState = {
             ...nextState,
             diplomaticRelations: setDiplomaticStatus(
@@ -463,7 +475,11 @@ export function applyEventEffects(
       }
 
       case "formTradePact": {
-        if (effect.empireId && effect.empireId2 && nextState.diplomaticRelations) {
+        if (
+          effect.empireId &&
+          effect.empireId2 &&
+          nextState.diplomaticRelations
+        ) {
           nextState = {
             ...nextState,
             diplomaticRelations: setDiplomaticStatus(
@@ -488,7 +504,11 @@ export function applyEventEffects(
       }
 
       case "closeBorders": {
-        if (effect.empireId && effect.empireId2 && nextState.diplomaticRelations) {
+        if (
+          effect.empireId &&
+          effect.empireId2 &&
+          nextState.diplomaticRelations
+        ) {
           nextState = {
             ...nextState,
             diplomaticRelations: setDiplomaticStatus(
@@ -513,7 +533,11 @@ export function applyEventEffects(
       }
 
       case "openBorders": {
-        if (effect.empireId && effect.empireId2 && nextState.diplomaticRelations) {
+        if (
+          effect.empireId &&
+          effect.empireId2 &&
+          nextState.diplomaticRelations
+        ) {
           // Open borders implies at least peace status
           nextState = {
             ...nextState,
@@ -539,11 +563,16 @@ export function applyEventEffects(
       }
 
       case "degradeRelation": {
-        if (effect.empireId && effect.empireId2 && nextState.diplomaticRelations) {
+        if (
+          effect.empireId &&
+          effect.empireId2 &&
+          nextState.diplomaticRelations
+        ) {
           // Find current relation and degrade by one step
           const rel = nextState.diplomaticRelations.find(
             (r) =>
-              (r.empireA === effect.empireId && r.empireB === effect.empireId2) ||
+              (r.empireA === effect.empireId &&
+                r.empireB === effect.empireId2) ||
               (r.empireA === effect.empireId2 && r.empireB === effect.empireId),
           );
           if (rel) {
