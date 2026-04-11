@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { generateGalaxy } from "../GalaxyGenerator.ts";
-import { PlanetType } from "../../data/types.ts";
+import {
+  PlanetType,
+  GameSize,
+  GalaxyShape,
+  HyperlaneDensity,
+} from "../../data/types.ts";
 
 const ALL_PLANET_TYPES = Object.values(PlanetType);
 
@@ -130,6 +135,49 @@ describe("GalaxyGenerator", () => {
     const galaxy = generateGalaxy(42);
     for (const planet of galaxy.planets) {
       expect(planet.population).toBeGreaterThan(0);
+    }
+  });
+
+  it("hyperlanes avoid extreme long-distance connections", () => {
+    for (const seed of [7, 42, 99, 777, 2026]) {
+      const galaxy = generateGalaxy(
+        seed,
+        GameSize.Large,
+        GalaxyShape.Spiral,
+        HyperlaneDensity.Medium,
+      );
+      const distances = galaxy.hyperlanes
+        .map((h) => h.distance)
+        .sort((a, b) => a - b);
+      const max = distances[distances.length - 1] ?? 1;
+
+      const xs = galaxy.systems.map((s) => s.x);
+      const ys = galaxy.systems.map((s) => s.y);
+      const width = Math.max(...xs) - Math.min(...xs);
+      const height = Math.max(...ys) - Math.min(...ys);
+      const galaxyDiagonal = Math.sqrt(width * width + height * height);
+
+      // Prevent giant cross-map links while allowing occasional strategic shortcuts.
+      expect(max).toBeLessThanOrEqual(galaxyDiagonal * 0.42);
+    }
+  });
+
+  it("hyperlane network stays corridor-like instead of web-like", () => {
+    for (const seed of [13, 42, 101, 500, 9001]) {
+      const galaxy = generateGalaxy(
+        seed,
+        GameSize.Large,
+        GalaxyShape.Ring,
+        HyperlaneDensity.Medium,
+      );
+
+      const systemCount = galaxy.systems.length;
+      const edgeCount = galaxy.hyperlanes.length;
+      const averageDegree = (2 * edgeCount) / Math.max(systemCount, 1);
+
+      // Dense enough to navigate, sparse enough to feel like hyperlane corridors.
+      expect(averageDegree).toBeGreaterThanOrEqual(2.0);
+      expect(averageDegree).toBeLessThanOrEqual(3.8);
     }
   });
 });

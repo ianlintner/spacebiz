@@ -644,6 +644,80 @@ interface Edge {
   dist: number;
 }
 
+function percentileFromSorted(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  const clamped = Math.max(0, Math.min(1, p));
+  const idx = Math.floor((sorted.length - 1) * clamped);
+  return sorted[idx];
+}
+
+function edgeCountTarget(systemCount: number, keepRatio: number): number {
+  // Keep graph navigable and maze-like: low average degree with some redundancy.
+  // keepRatio is 0..1 from density config.
+  const targetAvgDegree = 1.8 + keepRatio * 1.6;
+  return Math.max(
+    systemCount - 1,
+    Math.round((systemCount * targetAvgDegree) / 2),
+  );
+}
+
+function hasSharedNeighbor(
+  adjacency: Array<Set<number>>,
+  a: number,
+  b: number,
+): boolean {
+  const aNeighbors = adjacency[a];
+  const bNeighbors = adjacency[b];
+  for (const n of aNeighbors) {
+    if (bNeighbors.has(n)) return true;
+  }
+  return false;
+}
+
+function getShapeOrderedSystemIndexes(
+  systems: StarSystem[],
+  shape: GalaxyShapeT,
+  cx: number,
+  cy: number,
+): number[] {
+  return systems
+    .map((sys, idx) => {
+      const dx = sys.x - cx;
+      const dy = sys.y - cy;
+      const r = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx);
+
+      let shapeCoord = 0;
+      switch (shape) {
+        case GalaxyShape.Spiral:
+          // Approximate arm-following order: angular sweep with outward progression.
+          shapeCoord = angle + r * 0.006;
+          break;
+        case GalaxyShape.Ring:
+          // Circumferential ring order.
+          shapeCoord = angle;
+          break;
+        case GalaxyShape.Elliptical:
+          // Broad elliptical flow left-to-right with vertical tie-break.
+          shapeCoord = sys.x * 0.01 + sys.y * 0.002;
+          break;
+        case GalaxyShape.Irregular:
+          // Cluster-ish ordering by empire then local angle.
+          shapeCoord = Number(sys.empireId.replace(/[^\d]/g, "")) * 10 + angle;
+          break;
+        default:
+          shapeCoord = angle;
+      }
+
+      return { idx, shapeCoord, r };
+    })
+    .sort((a, b) => {
+      if (a.shapeCoord !== b.shapeCoord) return a.shapeCoord - b.shapeCoord;
+      return a.r - b.r;
+    })
+    .map((v) => v.idx);
+}
+
 /**
  * Delaunay-approximation via sorted-distance neighbor graph.
  * For each system, connect to nearest neighbors, then prune by density config.
@@ -660,19 +734,43 @@ function generateHyperlanes(
   const densityCfg = HYPERLANE_DENSITY_CONFIGS[density];
   const shapeBias = HYPERLANE_SHAPE_BIAS[shape] ?? 0.5;
   const maxConn = densityCfg.maxConn;
+  const targetEdges = edgeCountTarget(systems.length, densityCfg.keepRatio);
 
   // 1. Compute all pairwise distances
   const allEdges: Edge[] = [];
+  const nearestNeighborDist = new Float64Array(systems.length);
+  for (let i = 0; i < systems.length; i++)
+    nearestNeighborDist[i] = Number.POSITIVE_INFINITY;
   for (let i = 0; i < systems.length; i++) {
     for (let j = i + 1; j < systems.length; j++) {
       const dx = systems[i].x - systems[j].x;
       const dy = systems[i].y - systems[j].y;
-      allEdges.push({ a: i, b: j, dist: Math.sqrt(dx * dx + dy * dy) });
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      allEdges.push({ a: i, b: j, dist });
+      if (dist < nearestNeighborDist[i]) nearestNeighborDist[i] = dist;
+      if (dist < nearestNeighborDist[j]) nearestNeighborDist[j] = dist;
     }
   }
   allEdges.sort((a, b) => a.dist - b.dist);
 
-  // 2. Build MST first (Kruskal's) to guarantee connectivity
+  const sortedDistances = allEdges.map((e) => e.dist);
+  const p70 = percentileFromSorted(sortedDistances, 0.7);
+  const p90 = percentileFromSorted(sortedDistances, 0.9);
+  const nnSorted = Array.from(nearestNeighborDist)
+    .filter((v) => Number.isFinite(v))
+    .sort((a, b) => a - b);
+  const nn75 = percentileFromSorted(nnSorted, 0.75);
+  const mapW = bounds.maxX - bounds.minX;
+  const mapH = bounds.maxY - bounds.minY;
+  const mapDiagonal = Math.sqrt(mapW * mapW + mapH * mapH);
+  const absoluteMaxEdge = mapDiagonal * 0.4;
+  const longEdgeLimit = Math.min(
+    Math.max(nn75 * (2.2 + densityCfg.keepRatio * 0.8), p70 * 0.8, p90 * 0.55),
+    absoluteMaxEdge,
+  );
+  const scaffoldEdgeLimit = longEdgeLimit * 1.05;
+
+  // 2. Build DSU for connectivity and an edge lookup table
   const parent = new Int32Array(systems.length);
   for (let i = 0; i < systems.length; i++) parent[i] = i;
   function find(x: number): number {
@@ -692,25 +790,87 @@ function generateHyperlanes(
 
   const keptEdges = new Set<string>();
   const connCount = new Int32Array(systems.length);
+  const adjacency: Array<Set<number>> = Array.from(
+    { length: systems.length },
+    () => new Set<number>(),
+  );
   const edgeKey = (a: number, b: number) => (a < b ? `${a}-${b}` : `${b}-${a}`);
+  const edgeByKey = new Map<string, Edge>();
+  for (const e of allEdges) edgeByKey.set(edgeKey(e.a, e.b), e);
 
-  // MST edges (always kept)
-  for (const e of allEdges) {
-    if (union(e.a, e.b)) {
-      keptEdges.add(edgeKey(e.a, e.b));
-      connCount[e.a]++;
-      connCount[e.b]++;
+  function addEdge(a: number, b: number, allowCapOverflow = false): boolean {
+    const key = edgeKey(a, b);
+    if (keptEdges.has(key)) return false;
+    const cap = allowCapOverflow ? maxConn + 1 : maxConn;
+    if (connCount[a] >= cap || connCount[b] >= cap) return false;
+    keptEdges.add(key);
+    connCount[a]++;
+    connCount[b]++;
+    adjacency[a].add(b);
+    adjacency[b].add(a);
+    union(a, b);
+    return true;
+  }
+
+  function addConnectivityEdge(a: number, b: number): boolean {
+    const key = edgeKey(a, b);
+    if (keptEdges.has(key)) return false;
+    keptEdges.add(key);
+    connCount[a]++;
+    connCount[b]++;
+    adjacency[a].add(b);
+    adjacency[b].add(a);
+    union(a, b);
+    return true;
+  }
+
+  // 3. Create shape-aligned primary scaffold (main corridors)
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cy = (bounds.minY + bounds.maxY) / 2;
+  const ordered = getShapeOrderedSystemIndexes(systems, shape, cx, cy);
+
+  for (let i = 0; i < ordered.length - 1; i++) {
+    if (keptEdges.size >= targetEdges) break;
+    const a = ordered[i];
+    const b = ordered[i + 1];
+    const e = edgeByKey.get(edgeKey(a, b));
+    if (!e || e.dist > scaffoldEdgeLimit) continue;
+    addEdge(a, b);
+  }
+
+  // Ring gets a closed primary loop when possible.
+  if (shape === GalaxyShape.Ring && ordered.length > 2) {
+    const a = ordered[0];
+    const b = ordered[ordered.length - 1];
+    const e = edgeByKey.get(edgeKey(a, b));
+    if (e && e.dist <= scaffoldEdgeLimit) {
+      addEdge(a, b);
     }
   }
 
-  // 3. Add extra edges based on density and shape bias
-  const cx = (bounds.minX + bounds.maxX) / 2;
-  const cy = (bounds.minY + bounds.maxY) / 2;
+  // 4. Build connectivity with short bridges first, then fallback.
+  const connectivityEdgeLimit = longEdgeLimit * 1.1;
+  for (const e of allEdges) {
+    if (find(e.a) === find(e.b)) continue;
+    if (e.dist > connectivityEdgeLimit || e.dist > absoluteMaxEdge) continue;
+    addConnectivityEdge(e.a, e.b);
+  }
+  for (const e of allEdges) {
+    if (find(e.a) === find(e.b)) continue;
+    if (e.dist > absoluteMaxEdge) continue;
+    addConnectivityEdge(e.a, e.b);
+  }
+
+  // 5. Add tributaries based on density and shape bias
 
   for (const e of allEdges) {
-    const key = edgeKey(e.a, e.b);
-    if (keptEdges.has(key)) continue;
+    if (keptEdges.size >= targetEdges) break;
+    if (keptEdges.has(edgeKey(e.a, e.b))) continue;
     if (connCount[e.a] >= maxConn || connCount[e.b] >= maxConn) continue;
+    if (e.dist > longEdgeLimit) continue;
+
+    // Discourage triangle-heavy local webbing; leave only occasional shortcuts.
+    if (hasSharedNeighbor(adjacency, e.a, e.b) && rng.next() < 0.7) continue;
 
     // Shape-aware scoring: prefer edges that align with the galaxy shape
     const edgeScore = scoreEdgeForShape(
@@ -720,33 +880,33 @@ function generateHyperlanes(
       cx,
       cy,
     );
+    const distanceScore = Math.max(0, 1 - e.dist / longEdgeLimit);
 
-    // Keep edge if shape-compatible or random chance based on density
+    // Keep edge if shape-compatible and reasonably short.
     const keepChance =
-      edgeScore * shapeBias + (1 - shapeBias) * densityCfg.keepRatio;
+      (edgeScore * shapeBias + (1 - shapeBias) * distanceScore) *
+      densityCfg.keepRatio;
     if (rng.next() < keepChance) {
-      keptEdges.add(key);
-      connCount[e.a]++;
-      connCount[e.b]++;
+      addEdge(e.a, e.b);
     }
   }
 
-  // 4. Ensure minimum connections
+  // 6. Ensure minimum connections
+  const minConnectionEdgeCap = longEdgeLimit * 1.2;
   for (let i = 0; i < systems.length; i++) {
     if (connCount[i] >= HYPERLANE_MIN_CONNECTIONS) continue;
     // Find nearest unconnected systems
-    const candidates = allEdges
-      .filter(
-        (e) => (e.a === i || e.b === i) && !keptEdges.has(edgeKey(e.a, e.b)),
-      )
-      .sort((a, b) => a.dist - b.dist);
+    const candidates = allEdges.filter(
+      (e) =>
+        (e.a === i || e.b === i) &&
+        e.dist <= minConnectionEdgeCap &&
+        !keptEdges.has(edgeKey(e.a, e.b)),
+    );
     for (const c of candidates) {
       if (connCount[i] >= HYPERLANE_MIN_CONNECTIONS) break;
       const other = c.a === i ? c.b : c.a;
       if (connCount[other] >= maxConn) continue;
-      keptEdges.add(edgeKey(c.a, c.b));
-      connCount[c.a]++;
-      connCount[c.b]++;
+      addEdge(c.a, c.b);
     }
   }
 
