@@ -238,327 +238,604 @@ export class SimPlaybackScene extends Phaser.Scene {
     }
     if (starTweens.length > 0) registerAmbientCleanup(this, starTweens);
 
-    // Build planet -> system lookup
-    const planetSystemMap = new Map<string, string>();
-    for (const planet of planets) {
-      planetSystemMap.set(planet.id, planet.systemId);
-    }
-    const systemLookup = new Map<
-      string,
-      { x: number; y: number; color: number }
-    >();
-    for (const sys of systems) {
-      systemLookup.set(sys.id, { x: sys.x, y: sys.y, color: sys.starColor });
+    // ── Hyperlane network ─────────────────────────────────────────────────────
+    const hyperlanes = state.hyperlanes ?? [];
+    const hlGraphics = this.add.graphics().setDepth(-10);
+    for (const hl of hyperlanes) {
+      const sA = systemLookup.get(hl.systemA);
+      const sB = systemLookup.get(hl.systemB);
+      if (!sA || !sB) continue;
+      hlGraphics.lineStyle(1, theme.colors.accent, 0.15);
+      hlGraphics.beginPath();
+      hlGraphics.moveTo(sA.x, sA.y);
+      hlGraphics.lineTo(sB.x, sB.y);
+      hlGraphics.strokePath();
     }
 
-    // Draw systems with glow halos
+    // ── Planet count per system ───────────────────────────────────────────────
+    const planetCountBySystem = new Map<string, number>();
+    for (const p of planets) {
+      planetCountBySystem.set(
+        p.systemId,
+        (planetCountBySystem.get(p.systemId) ?? 0) + 1,
+      );
+    }
+
+    // ── Star systems (route-highlighted vs dim) ───────────────────────────────
     for (const sys of systems) {
-      // Glow halo behind the star dot
-      this.add.circle(sys.x, sys.y, 8, sys.starColor, 0.15);
-      // Star dot
-      this.add.circle(sys.x, sys.y, 4, sys.starColor, 0.6);
+      const isRoute = routeSystemIds.has(sys.id);
+      const pCount = planetCountBySystem.get(sys.id) ?? 0;
+      const baseR = Math.max(3, 3 + Math.min(3, pCount));
+      const r = isRoute ? baseR + 2 : baseR;
+      const outerHalo = this.add
+        .circle(sys.x, sys.y, r * 4, sys.starColor)
+        .setAlpha(isRoute ? 0.12 : 0.04)
+        .setDepth(-5);
+      if (isRoute) {
+        addPulseTween(this, outerHalo, {
+          minAlpha: 0.06,
+          maxAlpha: 0.18,
+          duration: 2500 + Math.random() * 2000,
+          delay: Math.random() * 2000,
+        });
+      }
       this.add
-        .text(sys.x, sys.y + 8, sys.name, {
-          fontSize: `${theme.fonts.caption.size}px`,
+        .circle(sys.x, sys.y, r * 1.8, sys.starColor)
+        .setAlpha(isRoute ? 0.3 : 0.12)
+        .setDepth(-4);
+      this.add
+        .circle(sys.x, sys.y, r, sys.starColor, isRoute ? 0.95 : 0.55)
+        .setDepth(-3);
+      this.add
+        .text(sys.x, sys.y + r + 5, sys.name, {
+          fontSize: `${isRoute ? theme.fonts.caption.size + 1 : theme.fonts.caption.size - 1}px`,
           fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.textDim),
+          color: isRoute
+            ? colorToString(theme.colors.text)
+            : colorToString(theme.colors.textDim),
           stroke: "#000000",
-          strokeThickness: 2,
+          strokeThickness: isRoute ? 3 : 1,
         })
-        .setOrigin(0.5, 0);
+        .setOrigin(0.5, 0)
+        .setAlpha(isRoute ? 0.9 : 0.3)
+        .setDepth(-3);
     }
 
-    // Draw route lines and animate ships with glow trails
-    const routeGraphics = this.add.graphics();
-    routeGraphics.lineStyle(1, theme.colors.accent, 0.3);
-
-    // Build a lookup from routeId → revenue from this turn's route performance
+    // ── Route revenue lookup ──────────────────────────────────────────────────
     const routeRevenueMap = new Map<string, number>();
     for (const rp of this.turnResult.routePerformance) {
       routeRevenueMap.set(rp.routeId, rp.revenue);
     }
 
+    // ── Route lines + animated ships ─────────────────────────────────────────
+    const routeGraphics = this.add.graphics().setDepth(0);
     for (const route of state.activeRoutes) {
-      const originSysId = planetSystemMap.get(route.originPlanetId);
-      const destSysId = planetSystemMap.get(route.destinationPlanetId);
-      if (!originSysId || !destSysId) continue;
-      const originSys = systemLookup.get(originSysId);
-      const destSys = systemLookup.get(destSysId);
-      if (!originSys || !destSys) continue;
-
-      // Route line
-      routeGraphics.beginPath();
-      routeGraphics.moveTo(originSys.x, originSys.y);
-      routeGraphics.lineTo(destSys.x, destSys.y);
-      routeGraphics.strokePath();
-
-      // Trailing glow dots (behind the ship)
-      const trail1 = this.add.circle(
-        originSys.x,
-        originSys.y,
-        2,
-        theme.colors.accent,
-        0.5,
-      );
-      const trail2 = this.add.circle(
-        originSys.x,
-        originSys.y,
-        1.5,
-        theme.colors.accent,
-        0.3,
-      );
-      const trail3 = this.add.circle(
-        originSys.x,
-        originSys.y,
-        1,
-        theme.colors.accent,
-        0.1,
-      );
-
-      // Animated ship dot traveling the route
-      const shipDot = this.add.circle(
-        originSys.x,
-        originSys.y,
-        3,
-        theme.colors.accent,
-      );
-
-      const halfDuration = ANIM_DURATION / 2;
-
-      this.tweens.add({
-        targets: shipDot,
-        x: destSys.x,
-        y: destSys.y,
-        duration: halfDuration,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-
-      // Trail dots follow with small delays for trailing effect
-      this.tweens.add({
-        targets: trail1,
-        x: destSys.x,
-        y: destSys.y,
-        duration: halfDuration,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-        delay: 60,
-      });
-
-      this.tweens.add({
-        targets: trail2,
-        x: destSys.x,
-        y: destSys.y,
-        duration: halfDuration,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-        delay: 120,
-      });
-
-      this.tweens.add({
-        targets: trail3,
-        x: destSys.x,
-        y: destSys.y,
-        duration: halfDuration,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-        delay: 180,
-      });
-
-      // Mid-point revenue popup — fires when the ship reaches its destination
+      const oSysId = planetSystemMap.get(route.originPlanetId);
+      const dSysId = planetSystemMap.get(route.destinationPlanetId);
+      if (!oSysId || !dSysId) continue;
+      const oSys = systemLookup.get(oSysId);
+      const dSys = systemLookup.get(dSysId);
+      if (!oSys || !dSys) continue;
+      const ox = oSys.x;
+      const oy = oSys.y;
+      const dx = dSys.x;
+      const dy = dSys.y;
+      const angle = Math.atan2(dy - oy, dx - ox);
+      const halfDur = ANIM_DURATION / 2;
       const routeRevenue = routeRevenueMap.get(route.id) ?? 0;
+      const routeColor =
+        routeRevenue >= 1000
+          ? theme.colors.profit
+          : routeRevenue > 0
+            ? theme.colors.accent
+            : theme.colors.textDim;
+      // Glow underlayer
+      routeGraphics.lineStyle(6, routeColor, 0.1);
+      routeGraphics.beginPath();
+      routeGraphics.moveTo(ox, oy);
+      routeGraphics.lineTo(dx, dy);
+      routeGraphics.strokePath();
+      // Route line
+      routeGraphics.lineStyle(2, routeColor, 0.75);
+      routeGraphics.beginPath();
+      routeGraphics.moveTo(ox, oy);
+      routeGraphics.lineTo(dx, dy);
+      routeGraphics.strokePath();
+      // Endpoint halos
+      this.add.circle(ox, oy, 9, routeColor, 0.18).setDepth(1);
+      this.add.circle(dx, dy, 9, routeColor, 0.18).setDepth(1);
+      // Ship sprite or fallback pip
+      const firstShipId = route.assignedShipIds[0];
+      const firstShip = firstShipId
+        ? state.fleet.find((s) => s.id === firstShipId)
+        : undefined;
+      const shipIconKey = firstShip
+        ? getShipIconKey(firstShip.class)
+        : undefined;
+      const shipTint = firstShip
+        ? getShipColor(firstShip.class)
+        : theme.colors.accent;
+      const delay = Math.random() * halfDur * 0.5;
+      if (shipIconKey && this.textures.exists(shipIconKey)) {
+        const sp = this.add
+          .image(ox, oy, shipIconKey)
+          .setDisplaySize(22, 22)
+          .setTint(shipTint)
+          .setAlpha(0.95)
+          .setRotation(angle)
+          .setDepth(12);
+        const sg = this.add.circle(ox, oy, 13, shipTint, 0.18).setDepth(11);
+        this.tweens.add({
+          targets: [sp, sg],
+          x: dx,
+          y: dy,
+          duration: halfDur,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+          delay,
+          onYoyo: () => {
+            sp.setRotation(angle + Math.PI);
+          },
+          onRepeat: () => {
+            sp.setRotation(angle);
+          },
+        });
+        for (let t = 0; t < 3; t++) {
+          const trail = this.add
+            .circle(ox, oy, 3 - t, shipTint, 0.45 - t * 0.12)
+            .setDepth(10);
+          this.tweens.add({
+            targets: trail,
+            x: dx,
+            y: dy,
+            duration: halfDur,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+            delay: delay + 85 * (t + 1),
+          });
+        }
+      } else {
+        const pip = this.add.circle(ox, oy, 5, shipTint).setDepth(12);
+        const glow = this.add.circle(ox, oy, 11, shipTint, 0.2).setDepth(11);
+        this.tweens.add({
+          targets: [pip, glow],
+          x: dx,
+          y: dy,
+          duration: halfDur,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+          delay,
+        });
+        for (let t = 0; t < 2; t++) {
+          const trail = this.add
+            .circle(ox, oy, 3 - t, shipTint, 0.4 - t * 0.15)
+            .setDepth(10);
+          this.tweens.add({
+            targets: trail,
+            x: dx,
+            y: dy,
+            duration: halfDur,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+            delay: delay + 85 * (t + 1),
+          });
+        }
+      }
+      // Revenue popup at midpoint
       if (routeRevenue > 0) {
-        const midX = (originSys.x + destSys.x) / 2;
-        const midY = (originSys.y + destSys.y) / 2;
-        this.time.delayedCall(halfDuration, () => {
+        const midX = (ox + dx) / 2;
+        const midY = (oy + dy) / 2;
+        this.time.delayedCall(halfDur + delay, () => {
           if (this.animationComplete) return;
           new FloatingText(
             this,
             midX,
             midY,
-            "+" + "\u00A7" + routeRevenue.toLocaleString(),
+            "+" + formatCash(routeRevenue),
             theme.colors.profit,
-            { size: "small", riseDistance: 44 },
+            { size: "large", riseDistance: 60 },
           );
           getAudioDirector().sfx("route_complete");
         });
       }
     }
 
-    // -----------------------------------------------------------------------
-    // Step 3: Revenue / Cost ticker (top-right) — Panel component
-    // -----------------------------------------------------------------------
-    const tickerPanel = new Panel(this, {
-      x: sfW - 230,
-      y: 10,
-      width: 220,
-      height: 130,
-      showGlow: false,
+    // Pulse route lines alpha
+    this.tweens.add({
+      targets: routeGraphics,
+      alpha: { from: 0.65, to: 1.0 },
+      duration: 1400,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
     });
-    tickerPanel.setScrollFactor(0);
-    const tc = tickerPanel.getContentArea();
 
-    const tickerTitle = new Label(this, {
-      x: tc.x,
-      y: tc.y,
-      text: "Turn Simulation",
-      style: "caption",
-      color: theme.colors.accent,
+    // ── Camera drag & zoom ────────────────────────────────────────────────────
+    this.input.on(
+      "wheel",
+      (
+        _ptr: Phaser.Input.Pointer,
+        _over: Phaser.GameObjects.GameObject[],
+        _dx: number,
+        dy: number,
+      ) => {
+        cam.setZoom(
+          Phaser.Math.Clamp(
+            cam.zoom + (dy < 0 ? ZOOM_STEP : -ZOOM_STEP),
+            MIN_ZOOM,
+            MAX_ZOOM,
+          ),
+        );
+      },
+    );
+    this.input.on("pointerdown", (ptr: Phaser.Input.Pointer) => {
+      this.isDragging = false;
+      this.dragStartX = ptr.x;
+      this.dragStartY = ptr.y;
+      this.camStartX = cam.scrollX;
+      this.camStartY = cam.scrollY;
     });
-    this.children.remove(tickerTitle);
-    tickerPanel.add(tickerTitle);
-
-    this.revenueLabel = new Label(this, {
-      x: tc.x,
-      y: tc.y + 22,
-      text: "Revenue: " + formatCash(0),
-      style: "body",
-      color: theme.colors.profit,
+    this.input.on("pointermove", (ptr: Phaser.Input.Pointer) => {
+      if (!ptr.isDown) return;
+      const ddx = ptr.x - this.dragStartX;
+      const ddy = ptr.y - this.dragStartY;
+      if (!this.isDragging && Math.abs(ddx) + Math.abs(ddy) < DRAG_THRESHOLD)
+        return;
+      this.isDragging = true;
+      cam.scrollX = this.camStartX - ddx / cam.zoom;
+      cam.scrollY = this.camStartY - ddy / cam.zoom;
     });
-    this.children.remove(this.revenueLabel);
-    tickerPanel.add(this.revenueLabel);
-
-    this.costsLabel = new Label(this, {
-      x: tc.x,
-      y: tc.y + 44,
-      text: "Costs: " + formatCash(0),
-      style: "body",
-      color: theme.colors.loss,
+    this.input.on("pointerup", () => {
+      this.isDragging = false;
     });
-    this.children.remove(this.costsLabel);
-    tickerPanel.add(this.costsLabel);
 
-    this.profitLabel = new Label(this, {
-      x: tc.x,
-      y: tc.y + 66,
-      text: "Profit: " + formatCash(0),
-      style: "value",
-      color: theme.colors.text,
+    // ── Build leaderboard data ─────────────────────────────────────────────────
+    const leaderboard: LeaderEntry[] = [];
+    leaderboard.push({
+      id: "player",
+      name: state.companyName,
+      isPlayer: true,
+      startCash: state.cash,
+      endCash: this.newState.cash,
+      profit: this.turnResult.netProfit,
+      routeCount: state.activeRoutes.length,
+      bankrupt: false,
     });
-    this.children.remove(this.profitLabel);
-    tickerPanel.add(this.profitLabel);
+    for (const ai of this.turnResult.aiSummaries) {
+      const aiComp = state.aiCompanies.find((c) => c.id === ai.companyId);
+      leaderboard.push({
+        id: ai.companyId,
+        name: ai.companyName,
+        isPlayer: false,
+        startCash: aiComp?.cash ?? ai.cashAtEnd,
+        endCash: ai.cashAtEnd,
+        profit: ai.netProfit,
+        routeCount: ai.routeCount,
+        bankrupt: ai.bankrupt,
+      });
+    }
+    leaderboard.sort((a, b) => b.endCash - a.endCash);
 
-    // Separator line between costs and profit
-    const tickerSep = this.add
-      .rectangle(tc.x, tc.y + 62, tc.width - 16, 1, theme.colors.panelBorder)
+    // ── HUD text helper (scrollFactor 0) ──────────────────────────────────────
+    const hudText = (
+      x: number,
+      y: number,
+      txt: string,
+      col: number,
+      fs = 11,
+      stroke = 2,
+    ) =>
+      this.add
+        .text(x, y, txt, {
+          fontSize: `${fs}px`,
+          fontFamily: theme.fonts.body.family,
+          color: colorToString(col),
+          stroke: "#000000",
+          strokeThickness: stroke,
+        })
+        .setScrollFactor(0)
+        .setDepth(50);
+
+    // ── Top-centre: sim turn indicator ─────────────────────────────────────────
+    const quarter = ((state.turn - 1) % 4) + 1;
+    const year = Math.floor((state.turn - 1) / 4) + 1;
+    const simLabel = hudText(
+      sfW / 2,
+      8,
+      `\u27eb SIMULATING Q${quarter} Y${year} \u27ea`,
+      theme.colors.accent,
+      13,
+      3,
+    ).setOrigin(0.5, 0);
+    this.tweens.add({
+      targets: simLabel,
+      alpha: { from: 0.9, to: 0.35 },
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+
+    // ── Left panel: Competition Standings ─────────────────────────────────────
+    const LP = 10;
+    const LPW = 190;
+    const maxRows = Math.min(leaderboard.length, 7);
+    const ROW_H = 46;
+    const LBPT = 30;
+    const lPanelH = 28 + maxRows * ROW_H;
+    this.add
+      .rectangle(LP, LBPT, LPW, lPanelH, 0x050c1a, 0.84)
       .setOrigin(0, 0)
-      .setAlpha(0.5);
-    tickerPanel.add(tickerSep);
+      .setStrokeStyle(1, theme.colors.panelBorder, 0.55)
+      .setScrollFactor(0)
+      .setDepth(49);
+    hudText(LP + 8, LBPT + 6, "STANDINGS", theme.colors.accent, 10, 2);
+    this.add
+      .rectangle(LP + 4, LBPT + 20, LPW - 8, 1, theme.colors.accent, 0.28)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(50);
+    for (let i = 0; i < maxRows; i++) {
+      const e = leaderboard[i];
+      const ry = LBPT + 26 + i * ROW_H;
+      if (e.isPlayer) {
+        this.add
+          .rectangle(
+            LP + 2,
+            ry - 1,
+            LPW - 4,
+            ROW_H - 2,
+            theme.colors.accent,
+            0.07,
+          )
+          .setOrigin(0, 0)
+          .setScrollFactor(0)
+          .setDepth(49);
+      }
+      const medalColor =
+        i === 0
+          ? 0xffd700
+          : i === 1
+            ? 0xc0c0c0
+            : i === 2
+              ? 0xcd7f32
+              : theme.colors.textDim;
+      this.add
+        .circle(LP + 9, ry + 8, 4, medalColor, i <= 2 ? 0.9 : 0.45)
+        .setScrollFactor(0)
+        .setDepth(51);
+      const truncName =
+        e.name.length > 15 ? e.name.substring(0, 13) + "\u2026" : e.name;
+      hudText(
+        LP + 18,
+        ry + 1,
+        `${i + 1}. ${truncName}${e.bankrupt ? " \u2620" : ""}`,
+        e.isPlayer ? theme.colors.accent : theme.colors.text,
+        11,
+        2,
+      );
+      const cashT = hudText(
+        LP + 18,
+        ry + 16,
+        formatCash(e.startCash),
+        theme.colors.text,
+        12,
+        2,
+      );
+      this.leaderCashTexts.set(e.id, cashT);
+      const profitCol = e.profit >= 0 ? theme.colors.profit : theme.colors.loss;
+      const profitT = hudText(
+        LP + 18,
+        ry + 31,
+        (e.profit >= 0 ? "+" : "") + formatCash(0),
+        profitCol,
+        10,
+        1,
+      );
+      this.leaderProfitTexts.set(e.id, profitT);
+      hudText(
+        LP + LPW - 6,
+        ry + 16,
+        `${e.routeCount}\u25b8`,
+        theme.colors.textDim,
+        10,
+        1,
+      ).setOrigin(1, 0);
+    }
 
-    // Drive the ticker with a tween on a dummy progress value
+    // ── Right panel: Financial Report ─────────────────────────────────────────
+    const RP = 10;
+    const RPW = 210;
+    const RPX = sfW - RPW - RP;
+    const RBPT = 30;
+    this.add
+      .rectangle(RPX, RBPT, RPW, 218, 0x050c1a, 0.84)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, theme.colors.panelBorder, 0.55)
+      .setScrollFactor(0)
+      .setDepth(49);
+    hudText(RPX + 8, RBPT + 6, "FINANCIAL REPORT", theme.colors.accent, 10, 2);
+    this.add
+      .rectangle(RPX + 4, RBPT + 20, RPW - 8, 1, theme.colors.accent, 0.28)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(50);
+    let ty = RBPT + 26;
+    hudText(RPX + 8, ty, "REVENUE", theme.colors.textDim, 9, 1);
+    ty += 13;
+    this.revenueText = hudText(
+      RPX + 8,
+      ty,
+      formatCash(0),
+      theme.colors.profit,
+      15,
+      2,
+    );
+    ty += 22;
+    hudText(RPX + 8, ty, "OPERATING COSTS", theme.colors.textDim, 9, 1);
+    ty += 13;
+    this.costsText = hudText(
+      RPX + 8,
+      ty,
+      formatCash(0),
+      theme.colors.loss,
+      15,
+      2,
+    );
+    ty += 22;
+    this.add
+      .rectangle(RPX + 4, ty, RPW - 8, 1, theme.colors.panelBorder, 0.4)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(50);
+    ty += 8;
+    hudText(RPX + 8, ty, "NET PROFIT", theme.colors.textDim, 9, 1);
+    ty += 13;
+    this.profitText = hudText(
+      RPX + 8,
+      ty,
+      formatCash(0),
+      theme.colors.text,
+      17,
+      2,
+    );
+    ty += 25;
+    this.add
+      .rectangle(RPX + 4, ty, RPW - 8, 1, theme.colors.panelBorder, 0.35)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(50);
+    ty += 8;
+    hudText(
+      RPX + 8,
+      ty,
+      `\u25b6 ${state.activeRoutes.length} active routes`,
+      theme.colors.textDim,
+      10,
+      1,
+    );
+    ty += 14;
+    hudText(
+      RPX + 8,
+      ty,
+      `\u25b6 ${state.fleet.length} ships in fleet`,
+      theme.colors.textDim,
+      10,
+      1,
+    );
+    ty += 14;
+    hudText(
+      RPX + 8,
+      ty + 4,
+      "Scroll to zoom \u00b7 Drag to pan",
+      theme.colors.textDim,
+      9,
+      0,
+    ).setAlpha(0.45);
+
+    // ── Revenue ticker tween ──────────────────────────────────────────────────
     const totalRevenue = this.turnResult.revenue;
     const totalCosts =
       this.turnResult.fuelCosts +
       this.turnResult.maintenanceCosts +
       this.turnResult.loanPayments +
       this.turnResult.otherCosts;
-
-    const tickerDriver = { progress: 0 };
+    const tickProgress = { t: 0 };
     this.tweens.add({
-      targets: tickerDriver,
-      progress: 1,
+      targets: tickProgress,
+      t: 1,
       duration: ANIM_DURATION,
       onUpdate: () => {
-        const rev = Math.round(totalRevenue * tickerDriver.progress);
-        const cost = Math.round(totalCosts * tickerDriver.progress);
-        const profit = rev - cost;
-        this.revenueLabel.setText("Revenue: " + formatCash(rev));
-        this.costsLabel.setText("Costs: " + formatCash(cost));
-        this.profitLabel.setText("Profit: " + formatCash(profit));
-        this.profitLabel.setLabelColor(
-          profit >= 0 ? theme.colors.profit : theme.colors.loss,
+        const p = tickProgress.t;
+        const rev = Math.round(totalRevenue * p);
+        const cost = Math.round(totalCosts * p);
+        const net = rev - cost;
+        this.revenueText.setText(formatCash(rev));
+        this.costsText.setText(formatCash(cost));
+        this.profitText.setText(formatCash(net));
+        this.profitText.setColor(
+          colorToString(net >= 0 ? theme.colors.profit : theme.colors.loss),
         );
+        for (const e of leaderboard) {
+          const animCash = Math.round(
+            e.startCash + (e.endCash - e.startCash) * p,
+          );
+          const animProfit = Math.round(e.profit * p);
+          this.leaderCashTexts.get(e.id)?.setText(formatCash(animCash));
+          const pt = this.leaderProfitTexts.get(e.id);
+          if (pt) {
+            pt.setText((e.profit >= 0 ? "+" : "") + formatCash(animProfit));
+            pt.setColor(
+              colorToString(
+                e.profit >= 0 ? theme.colors.profit : theme.colors.loss,
+              ),
+            );
+          }
+        }
       },
       onComplete: () => {
         this.finishAnimation();
       },
     });
 
-    // -----------------------------------------------------------------------
-    // Step 4: Event popups — timed reveals during the animation
-    // -----------------------------------------------------------------------
+    // ── Event popups ──────────────────────────────────────────────────────────
     const eventNames = this.turnResult.eventsOccurred;
     const activeEvents = this.newState.activeEvents;
-
     if (eventNames.length > 0) {
       const interval = ANIM_DURATION / (eventNames.length + 1);
       eventNames.forEach((eventName, index) => {
         this.time.delayedCall(interval * (index + 1), () => {
           if (this.animationComplete) return;
           const detail = activeEvents.find((e) => e.name === eventName);
-          const description = detail ? detail.description : "";
-          this.showEventPopup(eventName, description, index, detail?.category);
+          this.showEventPopup(
+            eventName,
+            detail?.description ?? "",
+            index,
+            detail?.category,
+          );
         });
       });
     }
 
-    // -----------------------------------------------------------------------
-    // Step 5: Speed control buttons — centered horizontally
-    // -----------------------------------------------------------------------
-    const btnY = sfH - 50;
-    const btnWidth = 80;
-    const btnHeight = 32;
-    const totalBtnWidth = btnWidth * 4 + 30;
-    const startX = sfW / 2 - totalBtnWidth / 2;
-
-    const btn1x = new Button(this, {
-      x: startX,
-      y: btnY,
-      width: btnWidth,
-      height: btnHeight,
-      label: "1x",
-      onClick: () => this.setSpeed(1),
-    });
-    btn1x.setScrollFactor(0);
-
-    const btn2x = new Button(this, {
-      x: startX + btnWidth + 10,
-      y: btnY,
-      width: btnWidth,
-      height: btnHeight,
-      label: "2x",
-      onClick: () => this.setSpeed(2),
-    });
-    btn2x.setScrollFactor(0);
-
-    const btn4x = new Button(this, {
-      x: startX + (btnWidth + 10) * 2,
-      y: btnY,
-      width: btnWidth,
-      height: btnHeight,
-      label: "4x",
-      onClick: () => this.setSpeed(4),
-    });
-    btn4x.setScrollFactor(0);
-
-    const btnSkip = new Button(this, {
-      x: startX + (btnWidth + 10) * 3,
-      y: btnY,
-      width: btnWidth,
-      height: btnHeight,
-      label: "Skip",
-      onClick: () => this.skipAnimation(),
-    });
-    btnSkip.setScrollFactor(0);
+    // ── Speed controls bar ────────────────────────────────────────────────────
+    const BTN_W = 80;
+    const BTN_H = 32;
+    const BTN_GAP = 10;
+    const totalBW = BTN_W * 4 + BTN_GAP * 3;
+    const btnStartX = sfW / 2 - totalBW / 2;
+    const btnBaseY = sfH - BTN_H - 18;
+    const speedDefs = [
+      { label: "1\u00d7", speed: 1 },
+      { label: "2\u00d7", speed: 2 },
+      { label: "4\u00d7", speed: 4 },
+      { label: "Skip", speed: 0 },
+    ];
+    for (let i = 0; i < speedDefs.length; i++) {
+      const def = speedDefs[i];
+      const btn = new Button(this, {
+        x: btnStartX + i * (BTN_W + BTN_GAP),
+        y: btnBaseY,
+        width: BTN_W,
+        height: BTN_H,
+        label: def.label,
+        onClick: () =>
+          def.speed === 0 ? this.skipAnimation() : this.setSpeed(def.speed),
+      });
+      btn.setScrollFactor(0);
+    }
   }
 
-  // -------------------------------------------------------------------------
-  // Speed controls
-  // -------------------------------------------------------------------------
-
+  // ── Speed control ─────────────────────────────────────────────────────────
   private setSpeed(multiplier: number): void {
     this.tweens.timeScale = multiplier;
     this.time.timeScale = multiplier;
   }
 
-  // -------------------------------------------------------------------------
-  // Event popup slide-in — glass-styled panels
-  // -------------------------------------------------------------------------
-
+  // ── Event popup slide-in ──────────────────────────────────────────────────
   private showEventPopup(
     name: string,
     description: string,
@@ -568,8 +845,13 @@ export class SimPlaybackScene extends Phaser.Scene {
     const theme = getTheme();
     const cam = this.cameras.main;
     const sfW = cam.width / cam.zoom;
-    const popupY = 200 + index * 70;
-
+    const popupH = 72;
+    const popupW = 300;
+    const containerY = 60 + index * (popupH + 8);
+    const container = this.add
+      .container(sfW + popupW, containerY)
+      .setScrollFactor(0)
+      .setDepth(60);
     const isHazard = category === EventCategory.Hazard;
     const isOpportunity = category === EventCategory.Opportunity;
     const borderColor = isHazard
@@ -577,13 +859,7 @@ export class SimPlaybackScene extends Phaser.Scene {
       : isOpportunity
         ? theme.colors.profit
         : theme.colors.warning;
-    const nameColor = isHazard
-      ? theme.colors.loss
-      : isOpportunity
-        ? theme.colors.accent
-        : theme.colors.accent;
-
-    // Play SFX keyed to category
+    const nameColor = isHazard ? theme.colors.loss : theme.colors.accent;
     const audio = getAudioDirector();
     if (isHazard) {
       audio.sfx("event_hazard");
@@ -592,28 +868,22 @@ export class SimPlaybackScene extends Phaser.Scene {
     } else {
       audio.sfx("ui_click_secondary");
     }
-
-    const container = this.add.container(sfW + 310, popupY);
-    container.setScrollFactor(0);
-
-    // Glass-styled background rectangle using theme colors
     const bg = this.add
-      .rectangle(0, 0, 300, 55, theme.colors.panelBg, 0.85)
+      .rectangle(0, 0, popupW, popupH, theme.colors.panelBg, 0.92)
       .setOrigin(0, 0);
-    // Category-colored accent left border bar
-    const border = this.add.rectangle(0, 0, 4, 55, borderColor).setOrigin(0, 0);
-
-    const truncName = name.length > 30 ? name.substring(0, 27) + "..." : name;
+    const border = this.add
+      .rectangle(0, 0, 4, popupH, borderColor)
+      .setOrigin(0, 0);
+    const truncName =
+      name.length > 30 ? name.substring(0, 27) + "\u2026" : name;
     const nameText = this.add.text(12, 6, truncName, {
       fontSize: `${theme.fonts.body.size}px`,
       fontFamily: theme.fonts.body.family,
       color: colorToString(nameColor),
-      wordWrap: { width: 276 },
     });
-
     const shortDesc =
       description.length > 38
-        ? description.substring(0, 35) + "..."
+        ? description.substring(0, 35) + "\u2026"
         : description;
     const descText = this.add.text(12, 28, shortDesc, {
       fontSize: `${theme.fonts.caption.size}px`,
@@ -621,30 +891,32 @@ export class SimPlaybackScene extends Phaser.Scene {
       color: colorToString(theme.colors.textDim),
       wordWrap: { width: 276 },
     });
-
     container.add([bg, border, nameText, descText]);
-
-    // Slide in from the right edge
+    // Slide in from right
     this.tweens.add({
       targets: container,
-      x: sfW - 320,
+      x: sfW - popupW - 10,
       duration: 400,
       ease: "Back.easeOut",
     });
+    // Auto-dismiss after 3.5 s
+    this.time.delayedCall(3500, () => {
+      this.tweens.add({
+        targets: container,
+        x: sfW + popupW,
+        alpha: 0,
+        duration: 350,
+        ease: "Sine.easeIn",
+        onComplete: () => container.destroy(),
+      });
+    });
   }
 
-  // -------------------------------------------------------------------------
-  // Skip / finish
-  // -------------------------------------------------------------------------
-
+  // ── Skip animation ────────────────────────────────────────────────────────
   private skipAnimation(): void {
     if (this.animationComplete) return;
-
     this.tweens.killAll();
     this.time.removeAllEvents();
-
-    // Set ticker to final values
-    const theme = getTheme();
     const totalRevenue = this.turnResult.revenue;
     const totalCosts =
       this.turnResult.fuelCosts +
@@ -652,48 +924,40 @@ export class SimPlaybackScene extends Phaser.Scene {
       this.turnResult.loanPayments +
       this.turnResult.otherCosts;
     const netProfit = this.turnResult.netProfit;
-
-    this.revenueLabel.setText("Revenue: " + formatCash(totalRevenue));
-    this.costsLabel.setText("Costs: " + formatCash(totalCosts));
-    this.profitLabel.setText("Profit: " + formatCash(netProfit));
-    this.profitLabel.setLabelColor(
-      netProfit >= 0 ? theme.colors.profit : theme.colors.loss,
+    this.revenueText.setText(formatCash(totalRevenue));
+    this.costsText.setText(formatCash(totalCosts));
+    this.profitText.setText(formatCash(netProfit));
+    const theme = getTheme();
+    this.profitText.setColor(
+      colorToString(netProfit >= 0 ? theme.colors.profit : theme.colors.loss),
     );
-
     this.finishAnimation();
   }
 
+  // ── Finish animation ──────────────────────────────────────────────────────
   private finishAnimation(): void {
     if (this.animationComplete) return;
     this.animationComplete = true;
-
     // Commit the simulated state to the store
     gameStore.setState(this.newState);
-
     const theme = getTheme();
-    const audio = getAudioDirector();
     const net = this.turnResult.netProfit;
-
-    // Dopamine hit: screen flash + sfx keyed to outcome
+    const audio = getAudioDirector();
     if (net >= 0) {
-      flashScreen(this, theme.colors.profit, 0.28, 600);
+      flashScreen(this, theme.colors.profit, 0.18, 600);
       audio.sfxProfitFanfare();
     } else {
       flashScreen(this, theme.colors.loss, 0.22, 500);
       audio.sfxLossSting();
     }
     audio.sfx("sim_complete");
-
-    // Show milestone overlay for notable outcomes
     const isLargeProfit = net > 0 && net >= 5000;
     if (isLargeProfit) {
-      // Reset camera to full game area so overlay renders at correct size/position
       const L2 = getLayout();
-      const cam = this.cameras.main;
-      cam.setViewport(0, 0, L2.gameWidth, L2.gameHeight);
-      cam.setZoom(1);
-      cam.centerOn(L2.gameWidth / 2, L2.gameHeight / 2);
-
+      const cam2 = this.cameras.main;
+      cam2.setViewport(0, 0, L2.gameWidth, L2.gameHeight);
+      cam2.setZoom(1);
+      cam2.centerOn(L2.gameWidth / 2, L2.gameHeight / 2);
       const sign = net >= 0 ? "+" : "";
       MilestoneOverlay.show(
         this,
@@ -702,8 +966,6 @@ export class SimPlaybackScene extends Phaser.Scene {
         sign + "\u00A7" + Math.abs(Math.round(net)).toLocaleString() + " Net",
       );
     }
-
-    // Brief pause then transition to the turn report via HUD
     this.time.timeScale = 1;
     this.time.delayedCall(isLargeProfit ? 2200 : 500, () => {
       const hud = this.scene.get("GameHUDScene") as GameHUDScene;
