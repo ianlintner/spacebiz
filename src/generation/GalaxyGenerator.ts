@@ -351,15 +351,23 @@ function generateSystemPoints(
   centerY: number,
   bounds: Bounds,
   mapScale: number,
+  existingPoints: Array<{ x: number; y: number }> = [],
+  neighborCenters: Array<{ x: number; y: number }> = [],
 ): Array<{ x: number; y: number }> {
   const points: Array<{ x: number; y: number }> = [];
-  const localRadiusX = 180 * Math.sqrt(mapScale);
-  const localRadiusY = 150 * Math.sqrt(mapScale);
-  const minDist = 70 * Math.sqrt(mapScale);
+  const localRadiusX = 210 * Math.sqrt(mapScale);
+  const localRadiusY = 175 * Math.sqrt(mapScale);
+  const minDist = 80 * Math.sqrt(mapScale);
+  const globalMinDist = minDist * 0.85;
 
-  for (let i = 0; i < count; i++) {
+  // Reserve 1-2 slots for outpost/bridge systems toward neighbors
+  const bridgeCount =
+    neighborCenters.length > 0 ? Math.min(2, Math.floor(count * 0.2)) : 0;
+  const mainCount = count - bridgeCount;
+
+  for (let i = 0; i < mainCount; i++) {
     let placed = false;
-    for (let attempt = 0; attempt < 50; attempt++) {
+    for (let attempt = 0; attempt < 60; attempt++) {
       const angle = rng.nextFloat(0, Math.PI * 2);
       const radial = Math.sqrt(rng.next()) * 0.95 + 0.05;
       const px = clamp(
@@ -373,20 +381,28 @@ function generateSystemPoints(
         bounds.maxY,
       );
 
-      const overlaps = points.some((p) => {
+      const overlapsLocal = points.some((p) => {
         const dx = p.x - px;
         const dy = p.y - py;
         return dx * dx + dy * dy < minDist * minDist;
       });
-      if (!overlaps) {
-        points.push({ x: px, y: py });
-        placed = true;
-        break;
-      }
+      if (overlapsLocal) continue;
+
+      // Check against all previously-placed systems from other empires
+      const overlapsGlobal = existingPoints.some((p) => {
+        const dx = p.x - px;
+        const dy = p.y - py;
+        return dx * dx + dy * dy < globalMinDist * globalMinDist;
+      });
+      if (overlapsGlobal) continue;
+
+      points.push({ x: px, y: py });
+      placed = true;
+      break;
     }
 
     if (!placed) {
-      const fallbackAngle = (i / Math.max(count, 1)) * Math.PI * 2;
+      const fallbackAngle = (i / Math.max(mainCount, 1)) * Math.PI * 2;
       points.push({
         x: clamp(
           centerX + Math.cos(fallbackAngle) * localRadiusX * 0.7,
@@ -395,6 +411,65 @@ function generateSystemPoints(
         ),
         y: clamp(
           centerY + Math.sin(fallbackAngle) * localRadiusY * 0.7,
+          bounds.minY,
+          bounds.maxY,
+        ),
+      });
+    }
+  }
+
+  // Place bridge/outpost systems toward nearest neighbor empire centers
+  for (let bi = 0; bi < bridgeCount; bi++) {
+    const nc = neighborCenters[bi % neighborCenters.length];
+    let placed = false;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      // Position 50-70% of the way toward the neighbor center
+      const t = rng.nextFloat(0.5, 0.72);
+      const jitterX = rng.nextFloat(-40, 40) * Math.sqrt(mapScale);
+      const jitterY = rng.nextFloat(-35, 35) * Math.sqrt(mapScale);
+      const px = clamp(
+        centerX + (nc.x - centerX) * t + jitterX,
+        bounds.minX,
+        bounds.maxX,
+      );
+      const py = clamp(
+        centerY + (nc.y - centerY) * t + jitterY,
+        bounds.minY,
+        bounds.maxY,
+      );
+
+      const overlapsLocal = points.some((p) => {
+        const dx = p.x - px;
+        const dy = p.y - py;
+        return dx * dx + dy * dy < minDist * minDist;
+      });
+      if (overlapsLocal) continue;
+
+      const overlapsGlobal = existingPoints.some((p) => {
+        const dx = p.x - px;
+        const dy = p.y - py;
+        return dx * dx + dy * dy < globalMinDist * globalMinDist;
+      });
+      if (overlapsGlobal) continue;
+
+      points.push({ x: px, y: py });
+      placed = true;
+      break;
+    }
+
+    if (!placed) {
+      // Fallback: just place near the edge of the main cluster toward neighbor
+      const dirX = nc.x - centerX;
+      const dirY = nc.y - centerY;
+      const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+      points.push({
+        x: clamp(
+          centerX + (dirX / dirLen) * localRadiusX * 0.9,
+          bounds.minX,
+          bounds.maxX,
+        ),
+        y: clamp(
+          centerY + (dirY / dirLen) * localRadiusY * 0.9,
           bounds.minY,
           bounds.maxY,
         ),
@@ -440,6 +515,9 @@ export function generateGalaxy(
 
   // Shuffle dispositions — first empire always friendly (player home candidate)
   const usedPrefixes = new Set<number>();
+
+  // Track all placed system points globally for deconfliction
+  const allSystemPoints: Array<{ x: number; y: number }> = [];
 
   // Position sectors and empires across the coordinate space
   for (let si = 0; si < numSectors; si++) {
@@ -494,6 +572,20 @@ export function generateGalaxy(
       config.systemsPerEmpireMin,
       config.systemsPerEmpireMax,
     );
+
+    // Find nearest other sector centers as neighbor targets for bridge systems
+    const neighborCenters = sectorCenters
+      .filter((_, idx) => idx !== si)
+      .map((c) => ({
+        x: c.x,
+        y: c.y,
+        dist: Math.sqrt(
+          (c.x - sectorX) * (c.x - sectorX) + (c.y - sectorY) * (c.y - sectorY),
+        ),
+      }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 3);
+
     const systemPoints = generateSystemPoints(
       rng,
       numSystems,
@@ -501,7 +593,10 @@ export function generateGalaxy(
       sectorY,
       mapBounds,
       scale,
+      allSystemPoints,
+      neighborCenters,
     );
+    allSystemPoints.push(...systemPoints);
 
     let homeSystemId = "";
 
@@ -652,8 +747,6 @@ function percentileFromSorted(sorted: number[], p: number): number {
 }
 
 function edgeCountTarget(systemCount: number, keepRatio: number): number {
-  // Keep graph navigable and maze-like: low average degree with some redundancy.
-  // keepRatio is 0..1 from density config.
   const targetAvgDegree = 1.8 + keepRatio * 1.6;
   return Math.max(
     systemCount - 1,
@@ -674,53 +767,90 @@ function hasSharedNeighbor(
   return false;
 }
 
-function getShapeOrderedSystemIndexes(
-  systems: StarSystem[],
-  shape: GalaxyShapeT,
-  cx: number,
-  cy: number,
-): number[] {
-  return systems
-    .map((sys, idx) => {
-      const dx = sys.x - cx;
-      const dy = sys.y - cy;
-      const r = Math.sqrt(dx * dx + dy * dy);
-      const angle = Math.atan2(dy, dx);
+// ── Geometric helpers for crossing detection ─────────────────
 
-      let shapeCoord = 0;
-      switch (shape) {
-        case GalaxyShape.Spiral:
-          // Approximate arm-following order: angular sweep with outward progression.
-          shapeCoord = angle + r * 0.006;
-          break;
-        case GalaxyShape.Ring:
-          // Circumferential ring order.
-          shapeCoord = angle;
-          break;
-        case GalaxyShape.Elliptical:
-          // Broad elliptical flow left-to-right with vertical tie-break.
-          shapeCoord = sys.x * 0.01 + sys.y * 0.002;
-          break;
-        case GalaxyShape.Irregular:
-          // Cluster-ish ordering by empire then local angle.
-          shapeCoord = Number(sys.empireId.replace(/[^\d]/g, "")) * 10 + angle;
-          break;
-        default:
-          shapeCoord = angle;
-      }
-
-      return { idx, shapeCoord, r };
-    })
-    .sort((a, b) => {
-      if (a.shapeCoord !== b.shapeCoord) return a.shapeCoord - b.shapeCoord;
-      return a.r - b.r;
-    })
-    .map((v) => v.idx);
+function cross2d(ax: number, ay: number, bx: number, by: number): number {
+  return ax * by - ay * bx;
 }
 
 /**
- * Delaunay-approximation via sorted-distance neighbor graph.
- * For each system, connect to nearest neighbors, then prune by density config.
+ * Test whether two line segments (p1-p2) and (p3-p4) properly cross.
+ * Segments sharing an endpoint are NOT considered crossing.
+ */
+function segmentsCross(
+  ax1: number,
+  ay1: number,
+  ax2: number,
+  ay2: number,
+  bx1: number,
+  by1: number,
+  bx2: number,
+  by2: number,
+): boolean {
+  // Skip if segments share an endpoint
+  const eps = 0.01;
+  if (
+    (Math.abs(ax1 - bx1) < eps && Math.abs(ay1 - by1) < eps) ||
+    (Math.abs(ax1 - bx2) < eps && Math.abs(ay1 - by2) < eps) ||
+    (Math.abs(ax2 - bx1) < eps && Math.abs(ay2 - by1) < eps) ||
+    (Math.abs(ax2 - bx2) < eps && Math.abs(ay2 - by2) < eps)
+  ) {
+    return false;
+  }
+
+  const d1 = cross2d(bx2 - bx1, by2 - by1, ax1 - bx1, ay1 - by1);
+  const d2 = cross2d(bx2 - bx1, by2 - by1, ax2 - bx1, ay2 - by1);
+  const d3 = cross2d(ax2 - ax1, ay2 - ay1, bx1 - ax1, by1 - ay1);
+  const d4 = cross2d(ax2 - ax1, ay2 - ay1, bx2 - ax1, by2 - ay1);
+
+  return (
+    ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+    ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
+  );
+}
+
+/**
+ * Check if an edge would visually cross any already-kept edge.
+ */
+function wouldCrossKeptEdges(
+  a: number,
+  b: number,
+  systems: StarSystem[],
+  keptEdgeList: Array<[number, number]>,
+): boolean {
+  const ax1 = systems[a].x;
+  const ay1 = systems[a].y;
+  const ax2 = systems[b].x;
+  const ay2 = systems[b].y;
+  for (const [ka, kb] of keptEdgeList) {
+    // Skip if shares an endpoint
+    if (ka === a || ka === b || kb === a || kb === b) continue;
+    if (
+      segmentsCross(
+        ax1,
+        ay1,
+        ax2,
+        ay2,
+        systems[ka].x,
+        systems[ka].y,
+        systems[kb].x,
+        systems[kb].y,
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * MST-first hyperlane generation with edge-crossing avoidance.
+ *
+ * Steps:
+ *   1. Compute pairwise distances and distance statistics
+ *   2. Build MST (Kruskal's) for guaranteed connectivity (always planar)
+ *   3. Add short non-crossing edges for density, with shape bias
+ *   4. Ensure minimum connections per system
  */
 function generateHyperlanes(
   rng: SeededRNG,
@@ -753,9 +883,7 @@ function generateHyperlanes(
   }
   allEdges.sort((a, b) => a.dist - b.dist);
 
-  const sortedDistances = allEdges.map((e) => e.dist);
-  const p70 = percentileFromSorted(sortedDistances, 0.7);
-  const p90 = percentileFromSorted(sortedDistances, 0.9);
+  // Distance statistics for edge limits
   const nnSorted = Array.from(nearestNeighborDist)
     .filter((v) => Number.isFinite(v))
     .sort((a, b) => a - b);
@@ -763,14 +891,14 @@ function generateHyperlanes(
   const mapW = bounds.maxX - bounds.minX;
   const mapH = bounds.maxY - bounds.minY;
   const mapDiagonal = Math.sqrt(mapW * mapW + mapH * mapH);
-  const absoluteMaxEdge = mapDiagonal * 0.4;
+  const absoluteMaxEdge = mapDiagonal * 0.35;
+  // Tributary edges capped much shorter than MST allowance
   const longEdgeLimit = Math.min(
-    Math.max(nn75 * (2.2 + densityCfg.keepRatio * 0.8), p70 * 0.8, p90 * 0.55),
+    nn75 * (2.5 + densityCfg.keepRatio * 1.0),
     absoluteMaxEdge,
   );
-  const scaffoldEdgeLimit = longEdgeLimit * 1.05;
 
-  // 2. Build DSU for connectivity and an edge lookup table
+  // 2. DSU + data structures
   const parent = new Int32Array(systems.length);
   for (let i = 0; i < systems.length; i++) parent[i] = i;
   function find(x: number): number {
@@ -789,21 +917,21 @@ function generateHyperlanes(
   }
 
   const keptEdges = new Set<string>();
+  // Also keep an ordered list for fast crossing checks
+  const keptEdgeList: Array<[number, number]> = [];
   const connCount = new Int32Array(systems.length);
   const adjacency: Array<Set<number>> = Array.from(
     { length: systems.length },
     () => new Set<number>(),
   );
   const edgeKey = (a: number, b: number) => (a < b ? `${a}-${b}` : `${b}-${a}`);
-  const edgeByKey = new Map<string, Edge>();
-  for (const e of allEdges) edgeByKey.set(edgeKey(e.a, e.b), e);
 
-  function addEdge(a: number, b: number, allowCapOverflow = false): boolean {
+  function addEdge(a: number, b: number): boolean {
     const key = edgeKey(a, b);
     if (keptEdges.has(key)) return false;
-    const cap = allowCapOverflow ? maxConn + 1 : maxConn;
-    if (connCount[a] >= cap || connCount[b] >= cap) return false;
+    if (connCount[a] >= maxConn || connCount[b] >= maxConn) return false;
     keptEdges.add(key);
+    keptEdgeList.push([Math.min(a, b), Math.max(a, b)]);
     connCount[a]++;
     connCount[b]++;
     adjacency[a].add(b);
@@ -812,10 +940,12 @@ function generateHyperlanes(
     return true;
   }
 
-  function addConnectivityEdge(a: number, b: number): boolean {
+  // MST edges bypass degree caps (connectivity is paramount)
+  function addMSTEdge(a: number, b: number): boolean {
     const key = edgeKey(a, b);
     if (keptEdges.has(key)) return false;
     keptEdges.add(key);
+    keptEdgeList.push([Math.min(a, b), Math.max(a, b)]);
     connCount[a]++;
     connCount[b]++;
     adjacency[a].add(b);
@@ -824,44 +954,23 @@ function generateHyperlanes(
     return true;
   }
 
-  // 3. Create shape-aligned primary scaffold (main corridors)
-  const cx = (bounds.minX + bounds.maxX) / 2;
-  const cy = (bounds.minY + bounds.maxY) / 2;
-  const ordered = getShapeOrderedSystemIndexes(systems, shape, cx, cy);
-
-  for (let i = 0; i < ordered.length - 1; i++) {
-    if (keptEdges.size >= targetEdges) break;
-    const a = ordered[i];
-    const b = ordered[i + 1];
-    const e = edgeByKey.get(edgeKey(a, b));
-    if (!e || e.dist > scaffoldEdgeLimit) continue;
-    addEdge(a, b);
-  }
-
-  // Ring gets a closed primary loop when possible.
-  if (shape === GalaxyShape.Ring && ordered.length > 2) {
-    const a = ordered[0];
-    const b = ordered[ordered.length - 1];
-    const e = edgeByKey.get(edgeKey(a, b));
-    if (e && e.dist <= scaffoldEdgeLimit) {
-      addEdge(a, b);
-    }
-  }
-
-  // 4. Build connectivity with short bridges first, then fallback.
-  const connectivityEdgeLimit = longEdgeLimit * 1.1;
-  for (const e of allEdges) {
-    if (find(e.a) === find(e.b)) continue;
-    if (e.dist > connectivityEdgeLimit || e.dist > absoluteMaxEdge) continue;
-    addConnectivityEdge(e.a, e.b);
-  }
+  // 3. MST (Kruskal's) — shortest edges first, guaranteed connectivity.
+  //    MST is always planar so no crossing check needed.
+  //    Cap at absoluteMaxEdge; remaining islands merge with closest short bridges.
   for (const e of allEdges) {
     if (find(e.a) === find(e.b)) continue;
     if (e.dist > absoluteMaxEdge) continue;
-    addConnectivityEdge(e.a, e.b);
+    addMSTEdge(e.a, e.b);
+  }
+  // Fallback for any remaining disconnected components (very rare)
+  for (const e of allEdges) {
+    if (find(e.a) === find(e.b)) continue;
+    addMSTEdge(e.a, e.b);
   }
 
-  // 5. Add tributaries based on density and shape bias
+  // 4. Add short non-crossing edges for density, with shape and anti-web bias
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cy = (bounds.minY + bounds.maxY) / 2;
 
   for (const e of allEdges) {
     if (keptEdges.size >= targetEdges) break;
@@ -869,10 +978,13 @@ function generateHyperlanes(
     if (connCount[e.a] >= maxConn || connCount[e.b] >= maxConn) continue;
     if (e.dist > longEdgeLimit) continue;
 
-    // Discourage triangle-heavy local webbing; leave only occasional shortcuts.
-    if (hasSharedNeighbor(adjacency, e.a, e.b) && rng.next() < 0.7) continue;
+    // Anti-web: strongly discourage triangles
+    if (hasSharedNeighbor(adjacency, e.a, e.b) && rng.next() < 0.8) continue;
 
-    // Shape-aware scoring: prefer edges that align with the galaxy shape
+    // Crossing avoidance: skip edges that visually cross existing lanes
+    if (wouldCrossKeptEdges(e.a, e.b, systems, keptEdgeList)) continue;
+
+    // Shape-aware scoring
     const edgeScore = scoreEdgeForShape(
       systems[e.a],
       systems[e.b],
@@ -882,7 +994,6 @@ function generateHyperlanes(
     );
     const distanceScore = Math.max(0, 1 - e.dist / longEdgeLimit);
 
-    // Keep edge if shape-compatible and reasonably short.
     const keepChance =
       (edgeScore * shapeBias + (1 - shapeBias) * distanceScore) *
       densityCfg.keepRatio;
@@ -891,26 +1002,32 @@ function generateHyperlanes(
     }
   }
 
-  // 6. Ensure minimum connections
-  const minConnectionEdgeCap = longEdgeLimit * 1.2;
+  // 5. Ensure minimum connections (relax crossing check for connectivity)
   for (let i = 0; i < systems.length; i++) {
     if (connCount[i] >= HYPERLANE_MIN_CONNECTIONS) continue;
-    // Find nearest unconnected systems
     const candidates = allEdges.filter(
       (e) =>
         (e.a === i || e.b === i) &&
-        e.dist <= minConnectionEdgeCap &&
+        e.dist <= longEdgeLimit * 1.3 &&
         !keptEdges.has(edgeKey(e.a, e.b)),
     );
     for (const c of candidates) {
       if (connCount[i] >= HYPERLANE_MIN_CONNECTIONS) break;
       const other = c.a === i ? c.b : c.a;
-      if (connCount[other] >= maxConn) continue;
-      addEdge(c.a, c.b);
+      if (connCount[other] >= maxConn + 1) continue;
+      // Allow crossing here if needed for connectivity
+      const key = edgeKey(c.a, c.b);
+      if (keptEdges.has(key)) continue;
+      keptEdges.add(key);
+      keptEdgeList.push([Math.min(c.a, c.b), Math.max(c.a, c.b)]);
+      connCount[c.a]++;
+      connCount[c.b]++;
+      adjacency[c.a].add(c.b);
+      adjacency[c.b].add(c.a);
     }
   }
 
-  // 5. Convert to Hyperlane objects
+  // 6. Convert to Hyperlane objects
   const hyperlanes: Hyperlane[] = [];
   let hIdx = 0;
   for (const key of keptEdges) {

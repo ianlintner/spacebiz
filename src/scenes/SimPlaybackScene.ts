@@ -6,30 +6,63 @@ import {
   getTheme,
   colorToString,
   Button,
-  Label,
-  Panel,
-  createStarfield,
   getLayout,
   FloatingText,
   MilestoneOverlay,
   flashScreen,
+  addPulseTween,
+  addTwinkleTween,
+  registerAmbientCleanup,
+  getShipIconKey,
+  getShipColor,
 } from "../ui/index.ts";
 import type { GameHUDScene } from "./GameHUDScene.ts";
 import type { GameState, TurnResult } from "../data/types.ts";
 import { EventCategory } from "../data/types.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 
+// ── Camera constants ──────────────────────────────────────────────────────────
+const MIN_ZOOM = 0.35;
+const MAX_ZOOM = 3.0;
+const ZOOM_STEP = 0.08;
+const DRAG_THRESHOLD = 5;
+
 function formatCash(amount: number): string {
   return "\u00A7" + amount.toLocaleString();
+}
+
+// Entry for the live competition leaderboard
+interface LeaderEntry {
+  id: string;
+  name: string;
+  isPlayer: boolean;
+  startCash: number;
+  endCash: number;
+  profit: number;
+  routeCount: number;
+  bankrupt: boolean;
 }
 
 export class SimPlaybackScene extends Phaser.Scene {
   private newState!: GameState;
   private turnResult!: TurnResult;
   private animationComplete = false;
-  private revenueLabel!: Label;
-  private costsLabel!: Label;
-  private profitLabel!: Label;
+
+  // Camera drag state
+  private isDragging = false;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private camStartX = 0;
+  private camStartY = 0;
+
+  // Live leaderboard text references (updated each tween frame)
+  private leaderCashTexts: Map<string, Phaser.GameObjects.Text> = new Map();
+  private leaderProfitTexts: Map<string, Phaser.GameObjects.Text> = new Map();
+
+  // Revenue ticker text references
+  private revenueText!: Phaser.GameObjects.Text;
+  private costsText!: Phaser.GameObjects.Text;
+  private profitText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: "SimPlaybackScene" });
@@ -39,39 +72,64 @@ export class SimPlaybackScene extends Phaser.Scene {
     const theme = getTheme();
     const L = getLayout();
     this.animationComplete = false;
+    this.leaderCashTexts.clear();
+    this.leaderProfitTexts.clear();
 
-    // -----------------------------------------------------------------------
-    // Step 1: Run simulation immediately — animation is purely cosmetic
-    // -----------------------------------------------------------------------
+    // ── Step 1: Simulate the turn immediately (animation is cosmetic) ─────────
     const state = gameStore.getState();
     const rng = new SeededRNG(state.seed + state.turn);
     this.newState = simulateTurn(state, rng);
     this.turnResult = this.newState.history[this.newState.history.length - 1];
 
-    const ANIM_DURATION = 5000; // 5 seconds at 1x speed
+    const ANIM_DURATION = 5000;
 
-    // -----------------------------------------------------------------------
-    // Step 2: Simplified galaxy view — systems as dots, route lines
-    // -----------------------------------------------------------------------
+    // ── Galaxy geometry ───────────────────────────────────────────────────────
     const { systems, planets } = state.galaxy;
 
-    // Compute galaxy extents for camera framing
-    let wMinX = Infinity;
-    let wMaxX = -Infinity;
-    let wMinY = Infinity;
-    let wMaxY = -Infinity;
+    let gMinX = Infinity, gMaxX = -Infinity, gMinY = Infinity, gMaxY = -Infinity;
     for (const sys of systems) {
-      if (sys.x < wMinX) wMinX = sys.x;
-      if (sys.x > wMaxX) wMaxX = sys.x;
-      if (sys.y < wMinY) wMinY = sys.y;
-      if (sys.y > wMaxY) wMaxY = sys.y;
+      if (sys.x < gMinX) gMinX = sys.x;
+      if (sys.x > gMaxX) gMaxX = sys.x;
+      if (sys.y < gMinY) gMinY = sys.y;
+      if (sys.y > gMaxY) gMaxY = sys.y;
     }
-    const galCx = (wMinX + wMaxX) / 2;
-    const galCy = (wMinY + wMaxY) / 2;
-    const galW = wMaxX - wMinX;
-    const galH = wMaxY - wMinY;
+    const galCx = (gMinX + gMaxX) / 2;
+    const galCy = (gMinY + gMaxY) / 2;
+    const galW = gMaxX - gMinX;
+    const galH = gMaxY - gMinY;
 
-    // Set camera viewport to visible content area (clear of HUD chrome)
+    // Build planet→system & system lookup maps
+    const planetSystemMap = new Map<string, string>();
+    for (const planet of planets) {
+      planetSystemMap.set(planet.id, planet.systemId);
+    }
+    const systemLookup = new Map<string, { x: number; y: number; color: number }>();
+    for (const sys of systems) {
+      systemLookup.set(sys.id, { x: sys.x, y: sys.y, color: sys.starColor });
+    }
+
+    // Compute bounding box of player's active route endpoints for initial focus
+    const routeSystemIds = new Set<string>();
+    let rMinX = Infinity, rMaxX = -Infinity, rMinY = Infinity, rMaxY = -Infinity;
+    for (const route of state.activeRoutes) {
+      for (const pid of [route.originPlanetId, route.destinationPlanetId]) {
+        const sysId = planetSystemMap.get(pid);
+        if (!sysId) continue;
+        routeSystemIds.add(sysId);
+        const sys = systemLookup.get(sysId);
+        if (!sys) continue;
+        if (sys.x < rMinX) rMinX = sys.x;
+        if (sys.x > rMaxX) rMaxX = sys.x;
+        if (sys.y < rMinY) rMinY = sys.y;
+        if (sys.y > rMaxY) rMaxY = sys.y;
+      }
+    }
+    const focusCx = isFinite(rMinX) ? (rMinX + rMaxX) / 2 : galCx;
+    const focusCy = isFinite(rMinY) ? (rMinY + rMaxY) / 2 : galCy;
+    const routeSpanW = isFinite(rMinX) ? Math.max(rMaxX - rMinX + 400, 300) : 500;
+    const routeSpanH = isFinite(rMinY) ? Math.max(rMaxY - rMinY + 300, 200) : 400;
+
+    // ── Camera setup ──────────────────────────────────────────────────────────
     const cam = this.cameras.main;
     const vpX = L.navSidebarWidth;
     const vpY = L.contentTop;
@@ -79,25 +137,52 @@ export class SimPlaybackScene extends Phaser.Scene {
     const vpH = L.gameHeight - L.contentTop - L.hudBottomBarHeight;
     cam.setViewport(vpX, vpY, vpW, vpH);
 
-    // Zoom camera to fit the galaxy within the viewport
-    const zoomX = vpW / (galW + 200);
-    const zoomY = vpH / (galH + 200);
-    const fitZoom = Math.max(Math.min(zoomX, zoomY, 1), 0.55);
-    cam.setZoom(fitZoom);
-    cam.centerOn(galCx, galCy);
+    // Start zoomed in on route cluster (minimum 1.0×, max 2.0×)
+    const fitZoomX = vpW / routeSpanW;
+    const fitZoomY = vpH / routeSpanH;
+    const startZoom = Math.max(Math.min(fitZoomX, fitZoomY, 2.0), 1.0);
+    cam.setZoom(startZoom);
+    cam.centerOn(focusCx, focusCy);
 
-    // Effective coordinate space for scrollFactor(0) elements within viewport
-    const sfW = vpW / fitZoom;
-    const sfH = vpH / fitZoom;
+    // Virtual coordinate space for scrollFactor(0) HUD elements
+    const sfW = vpW / startZoom;
+    const sfH = vpH / startZoom;
 
-    // Starfield background — scale & reposition to cover the full galaxy area
-    const starfield = createStarfield(this);
-    const spreadScale = Math.max((galW + 400) / 1280, (galH + 400) / 720, 1);
-    starfield.setScale(spreadScale);
-    starfield.setPosition(
-      galCx - (1280 * spreadScale) / 2,
-      galCy - (720 * spreadScale) / 2,
-    );
+    // ── Parallax starfield (3 depth layers) ───────────────────────────────────
+    const spreadW = galW + 2400;
+    const spreadH = galH + 1600;
+    const starTweens: Phaser.Tweens.Tween[] = [];
+    type ParallaxLayer = {
+      count: number; scrollFactor: number;
+      minAlpha: number; maxAlpha: number;
+      minScale: number; maxScale: number;
+      depth: number; tints: number[];
+    };
+    const PARALLAX_LAYERS: ParallaxLayer[] = [
+      { count: 90, scrollFactor: 0.05, minAlpha: 0.06, maxAlpha: 0.22, minScale: 0.14, maxScale: 0.32, depth: -300, tints: [0xffffff, 0xaaccff] },
+      { count: 60, scrollFactor: 0.15, minAlpha: 0.1, maxAlpha: 0.4, minScale: 0.22, maxScale: 0.55, depth: -200, tints: [0xffffff, 0xaaccff, 0xffffcc] },
+      { count: 35, scrollFactor: 0.3, minAlpha: 0.15, maxAlpha: 0.55, minScale: 0.32, maxScale: 0.75, depth: -100, tints: [0xffffff, 0xaaccff] },
+    ];
+    for (const layer of PARALLAX_LAYERS) {
+      for (let i = 0; i < layer.count; i++) {
+        const sx = galCx + (Math.random() - 0.5) * spreadW;
+        const sy = galCy + (Math.random() - 0.5) * spreadH;
+        const alpha = layer.minAlpha + Math.random() * (layer.maxAlpha - layer.minAlpha);
+        const scale = layer.minScale + Math.random() * (layer.maxScale - layer.minScale);
+        const tint = layer.tints[Math.floor(Math.random() * layer.tints.length)];
+        const dot = this.add.image(sx, sy, "glow-dot")
+          .setAlpha(alpha).setScale(scale).setTint(tint)
+          .setDepth(layer.depth).setScrollFactor(layer.scrollFactor);
+        if (Math.random() > 0.65) {
+          const tw = addTwinkleTween(this, dot, {
+            minAlpha: Math.max(0.02, alpha * 0.3), maxAlpha: Math.min(0.9, alpha * 1.8),
+            minDuration: 1800, maxDuration: 6000, delay: Math.random() * 5000,
+          });
+          starTweens.push(tw);
+        }
+      }
+    }
+    if (starTweens.length > 0) registerAmbientCleanup(this, starTweens);
 
     // Build planet -> system lookup
     const planetSystemMap = new Map<string, string>();
