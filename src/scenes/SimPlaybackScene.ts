@@ -86,7 +86,10 @@ export class SimPlaybackScene extends Phaser.Scene {
     // ── Galaxy geometry ───────────────────────────────────────────────────────
     const { systems, planets } = state.galaxy;
 
-    let gMinX = Infinity, gMaxX = -Infinity, gMinY = Infinity, gMaxY = -Infinity;
+    let gMinX = Infinity,
+      gMaxX = -Infinity,
+      gMinY = Infinity,
+      gMaxY = -Infinity;
     for (const sys of systems) {
       if (sys.x < gMinX) gMinX = sys.x;
       if (sys.x > gMaxX) gMaxX = sys.x;
@@ -103,14 +106,20 @@ export class SimPlaybackScene extends Phaser.Scene {
     for (const planet of planets) {
       planetSystemMap.set(planet.id, planet.systemId);
     }
-    const systemLookup = new Map<string, { x: number; y: number; color: number }>();
+    const systemLookup = new Map<
+      string,
+      { x: number; y: number; color: number }
+    >();
     for (const sys of systems) {
       systemLookup.set(sys.id, { x: sys.x, y: sys.y, color: sys.starColor });
     }
 
     // Compute bounding box of player's active route endpoints for initial focus
     const routeSystemIds = new Set<string>();
-    let rMinX = Infinity, rMaxX = -Infinity, rMinY = Infinity, rMaxY = -Infinity;
+    let rMinX = Infinity,
+      rMaxX = -Infinity,
+      rMinY = Infinity,
+      rMaxY = -Infinity;
     for (const route of state.activeRoutes) {
       for (const pid of [route.originPlanetId, route.destinationPlanetId]) {
         const sysId = planetSystemMap.get(pid);
@@ -126,8 +135,12 @@ export class SimPlaybackScene extends Phaser.Scene {
     }
     const focusCx = isFinite(rMinX) ? (rMinX + rMaxX) / 2 : galCx;
     const focusCy = isFinite(rMinY) ? (rMinY + rMaxY) / 2 : galCy;
-    const routeSpanW = isFinite(rMinX) ? Math.max(rMaxX - rMinX + 400, 300) : 500;
-    const routeSpanH = isFinite(rMinY) ? Math.max(rMaxY - rMinY + 300, 200) : 400;
+    const routeSpanW = isFinite(rMinX)
+      ? Math.max(rMaxX - rMinX + 400, 300)
+      : 500;
+    const routeSpanH = isFinite(rMinY)
+      ? Math.max(rMaxY - rMinY + 300, 200)
+      : 400;
 
     // ── Camera setup ──────────────────────────────────────────────────────────
     const cam = this.cameras.main;
@@ -153,30 +166,71 @@ export class SimPlaybackScene extends Phaser.Scene {
     const spreadH = galH + 1600;
     const starTweens: Phaser.Tweens.Tween[] = [];
     type ParallaxLayer = {
-      count: number; scrollFactor: number;
-      minAlpha: number; maxAlpha: number;
-      minScale: number; maxScale: number;
-      depth: number; tints: number[];
+      count: number;
+      scrollFactor: number;
+      minAlpha: number;
+      maxAlpha: number;
+      minScale: number;
+      maxScale: number;
+      depth: number;
+      tints: number[];
     };
     const PARALLAX_LAYERS: ParallaxLayer[] = [
-      { count: 90, scrollFactor: 0.05, minAlpha: 0.06, maxAlpha: 0.22, minScale: 0.14, maxScale: 0.32, depth: -300, tints: [0xffffff, 0xaaccff] },
-      { count: 60, scrollFactor: 0.15, minAlpha: 0.1, maxAlpha: 0.4, minScale: 0.22, maxScale: 0.55, depth: -200, tints: [0xffffff, 0xaaccff, 0xffffcc] },
-      { count: 35, scrollFactor: 0.3, minAlpha: 0.15, maxAlpha: 0.55, minScale: 0.32, maxScale: 0.75, depth: -100, tints: [0xffffff, 0xaaccff] },
+      {
+        count: 90,
+        scrollFactor: 0.05,
+        minAlpha: 0.06,
+        maxAlpha: 0.22,
+        minScale: 0.14,
+        maxScale: 0.32,
+        depth: -300,
+        tints: [0xffffff, 0xaaccff],
+      },
+      {
+        count: 60,
+        scrollFactor: 0.15,
+        minAlpha: 0.1,
+        maxAlpha: 0.4,
+        minScale: 0.22,
+        maxScale: 0.55,
+        depth: -200,
+        tints: [0xffffff, 0xaaccff, 0xffffcc],
+      },
+      {
+        count: 35,
+        scrollFactor: 0.3,
+        minAlpha: 0.15,
+        maxAlpha: 0.55,
+        minScale: 0.32,
+        maxScale: 0.75,
+        depth: -100,
+        tints: [0xffffff, 0xaaccff],
+      },
     ];
     for (const layer of PARALLAX_LAYERS) {
       for (let i = 0; i < layer.count; i++) {
         const sx = galCx + (Math.random() - 0.5) * spreadW;
         const sy = galCy + (Math.random() - 0.5) * spreadH;
-        const alpha = layer.minAlpha + Math.random() * (layer.maxAlpha - layer.minAlpha);
-        const scale = layer.minScale + Math.random() * (layer.maxScale - layer.minScale);
-        const tint = layer.tints[Math.floor(Math.random() * layer.tints.length)];
-        const dot = this.add.image(sx, sy, "glow-dot")
-          .setAlpha(alpha).setScale(scale).setTint(tint)
-          .setDepth(layer.depth).setScrollFactor(layer.scrollFactor);
+        const alpha =
+          layer.minAlpha + Math.random() * (layer.maxAlpha - layer.minAlpha);
+        const scale =
+          layer.minScale + Math.random() * (layer.maxScale - layer.minScale);
+        const tint =
+          layer.tints[Math.floor(Math.random() * layer.tints.length)];
+        const dot = this.add
+          .image(sx, sy, "glow-dot")
+          .setAlpha(alpha)
+          .setScale(scale)
+          .setTint(tint)
+          .setDepth(layer.depth)
+          .setScrollFactor(layer.scrollFactor);
         if (Math.random() > 0.65) {
           const tw = addTwinkleTween(this, dot, {
-            minAlpha: Math.max(0.02, alpha * 0.3), maxAlpha: Math.min(0.9, alpha * 1.8),
-            minDuration: 1800, maxDuration: 6000, delay: Math.random() * 5000,
+            minAlpha: Math.max(0.02, alpha * 0.3),
+            maxAlpha: Math.min(0.9, alpha * 1.8),
+            minDuration: 1800,
+            maxDuration: 6000,
+            delay: Math.random() * 5000,
           });
           starTweens.push(tw);
         }
