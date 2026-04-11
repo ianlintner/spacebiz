@@ -27,12 +27,13 @@ function runSim(overrides: Partial<SimulationConfig> = {}): SimulationResult {
 // ---------------------------------------------------------------------------
 
 describe("AI behavioral: fleet management", () => {
-  it("at least one AI company acquires ships within first 5 turns via auto-buy", () => {
-    const result = runSim({ maxTurns: 5 });
-    const lastTurn = result.turnLogs[result.turnLogs.length - 1];
+  it("AI companies start with at least 1 ship", () => {
+    const result = runSim({ maxTurns: 1 });
+    const firstTurn = result.turnLogs[0];
 
-    const anyHasShips = lastTurn.companies.some((c) => c.fleetSize >= 1);
-    expect(anyHasShips).toBe(true);
+    for (const company of firstTurn.companies) {
+      expect(company.fleetSize).toBeGreaterThanOrEqual(1);
+    }
   });
 
   it("at least one AI company purchases ships within 15 turns", () => {

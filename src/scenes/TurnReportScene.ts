@@ -48,6 +48,13 @@ export class TurnReportScene extends Phaser.Scene {
     const theme = getTheme();
     const state = gameStore.getState();
     getAudioDirector().setMusicState("report");
+      // ── Layout constants — all panels must fit within L.contentHeight (612px) ──
+      const TR_GAP = 4;
+      const TR_ROUTE_H = 125;
+      const TR_AI_H = 116;
+      const TR_BOTTOM_H = 115;
+      const TR_ROUTE_Y = L.contentTop + 200 + TR_GAP;
+      const TR_AI_Y = TR_ROUTE_Y + TR_ROUTE_H + TR_GAP;
 
     // Flow constants: ensure all panels fit in contentHeight (612px)
     const TR_GAP = 8;
@@ -201,9 +208,6 @@ export class TurnReportScene extends Phaser.Scene {
         plContent.width - 16,
         1,
         theme.colors.panelBorder,
-      )
-      .setOrigin(0, 0);
-    plPanel.add(sepLine);
     rowY += 12;
 
     // Net profit row — animated counter
@@ -218,6 +222,9 @@ export class TurnReportScene extends Phaser.Scene {
       .setAlpha(0);
     plPanel.add(netLabel);
 
+            const aiSummaries = lastTurn.aiSummaries ?? [];
+            const aiSummaries = lastTurn.aiSummaries ?? [];
+            const aiSummaries = lastTurn.aiSummaries ?? [];
     const netValue = this.add
       .text(plContent.x + plContent.width - 8, rowY, formatCash(0), {
         fontSize: `${theme.fonts.value.size}px`,
@@ -382,14 +389,13 @@ export class TurnReportScene extends Phaser.Scene {
       width: L.mainContentWidth - 20,
       height: TR_ROUTE_H - 44,
       columns: [
-        {
           key: "route",
           label: "Route",
           width: 200,
         },
         {
+      new Panel(this, {
           key: "trips",
-          label: "Trips",
           width: 70,
           align: "right",
         },
@@ -402,6 +408,7 @@ export class TurnReportScene extends Phaser.Scene {
           colorFn: () => theme.colors.profit,
         },
         {
+      new Panel(this, {
           key: "fuelCost",
           label: "Fuel Cost",
           width: 130,
