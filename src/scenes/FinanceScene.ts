@@ -28,6 +28,17 @@ function formatCash(n: number): string {
   return sign + "\u00A7" + abs.toLocaleString("en-US");
 }
 
+function fitImageCover(
+  image: Phaser.GameObjects.Image,
+  width: number,
+  height: number,
+): void {
+  const srcW = Math.max(1, image.width);
+  const srcH = Math.max(1, image.height);
+  const scale = Math.max(width / srcW, height / srcH);
+  image.setDisplaySize(srcW * scale, srcH * scale);
+}
+
 export class FinanceScene extends Phaser.Scene {
   private selectedLoanId: string | null = null;
   private ui!: SceneUiDirector;
@@ -85,9 +96,9 @@ export class FinanceScene extends Phaser.Scene {
       const pY = L.contentTop + 16 + pSize / 2;
       const ceoImg = this.add
         .image(pX, pY, ceoPortraitKey)
-        .setDisplaySize(pSize, pSize)
         .setOrigin(0.5, 0.5)
         .setDepth(10);
+      fitImageCover(ceoImg, pSize, pSize);
       // Round mask
       const mask = this.add
         .circle(pX, pY, pSize / 2, 0xffffff)

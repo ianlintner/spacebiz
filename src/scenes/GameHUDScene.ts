@@ -27,6 +27,17 @@ function formatCash(amount: number): string {
   return "\u00A7" + amount.toLocaleString();
 }
 
+function fitImageCover(
+  image: Phaser.GameObjects.Image,
+  width: number,
+  height: number,
+): void {
+  const srcW = Math.max(1, image.width);
+  const srcH = Math.max(1, image.height);
+  const scale = Math.max(width / srcW, height / srcH);
+  image.setDisplaySize(srcW * scale, srcH * scale);
+}
+
 export class GameHUDScene extends Phaser.Scene {
   private companyLabel!: Label;
   private turnLabel!: Label;
@@ -123,8 +134,8 @@ export class GameHUDScene extends Phaser.Scene {
     if (this.textures.exists(portraitKey)) {
       const portraitImg = this.add
         .image(6 + portraitSize / 2, L.hudTopBarHeight / 2, portraitKey)
-        .setDisplaySize(portraitSize, portraitSize)
         .setOrigin(0.5, 0.5);
+      fitImageCover(portraitImg, portraitSize, portraitSize);
       // Round mask
       const mask = this.add
         .circle(
@@ -738,7 +749,7 @@ export class GameHUDScene extends Phaser.Scene {
     const disabledReason =
       state.phase === "simulation"
         ? "Locked during simulation"
-        : "Review results to continue";
+        : "Quarter complete — review results to continue";
     for (const [scene, hitArea] of this.navHitAreas) {
       if (navEnabled) {
         hitArea.setInteractive(
@@ -1365,7 +1376,11 @@ export class GameHUDScene extends Phaser.Scene {
       return;
     }
     if (state.phase === "review") {
-      this.actionPromptLabel.setText("📊 Reviewing results");
+      const q = ((state.turn - 1) % 4) + 1;
+      const y = Math.ceil(state.turn / 4);
+      this.actionPromptLabel.setText(
+        `✅ Quarter complete (Q${q} Y${y}) — review results`,
+      );
       this.actionPromptLabel.setLabelColor(theme.colors.textDim);
       return;
     }

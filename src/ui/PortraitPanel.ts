@@ -22,6 +22,17 @@ import { getPlanetPortraitTextureKey } from "../data/planetPortraits.ts";
 import { getPortraitTextureKey } from "../data/portraits.ts";
 import { getLeaderTextureKey } from "../data/empireLeaderPortraits.ts";
 
+function fitImageContain(
+  image: Phaser.GameObjects.Image,
+  maxWidth: number,
+  maxHeight: number,
+): void {
+  const srcW = Math.max(1, image.width);
+  const srcH = Math.max(1, image.height);
+  const scale = Math.min(maxWidth / srcW, maxHeight / srcH);
+  image.setDisplaySize(srcW * scale, srcH * scale);
+}
+
 export interface PortraitPanelConfig {
   x: number;
   y: number;
@@ -143,7 +154,12 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
       } else {
         this.portraitImage.setTexture(texKey);
       }
-      this.portraitImage.setDisplaySize(
+      this.portraitImage.setPosition(
+        theme.spacing.sm + this.portraitWidth / 2,
+        theme.spacing.sm + this.portraitHeight / 2,
+      );
+      fitImageContain(
+        this.portraitImage,
         this.portraitWidth,
         this.portraitHeight,
       );

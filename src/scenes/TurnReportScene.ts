@@ -52,9 +52,9 @@ export class TurnReportScene extends Phaser.Scene {
     // Flow constants: ensure all panels fit in contentHeight (612px)
     const TR_GAP = 8;
     const TR_PL_H = 192;
-    const TR_ROUTE_H = 120;
-    const TR_AI_H = 112;
-    const TR_BOTTOM_H = 112;
+    const TR_ROUTE_H = 104;
+    const TR_AI_H = 86;
+    const TR_BOTTOM_H = 132;
     const TR_ROUTE_Y = L.contentTop + TR_PL_H + TR_GAP;
     const TR_AI_Y = TR_ROUTE_Y + TR_ROUTE_H + TR_GAP;
 
@@ -83,6 +83,8 @@ export class TurnReportScene extends Phaser.Scene {
       lastTurn.loanPayments +
       lastTurn.tariffCosts +
       lastTurn.otherCosts;
+    const quarter = ((lastTurn.turn - 1) % 4) + 1;
+    const year = Math.ceil(lastTurn.turn / 4);
     const netColor =
       lastTurn.netProfit >= 0 ? theme.colors.profit : theme.colors.loss;
 
@@ -95,8 +97,9 @@ export class TurnReportScene extends Phaser.Scene {
     portrait.updatePortrait(
       "event",
       lastTurn.turn,
-      `Turn ${lastTurn.turn} Report`,
+      "Quarter Complete",
       [
+        { label: "Period", value: `Q${quarter} Y${year}` },
         { label: "Revenue", value: formatCash(lastTurn.revenue) },
         { label: "Costs", value: formatCash(totalCosts) },
         { label: "Net Profit", value: formatCash(lastTurn.netProfit) },
@@ -116,7 +119,7 @@ export class TurnReportScene extends Phaser.Scene {
       y: L.contentTop,
       width: L.mainContentWidth,
       height: TR_PL_H,
-      title: "Profit & Loss",
+      title: "Quarter Summary",
     });
     const plContent = plPanel.getContentArea();
 
@@ -373,7 +376,7 @@ export class TurnReportScene extends Phaser.Scene {
       y: TR_ROUTE_Y,
       width: L.mainContentWidth,
       height: TR_ROUTE_H,
-      title: "Route Performance",
+      title: "Top Routes",
     });
 
     const routeTable = new DataTable(this, {
@@ -385,7 +388,7 @@ export class TurnReportScene extends Phaser.Scene {
         {
           key: "route",
           label: "Route",
-          width: 200,
+          width: 280,
         },
         {
           key: "trips",
@@ -396,43 +399,32 @@ export class TurnReportScene extends Phaser.Scene {
         {
           key: "revenue",
           label: "Revenue",
-          width: 130,
+          width: 180,
           align: "right",
           format: (v) => formatCash(v as number),
           colorFn: () => theme.colors.profit,
         },
         {
-          key: "fuelCost",
-          label: "Fuel Cost",
-          width: 130,
+          key: "margin",
+          label: "Margin",
+          width: 170,
           align: "right",
           format: (v) => formatCash(v as number),
-          colorFn: () => theme.colors.loss,
-        },
-        {
-          key: "cargo",
-          label: "Cargo",
-          width: 90,
-          align: "right",
-        },
-        {
-          key: "breakdowns",
-          label: "Breakdowns",
-          width: 90,
-          align: "right",
-          colorFn: (v) => ((v as number) > 0 ? theme.colors.loss : null),
+          colorFn: (v) =>
+            (v as number) >= 0 ? theme.colors.profit : theme.colors.loss,
         },
       ],
     });
 
-    const routeRows = routePerf.map((rp) => ({
-      route: routeLabelMap.get(rp.routeId) ?? rp.routeId,
-      trips: rp.trips,
-      revenue: rp.revenue,
-      fuelCost: rp.fuelCost,
-      cargo: rp.cargoMoved + rp.passengersMoved,
-      breakdowns: rp.breakdowns,
-    }));
+    const routeRows = routePerf
+      .map((rp) => ({
+        route: routeLabelMap.get(rp.routeId) ?? rp.routeId,
+        trips: rp.trips,
+        revenue: rp.revenue,
+        margin: rp.revenue - rp.fuelCost,
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 4);
     routeTable.setRows(routeRows);
 
     // -----------------------------------------------------------------------
@@ -445,7 +437,7 @@ export class TurnReportScene extends Phaser.Scene {
         y: TR_AI_Y,
         width: L.mainContentWidth,
         height: TR_AI_H,
-        title: "Rival Companies",
+        title: "Rival Snapshot",
       });
 
       const aiTable = new DataTable(this, {
@@ -454,49 +446,37 @@ export class TurnReportScene extends Phaser.Scene {
         width: L.mainContentWidth - 20,
         height: TR_AI_H - 44,
         columns: [
-          { key: "name", label: "Company", width: 200 },
-          {
-            key: "revenue",
-            label: "Revenue",
-            width: 120,
-            align: "right",
-            format: (v) => formatCash(v as number),
-          },
+          { key: "name", label: "Company", width: 300 },
           {
             key: "cash",
             label: "Cash",
-            width: 120,
+            width: 180,
             align: "right",
             format: (v) => formatCash(v as number),
-          },
-          {
-            key: "fleet",
-            label: "Ships",
-            width: 80,
-            align: "right",
           },
           {
             key: "routes",
             label: "Routes",
-            width: 80,
+            width: 100,
             align: "right",
           },
           {
             key: "status",
             label: "Status",
-            width: 100,
+            width: 160,
           },
         ],
       });
 
-      const aiRows = aiSummaries.map((s) => ({
-        name: s.companyName,
-        revenue: s.revenue,
-        cash: s.cashAtEnd,
-        fleet: s.fleetSize,
-        routes: s.routeCount,
-        status: s.bankrupt ? "BANKRUPT" : "Active",
-      }));
+      const aiRows = aiSummaries
+        .map((s) => ({
+          name: s.companyName,
+          cash: s.cashAtEnd,
+          routes: s.routeCount,
+          status: s.bankrupt ? "BANKRUPT" : "Active",
+        }))
+        .sort((a, b) => b.cash - a.cash)
+        .slice(0, 5);
       aiTable.setRows(aiRows);
     }
 
@@ -521,7 +501,7 @@ export class TurnReportScene extends Phaser.Scene {
       y: bottomY + 40,
       width: halfWidth - 20,
       height: TR_BOTTOM_H - 44,
-      itemHeight: 60,
+      itemHeight: 52,
     });
 
     const eventNames = lastTurn.eventsOccurred;
@@ -529,15 +509,21 @@ export class TurnReportScene extends Phaser.Scene {
 
     if (eventNames.length === 0) {
       const emptyItem = this.add.container(0, 0);
-      const emptyText = this.add.text(10, 12, "No notable events this turn.", {
-        fontSize: `${theme.fonts.body.size}px`,
-        fontFamily: theme.fonts.body.family,
-        color: colorToString(theme.colors.textDim),
-      });
+      const emptyText = this.add.text(
+        10,
+        12,
+        "Quiet quarter. No major events.",
+        {
+          fontSize: `${theme.fonts.body.size}px`,
+          fontFamily: theme.fonts.body.family,
+          color: colorToString(theme.colors.textDim),
+        },
+      );
       emptyItem.add(emptyText);
       newsList.addItem(emptyItem);
     } else {
-      for (const eventName of eventNames) {
+      const visibleEvents = eventNames.slice(0, 2);
+      for (const eventName of visibleEvents) {
         const detail = activeEvents.find((e) => e.name === eventName);
         const desc = detail ? detail.description : "";
 
@@ -556,6 +542,21 @@ export class TurnReportScene extends Phaser.Scene {
         });
         item.add([nameText, descText]);
         newsList.addItem(item);
+      }
+      if (eventNames.length > visibleEvents.length) {
+        const more = this.add.container(0, 0);
+        const moreText = this.add.text(
+          10,
+          12,
+          `+${eventNames.length - visibleEvents.length} more events (see Empire / Market views)`,
+          {
+            fontSize: `${theme.fonts.caption.size}px`,
+            fontFamily: theme.fonts.caption.family,
+            color: colorToString(theme.colors.textDim),
+          },
+        );
+        more.add(moreText);
+        newsList.addItem(more);
       }
     }
 
@@ -584,9 +585,10 @@ export class TurnReportScene extends Phaser.Scene {
     marketPanel.add(fuelLabel);
 
     // Show summary of cargo delivered this turn
-    const cargoEntries = Object.entries(lastTurn.cargoDelivered).filter(
-      ([, amount]) => amount > 0,
-    );
+    const cargoEntries = Object.entries(lastTurn.cargoDelivered)
+      .filter(([, amount]) => amount > 0)
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
+      .slice(0, 3);
     let marketY = mpContent.y + 32;
     if (cargoEntries.length > 0) {
       const cargoHeader = this.add.text(

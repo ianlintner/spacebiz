@@ -17,7 +17,7 @@ interface EmpireTerritory {
   empireId: string;
   name: string;
   color: number;
-  /** Points forming the outer boundary polygon (convex hull + padding) */
+  /** Points forming the final smoothed territory boundary polygon */
   boundary: Array<{ x: number; y: number }>;
   /** Centroid for the empire label */
   centroid: { x: number; y: number };
@@ -131,20 +131,18 @@ export function drawEmpireBorders(
 
     if (cells.length === 0) continue;
 
-    // Find boundary cells (cells with at least one neighbour that's different)
-    const boundaryPts: Array<{ x: number; y: number }> = [];
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        if (ownership[row * cols + col] !== empireId) continue;
-        const isBorder = isEdgeCell(ownership, cols, rows, row, col, empireId);
-        if (isBorder) {
-          boundaryPts.push({
-            x: minX + col * cfg.gridStep,
-            y: minY + row * cfg.gridStep,
-          });
-        }
-      }
-    }
+    // Trace an ordered contour from cell edges so territories remain non-overlapping
+    const boundary = traceEmpireBoundary(
+      ownership,
+      cols,
+      rows,
+      empireId,
+      minX,
+      minY,
+      cfg.gridStep,
+    );
+
+    if (boundary.length < 3) continue;
 
     // Compute centroid from actual system positions
     let cx = 0;
@@ -156,14 +154,16 @@ export function drawEmpireBorders(
     cx /= empSystems.length;
     cy /= empSystems.length;
 
-    // Sort boundary points by angle from centroid for a clean polygon
-    const sorted = sortByAngle(boundaryPts, cx, cy);
+    // Smooth the traced contour while preserving territory topology
+    const smoothBoundary = subsampleAndSmooth(boundary, 240);
+
+    if (smoothBoundary.length < 3) continue;
 
     territories.push({
       empireId,
       name,
       color,
-      boundary: sorted,
+      boundary: smoothBoundary,
       centroid: { x: cx, y: cy },
     });
   }
@@ -174,48 +174,123 @@ export function drawEmpireBorders(
   }
 }
 
-// ── Boundary detection ──────────────────────────────────────────────────────
+// ── Boundary tracing ────────────────────────────────────────────────────────
 
-function isEdgeCell(
+function ptKey(p: { x: number; y: number }): string {
+  return `${p.x.toFixed(4)},${p.y.toFixed(4)}`;
+}
+
+function addDirectedEdge(
+  edges: Map<string, Array<{ x: number; y: number }>>,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): void {
+  const key = ptKey(from);
+  const arr = edges.get(key) ?? [];
+  arr.push(to);
+  edges.set(key, arr);
+}
+
+/**
+ * Build ordered contour loops from ownership cells by tracing exposed cell edges.
+ * Returns the longest loop (main landmass) for the empire.
+ */
+function traceEmpireBoundary(
   grid: Array<string | null>,
   cols: number,
   rows: number,
-  row: number,
-  col: number,
   empireId: string,
-): boolean {
-  const neighbors = [
-    [-1, 0],
-    [1, 0],
-    [0, -1],
-    [0, 1],
-    [-1, -1],
-    [-1, 1],
-    [1, -1],
-    [1, 1],
-  ];
-  for (const [dr, dc] of neighbors) {
-    const nr = row + dr;
-    const nc = col + dc;
-    if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) return true;
-    if (grid[nr * cols + nc] !== empireId) return true;
-  }
-  return false;
-}
-
-// ── Sorting & smoothing ─────────────────────────────────────────────────────
-
-function sortByAngle(
-  points: Array<{ x: number; y: number }>,
-  cx: number,
-  cy: number,
+  minX: number,
+  minY: number,
+  step: number,
 ): Array<{ x: number; y: number }> {
-  return [...points].sort((a, b) => {
-    const angleA = Math.atan2(a.y - cy, a.x - cx);
-    const angleB = Math.atan2(b.y - cy, b.x - cx);
-    return angleA - angleB;
-  });
+  const edges = new Map<string, Array<{ x: number; y: number }>>();
+  const half = step / 2;
+
+  const ownerAt = (r: number, c: number): string | null => {
+    if (r < 0 || r >= rows || c < 0 || c >= cols) return null;
+    return grid[r * cols + c];
+  };
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      if (ownerAt(row, col) !== empireId) continue;
+
+      const cx = minX + col * step;
+      const cy = minY + row * step;
+      const l = cx - half;
+      const r = cx + half;
+      const t = cy - half;
+      const b = cy + half;
+
+      // Add clockwise cell edges only where adjacent ownership differs
+      if (ownerAt(row - 1, col) !== empireId) {
+        addDirectedEdge(edges, { x: l, y: t }, { x: r, y: t });
+      }
+      if (ownerAt(row, col + 1) !== empireId) {
+        addDirectedEdge(edges, { x: r, y: t }, { x: r, y: b });
+      }
+      if (ownerAt(row + 1, col) !== empireId) {
+        addDirectedEdge(edges, { x: r, y: b }, { x: l, y: b });
+      }
+      if (ownerAt(row, col - 1) !== empireId) {
+        addDirectedEdge(edges, { x: l, y: b }, { x: l, y: t });
+      }
+    }
+  }
+
+  let bestLoop: Array<{ x: number; y: number }> = [];
+  let bestPerimeter = 0;
+
+  const popNextEdge = (from: { x: number; y: number }) => {
+    const key = ptKey(from);
+    const arr = edges.get(key);
+    if (!arr || arr.length === 0) return null;
+    const next = arr.pop() ?? null;
+    if (arr.length === 0) edges.delete(key);
+    return next;
+  };
+
+  while (edges.size > 0) {
+    const firstKey = edges.keys().next().value as string;
+    const [sx, sy] = firstKey.split(",").map(Number);
+    const start = { x: sx, y: sy };
+
+    const loop: Array<{ x: number; y: number }> = [start];
+    let current = start;
+
+    for (let guard = 0; guard < cols * rows * 8; guard++) {
+      const next = popNextEdge(current);
+      if (!next) break;
+      loop.push(next);
+      current = next;
+      if (ptKey(current) === ptKey(start)) break;
+    }
+
+    if (loop.length < 4) continue;
+
+    let perimeter = 0;
+    for (let i = 1; i < loop.length; i++) {
+      const a = loop[i - 1];
+      const b = loop[i];
+      perimeter += Math.hypot(b.x - a.x, b.y - a.y);
+    }
+
+    // Drop duplicated closing point for downstream closed-loop logic
+    if (ptKey(loop[loop.length - 1]) === ptKey(loop[0])) {
+      loop.pop();
+    }
+
+    if (perimeter > bestPerimeter) {
+      bestPerimeter = perimeter;
+      bestLoop = loop;
+    }
+  }
+
+  return bestLoop;
 }
+
+// ── Shape smoothing ─────────────────────────────────────────────────────────
 
 /** Subsample boundary points to keep only every Nth for performance, then smooth */
 function subsampleAndSmooth(
@@ -267,15 +342,15 @@ function renderTerritory(
   const { boundary, color, centroid } = territory;
   if (boundary.length < 3) return;
 
-  // Subsample to ~120 control points then smooth for organic look
-  const smooth = subsampleAndSmooth(boundary, 120);
+  // Keep a smooth but stable contour that stays close to the ownership boundary
+  const smooth = subsampleAndSmooth(boundary, 200);
   if (smooth.length < 3) return;
 
   const yo = cfg.yOffset;
 
-  // ── Filled territory (very translucent) ──
+  // ── Filled territory (very subtle, to avoid heavy blob overlap) ──
   const fillGfx = scene.add.graphics();
-  fillGfx.fillStyle(color, 0.04);
+  fillGfx.fillStyle(color, 0.016);
   fillGfx.beginPath();
   fillGfx.moveTo(smooth[0].x, smooth[0].y + yo);
   for (let i = 1; i < smooth.length; i++) {
@@ -283,16 +358,10 @@ function renderTerritory(
   }
   fillGfx.closePath();
   fillGfx.fillPath();
-  addPulseTween(scene, fillGfx, {
-    minAlpha: 0.4,
-    maxAlpha: 1.0,
-    duration: 5000 + Math.random() * 2000,
-    delay: Math.random() * 2000,
-  });
 
   // ── Outer glow edge (wider, soft) ──
   const glowGfx = scene.add.graphics();
-  glowGfx.lineStyle(6, color, 0.08);
+  glowGfx.lineStyle(5, color, 0.07);
   glowGfx.beginPath();
   glowGfx.moveTo(smooth[0].x, smooth[0].y + yo);
   for (let i = 1; i < smooth.length; i++) {
@@ -303,7 +372,7 @@ function renderTerritory(
 
   // ── Sharp border edge ──
   const edgeGfx = scene.add.graphics();
-  edgeGfx.lineStyle(1.5, color, 0.4);
+  edgeGfx.lineStyle(1.6, color, 0.5);
   edgeGfx.beginPath();
   edgeGfx.moveTo(smooth[0].x, smooth[0].y + yo);
   for (let i = 1; i < smooth.length; i++) {

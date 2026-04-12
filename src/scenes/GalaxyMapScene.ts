@@ -165,7 +165,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     drawEmpireBorders(this, systems, empires, {
       yOffset: L.contentTop,
       influence: 130,
-      gridStep: 10,
+      gridStep: 8,
     });
 
     // ── Empire flags at home systems ──

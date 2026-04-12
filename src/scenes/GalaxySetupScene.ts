@@ -43,6 +43,7 @@ export class GalaxySetupScene extends Phaser.Scene {
   private portraitImage: Phaser.GameObjects.Image | null = null;
   private portraitLabel: Label | null = null;
   private portraitMask: Phaser.GameObjects.Graphics | null = null;
+  private portraitDiameter = 0;
   /** Layout values needed by buildSystemCards, set in create() */
   private configX = 0;
   private configW = 0;
@@ -91,6 +92,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     // Top area: Two-column layout — LEFT = CEO portrait, RIGHT = config
     // ═══════════════════════════════════════════════════════════════════
     const portraitSize = 120;
+    this.portraitDiameter = portraitSize;
     const portraitAreaW = portraitSize + pad * 2;
     const portraitCenterX = panelX + pad + portraitSize / 2;
     const portraitCenterY = contentTop + portraitSize / 2;
@@ -99,8 +101,8 @@ export class GalaxySetupScene extends Phaser.Scene {
     const portraitKey = getPortraitTextureKey(CEO_PORTRAITS[0].id);
     this.portraitImage = this.add
       .image(portraitCenterX, portraitCenterY, portraitKey)
-      .setDisplaySize(portraitSize, portraitSize)
       .setOrigin(0.5, 0.5);
+    this.fitPortraitInCircle(this.portraitImage, portraitSize);
 
     this.portraitMask = this.add.graphics();
     this.portraitMask.fillStyle(0xffffff);
@@ -320,10 +322,24 @@ export class GalaxySetupScene extends Phaser.Scene {
     const key = getPortraitTextureKey(def.id);
     if (this.portraitImage && this.textures.exists(key)) {
       this.portraitImage.setTexture(key);
+      if (this.portraitDiameter > 0) {
+        this.fitPortraitInCircle(this.portraitImage, this.portraitDiameter);
+      }
     }
     if (this.portraitLabel) {
       this.portraitLabel.setText(def.label);
     }
+  }
+
+  private fitPortraitInCircle(
+    image: Phaser.GameObjects.Image,
+    diameter: number,
+  ): void {
+    const srcW = Math.max(1, image.width);
+    const srcH = Math.max(1, image.height);
+    // Cover fit for circular masks (fills the circle without distortion)
+    const scale = Math.max(diameter / srcW, diameter / srcH);
+    image.setDisplaySize(srcW * scale, srcH * scale);
   }
 
   private buildSystemCards(): void {
