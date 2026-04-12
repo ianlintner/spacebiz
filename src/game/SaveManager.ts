@@ -44,10 +44,14 @@ function readSave(key: string): GameState | null {
 
 /** Migrate older saves that lack newer fields. */
 function migrateSave(state: GameState): GameState {
-  if (!state.adviser) {
-    return { ...state, adviser: initAdviserState() };
+  let migrated = state;
+  if (!migrated.adviser) {
+    migrated = { ...migrated, adviser: initAdviserState() };
   }
-  return state;
+  if (migrated.stationHub === undefined) {
+    migrated = { ...migrated, stationHub: null };
+  }
+  return migrated;
 }
 
 /** Serialize the current game state to localStorage under the manual-save key. */

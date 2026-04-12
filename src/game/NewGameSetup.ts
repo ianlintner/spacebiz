@@ -33,6 +33,7 @@ import {
   initializeDiplomacy,
   initializeBorderPorts,
 } from "./empire/DiplomacyManager.ts";
+import { createEmptyHub, selectRunRoomTypes } from "./hub/HubManager.ts";
 
 export interface NewGameResult {
   state: GameState;
@@ -293,6 +294,18 @@ export function createNewGame(
     diplomacyRng,
   );
 
+  // Phase 5: Initialize station hub at the default starting system
+  const hubRng = new SeededRNG(seed + 4);
+  const availableRoomTypes = selectRunRoomTypes(hubRng);
+  const defaultStartingSystem = startingSystemOptions[0];
+  const stationHub = defaultStartingSystem
+    ? createEmptyHub(
+        defaultStartingSystem.id,
+        defaultStartingSystem.empireId,
+        availableRoomTypes,
+      )
+    : null;
+
   const state: GameState = {
     seed,
     turn: 1,
@@ -334,6 +347,7 @@ export function createNewGame(
     tech,
     empireTradePolicies,
     interEmpireCargoLocks: [],
+    stationHub,
   };
 
   return { state, startingSystemOptions };
