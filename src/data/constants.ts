@@ -6,7 +6,9 @@ import {
   GameSize,
   TechBranch,
   HyperlaneDensity,
+  HubRoomType,
   type Technology,
+  type HubRoomDefinition,
 } from "./types";
 
 export const STARTING_CASH = 200000;
@@ -596,3 +598,176 @@ export const AI_PERSONALITY_SLOTS: Record<
   steadyHauler: { baseSlots: 4, maxSlots: 8 },
   cherryPicker: { baseSlots: 5, maxSlots: 11 },
 };
+
+// ── Hub Station Constants ──────────────────────────────────────
+
+/** Cost to upgrade hub to each level (index = target level) */
+export const HUB_UPGRADE_COSTS = [0, 25000, 50000, 100000, 200000] as const;
+
+/** Available grid slots at each hub level */
+export const HUB_LEVEL_SLOTS = [4, 8, 12, 18, 24] as const;
+
+/** Max hub level */
+export const HUB_MAX_LEVEL = 4;
+
+/** Grid dimensions: decks (rows) × slots per deck (columns) */
+export const HUB_GRID_DECKS = 4;
+export const HUB_GRID_SLOTS_PER_DECK = 6;
+
+/** Bonus falloff at 1 hyperlane hop from hub system */
+export const HUB_RADIUS_FALLOFF = 0.5;
+
+/** Number of tech-gated rooms available per run (plus 2 starters = 8 total) */
+export const HUB_TECH_ROOMS_PER_RUN = 6;
+
+/** Refund ratio when demolishing a room */
+export const HUB_DEMOLISH_REFUND_RATIO = 0.5;
+
+/** All hub room definitions */
+export const HUB_ROOM_DEFINITIONS: Record<HubRoomType, HubRoomDefinition> = {
+  [HubRoomType.TradeOffice]: {
+    type: HubRoomType.TradeOffice,
+    name: "Trade Office",
+    description: "Reduces license fees across the empire by 15%.",
+    icon: "📋",
+    buildCost: 10000,
+    upkeepCost: 2000,
+    limit: 1,
+    techRequirement: null,
+    bonusScope: "empire",
+    bonusEffects: [{ type: "modifyLicenseFee", value: -0.15 }],
+  },
+  [HubRoomType.PassengerLounge]: {
+    type: HubRoomType.PassengerLounge,
+    name: "Passenger Lounge",
+    description: "Boosts passenger revenue by 25% at hub system and neighbors.",
+    icon: "🛋️",
+    buildCost: 12000,
+    upkeepCost: 2000,
+    limit: 1,
+    techRequirement: null,
+    bonusScope: "localRadius",
+    bonusEffects: [{ type: "modifyPassengerRevenue", value: 0.25 }],
+  },
+  [HubRoomType.FreightTerminal]: {
+    type: HubRoomType.FreightTerminal,
+    name: "Freight Terminal",
+    description: "Adds 1 additional route slot empire-wide.",
+    icon: "📦",
+    buildCost: 20000,
+    upkeepCost: 3000,
+    limit: 1,
+    techRequirement: "logistics_1",
+    bonusScope: "empire",
+    bonusEffects: [{ type: "addRouteSlots", value: 1 }],
+  },
+  [HubRoomType.FuelDepot]: {
+    type: HubRoomType.FuelDepot,
+    name: "Fuel Depot",
+    description:
+      "Reduces fuel costs by 20% for routes through hub system and neighbors.",
+    icon: "⛽",
+    buildCost: 15000,
+    upkeepCost: 2500,
+    limit: 1,
+    techRequirement: "engineering_1",
+    bonusScope: "localRadius",
+    bonusEffects: [{ type: "modifyFuel", value: -0.2 }],
+  },
+  [HubRoomType.MarketExchange]: {
+    type: HubRoomType.MarketExchange,
+    name: "Market Exchange",
+    description: "Increases trade revenue by 5% on all empire routes.",
+    icon: "📈",
+    buildCost: 15000,
+    upkeepCost: 2000,
+    limit: 1,
+    techRequirement: "intelligence_1",
+    bonusScope: "empire",
+    bonusEffects: [{ type: "modifyRevenue", value: 0.05 }],
+  },
+  [HubRoomType.CustomsBureau]: {
+    type: HubRoomType.CustomsBureau,
+    name: "Customs Bureau",
+    description: "Reduces tariff rates in the empire by 20%.",
+    icon: "🏛️",
+    buildCost: 18000,
+    upkeepCost: 3000,
+    limit: 1,
+    techRequirement: "diplomacy_1",
+    bonusScope: "empire",
+    bonusEffects: [{ type: "modifyTariff", value: -0.2 }],
+  },
+  [HubRoomType.RepairBay]: {
+    type: HubRoomType.RepairBay,
+    name: "Repair Bay",
+    description:
+      "Ships on routes through hub system gain +3 condition per turn.",
+    icon: "🔧",
+    buildCost: 12000,
+    upkeepCost: 1500,
+    limit: 2,
+    techRequirement: "engineering_2",
+    bonusScope: "local",
+    bonusEffects: [{ type: "addRepairPerTurn", value: 3 }],
+  },
+  [HubRoomType.ResearchLab]: {
+    type: HubRoomType.ResearchLab,
+    name: "Research Lab",
+    description: "Generates +1 research point per turn.",
+    icon: "🔬",
+    buildCost: 20000,
+    upkeepCost: 2500,
+    limit: 1,
+    techRequirement: "intelligence_2",
+    bonusScope: "empire",
+    bonusEffects: [{ type: "addRPPerTurn", value: 1 }],
+  },
+  [HubRoomType.CargoWarehouse]: {
+    type: HubRoomType.CargoWarehouse,
+    name: "Cargo Warehouse",
+    description:
+      "Reduces saturation impact by 30% at hub system and neighbors.",
+    icon: "🏗️",
+    buildCost: 10000,
+    upkeepCost: 1500,
+    limit: 2,
+    techRequirement: "logistics_2",
+    bonusScope: "localRadius",
+    bonusEffects: [{ type: "modifySaturation", value: -0.3 }],
+  },
+  [HubRoomType.SecurityOffice]: {
+    type: HubRoomType.SecurityOffice,
+    name: "Security Office",
+    description:
+      "AI routes in empire earn 15% less revenue. AI maintenance +10%.",
+    icon: "🛡️",
+    buildCost: 25000,
+    upkeepCost: 3500,
+    limit: 1,
+    techRequirement: "diplomacy_2",
+    bonusScope: "empire",
+    bonusEffects: [
+      { type: "modifyAIRevenue", value: -0.15 },
+      { type: "modifyAIMaintenance", value: 0.1 },
+    ],
+  },
+};
+
+/** Room types that are always available (no tech requirement) */
+export const HUB_STARTER_ROOMS: HubRoomType[] = [
+  HubRoomType.TradeOffice,
+  HubRoomType.PassengerLounge,
+];
+
+/** Room types that require tech and are randomized per run */
+export const HUB_TECH_GATED_ROOMS: HubRoomType[] = [
+  HubRoomType.FreightTerminal,
+  HubRoomType.FuelDepot,
+  HubRoomType.MarketExchange,
+  HubRoomType.CustomsBureau,
+  HubRoomType.RepairBay,
+  HubRoomType.ResearchLab,
+  HubRoomType.CargoWarehouse,
+  HubRoomType.SecurityOffice,
+];

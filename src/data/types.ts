@@ -137,6 +137,68 @@ export const TechBranch = {
 } as const;
 export type TechBranch = (typeof TechBranch)[keyof typeof TechBranch];
 
+// ── Hub Station types ──────────────────────────────────────
+
+export const HubRoomType = {
+  TradeOffice: "tradeOffice",
+  PassengerLounge: "passengerLounge",
+  FreightTerminal: "freightTerminal",
+  FuelDepot: "fuelDepot",
+  MarketExchange: "marketExchange",
+  CustomsBureau: "customsBureau",
+  RepairBay: "repairBay",
+  ResearchLab: "researchLab",
+  CargoWarehouse: "cargoWarehouse",
+  SecurityOffice: "securityOffice",
+} as const;
+export type HubRoomType = (typeof HubRoomType)[keyof typeof HubRoomType];
+
+export type HubBonusScope = "empire" | "local" | "localRadius";
+
+export interface HubBonusEffect {
+  type:
+    | "modifyLicenseFee"
+    | "modifyPassengerRevenue"
+    | "addRouteSlots"
+    | "modifyFuel"
+    | "modifyRevenue"
+    | "modifyTariff"
+    | "addRepairPerTurn"
+    | "addRPPerTurn"
+    | "modifySaturation"
+    | "modifyAIRevenue"
+    | "modifyAIMaintenance";
+  value: number;
+}
+
+export interface HubRoomDefinition {
+  type: HubRoomType;
+  name: string;
+  description: string;
+  icon: string;
+  buildCost: number;
+  upkeepCost: number;
+  limit: number;
+  techRequirement: string | null;
+  bonusScope: HubBonusScope;
+  bonusEffects: HubBonusEffect[];
+}
+
+export interface HubRoom {
+  id: string;
+  type: HubRoomType;
+  gridX: number;
+  gridY: number;
+}
+
+export interface StationHub {
+  level: number;
+  rooms: HubRoom[];
+  systemId: string;
+  empireId: string;
+  availableRoomTypes: HubRoomType[];
+}
+
 export interface Sector {
   id: string;
   name: string;
@@ -603,4 +665,7 @@ export interface GameState {
   borderPorts?: BorderPort[];
   diplomaticRelations?: DiplomaticRelation[];
   hyperlaneDensity?: HyperlaneDensity;
+
+  // Phase 5: Hub Station
+  stationHub: StationHub | null;
 }
