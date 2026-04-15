@@ -9,6 +9,18 @@ export interface AdviserPanelConfig {
   width: number;
   /** If true, uses compact single-line mode (for HUD sidebar) */
   compact?: boolean;
+  /**
+   * Controls which edge stays fixed when the panel resizes.
+   * "bottom" (default) anchors the bottom edge — panel grows upward.
+   * "top" anchors the top edge — panel grows downward (use for upper-corner placement).
+   */
+  anchor?: "bottom" | "top";
+  /**
+   * Optional Phaser texture key for a portrait image.
+   * When provided and the texture exists, the portrait image replaces the
+   * programmatic pixel-art drawing.
+   */
+  portraitKey?: string;
 }
 
 const PORTRAIT_SIZE = 96;
@@ -23,6 +35,7 @@ const NAME_HEIGHT = 18;
  */
 export class AdviserPanel extends Phaser.GameObjects.Container {
   private portraitGfx: Phaser.GameObjects.Graphics;
+  private portraitImg: Phaser.GameObjects.Image | null = null;
   private nameLabel: Phaser.GameObjects.Text;
   private msgLabel: Phaser.GameObjects.Text;
   private bg: Phaser.GameObjects.NineSlice;
@@ -43,11 +56,13 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   private panelWidth: number;
   private panelHeight: number;
   private minPanelHeight: number;
+  private anchor: "bottom" | "top";
 
   constructor(scene: Phaser.Scene, config: AdviserPanelConfig) {
     super(scene, config.x, config.y);
     const theme = getTheme();
     this.isCompact = config.compact ?? false;
+    this.anchor = config.anchor ?? "bottom";
     this.portraitSize = this.isCompact ? COMPACT_PORTRAIT : PORTRAIT_SIZE;
     this.panelWidth = config.width;
     this.minPanelHeight = this.isCompact
@@ -117,13 +132,33 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
 
     this.portraitGfx = scene.add.graphics();
     this.portraitGfx.setPosition(MSG_PADDING, MSG_PADDING);
-    this.add(this.portraitGfx);
-    drawRexPortrait(
-      this.portraitGfx,
-      this.portraitSize,
-      this.portraitSize,
-      "standby",
-    );
+
+    // Use a portrait image when the texture key is provided and the texture exists.
+    const useImage =
+      config.portraitKey !== undefined &&
+      scene.textures.exists(config.portraitKey);
+
+    if (useImage && config.portraitKey !== undefined) {
+      // Hide the pixel-art graphics; display the loaded portrait image instead.
+      this.portraitGfx.setVisible(false);
+      this.portraitImg = scene.add
+        .image(
+          MSG_PADDING + this.portraitSize / 2,
+          MSG_PADDING + this.portraitSize / 2,
+          config.portraitKey,
+        )
+        .setOrigin(0.5, 0.5)
+        .setDisplaySize(this.portraitSize, this.portraitSize);
+      this.add(this.portraitImg);
+    } else {
+      this.add(this.portraitGfx);
+      drawRexPortrait(
+        this.portraitGfx,
+        this.portraitSize,
+        this.portraitSize,
+        "standby",
+      );
+    }
 
     // Text area to the right of portrait
     const textX = MSG_PADDING + this.portraitSize + MSG_PADDING + 4;
@@ -281,12 +316,15 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   }
 
   private updatePortrait(mood: AdviserMood): void {
-    drawRexPortrait(
-      this.portraitGfx,
-      this.portraitSize,
-      this.portraitSize,
-      mood,
-    );
+    // Only redraw the pixel-art graphics when no image portrait is in use.
+    if (this.portraitImg === null) {
+      drawRexPortrait(
+        this.portraitGfx,
+        this.portraitSize,
+        this.portraitSize,
+        mood,
+      );
+    }
   }
 
   private updateAccentBar(mood: AdviserMood): void {
@@ -321,12 +359,16 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     });
   }
 
-  /** Resize panel height, growing upward so bottom edge stays fixed. */
+  /** Resize panel height. "bottom" anchor grows upward; "top" anchor grows downward. */
   private resizePanel(newHeight: number): void {
     const delta = newHeight - this.panelHeight;
     if (delta === 0) return;
 
-    this.y -= delta;
+    // Only shift y when anchored at bottom so the bottom edge stays fixed.
+    // When anchored at top the top edge stays fixed (panel grows downward).
+    if (this.anchor !== "top") {
+      this.y -= delta;
+    }
     this.panelHeight = newHeight;
 
     this.shadow.setSize(this.panelWidth, newHeight);

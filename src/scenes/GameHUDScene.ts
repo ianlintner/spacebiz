@@ -628,15 +628,17 @@ export class GameHUDScene extends Phaser.Scene {
     });
     this.endTurnButton.setVisible(state.phase === "planning");
 
-    // ── Adviser Panel (compact, positioned above bottom bar) ──
-    const advPanelW = 440;
-    const advPanelX = L.navSidebarWidth + 8;
-    const advPanelY = L.gameHeight - L.hudBottomBarHeight - 96;
+    // ── Adviser Panel (upper-right corner, Stellaris-style) ──
+    const advPanelW = 380;
+    const advPanelX = L.gameWidth - advPanelW - 8;
+    const advPanelY = L.hudTopBarHeight + 8;
     this.adviserPanel = new AdviserPanel(this, {
       x: advPanelX,
       y: advPanelY,
       width: advPanelW,
       compact: true,
+      anchor: "top",
+      portraitKey: "portrait-rex",
     });
     this.adviserPanel.setDepth(200);
 

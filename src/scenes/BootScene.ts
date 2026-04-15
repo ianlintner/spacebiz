@@ -38,6 +38,12 @@ export class BootScene extends Phaser.Scene {
     this.load.image("hero-freight", "concepts/hero/freight-menu.jpg");
     this.load.image("hero-passenger", "concepts/hero/passenger-menu.jpg");
 
+    // Preload Rex (K9-Corp adviser) portrait
+    this.load.image(
+      "portrait-rex",
+      "concepts/assistant/advisor-mcp-test.png",
+    );
+
     // Preload CEO portrait images
     for (const def of CEO_PORTRAITS) {
       this.load.image(getPortraitTextureKey(def.id), getPortraitAssetPath(def));
