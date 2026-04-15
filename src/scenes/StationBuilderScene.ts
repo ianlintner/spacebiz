@@ -111,6 +111,8 @@ export class StationBuilderScene extends Phaser.Scene {
   private selectedRoomType: HubRoomType | null = null;
   private selectedRoomId: string | null = null;
   private gridCells: Phaser.GameObjects.Rectangle[][] = [];
+  private roomCardWidth = 110;
+  private roomCardHeight = 50;
   private gridPanel!: Panel;
   private infoPanel!: Panel;
   private infoContent!: { x: number; y: number; width: number; height: number };
@@ -123,6 +125,13 @@ export class StationBuilderScene extends Phaser.Scene {
     bounds: Phaser.Geom.Rectangle;
     valid: boolean;
   }> = [];
+  private handlePointerMove = (p: Phaser.Input.Pointer): void => {
+    this.onDragMove(p);
+  };
+
+  private handlePointerUp = (p: Phaser.Input.Pointer): void => {
+    this.onDragEnd(p);
+  };
 
   constructor() {
     super({ key: "StationBuilderScene" });
@@ -130,7 +139,6 @@ export class StationBuilderScene extends Phaser.Scene {
 
   create(): void {
     const L = getLayout();
-    const theme = getTheme();
     this.selectedRoomType = null;
     this.selectedRoomId = null;
     this.infoElements = [];
@@ -164,6 +172,10 @@ export class StationBuilderScene extends Phaser.Scene {
         : "No Hub Station",
     });
 
+    const gridMetrics = this.getGridMetrics();
+    this.roomCardWidth = Math.floor(gridMetrics.cellW);
+    this.roomCardHeight = Math.floor(gridMetrics.cellH);
+
     if (hub) {
       this.buildGrid(hub);
     }
@@ -188,49 +200,35 @@ export class StationBuilderScene extends Phaser.Scene {
       );
       let col = 0;
       let row = 0;
-      const btnW = 110;
-      const btnH = 50;
+      const btnW = this.roomCardWidth;
+      const btnH = this.roomCardHeight;
       const gap = 6;
       const cols = Math.max(1, Math.floor(paletteContent.width / (btnW + gap)));
 
       for (const rt of roomTypes) {
-        const def = HUB_ROOM_DEFINITIONS[rt];
         const check = canBuildRoom(hub, rt, completedTechIds, state.cash);
 
         const bx = paletteContent.x + col * (btnW + gap) + btnW / 2;
         const by = paletteContent.y + row * (btnH + gap) + btnH / 2;
 
-        const roomColor = ROOM_COLORS[rt] ?? 0x555555;
-
-        const bg = this.add
-          .rectangle(bx, by, btnW, btnH, roomColor, 0.2)
-          .setStrokeStyle(1, roomColor)
-          .setInteractive({ useHandCursor: true });
+        const card = this.createRoomCardVisual({
+          x: bx,
+          y: by,
+          width: btnW,
+          height: btnH,
+          roomType: rt,
+          enabled: check.canBuild,
+          showCost: true,
+          selected: this.selectedRoomType === rt,
+          interactive: true,
+        });
+        const { bg } = card;
         palettePanel.add(bg);
-
-        const nameText = this.add
-          .text(bx, by - 8, `${def.icon} ${def.name}`, {
-            fontSize: "10px",
-            fontFamily: theme.fonts.body.family,
-            color: colorToString(
-              check.canBuild ? theme.colors.text : theme.colors.textDim,
-            ),
-            align: "center",
-            wordWrap: { width: btnW - 8 },
-          })
-          .setOrigin(0.5, 0.5);
-        palettePanel.add(nameText);
-
-        const costText = this.add
-          .text(bx, by + 14, formatCash(def.buildCost), {
-            fontSize: "9px",
-            fontFamily: theme.fonts.caption.family,
-            color: colorToString(
-              check.canBuild ? theme.colors.profit : theme.colors.textDim,
-            ),
-          })
-          .setOrigin(0.5, 0.5);
-        palettePanel.add(costText);
+        palettePanel.add(card.iconText);
+        palettePanel.add(card.nameText);
+        if (card.costText) {
+          palettePanel.add(card.costText);
+        }
 
         bg.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
           if (check.canBuild) {
@@ -242,11 +240,14 @@ export class StationBuilderScene extends Phaser.Scene {
         });
 
         bg.on("pointerover", () => {
-          bg.setFillStyle(roomColor, 0.45);
+          bg.setFillStyle(card.roomColor, 0.45);
           this.showRoomInfo(rt);
         });
         bg.on("pointerout", () => {
-          bg.setFillStyle(roomColor, this.selectedRoomType === rt ? 0.5 : 0.2);
+          bg.setFillStyle(
+            card.roomColor,
+            this.selectedRoomType === rt ? 0.5 : 0.22,
+          );
         });
 
         col++;
@@ -271,22 +272,23 @@ export class StationBuilderScene extends Phaser.Scene {
 
     this.showDefaultInfo(hub, state.cash);
 
-    // Scene-level drag listeners
-    this.input.on("pointermove", (p: Phaser.Input.Pointer) =>
-      this.onDragMove(p),
-    );
-    this.input.on("pointerup", (p: Phaser.Input.Pointer) => this.onDragEnd(p));
+    // Scene-level drag listeners (de-duplicated across restarts)
+    this.input.off("pointermove", this.handlePointerMove);
+    this.input.off("pointerup", this.handlePointerUp);
+    this.input.on("pointermove", this.handlePointerMove);
+    this.input.on("pointerup", this.handlePointerUp);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.off("pointermove", this.handlePointerMove);
+      this.input.off("pointerup", this.handlePointerUp);
+    });
   }
 
   // ── Grid rendering ──
 
   private buildGrid(hub: StationHub): void {
     const theme = getTheme();
-    const content = this.gridPanel.getContentArea();
-    const cellW =
-      (content.width - (HUB_GRID_SLOTS_PER_DECK - 1) * 4) /
-      HUB_GRID_SLOTS_PER_DECK;
-    const cellH = (content.height - (HUB_GRID_DECKS - 1) * 4) / HUB_GRID_DECKS;
+    const { content, cellW, cellH } = this.getGridMetrics();
     const maxSlots = HUB_LEVEL_SLOTS[hub.level];
 
     this.gridCells = [];
@@ -306,7 +308,7 @@ export class StationBuilderScene extends Phaser.Scene {
           fillAlpha = 0.6;
         } else if (room) {
           fillColor = ROOM_COLORS[room.type] ?? 0x555555;
-          fillAlpha = 0.7;
+          fillAlpha = 0.26;
         }
 
         const cell = this.add
@@ -316,33 +318,19 @@ export class StationBuilderScene extends Phaser.Scene {
         this.gridCells[gy][gx] = cell;
 
         if (room) {
-          const def = HUB_ROOM_DEFINITIONS[room.type];
-          const label = this.add
-            .text(cx, cy - 4, def.icon, {
-              fontSize: "14px",
-              align: "center",
-            })
-            .setOrigin(0.5, 0.5);
-          this.gridPanel.add(label);
-
-          // Room name below icon
-          const roomName = this.add
-            .text(cx, cy + 10, def.name, {
-              fontSize: "8px",
-              fontFamily: theme.fonts.caption.family,
-              color: "#ffffff",
-              align: "center",
-              wordWrap: { width: cellW - 4 },
-              shadow: {
-                offsetX: 1,
-                offsetY: 1,
-                color: "#000000",
-                blur: 2,
-                fill: true,
-              },
-            })
-            .setOrigin(0.5, 0);
-          this.gridPanel.add(roomName);
+          const card = this.createRoomCardVisual({
+            x: cx,
+            y: cy,
+            width: cellW,
+            height: cellH,
+            roomType: room.type,
+            enabled: true,
+            showCost: false,
+            selected: false,
+          });
+          this.gridPanel.add(card.bg);
+          this.gridPanel.add(card.iconText);
+          this.gridPanel.add(card.nameText);
 
           cell.setInteractive({ useHandCursor: true });
           cell.on("pointerup", () => {
@@ -446,31 +434,23 @@ export class StationBuilderScene extends Phaser.Scene {
     if (this.dragGhost) {
       this.dragGhost.destroy();
     }
-    const def = HUB_ROOM_DEFINITIONS[rt];
-    const roomColor = ROOM_COLORS[rt] ?? 0x555555;
-    const size = 48;
+    const width = this.roomCardWidth;
+    const height = this.roomCardHeight;
 
     const ghost = this.add.container(pointer.worldX, pointer.worldY);
-    const bg = this.add
-      .rectangle(0, 0, size, size, roomColor, 0.5)
-      .setStrokeStyle(2, roomColor)
-      .setInteractive();
-    ghost.add(bg);
-
-    const icon = this.add
-      .text(0, -6, def.icon, { fontSize: "18px" })
-      .setOrigin(0.5, 0.5);
-    ghost.add(icon);
-
-    const nameLabel = this.add
-      .text(0, 14, def.name, {
-        fontSize: "7px",
-        color: "#ffffff",
-        align: "center",
-        wordWrap: { width: size - 4 },
-      })
-      .setOrigin(0.5, 0.5);
-    ghost.add(nameLabel);
+    const card = this.createRoomCardVisual({
+      x: 0,
+      y: 0,
+      width,
+      height,
+      roomType: rt,
+      enabled: true,
+      showCost: false,
+      selected: true,
+    });
+    ghost.add(card.bg);
+    ghost.add(card.iconText);
+    ghost.add(card.nameText);
 
     ghost.setAlpha(0.85);
     ghost.setDepth(1000);
@@ -553,6 +533,111 @@ export class StationBuilderScene extends Phaser.Scene {
       }
     }
     return null;
+  }
+
+  private getGridMetrics(): {
+    content: { x: number; y: number; width: number; height: number };
+    cellW: number;
+    cellH: number;
+  } {
+    const content = this.gridPanel.getContentArea();
+    const cellW =
+      (content.width - (HUB_GRID_SLOTS_PER_DECK - 1) * 4) /
+      HUB_GRID_SLOTS_PER_DECK;
+    const cellH = (content.height - (HUB_GRID_DECKS - 1) * 4) / HUB_GRID_DECKS;
+    return { content, cellW, cellH };
+  }
+
+  private createRoomCardVisual(params: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    roomType: HubRoomType;
+    enabled: boolean;
+    showCost: boolean;
+    selected: boolean;
+    interactive?: boolean;
+  }): {
+    bg: Phaser.GameObjects.Rectangle;
+    iconText: Phaser.GameObjects.Text;
+    nameText: Phaser.GameObjects.Text;
+    costText?: Phaser.GameObjects.Text;
+    roomColor: number;
+  } {
+    const theme = getTheme();
+    const {
+      x,
+      y,
+      width,
+      height,
+      roomType,
+      enabled,
+      showCost,
+      selected,
+      interactive = false,
+    } = params;
+    const def = HUB_ROOM_DEFINITIONS[roomType];
+    const roomColor = ROOM_COLORS[roomType] ?? 0x555555;
+
+    const bg = this.add
+      .rectangle(x, y, width, height, roomColor, selected ? 0.5 : 0.22)
+      .setStrokeStyle(selected ? 2 : 1, roomColor);
+
+    if (interactive) {
+      bg.setInteractive({ useHandCursor: enabled });
+    }
+
+    const iconText = this.add
+      .text(x - width / 2 + 10, y - height / 2 + 8, def.icon, {
+        fontSize: "10px",
+        fontFamily: theme.fonts.body.family,
+        color: enabled ? colorToString(theme.colors.text) : "#a0a0a0",
+      })
+      .setOrigin(0, 0);
+
+    const nameText = this.add
+      .text(x - width / 2 + 24, y - height / 2 + 8, def.name, {
+        fontSize: "9px",
+        fontFamily: theme.fonts.caption.family,
+        color: enabled ? "#ffffff" : "#a0a0a0",
+        align: "left",
+        wordWrap: { width: width - 30 },
+        shadow: {
+          offsetX: 1,
+          offsetY: 1,
+          color: "#000000",
+          blur: 2,
+          fill: true,
+        },
+      })
+      .setOrigin(0, 0);
+
+    let costText: Phaser.GameObjects.Text | undefined;
+    if (showCost) {
+      costText = this.add
+        .text(
+          x - width / 2 + 8,
+          y + height / 2 - 12,
+          formatCash(def.buildCost),
+          {
+            fontSize: "9px",
+            fontFamily: theme.fonts.caption.family,
+            color: enabled
+              ? colorToString(theme.colors.profit)
+              : colorToString(theme.colors.textDim),
+          },
+        )
+        .setOrigin(0, 0);
+    }
+
+    return {
+      bg,
+      iconText,
+      nameText,
+      costText,
+      roomColor,
+    };
   }
 
   private confirmDemolish(): void {
