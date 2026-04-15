@@ -23,6 +23,11 @@ import {
   getLeaderTextureKey,
   getLeaderAssetPath,
 } from "../data/empireLeaderPortraits.ts";
+import {
+  ROOM_PORTRAIT_TYPES,
+  getRoomPortraitTextureKey,
+  getRoomPortraitAssetPath,
+} from "../data/roomPortraits.ts";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -49,6 +54,14 @@ export class BootScene extends Phaser.Scene {
     // Preload empire leader portrait images
     for (const def of EMPIRE_LEADER_PORTRAITS) {
       this.load.image(getLeaderTextureKey(def.id), getLeaderAssetPath(def));
+    }
+
+    // Preload hub room portrait images
+    for (const rtype of ROOM_PORTRAIT_TYPES) {
+      this.load.image(
+        getRoomPortraitTextureKey(rtype),
+        getRoomPortraitAssetPath(rtype),
+      );
     }
   }
 

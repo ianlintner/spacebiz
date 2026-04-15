@@ -33,6 +33,7 @@ import {
   getTerminalUpgrade,
   upgradeTerminal,
 } from "../game/hub/HubManager.ts";
+import { getRoomPortraitTextureKey } from "../data/roomPortraits.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -688,6 +689,7 @@ export class StationBuilderScene extends Phaser.Scene {
         { label: "Upkeep", value: formatCash(def.upkeepCost) + "/turn" },
         { label: "Limit", value: String(def.limit) },
       ],
+      { textureKey: getRoomPortraitTextureKey(roomType) },
     );
 
     // Description line
@@ -755,6 +757,7 @@ export class StationBuilderScene extends Phaser.Scene {
         { label: "Upkeep", value: formatCash(def.upkeepCost) + "/turn" },
         { label: "Scope", value: def.bonusScope },
       ],
+      { textureKey: getRoomPortraitTextureKey(room.type) },
     );
 
     const descLabel = new Label(this, {
