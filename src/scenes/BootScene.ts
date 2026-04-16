@@ -28,6 +28,7 @@ import {
   getRoomPortraitTextureKey,
   getRoomPortraitAssetPath,
 } from "../data/roomPortraits.ts";
+import { generateAdviserSpritesheet } from "../ui/AdviserPortrait.ts";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -63,6 +64,15 @@ export class BootScene extends Phaser.Scene {
         getRoomPortraitAssetPath(rtype),
       );
     }
+
+    // Preload Rex adviser portrait images (MCP-generated PNGs, if available)
+    const rexMoods = ["standby", "analyzing", "alert", "success"] as const;
+    for (const mood of rexMoods) {
+      this.load.image(
+        `rex-portrait-${mood}`,
+        `portraits/adviser/rex-${mood}.png`,
+      );
+    }
   }
 
   create(): void {
@@ -83,6 +93,7 @@ export class BootScene extends Phaser.Scene {
     this.generateNavIcons();
     generateCargoIcons(this.textures);
     generateShipIcons(this.textures);
+    generateAdviserSpritesheet(this.textures);
 
     // Proceed to main menu after textures are ready
     this.scene.start("MainMenuScene");

@@ -1,28 +1,60 @@
 import Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
-import { drawRexPortrait, getMoodAccentColor } from "./AdviserPortrait.ts";
+import {
+  getMoodAccentColor,
+  ADVISER_SHEET_KEY,
+  ADVISER_FRAME_COUNT,
+  getAdviserFrameName,
+  generateAdviserSpritesheet,
+  drawRexPortrait,
+} from "./AdviserPortrait.ts";
 import type { AdviserMessage, AdviserMood } from "../data/types.ts";
 
 export interface AdviserPanelConfig {
   x: number;
   y: number;
   width: number;
-  /** If true, uses compact single-line mode (for HUD sidebar) */
+  /** If true, uses compact single-line mode */
   compact?: boolean;
 }
 
-const PORTRAIT_SIZE = 96;
+// ── Drawer constants ───────────────────────────────────────
+const TAB_WIDTH = 36;
+const PORTRAIT_SIZE = 120;
 const COMPACT_PORTRAIT = 64;
-const TYPEWRITER_MS = 25; // ms per character
-const MSG_PADDING = 12;
-const NAME_HEIGHT = 18;
+const TYPEWRITER_MS = 22;
+const MSG_PADDING = 14;
+const NAME_HEIGHT = 20;
+const DISMISS_SIZE = 24;
+const ANIM_FRAME_MS = 600;
+const SLIDE_DURATION = 280;
+
+/** Rex adviser portrait texture keys for loaded PNG portraits */
+const REX_PORTRAIT_KEYS: Record<AdviserMood, string> = {
+  standby: "rex-portrait-standby",
+  analyzing: "rex-portrait-analyzing",
+  alert: "rex-portrait-alert",
+  success: "rex-portrait-success",
+};
 
 /**
- * Self-contained adviser panel showing Rex's portrait + message with
- * typewriter effect. Supports compact (HUD badge) and full (report) modes.
+ * Drawer-style adviser panel with integrated tab handle.
+ *
+ * The container is always visible. In the closed state only the tab
+ * (left edge) peeks from the right side of the screen. Clicking the
+ * tab slides the full panel out; clicking it again (or the dismiss
+ * button) slides it back in.
+ *
+ * Layout inside the container (local coords):
+ *   x=0            → tab handle (TAB_WIDTH wide)
+ *   x=TAB_WIDTH    → panel body (config.width wide)
+ *
+ * The container's world-X is managed via closedX / openX.
  */
 export class AdviserPanel extends Phaser.GameObjects.Container {
-  private portraitGfx: Phaser.GameObjects.Graphics;
+  // ── Visual elements ──
+  private portraitImage: Phaser.GameObjects.Image | null = null;
+  private portraitGfx: Phaser.GameObjects.Graphics | null = null;
   private nameLabel: Phaser.GameObjects.Text;
   private msgLabel: Phaser.GameObjects.Text;
   private bg: Phaser.GameObjects.NineSlice;
@@ -31,8 +63,17 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   private solidBg: Phaser.GameObjects.Rectangle;
   private navLabel: Phaser.GameObjects.Text | null = null;
   private hitZone: Phaser.GameObjects.Zone | null = null;
-  private isCompact: boolean;
+  private dismissBtn: Phaser.GameObjects.Container | null = null;
+  private portraitBorder: Phaser.GameObjects.Rectangle;
+  private portraitGlowBar: Phaser.GameObjects.Rectangle;
+  private tabBg: Phaser.GameObjects.Graphics;
+  private tabIcon: Phaser.GameObjects.Image;
+  private tabLabel: Phaser.GameObjects.Text;
+  private tabAccent: Phaser.GameObjects.Rectangle;
+  private tabBadge: Phaser.GameObjects.Text;
 
+  // ── State ──
+  private isCompact: boolean;
   private messages: AdviserMessage[] = [];
   private currentIndex = 0;
   private typewriterTimer: Phaser.Time.TimerEvent | null = null;
@@ -43,113 +84,212 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   private panelWidth: number;
   private panelHeight: number;
   private minPanelHeight: number;
+  private animFrameIndex = 0;
+  private animTimer: Phaser.Time.TimerEvent | null = null;
+  private usesSpritesheet = false;
+  private usesPngPortraits = false;
+  private slideTween: Phaser.Tweens.Tween | null = null;
+  private drawerOpen = false;
+  private closedX: number; // x when drawer is closed (only tab visible)
+  private openX: number; // x when drawer is open (tab + panel visible)
 
   constructor(scene: Phaser.Scene, config: AdviserPanelConfig) {
-    super(scene, config.x, config.y);
+    // Container starts at closedX (only tab visible)
+    const closedX = config.x + config.width;
+    const openX = config.x;
+    super(scene, closedX, config.y);
+
     const theme = getTheme();
     this.isCompact = config.compact ?? false;
     this.portraitSize = this.isCompact ? COMPACT_PORTRAIT : PORTRAIT_SIZE;
     this.panelWidth = config.width;
-    this.minPanelHeight = this.isCompact
-      ? this.portraitSize + MSG_PADDING * 2
-      : this.portraitSize + MSG_PADDING * 3 + 24; // extra for nav
-    this.panelHeight = this.minPanelHeight;
-    const panelHeight = this.panelHeight;
+    this.closedX = closedX;
+    this.openX = openX;
 
-    // Drop shadow (offset dark rect behind everything)
+    // Calculate panel height
+    if (this.isCompact) {
+      this.minPanelHeight = this.portraitSize + MSG_PADDING * 2;
+    } else {
+      this.minPanelHeight = this.portraitSize + MSG_PADDING * 2 + 60;
+    }
+    this.panelHeight = this.minPanelHeight;
+
+    // All body elements are offset right by TAB_WIDTH
+    const bx = TAB_WIDTH; // body x offset
+
+    // ════════════════════════════════════════════════
+    // ── TAB HANDLE (x=0..TAB_WIDTH) ────────────────
+    // ════════════════════════════════════════════════
+
+    const tabH = 72;
+
+    this.tabBg = scene.add.graphics();
+    this.drawTabBg(this.tabBg, tabH, theme.colors.headerBg, 0.92, theme.colors.panelBorder, 0.6);
+    this.add(this.tabBg);
+
+    this.tabAccent = scene.add
+      .rectangle(0, 2, 3, tabH - 4, theme.colors.accent)
+      .setOrigin(0, 0)
+      .setAlpha(0.7);
+    this.add(this.tabAccent);
+
+    this.tabIcon = scene.add
+      .image(TAB_WIDTH / 2, tabH / 2 - 8, "icon-adviser")
+      .setOrigin(0.5, 0.5)
+      .setTint(theme.colors.textDim);
+    this.add(this.tabIcon);
+
+    this.tabLabel = scene.add
+      .text(TAB_WIDTH / 2, tabH - 12, "REX", {
+        fontSize: "8px",
+        fontFamily: theme.fonts.caption.family,
+        color: colorToString(theme.colors.textDim),
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5, 0.5);
+    this.add(this.tabLabel);
+
+    this.tabBadge = scene.add
+      .text(TAB_WIDTH - 4, 2, "", {
+        fontSize: "9px",
+        fontFamily: theme.fonts.caption.family,
+        color: "#fff",
+        backgroundColor: colorToString(theme.colors.accent),
+        padding: { x: 3, y: 1 },
+      })
+      .setOrigin(1, 0)
+      .setVisible(false);
+    this.add(this.tabBadge);
+
+    // Tab hit area
+    const tabHit = scene.add
+      .rectangle(TAB_WIDTH / 2, tabH / 2, TAB_WIDTH, tabH, 0x000000, 0)
+      .setOrigin(0.5, 0.5)
+      .setInteractive({ useHandCursor: true });
+    this.add(tabHit);
+
+    tabHit.on("pointerover", () => {
+      this.drawTabBg(this.tabBg, tabH, theme.colors.buttonHover, 0.95, theme.colors.accent, 0.8);
+      this.tabIcon.setTint(theme.colors.accent);
+      this.tabLabel.setColor(colorToString(theme.colors.accent));
+      this.tabAccent.setAlpha(1);
+    });
+    tabHit.on("pointerout", () => {
+      this.drawTabBg(this.tabBg, tabH, theme.colors.headerBg, 0.92, theme.colors.panelBorder, 0.6);
+      this.tabIcon.setTint(theme.colors.textDim);
+      this.tabLabel.setColor(colorToString(theme.colors.textDim));
+      this.tabAccent.setAlpha(0.7);
+    });
+    tabHit.on("pointerup", () => {
+      this.toggle();
+    });
+
+    // ════════════════════════════════════════════════
+    // ── PANEL BODY (x=TAB_WIDTH) ───────────────────
+    // ════════════════════════════════════════════════
+
+    // Drop shadow
     this.shadow = scene.add
-      .rectangle(4, 4, config.width, panelHeight, theme.colors.modalOverlay)
+      .rectangle(bx + 4, 4, config.width, this.panelHeight, theme.colors.modalOverlay)
       .setOrigin(0, 0)
       .setAlpha(0.5);
     this.add(this.shadow);
 
-    // Solid dark backing for contrast (behind the nineslice)
+    // Solid backing
     this.solidBg = scene.add
-      .rectangle(0, 0, config.width, panelHeight, theme.colors.background)
+      .rectangle(bx, 0, config.width, this.panelHeight, theme.colors.background)
       .setOrigin(0, 0)
       .setAlpha(0.94);
     this.add(this.solidBg);
 
-    // Background
+    // Nine-slice panel background
     this.bg = scene.add
-      .nineslice(
-        0,
-        0,
-        "panel-bg",
-        undefined,
-        config.width,
-        panelHeight,
-        10,
-        10,
-        10,
-        10,
-      )
+      .nineslice(bx, 0, "panel-bg", undefined, config.width, this.panelHeight, 10, 10, 10, 10)
       .setOrigin(0, 0)
-      .setAlpha(0.85);
+      .setAlpha(0.88);
     this.add(this.bg);
 
-    // Top highlight line for glass effect
-    const topHighlight = scene.add
-      .rectangle(1, 0, config.width - 2, 1, 0xffffff)
+    // Top highlight
+    scene.add
+      .rectangle(bx + 1, 0, config.width - 2, 1, 0xffffff)
       .setOrigin(0, 0)
       .setAlpha(0.1);
-    this.add(topHighlight);
 
-    // Accent bar left side
+    // Accent bar (top)
     this.accentBar = scene.add
-      .rectangle(0, 0, 4, panelHeight, theme.colors.accent)
+      .rectangle(bx, 0, config.width, 3, theme.colors.accent)
       .setOrigin(0, 0)
       .setAlpha(0.8);
     this.add(this.accentBar);
 
-    // Portrait with subtle border
-    const portraitBorder = scene.add
-      .rectangle(
-        MSG_PADDING - 2,
-        MSG_PADDING - 2,
-        this.portraitSize + 4,
-        this.portraitSize + 4,
-        theme.colors.panelBorder,
-      )
+    // ── Portrait section ──
+    const portraitX = bx + Math.floor((config.width - this.portraitSize) / 2);
+    const portraitY = MSG_PADDING;
+
+    this.portraitBorder = scene.add
+      .rectangle(portraitX - 3, portraitY - 3, this.portraitSize + 6, this.portraitSize + 6, theme.colors.panelBorder)
       .setOrigin(0, 0)
       .setAlpha(0.6);
-    this.add(portraitBorder);
+    this.add(this.portraitBorder);
 
-    this.portraitGfx = scene.add.graphics();
-    this.portraitGfx.setPosition(MSG_PADDING, MSG_PADDING);
-    this.add(this.portraitGfx);
-    drawRexPortrait(
-      this.portraitGfx,
-      this.portraitSize,
-      this.portraitSize,
-      "standby",
-    );
+    this.portraitGlowBar = scene.add
+      .rectangle(portraitX, portraitY + this.portraitSize + 1, this.portraitSize, 2, theme.colors.accent)
+      .setOrigin(0, 0)
+      .setAlpha(0.6);
+    this.add(this.portraitGlowBar);
 
-    // Text area to the right of portrait
-    const textX = MSG_PADDING + this.portraitSize + MSG_PADDING + 4;
-    const textW = config.width - textX - MSG_PADDING;
+    // Determine portrait rendering method
+    this.usesPngPortraits = this.checkPngPortraitsAvailable();
+    if (!this.usesPngPortraits) {
+      if (!scene.textures.exists(ADVISER_SHEET_KEY)) {
+        generateAdviserSpritesheet(scene.textures);
+      }
+      this.usesSpritesheet = scene.textures.exists(ADVISER_SHEET_KEY);
+    }
 
-    // Name / title label
-    const nameText = this.isCompact ? "Rex" : "Rex — K9-Corp Adviser";
+    if (this.usesPngPortraits) {
+      this.portraitImage = scene.add
+        .image(portraitX + this.portraitSize / 2, portraitY + this.portraitSize / 2, REX_PORTRAIT_KEYS.standby)
+        .setOrigin(0.5, 0.5)
+        .setDisplaySize(this.portraitSize, this.portraitSize);
+      this.add(this.portraitImage);
+    } else if (this.usesSpritesheet) {
+      const frameName = getAdviserFrameName("standby", 0);
+      this.portraitImage = scene.add
+        .image(portraitX + this.portraitSize / 2, portraitY + this.portraitSize / 2, ADVISER_SHEET_KEY, frameName)
+        .setOrigin(0.5, 0.5)
+        .setDisplaySize(this.portraitSize, this.portraitSize);
+      this.add(this.portraitImage);
+    } else {
+      this.portraitGfx = scene.add.graphics();
+      this.portraitGfx.setPosition(portraitX, portraitY);
+      this.add(this.portraitGfx);
+      drawRexPortrait(this.portraitGfx, this.portraitSize, this.portraitSize, "standby");
+    }
+
+    // ── Text area below portrait ──
+    const textAreaTop = portraitY + this.portraitSize + MSG_PADDING;
+    const textX = bx + MSG_PADDING + 4;
+    const textW = config.width - MSG_PADDING * 2 - 8;
+
+    const nameText = this.isCompact ? "Rex" : "REX — K9-Corp Adviser";
     this.nameLabel = scene.add
-      .text(textX, MSG_PADDING, nameText, {
-        fontSize: `${this.isCompact ? theme.fonts.caption.size : 13}px`,
+      .text(textX, textAreaTop, nameText, {
+        fontSize: `${this.isCompact ? theme.fonts.caption.size : 12}px`,
         fontFamily: theme.fonts.caption.family,
         color: colorToString(theme.colors.accent),
+        fontStyle: "bold",
       })
       .setOrigin(0, 0);
     this.add(this.nameLabel);
 
-    // Thin separator line below name
-    const separatorY = MSG_PADDING + NAME_HEIGHT - 2;
-    const separator = scene.add
+    const separatorY = textAreaTop + NAME_HEIGHT - 2;
+    scene.add
       .rectangle(textX, separatorY, textW, 1, theme.colors.accent)
       .setOrigin(0, 0)
       .setAlpha(0.25);
-    this.add(separator);
 
-    // Message text
-    const msgY = MSG_PADDING + NAME_HEIGHT + 2;
+    const msgY = textAreaTop + NAME_HEIGHT + 2;
     this.msgLabel = scene.add
       .text(textX, msgY, "", {
         fontSize: `${this.isCompact ? theme.fonts.caption.size : theme.fonts.body.size}px`,
@@ -161,10 +301,10 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
       .setOrigin(0, 0);
     this.add(this.msgLabel);
 
-    // Navigation label (full mode only)
+    // Navigation label
     if (!this.isCompact) {
       this.navLabel = scene.add
-        .text(config.width - MSG_PADDING, panelHeight - MSG_PADDING - 4, "", {
+        .text(bx + config.width - MSG_PADDING, this.panelHeight - MSG_PADDING - 4, "", {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
           color: colorToString(theme.colors.textDim),
@@ -175,55 +315,207 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
       this.add(this.navLabel);
     }
 
-    // Click anywhere to advance in full mode
+    // Dismiss X button
     if (!this.isCompact) {
-      this.hitZone = scene.add
-        .zone(0, 0, config.width, panelHeight)
-        .setOrigin(0, 0)
-        .setInteractive({ useHandCursor: true })
-        .on("pointerdown", () => {
-          if (this.charIndex < this.fullText.length) {
-            // Skip typewriter
-            this.finishTypewriter();
-          } else {
-            this.nextMessage();
-          }
-        });
-      this.add(this.hitZone);
+      this.dismissBtn = this.createDismissButton(bx + config.width, theme);
+      this.add(this.dismissBtn);
     }
 
-    this.setVisible(false);
+    // Click panel body to advance messages
+    this.hitZone = scene.add
+      .zone(bx, 0, config.width, this.panelHeight)
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => {
+        if (this.charIndex < this.fullText.length) {
+          this.finishTypewriter();
+        } else if (this.messages.length > 0) {
+          this.nextMessage();
+        }
+      });
+    this.add(this.hitZone);
+
+    // Start animation timer
+    this.startAnimationLoop();
+
+    // Always visible — starts in closed position
+    this.setAlpha(1);
     scene.add.existing(this);
   }
 
-  // ── Public API ──────────────────────────
+  // ── Tab drawing helper ─────────────────────────
 
-  /** Show a batch of messages. Replaces any current queue. */
-  showMessages(messages: AdviserMessage[]): void {
-    if (messages.length === 0) {
-      this.setVisible(false);
-      return;
-    }
-    this.messages = [...messages];
-    this.currentIndex = 0;
-    this.setVisible(true);
-    this.displayCurrent();
+  private drawTabBg(
+    gfx: Phaser.GameObjects.Graphics,
+    h: number,
+    fillColor: number,
+    fillAlpha: number,
+    strokeColor: number,
+    strokeAlpha: number,
+  ): void {
+    gfx.clear();
+    gfx.fillStyle(fillColor, fillAlpha);
+    gfx.fillRoundedRect(0, 0, TAB_WIDTH, h, { tl: 8, bl: 8, tr: 0, br: 0 });
+    gfx.lineStyle(1, strokeColor, strokeAlpha);
+    gfx.strokeRoundedRect(0, 0, TAB_WIDTH, h, { tl: 8, bl: 8, tr: 0, br: 0 });
   }
 
-  /** Append messages to the queue without resetting. */
+  // ── Dismiss Button ─────────────────────────────
+
+  private createDismissButton(
+    rightEdgeX: number,
+    theme: ReturnType<typeof getTheme>,
+  ): Phaser.GameObjects.Container {
+    const btn = this.scene.add.container(rightEdgeX - DISMISS_SIZE / 2 - 6, DISMISS_SIZE / 2 + 6);
+
+    const bg = this.scene.add
+      .circle(0, 0, DISMISS_SIZE / 2, theme.colors.buttonBg, 0.6)
+      .setInteractive({ useHandCursor: true });
+
+    const gfx = this.scene.add.graphics();
+    gfx.lineStyle(2, theme.colors.text, 0.8);
+    const s = 5;
+    gfx.beginPath();
+    gfx.moveTo(-s, -s);
+    gfx.lineTo(s, s);
+    gfx.moveTo(s, -s);
+    gfx.lineTo(-s, s);
+    gfx.strokePath();
+
+    btn.add([bg, gfx]);
+
+    bg.on("pointerover", () => bg.setFillStyle(theme.colors.buttonHover, 0.9));
+    bg.on("pointerout", () => bg.setFillStyle(theme.colors.buttonBg, 0.6));
+    bg.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      pointer.event.stopPropagation();
+      this.closeDrawer();
+    });
+
+    return btn;
+  }
+
+  // ── Animation loop ─────────────────────────────
+
+  private startAnimationLoop(): void {
+    this.animTimer = this.scene.time.addEvent({
+      delay: ANIM_FRAME_MS,
+      loop: true,
+      callback: () => {
+        if (!this.drawerOpen) return;
+        this.animFrameIndex = (this.animFrameIndex + 1) % ADVISER_FRAME_COUNT;
+        this.updatePortraitFrame();
+      },
+    });
+  }
+
+  private updatePortraitFrame(): void {
+    if (this.usesPngPortraits && this.portraitImage) return;
+    if (this.usesSpritesheet && this.portraitImage) {
+      const frameName = getAdviserFrameName(this.currentMood, this.animFrameIndex);
+      this.portraitImage.setFrame(frameName);
+    }
+  }
+
+  // ── Portrait helpers ───────────────────────────
+
+  private checkPngPortraitsAvailable(): boolean {
+    return this.scene.textures.exists(REX_PORTRAIT_KEYS.standby);
+  }
+
+  private updatePortrait(mood: AdviserMood): void {
+    if (this.usesPngPortraits && this.portraitImage) {
+      const key = REX_PORTRAIT_KEYS[mood];
+      if (this.scene.textures.exists(key)) {
+        this.portraitImage.setTexture(key);
+      }
+    } else if (this.usesSpritesheet && this.portraitImage) {
+      const frameName = getAdviserFrameName(mood, this.animFrameIndex);
+      this.portraitImage.setFrame(frameName);
+    } else if (this.portraitGfx) {
+      drawRexPortrait(this.portraitGfx, this.portraitSize, this.portraitSize, mood);
+    }
+  }
+
+  private updateAccentBar(mood: AdviserMood): void {
+    const color = getMoodAccentColor(mood);
+    this.accentBar.setFillStyle(color);
+    this.portraitGlowBar.setFillStyle(color);
+    this.portraitBorder.setFillStyle(color, 0.15);
+  }
+
+  // ── Public API ─────────────────────────────────
+
+  /** Toggle the drawer open/closed. */
+  toggle(): void {
+    if (this.drawerOpen) {
+      this.closeDrawer();
+    } else {
+      this.openDrawer();
+    }
+  }
+
+  /** Open the drawer. If no messages queued, shows standby. */
+  openDrawer(): void {
+    if (this.drawerOpen) return;
+    this.drawerOpen = true;
+
+    if (this.messages.length === 0) {
+      // Show default standby message
+      this.messages = [
+        {
+          id: `standby-${Date.now()}`,
+          text: "All quiet on the corporate front, boss.",
+          mood: "standby",
+          priority: 1,
+          context: "tip",
+          turnGenerated: 0,
+        },
+      ];
+      this.currentIndex = 0;
+    }
+    this.displayCurrent();
+    this.slideOpen();
+  }
+
+  /** Close the drawer with slide animation. */
+  closeDrawer(): void {
+    if (!this.drawerOpen) return;
+    this.slideClosed(() => {
+      this.drawerOpen = false;
+      this.stopTypewriter();
+    });
+  }
+
+  /** Whether the drawer is currently open. */
+  get isOpen(): boolean {
+    return this.drawerOpen;
+  }
+
+  /** Show a batch of messages and open the drawer. */
+  showMessages(messages: AdviserMessage[]): void {
+    if (messages.length === 0) return;
+    this.messages = [...messages];
+    this.currentIndex = 0;
+    this.drawerOpen = true;
+    this.displayCurrent();
+    this.slideOpen();
+  }
+
+  /** Append messages to the queue. Opens drawer if closed. */
   appendMessages(messages: AdviserMessage[]): void {
     if (messages.length === 0) return;
     const wasEmpty = this.messages.length === 0;
     this.messages.push(...messages);
-    if (wasEmpty) {
-      this.currentIndex = 0;
-      this.setVisible(true);
+    if (wasEmpty || !this.drawerOpen) {
+      this.currentIndex = this.messages.length - messages.length;
+      this.drawerOpen = true;
       this.displayCurrent();
+      this.slideOpen();
     }
     this.updateNav();
   }
 
-  /** Show a single message immediately. */
+  /** Show a single message immediately and open the drawer. */
   showSingle(text: string, mood: AdviserMood = "standby"): void {
     this.showMessages([
       {
@@ -237,16 +529,33 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     ]);
   }
 
-  /** Clear all messages and hide. */
+  /** Dismiss = close drawer. */
+  dismiss(): void {
+    this.closeDrawer();
+  }
+
+  /** Clear all messages (keeps drawer closed). */
   clear(): void {
     this.stopTypewriter();
     this.messages = [];
     this.currentIndex = 0;
+    this.msgLabel.setText("");
     this.resizePanel(this.minPanelHeight);
-    this.setVisible(false);
+    if (this.drawerOpen) {
+      this.closeDrawer();
+    }
   }
 
-  /** Number of unread messages remaining (including current). */
+  /** Update the badge on the tab. */
+  updateBadge(count: number): void {
+    if (count > 0) {
+      this.tabBadge.setText(`${count}`);
+      this.tabBadge.setVisible(true);
+    } else {
+      this.tabBadge.setVisible(false);
+    }
+  }
+
   get remaining(): number {
     return Math.max(0, this.messages.length - this.currentIndex);
   }
@@ -255,12 +564,43 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     return this.currentMood;
   }
 
-  // ── Internal ────────────────────────────
+  // ── Slide animations ───────────────────────────
+
+  private slideOpen(): void {
+    if (this.slideTween) {
+      this.slideTween.stop();
+      this.slideTween = null;
+    }
+    this.slideTween = this.scene.tweens.add({
+      targets: this,
+      x: this.openX,
+      duration: SLIDE_DURATION,
+      ease: "Back.easeOut",
+    });
+  }
+
+  private slideClosed(onComplete?: () => void): void {
+    if (this.slideTween) {
+      this.slideTween.stop();
+      this.slideTween = null;
+    }
+    this.slideTween = this.scene.tweens.add({
+      targets: this,
+      x: this.closedX,
+      duration: SLIDE_DURATION * 0.7,
+      ease: "Cubic.easeIn",
+      onComplete: () => {
+        onComplete?.();
+      },
+    });
+  }
+
+  // ── Internal ───────────────────────────────────
 
   private displayCurrent(): void {
     const msg = this.messages[this.currentIndex];
     if (!msg) {
-      this.setVisible(false);
+      this.closeDrawer();
       return;
     }
     this.currentMood = msg.mood;
@@ -275,22 +615,8 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
       this.currentIndex++;
       this.displayCurrent();
     } else {
-      // Last message — dismiss the panel
-      this.clear();
+      this.closeDrawer();
     }
-  }
-
-  private updatePortrait(mood: AdviserMood): void {
-    drawRexPortrait(
-      this.portraitGfx,
-      this.portraitSize,
-      this.portraitSize,
-      mood,
-    );
-  }
-
-  private updateAccentBar(mood: AdviserMood): void {
-    this.accentBar.setFillStyle(getMoodAccentColor(mood));
   }
 
   private startTypewriter(text: string): void {
@@ -298,17 +624,14 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     this.fullText = text;
     this.charIndex = 0;
 
-    // Measure full text to auto-size panel height
     this.msgLabel.setText(text);
     const textHeight = this.msgLabel.height;
     this.msgLabel.setText("");
 
-    const msgY = MSG_PADDING + NAME_HEIGHT + 2;
+    const textAreaTop = MSG_PADDING + this.portraitSize + MSG_PADDING;
+    const msgY = textAreaTop + NAME_HEIGHT + 2;
     const bottomPad = this.isCompact ? MSG_PADDING : MSG_PADDING + 24;
-    const neededHeight = Math.max(
-      this.minPanelHeight,
-      msgY + textHeight + bottomPad,
-    );
+    const neededHeight = Math.max(this.minPanelHeight, msgY + textHeight + bottomPad);
     this.resizePanel(neededHeight);
 
     this.typewriterTimer = this.scene.time.addEvent({
@@ -321,18 +644,12 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     });
   }
 
-  /** Resize panel height, growing upward so bottom edge stays fixed. */
   private resizePanel(newHeight: number): void {
-    const delta = newHeight - this.panelHeight;
-    if (delta === 0) return;
-
-    this.y -= delta;
+    if (Math.abs(newHeight - this.panelHeight) < 1) return;
     this.panelHeight = newHeight;
-
     this.shadow.setSize(this.panelWidth, newHeight);
     this.solidBg.setSize(this.panelWidth, newHeight);
     this.bg.setSize(this.panelWidth, newHeight);
-    this.accentBar.setSize(4, newHeight);
     if (this.hitZone) {
       this.hitZone.setSize(this.panelWidth, newHeight);
     }
@@ -358,7 +675,7 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     if (!this.navLabel) return;
     const total = this.messages.length;
     if (total <= 1) {
-      this.navLabel.setText("");
+      this.navLabel.setText("click to dismiss");
     } else {
       this.navLabel.setText(`${this.currentIndex + 1}/${total}  ▶`);
     }
@@ -366,6 +683,14 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
 
   destroy(fromScene?: boolean): void {
     this.stopTypewriter();
+    if (this.animTimer) {
+      this.animTimer.destroy();
+      this.animTimer = null;
+    }
+    if (this.slideTween) {
+      this.slideTween.stop();
+      this.slideTween = null;
+    }
     super.destroy(fromScene);
   }
 }

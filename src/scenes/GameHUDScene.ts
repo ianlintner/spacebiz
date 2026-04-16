@@ -412,75 +412,7 @@ export class GameHUDScene extends Phaser.Scene {
 
     this.updateNavBadges();
 
-    // ── Adviser button in nav sidebar ──
-    const adviserBtnY =
-      navSidebarTop + navSidebarH - (iconBtnSize / 2 + 12) * 2 - iconSpacing;
-    const adviserContainer = this.add.container(navCenterX, adviserBtnY);
-
-    const adviserHit = this.add
-      .rectangle(
-        0,
-        0,
-        L.navSidebarWidth,
-        iconBtnSize + iconSpacing,
-        0x000000,
-        0,
-      )
-      .setOrigin(0.5, 0.5)
-      .setInteractive(
-        new Phaser.Geom.Rectangle(
-          0,
-          0,
-          L.navSidebarWidth,
-          iconBtnSize + iconSpacing,
-        ),
-        Phaser.Geom.Rectangle.Contains,
-      );
-    if (adviserHit.input) {
-      adviserHit.input.cursor = "pointer";
-    }
-
-    const adviserBg = this.add
-      .rectangle(0, 0, iconBtnSize, iconBtnSize, theme.colors.buttonBg, 0.0)
-      .setOrigin(0.5, 0.5);
-
-    const adviserIcon = this.add
-      .image(0, 0, "icon-adviser")
-      .setOrigin(0.5, 0.5)
-      .setTint(theme.colors.textDim);
-
-    // Badge dot (shows pending message count)
-    this.adviserBadge = this.add
-      .text(iconBtnSize / 2 - 2, -iconBtnSize / 2 + 2, "", {
-        fontSize: "9px",
-        fontFamily: theme.fonts.caption.family,
-        color: "#fff",
-        backgroundColor: colorToString(theme.colors.accent),
-        padding: { x: 3, y: 1 },
-      })
-      .setOrigin(1, 0)
-      .setVisible(false);
-
-    adviserContainer.add([
-      adviserHit,
-      adviserBg,
-      adviserIcon,
-      this.adviserBadge,
-    ]);
-    this.navTooltip.attachTo(adviserHit, "Rex — Adviser");
-
-    adviserHit.on("pointerover", () => {
-      getAudioDirector().sfx("ui_hover");
-      adviserBg.setAlpha(0.2);
-      adviserIcon.setTint(theme.colors.text);
-    });
-    adviserHit.on("pointerout", () => {
-      adviserBg.setAlpha(0.0);
-      adviserIcon.setTint(theme.colors.textDim);
-    });
-    adviserHit.on("pointerup", () => {
-      this.toggleAdviserPanel();
-    });
+    // (Adviser tab is now integrated into the AdviserPanel drawer — see below)
 
     // ── Audio button at bottom of nav sidebar ──
     const audioBtnY = navSidebarTop + navSidebarH - iconBtnSize / 2 - 12;
@@ -628,15 +560,14 @@ export class GameHUDScene extends Phaser.Scene {
     });
     this.endTurnButton.setVisible(state.phase === "planning");
 
-    // ── Adviser Panel (compact, positioned above bottom bar) ──
-    const advPanelW = 440;
-    const advPanelX = L.navSidebarWidth + 8;
-    const advPanelY = L.gameHeight - L.hudBottomBarHeight - 96;
+    // ── Adviser Panel (Stellaris-style, upper-right) ──
+    const advPanelW = 220;
+    const advPanelX = L.gameWidth - advPanelW - 12;
+    const advPanelY = L.hudTopBarHeight + 8;
     this.adviserPanel = new AdviserPanel(this, {
       x: advPanelX,
       y: advPanelY,
       width: advPanelW,
-      compact: true,
     });
     this.adviserPanel.setDepth(200);
 
