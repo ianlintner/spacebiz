@@ -8,3 +8,4 @@ coverage/
 # MCP server clones and storage (contains API keys in .env)
 .mcp/
 .DS_Store
+public/portraits/.DS_Store
