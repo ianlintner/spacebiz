@@ -14,7 +14,7 @@ import {
 import { gameStore } from "../data/GameStore.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { checkTutorialAdvancement } from "../game/adviser/AdviserEngine.ts";
-import type { TutorialTrigger } from "../data/types.ts";
+import type { TutorialTrigger, AdviserMessage } from "../data/types.ts";
 import { TUTORIAL_STEPS } from "../game/adviser/TutorialDefinitions.ts";
 import {
   getAvailableRouteSlots,
@@ -578,6 +578,21 @@ export class GameHUDScene extends Phaser.Scene {
     if (pendingMsgs.length > 0) {
       this.adviserPanel.showMessages(pendingMsgs);
       this.updateAdviserBadge(pendingMsgs.length);
+    } else if (state.turn === 1 && state.activeRoutes.length === 0) {
+      // ── First-time onboarding: auto-open Rex with route-building prompt ──
+      // Only fires on a brand new game (turn 1, no routes yet).
+      const onboardMsg: AdviserMessage = {
+        id: "rex-onboard-first-route",
+        text: "Welcome aboard, Commander! I'm Rex, your K9 corporate adviser.\n\nTo launch your galactic freight empire, you'll need trade routes. Click the Routes icon (↔) in the left navigation bar to build your first corridor and start hauling cargo across the stars!",
+        mood: "analyzing",
+        priority: 3,
+        context: "tip",
+        turnGenerated: 1,
+      };
+      // Short delay so the HUD fully renders before the drawer slides in
+      this.time.delayedCall(700, () => {
+        this.adviserPanel.showMessages([onboardMsg]);
+      });
     }
 
     // Fire initial tutorial trigger
