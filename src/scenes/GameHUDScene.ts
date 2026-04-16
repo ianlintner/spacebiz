@@ -5,7 +5,6 @@ import {
   Modal,
   Panel,
   getTheme,
-  colorToString,
   getLayout,
   Tooltip,
   FloatingText,
@@ -63,7 +62,6 @@ export class GameHUDScene extends Phaser.Scene {
   private musicTrackValueLabel: Label | null = null;
   private muteValueLabel: Label | null = null;
   private adviserPanel!: AdviserPanel;
-  private adviserBadge: Phaser.GameObjects.Text | null = null;
   private tutorialOverlay: TutorialOverlay | null = null;
   private actionPromptLabel!: Label;
   private routeSlotLabel!: Label;
@@ -560,9 +558,13 @@ export class GameHUDScene extends Phaser.Scene {
     });
     this.endTurnButton.setVisible(state.phase === "planning");
 
-    // ── Adviser Panel (Stellaris-style, upper-right) ──
+    // ── Adviser Panel (drawer-style, upper-right) ──
+    // Tab (36px) is at x=0 of the container, panel body at x=36.
+    // When closed, only the tab peeks from the right edge.
+    // config.x = open position of the container's left edge (tab).
     const advPanelW = 220;
-    const advPanelX = L.gameWidth - advPanelW - 12;
+    const advTabW = 36; // must match TAB_WIDTH in AdviserPanel
+    const advPanelX = L.gameWidth - advTabW - advPanelW;
     const advPanelY = L.hudTopBarHeight + 8;
     this.adviserPanel = new AdviserPanel(this, {
       x: advPanelX,
@@ -1219,31 +1221,8 @@ export class GameHUDScene extends Phaser.Scene {
 
   // ── Adviser integration ──────────────────────────────────
 
-  private toggleAdviserPanel(): void {
-    if (this.adviserPanel.visible) {
-      this.adviserPanel.clear();
-    } else {
-      const state = gameStore.getState();
-      const pending = state.adviser?.pendingMessages ?? [];
-      if (pending.length > 0) {
-        this.adviserPanel.showMessages(pending);
-      } else {
-        this.adviserPanel.showSingle(
-          "All quiet on the corporate front, boss.",
-          "standby",
-        );
-      }
-    }
-  }
-
   private updateAdviserBadge(count: number): void {
-    if (!this.adviserBadge) return;
-    if (count > 0) {
-      this.adviserBadge.setText(`${count}`);
-      this.adviserBadge.setVisible(true);
-    } else {
-      this.adviserBadge.setVisible(false);
-    }
+    this.adviserPanel.updateBadge(count);
   }
 
   /** Call from scenes or HUD to advance tutorial on user actions. */
