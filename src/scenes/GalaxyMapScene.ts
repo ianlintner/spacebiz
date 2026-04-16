@@ -10,6 +10,9 @@ import {
   registerAmbientCleanup,
   getShipIconKey,
   getShipColor,
+  getShipMapKey,
+  getShipMapAnimKey,
+  SHIP_CLASS_LIST,
 } from "../ui/index.ts";
 import { drawEmpireBorders } from "../ui/EmpireBorders.ts";
 import {
@@ -351,8 +354,39 @@ export class GalaxyMapScene extends Phaser.Scene {
       // Calculate angle from origin to destination for rotation
       const angle = Math.atan2(dy - oy, dx - ox);
 
-      if (shipIconKey && this.textures.exists(shipIconKey)) {
-        // Ship sprite traveling the route
+      // Prefer the large animated map sprite; fall back to small icon if unavailable
+      const mapSprKey = firstShip ? getShipMapKey(firstShip.class) : undefined;
+      const mapAnimKey = firstShip ? getShipMapAnimKey(firstShip.class) : undefined;
+
+      if (mapSprKey && mapAnimKey && this.textures.exists(mapSprKey)) {
+        // Animated 48×48 sprite displayed at 28×28 with engine-glow frames
+        const shipSprite = this.add
+          .sprite(ox, oy, mapSprKey, "1")
+          .setDisplaySize(28, 28)
+          .setTint(shipTint)
+          .setAlpha(0.9)
+          .setRotation(angle)
+          .setDepth(5);
+        shipSprite.play(mapAnimKey);
+
+        this.tweens.add({
+          targets: shipSprite,
+          x: dx,
+          y: dy,
+          duration: theme.ambient.routeFlowDuration,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+          delay: Math.random() * theme.ambient.routeFlowDuration,
+          onYoyo: () => {
+            shipSprite.setRotation(angle + Math.PI);
+          },
+          onRepeat: () => {
+            shipSprite.setRotation(angle);
+          },
+        });
+      } else if (shipIconKey && this.textures.exists(shipIconKey)) {
+        // Fallback: small 24×24 icon image
         const shipSprite = this.add
           .image(ox, oy, shipIconKey)
           .setDisplaySize(16, 16)
@@ -403,6 +437,75 @@ export class GalaxyMapScene extends Phaser.Scene {
       repeat: -1,
       ease: "Sine.easeInOut",
     });
+
+    // ── Ambient wandering fleet ships ──
+    // Up to 5 ships pick random accessible star systems and drift between them
+    // even when there are no active player routes — brings the galaxy to life.
+    const accessibleSystems = systems.filter(
+      (s) => empireAccessible.get(s.empireId) ?? false,
+    );
+    if (accessibleSystems.length >= 2) {
+      const WANDERER_COUNT = Math.min(5, Math.floor(accessibleSystems.length / 3) + 1);
+      for (let wi = 0; wi < WANDERER_COUNT; wi++) {
+        const cls =
+          SHIP_CLASS_LIST[Math.floor(Math.random() * SHIP_CLASS_LIST.length)];
+        const mapKey = getShipMapKey(cls);
+        const mapAnimKey = getShipMapAnimKey(cls);
+        if (!this.textures.exists(mapKey)) continue;
+
+        const startSys =
+          accessibleSystems[Math.floor(Math.random() * accessibleSystems.length)];
+        const tint = getShipColor(cls);
+
+        const wanderer = this.add
+          .sprite(startSys.x, startSys.y + L.contentTop, mapKey, "0")
+          .setDisplaySize(24, 24)
+          .setTint(tint)
+          .setAlpha(0.5)
+          .setDepth(4);
+        wanderer.play(mapAnimKey);
+
+        const doWander = () => {
+          if (!wanderer.active) return;
+          // Pick a random target system sufficiently far from current position
+          let nextSys =
+            accessibleSystems[Math.floor(Math.random() * accessibleSystems.length)];
+          let tries = 0;
+          while (
+            tries < 10 &&
+            Math.hypot(
+              nextSys.x - wanderer.x,
+              nextSys.y + L.contentTop - wanderer.y,
+            ) < 80
+          ) {
+            nextSys =
+              accessibleSystems[Math.floor(Math.random() * accessibleSystems.length)];
+            tries++;
+          }
+          const tx = nextSys.x;
+          const ty = nextSys.y + L.contentTop;
+          const wAngle = Math.atan2(ty - wanderer.y, tx - wanderer.x);
+          wanderer.setRotation(wAngle);
+          const dist = Math.hypot(tx - wanderer.x, ty - wanderer.y);
+          // ~80 pixels/second average cruising speed
+          const dur = Math.max(2500, (dist / 80) * 1000);
+          this.tweens.add({
+            targets: wanderer,
+            x: tx,
+            y: ty,
+            duration: dur,
+            ease: "Linear",
+            onComplete: () => {
+              // Brief pause at destination, then pick a new target
+              this.time.delayedCall(1000 + Math.random() * 3000, doWander);
+            },
+          });
+        };
+
+        // Stagger each wanderer's initial departure
+        this.time.delayedCall(wi * 1200 + Math.random() * 3000, doWander);
+      }
+    }
 
     // ── Star systems ──
     const planetCountsBySystem = new Map<string, number>();

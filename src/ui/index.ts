@@ -33,3 +33,9 @@ export {
   type TutorialOverlayConfig,
 } from "./TutorialOverlay.ts";
 export { MiniMap, type MiniMapConfig } from "./MiniMap.ts";
+export {
+  getShipMapKey,
+  getShipMapAnimKey,
+  generateShipMapSprites,
+  SHIP_MAP_SIZE,
+} from "./ShipMapSprites.ts";

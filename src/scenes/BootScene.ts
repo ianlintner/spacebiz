@@ -6,6 +6,7 @@ import {
   registerUiSoundHandler,
   generateCargoIcons,
   generateShipIcons,
+  generateShipMapSprites,
 } from "../ui/index.ts";
 import { getAudioDirector, type SfxKey } from "../audio/AudioDirector.ts";
 import {
@@ -93,6 +94,7 @@ export class BootScene extends Phaser.Scene {
     this.generateNavIcons();
     generateCargoIcons(this.textures);
     generateShipIcons(this.textures);
+    generateShipMapSprites(this.textures, this.anims);
     generateAdviserSpritesheet(this.textures);
 
     // Proceed to main menu after textures are ready

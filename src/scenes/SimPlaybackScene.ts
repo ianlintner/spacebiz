@@ -15,6 +15,8 @@ import {
   registerAmbientCleanup,
   getShipIconKey,
   getShipColor,
+  getShipMapKey,
+  getShipMapAnimKey,
 } from "../ui/index.ts";
 import type { GameHUDScene } from "./GameHUDScene.ts";
 import type { GameState, TurnResult } from "../data/types.ts";
@@ -356,7 +358,52 @@ export class SimPlaybackScene extends Phaser.Scene {
         ? getShipColor(firstShip.class)
         : theme.colors.accent;
       const delay = Math.random() * halfDur * 0.5;
-      if (shipIconKey && this.textures.exists(shipIconKey)) {
+      // Prefer animated 48×48 map sprite (32×32 display); fall back to icon image
+      const mapSprKey = firstShip ? getShipMapKey(firstShip.class) : undefined;
+      const mapAnimKey = firstShip ? getShipMapAnimKey(firstShip.class) : undefined;
+      if (mapSprKey && mapAnimKey && this.textures.exists(mapSprKey)) {
+        const sp = this.add
+          .sprite(ox, oy, mapSprKey, "1")
+          .setDisplaySize(32, 32)
+          .setTint(shipTint)
+          .setAlpha(0.95)
+          .setRotation(angle)
+          .setDepth(12);
+        sp.play(mapAnimKey);
+        const sg = this.add.circle(ox, oy, 16, shipTint, 0.15).setDepth(11);
+        this.tweens.add({
+          targets: [sp, sg],
+          x: dx,
+          y: dy,
+          duration: halfDur,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+          delay,
+          onYoyo: () => {
+            sp.setRotation(angle + Math.PI);
+          },
+          onRepeat: () => {
+            sp.setRotation(angle);
+          },
+        });
+        for (let t = 0; t < 3; t++) {
+          const trail = this.add
+            .circle(ox, oy, 3 - t, shipTint, 0.45 - t * 0.12)
+            .setDepth(10);
+          this.tweens.add({
+            targets: trail,
+            x: dx,
+            y: dy,
+            duration: halfDur,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+            delay: delay + 85 * (t + 1),
+          });
+        }
+      } else if (shipIconKey && this.textures.exists(shipIconKey)) {
+        // Fallback: small 24×24 icon image with glow and trails
         const sp = this.add
           .image(ox, oy, shipIconKey)
           .setDisplaySize(22, 22)
