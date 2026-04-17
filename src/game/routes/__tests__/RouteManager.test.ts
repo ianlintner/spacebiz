@@ -13,6 +13,7 @@ import {
   estimateRouteRevenue,
   estimateRouteFuelCost,
   getVisibleRouteTrafficUnits,
+  buildTrafficPatrolWaypoints,
 } from "../RouteManager.ts";
 import { CargoType, PlanetType } from "../../../data/types.ts";
 import type {
@@ -422,6 +423,17 @@ describe("RouteManager", () => {
       expect(getVisibleRouteTrafficUnits(4)).toBe(3);
       expect(getVisibleRouteTrafficUnits(6)).toBe(3);
       expect(getVisibleRouteTrafficUnits(7)).toBe(4);
+    });
+
+    it("expands same-position patrol paths so same-system ships can visibly move", () => {
+      const expanded = buildTrafficPatrolWaypoints("route-same-system", [
+        { x: 100, y: 200 },
+        { x: 100, y: 200 },
+      ]);
+
+      expect(expanded).toHaveLength(4);
+      expect(new Set(expanded.map((waypoint) => `${waypoint.x},${waypoint.y}`)).size).toBe(4);
+      expect(expanded.every((waypoint) => waypoint.x === 100 && waypoint.y === 200)).toBe(false);
     });
 
     it("preserves stable ship ordering for class sampling", () => {

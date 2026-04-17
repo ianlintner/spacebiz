@@ -145,6 +145,11 @@ export interface RouteTrafficVisual {
   visualClassMix: ShipClass[];
 }
 
+export interface RouteTrafficWaypoint {
+  x: number;
+  y: number;
+}
+
 interface RouteTrafficSource {
   ownerId: string;
   routes: ActiveRoute[];
@@ -157,6 +162,40 @@ export function getVisibleRouteTrafficUnits(assignedShipCount: number): number {
   if (assignedShipCount <= 3) return 2;
   if (assignedShipCount <= 6) return 3;
   return 4;
+}
+
+function hashRouteId(routeId: string): number {
+  let hash = 0;
+  for (let i = 0; i < routeId.length; i++) {
+    hash = (hash * 31 + routeId.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+export function buildTrafficPatrolWaypoints(
+  routeId: string,
+  waypoints: RouteTrafficWaypoint[],
+): RouteTrafficWaypoint[] {
+  if (waypoints.length < 2) {
+    return waypoints;
+  }
+
+  const uniqueWaypointCount = new Set(
+    waypoints.map((waypoint) => `${waypoint.x},${waypoint.y}`),
+  ).size;
+  if (uniqueWaypointCount >= 2) {
+    return waypoints;
+  }
+
+  const center = waypoints[0];
+  const radius = 18;
+  const baseAngle = (hashRouteId(routeId) % 360) * (Math.PI / 180);
+  const offsets = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
+
+  return offsets.map((offset) => ({
+    x: center.x + Math.cos(baseAngle + offset) * radius,
+    y: center.y + Math.sin(baseAngle + offset) * radius,
+  }));
 }
 
 export function buildRouteTrafficVisuals(

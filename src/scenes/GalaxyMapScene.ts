@@ -25,6 +25,7 @@ import { isEmpireAccessible } from "../game/empire/EmpireAccessManager.ts";
 import {
   buildGalaxyRouteTrafficVisuals,
   buildGalaxyRouteTrafficStateKey,
+  buildTrafficPatrolWaypoints,
   getAvailableRouteSlots,
   getUsedRouteSlots,
 } from "../game/routes/RouteManager.ts";
@@ -460,7 +461,10 @@ export class GalaxyMapScene extends Phaser.Scene {
       };
 
       for (const visual of trafficVisuals) {
-        const forwardWaypoints = systemsToWaypoints(visual.pathSystemIds);
+        const forwardWaypoints = buildTrafficPatrolWaypoints(
+          visual.routeId,
+          systemsToWaypoints(visual.pathSystemIds),
+        );
         const reverseWaypoints = [...forwardWaypoints].reverse();
         if (forwardWaypoints.length < 2) continue;
 
