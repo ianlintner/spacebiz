@@ -71,3 +71,16 @@ CI (`.github/workflows/ci.yml`) runs exactly these three steps on every PR and p
 4. **Do not use enums or namespaces** (`erasableSyntaxOnly`).
 5. **Write tests** for new game logic, utilities, and data transformations.
 6. **Keep Phaser and Web Audio solutions simple** and browser-compatible.
+
+## Caretaker
+
+This repo uses the [caretaker](https://github.com/ianlintner/caretaker) autonomous
+maintenance system. The orchestrator runs daily via GitHub Actions and assigns tasks to
+`@copilot` via structured issue and PR comments.
+
+Agent instruction files live in `.github/agents/`:
+- `maintainer-pr.md` — how to respond to PR fix requests
+- `maintainer-issue.md` — how to execute assigned issues
+- `maintainer-upgrade.md` — how to apply caretaker upgrades
+
+Always check these files when you receive a caretaker assignment.
