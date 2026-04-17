@@ -137,11 +137,18 @@ export function getFreeRouteSlots(state: GameState): number {
 }
 
 export interface RouteTrafficVisual {
+  ownerId: string;
   routeId: string;
   pathSystemIds: string[];
   assignedShips: Ship[];
   visibleUnits: number;
   visualClassMix: ShipClass[];
+}
+
+interface RouteTrafficSource {
+  ownerId: string;
+  routes: ActiveRoute[];
+  fleet: Ship[];
 }
 
 export function getVisibleRouteTrafficUnits(assignedShipCount: number): number {
@@ -159,56 +166,148 @@ export function buildRouteTrafficVisuals(
   hyperlanes: Hyperlane[],
   borderPorts: BorderPort[],
 ): RouteTrafficVisual[] {
-  const fleetById = new Map(fleet.map((ship) => [ship.id, ship]));
+  return buildRouteTrafficVisualsFromSources(
+    [{ ownerId: "player", routes, fleet }],
+    planets,
+    hyperlanes,
+    borderPorts,
+  );
+}
+
+function buildRouteTrafficVisualsFromSources(
+  sources: RouteTrafficSource[],
+  planets: Planet[],
+  hyperlanes: Hyperlane[],
+  borderPorts: BorderPort[],
+): RouteTrafficVisual[] {
   const planetSystemById = new Map(
     planets.map((planet) => [planet.id, planet.systemId]),
   );
 
-  return routes.flatMap((route) => {
-    if (route.assignedShipIds.length === 0) {
-      return [];
-    }
+  return sources.flatMap(({ ownerId, routes, fleet }) => {
+    const fleetById = new Map(fleet.map((ship) => [ship.id, ship]));
 
-    const assignedShips = route.assignedShipIds.flatMap((shipId) => {
-      const ship = fleetById.get(shipId);
-      return ship ? [ship] : [];
+    return routes.flatMap((route) => {
+      if (route.assignedShipIds.length === 0) {
+        return [];
+      }
+
+      const assignedShips = route.assignedShipIds.flatMap((shipId) => {
+        const ship = fleetById.get(shipId);
+        return ship ? [ship] : [];
+      });
+
+      if (assignedShips.length === 0) {
+        return [];
+      }
+
+      const originSystemId = planetSystemById.get(route.originPlanetId);
+      const destinationSystemId = planetSystemById.get(route.destinationPlanetId);
+      if (!originSystemId || !destinationSystemId) {
+        return [];
+      }
+
+      const path = findPath(
+        originSystemId,
+        destinationSystemId,
+        hyperlanes,
+        borderPorts,
+      );
+      const pathSystemIds =
+        path && path.systems.length >= 2
+          ? path.systems
+          : [originSystemId, destinationSystemId];
+
+      if (pathSystemIds.length < 2) {
+        return [];
+      }
+
+      return [
+        {
+          ownerId,
+          routeId: route.id,
+          pathSystemIds,
+          assignedShips,
+          visibleUnits: getVisibleRouteTrafficUnits(assignedShips.length),
+          visualClassMix: assignedShips.map((ship) => ship.class),
+        },
+      ];
     });
-
-    if (assignedShips.length === 0) {
-      return [];
-    }
-
-    const originSystemId = planetSystemById.get(route.originPlanetId);
-    const destinationSystemId = planetSystemById.get(route.destinationPlanetId);
-    if (!originSystemId || !destinationSystemId) {
-      return [];
-    }
-
-    const path = findPath(
-      originSystemId,
-      destinationSystemId,
-      hyperlanes,
-      borderPorts,
-    );
-    const pathSystemIds =
-      path && path.systems.length >= 2
-        ? path.systems
-        : [originSystemId, destinationSystemId];
-
-    if (pathSystemIds.length < 2) {
-      return [];
-    }
-
-    return [
-      {
-        routeId: route.id,
-        pathSystemIds,
-        assignedShips,
-        visibleUnits: getVisibleRouteTrafficUnits(assignedShips.length),
-        visualClassMix: assignedShips.map((ship) => ship.class),
-      },
-    ];
   });
+}
+
+export function buildGalaxyRouteTrafficVisuals(
+  state: Pick<
+    GameState,
+    "activeRoutes" | "fleet" | "aiCompanies" | "galaxy" | "hyperlanes" | "borderPorts"
+  >,
+): RouteTrafficVisual[] {
+  const sources: RouteTrafficSource[] = [
+    {
+      ownerId: "player",
+      routes: state.activeRoutes,
+      fleet: state.fleet,
+    },
+    ...state.aiCompanies.map((company) => ({
+      ownerId: company.id,
+      routes: company.activeRoutes,
+      fleet: company.fleet,
+    })),
+  ];
+
+  return buildRouteTrafficVisualsFromSources(
+    sources,
+    state.galaxy.planets,
+    state.hyperlanes ?? [],
+    state.borderPorts ?? [],
+  );
+}
+
+export function buildRouteTrafficStateKey(
+  routes: ActiveRoute[],
+  fleet: Ship[],
+  planets: Planet[],
+  hyperlanes: Hyperlane[],
+  borderPorts: BorderPort[],
+): string {
+  const visuals = buildRouteTrafficVisuals(
+    routes,
+    fleet,
+    planets,
+    hyperlanes,
+    borderPorts,
+  );
+
+  return JSON.stringify(
+    visuals.map((visual) => ({
+      ownerId: visual.ownerId,
+      routeId: visual.routeId,
+      pathSystemIds: visual.pathSystemIds,
+      assignedShipIds: visual.assignedShips.map((ship) => ship.id),
+      visibleUnits: visual.visibleUnits,
+      visualClassMix: visual.visualClassMix,
+    })),
+  );
+}
+
+export function buildGalaxyRouteTrafficStateKey(
+  state: Pick<
+    GameState,
+    "activeRoutes" | "fleet" | "aiCompanies" | "galaxy" | "hyperlanes" | "borderPorts"
+  >,
+): string {
+  const visuals = buildGalaxyRouteTrafficVisuals(state);
+
+  return JSON.stringify(
+    visuals.map((visual) => ({
+      ownerId: visual.ownerId,
+      routeId: visual.routeId,
+      pathSystemIds: visual.pathSystemIds,
+      assignedShipIds: visual.assignedShips.map((ship) => ship.id),
+      visibleUnits: visual.visibleUnits,
+      visualClassMix: visual.visualClassMix,
+    })),
+  );
 }
 
 // ── Inter-Empire Cargo Lock Tracking ──────────────────────────────────

@@ -3,6 +3,9 @@ import {
   calculateDistance,
   calculateTripsPerTurn,
   buildRouteTrafficVisuals,
+  buildRouteTrafficStateKey,
+  buildGalaxyRouteTrafficVisuals,
+  buildGalaxyRouteTrafficStateKey,
   createRoute,
   assignShipToRoute,
   unassignShip,
@@ -21,6 +24,8 @@ import type {
   CargoMarketEntry,
   PlanetMarket,
   CargoType as CargoTypeT,
+  GameState,
+  AICompany,
 } from "../../../data/types.ts";
 import { BASE_FUEL_PRICE } from "../../../data/constants.ts";
 // TURN_DURATION and BASE_CARGO_PRICES used internally by RouteManager
@@ -119,6 +124,91 @@ function makeMarketState(overrides: Partial<MarketState> = {}): MarketState {
         [CargoType.Food]: { currentPrice: 50, baseDemand: 80, baseSupply: 20 },
       }),
     },
+    ...overrides,
+  };
+}
+
+function makeAICompany(overrides: Partial<AICompany> = {}): AICompany {
+  return {
+    id: "ai-1",
+    name: "Nova Freight",
+    empireId: "empire-2",
+    cash: 100000,
+    fleet: [],
+    activeRoutes: [],
+    reputation: 50,
+    totalCargoDelivered: 0,
+    personality: "steadyHauler",
+    bankrupt: false,
+    ceoName: "Nova Freight",
+    ceoPortrait: { portraitId: "ceo-1", category: "human" },
+    ...overrides,
+  };
+}
+
+function makeTrafficState(overrides: Partial<GameState> = {}): GameState {
+  return {
+    seed: 1,
+    turn: 1,
+    maxTurns: 100,
+    phase: "planning",
+    gameSize: "small",
+    galaxyShape: "spiral",
+    cash: 100000,
+    loans: [],
+    reputation: 50,
+    companyName: "Player Co",
+    ceoName: "Player CEO",
+    ceoPortrait: { portraitId: "player-1", category: "human" },
+    playerEmpireId: "empire-1",
+    galaxy: {
+      sectors: [],
+      empires: [],
+      systems: [],
+      planets: [
+        makePlanet({ id: "planet-1", systemId: "system-1" }),
+        makePlanet({ id: "planet-2", systemId: "system-2" }),
+      ],
+    },
+    fleet: [],
+    activeRoutes: [],
+    market: makeMarketState(),
+    aiCompanies: [],
+    activeEvents: [],
+    history: [],
+    storyteller: {
+      playerHealthScore: 0,
+      headwindBias: 0,
+      turnsInDebt: 0,
+      consecutiveProfitTurns: 0,
+    },
+    adviser: {
+      tutorialStepIndex: 0,
+      tutorialComplete: false,
+      tutorialSkipped: false,
+      pendingMessages: [],
+      shownMessageIds: [],
+      secretRevealed: false,
+      statsAdviserSaved: 0,
+      statsAdviserHindered: 0,
+    },
+    score: 0,
+    gameOver: false,
+    gameOverReason: null,
+    routeSlots: 4,
+    unlockedEmpireIds: [],
+    contracts: [],
+    tech: {
+      researchPoints: 0,
+      completedTechIds: [],
+      currentResearchId: null,
+      researchProgress: 0,
+    },
+    empireTradePolicies: {},
+    interEmpireCargoLocks: [],
+    hyperlanes: [],
+    borderPorts: [],
+    stationHub: null,
     ...overrides,
   };
 }
@@ -318,6 +408,7 @@ describe("RouteManager", () => {
       const visuals = buildRouteTrafficVisuals(routes, fleet, planets, [], []);
 
       expect(visuals).toHaveLength(1);
+      expect(visuals[0].ownerId).toBe("player");
       expect(visuals[0].assignedShips.map((ship) => ship.id)).toEqual(["ship-2"]);
       expect(visuals[0].visibleUnits).toBe(1);
       expect(visuals[0].visualClassMix).toEqual(["fastCourier"]);
@@ -361,6 +452,126 @@ describe("RouteManager", () => {
         "megaHauler",
       ]);
       expect(visuals[0].visibleUnits).toBe(2);
+    });
+
+    it("keeps the same traffic state key when unrelated state changes", () => {
+      const route = makeRoute({
+        assignedShipIds: ["ship-1", "ship-2"],
+      });
+      const fleet = [
+        makeShip({ id: "ship-1", class: "cargoShuttle" }),
+        makeShip({ id: "ship-2", class: "fastCourier" }),
+      ];
+      const planets = [
+        makePlanet({ id: "planet-1", systemId: "system-1" }),
+        makePlanet({ id: "planet-2", systemId: "system-2" }),
+      ];
+
+      const before = buildRouteTrafficStateKey(route ? [route] : [], fleet, planets, [], []);
+      const after = buildRouteTrafficStateKey(
+        [route],
+        fleet.map((ship) => ({ ...ship, maintenanceCost: ship.maintenanceCost + 500 })),
+        planets,
+        [],
+        [],
+      );
+
+      expect(after).toBe(before);
+    });
+
+    it("changes the traffic state key when route traffic inputs change", () => {
+      const route = makeRoute({
+        assignedShipIds: ["ship-1"],
+      });
+      const planets = [
+        makePlanet({ id: "planet-1", systemId: "system-1" }),
+        makePlanet({ id: "planet-2", systemId: "system-2" }),
+      ];
+
+      const before = buildRouteTrafficStateKey(
+        [route],
+        [makeShip({ id: "ship-1", class: "cargoShuttle" })],
+        planets,
+        [],
+        [],
+      );
+      const after = buildRouteTrafficStateKey(
+        [route],
+        [makeShip({ id: "ship-1", class: "megaHauler" })],
+        planets,
+        [],
+        [],
+      );
+
+      expect(after).not.toBe(before);
+    });
+
+    it("includes assigned AI company ships in galaxy traffic visuals", () => {
+      const playerRoute = makeRoute({ id: "route-player", assignedShipIds: ["ship-player"] });
+      const aiRoute = makeRoute({ id: "route-ai", assignedShipIds: ["ship-ai"] });
+      const state = makeTrafficState({
+        fleet: [makeShip({ id: "ship-player", class: "cargoShuttle" })],
+        activeRoutes: [playerRoute],
+        aiCompanies: [
+          makeAICompany({
+            id: "ai-empire",
+            fleet: [makeShip({ id: "ship-ai", class: "fastCourier" })],
+            activeRoutes: [aiRoute],
+          }),
+        ],
+      });
+
+      const visuals = buildGalaxyRouteTrafficVisuals(state);
+
+      expect(visuals).toHaveLength(2);
+      expect(visuals.map((visual) => visual.ownerId)).toEqual(["player", "ai-empire"]);
+      expect(visuals[1].assignedShips.map((ship) => ship.id)).toEqual(["ship-ai"]);
+      expect(visuals[1].visualClassMix).toEqual(["fastCourier"]);
+    });
+
+    it("keeps assignment-only rule for AI galaxy traffic", () => {
+      const aiRoute = makeRoute({ id: "route-ai", assignedShipIds: ["missing-ai-ship"] });
+      const state = makeTrafficState({
+        aiCompanies: [
+          makeAICompany({
+            id: "ai-empire",
+            fleet: [makeShip({ id: "other-ship" })],
+            activeRoutes: [aiRoute],
+          }),
+        ],
+      });
+
+      const visuals = buildGalaxyRouteTrafficVisuals(state);
+
+      expect(visuals).toEqual([]);
+    });
+
+    it("changes galaxy traffic state key when AI traffic changes", () => {
+      const route = makeRoute({ id: "route-ai", assignedShipIds: ["ship-ai"] });
+      const before = buildGalaxyRouteTrafficStateKey(
+        makeTrafficState({
+          aiCompanies: [
+            makeAICompany({
+              id: "ai-empire",
+              fleet: [makeShip({ id: "ship-ai", class: "cargoShuttle" })],
+              activeRoutes: [route],
+            }),
+          ],
+        }),
+      );
+      const after = buildGalaxyRouteTrafficStateKey(
+        makeTrafficState({
+          aiCompanies: [
+            makeAICompany({
+              id: "ai-empire",
+              fleet: [makeShip({ id: "ship-ai", class: "megaHauler" })],
+              activeRoutes: [route],
+            }),
+          ],
+        }),
+      );
+
+      expect(after).not.toBe(before);
     });
   });
 

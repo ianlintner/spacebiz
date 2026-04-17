@@ -23,7 +23,8 @@ import {
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { isEmpireAccessible } from "../game/empire/EmpireAccessManager.ts";
 import {
-  buildRouteTrafficVisuals,
+  buildGalaxyRouteTrafficVisuals,
+  buildGalaxyRouteTrafficStateKey,
   getAvailableRouteSlots,
   getUsedRouteSlots,
 } from "../game/routes/RouteManager.ts";
@@ -66,6 +67,7 @@ export class GalaxyMapScene extends Phaser.Scene {
   private camStartX = 0;
   private camStartY = 0;
   private routeTrafficLayer: TrafficLayerHandle | null = null;
+  private routeTrafficStateKey: string | null = null;
 
   constructor() {
     super({ key: "GalaxyMapScene" });
@@ -522,18 +524,23 @@ export class GalaxyMapScene extends Phaser.Scene {
       }
 
       this.routeTrafficLayer = null;
+      this.routeTrafficStateKey = null;
     };
 
     const refreshRouteTrafficLayer = (currentState: GameState): void => {
+      const nextTrafficStateKey = buildGalaxyRouteTrafficStateKey(currentState);
+
+      if (
+        this.routeTrafficLayer &&
+        this.routeTrafficStateKey === nextTrafficStateKey
+      ) {
+        return;
+      }
+
       destroyRouteTrafficLayer();
-      const trafficVisuals = buildRouteTrafficVisuals(
-        currentState.activeRoutes,
-        currentState.fleet,
-        currentState.galaxy.planets,
-        currentState.hyperlanes ?? [],
-        currentState.borderPorts ?? [],
-      );
+      const trafficVisuals = buildGalaxyRouteTrafficVisuals(currentState);
       this.routeTrafficLayer = createRouteTrafficLayer(trafficVisuals);
+      this.routeTrafficStateKey = nextTrafficStateKey;
     };
 
     refreshRouteTrafficLayer(state);
