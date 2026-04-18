@@ -25,6 +25,11 @@ export const OVERHAUL_COST_RATIO = 0.3;
 export const OVERHAUL_RESTORE_CONDITION = 90;
 export const BREAKDOWN_THRESHOLD = 50;
 export const TURN_DURATION = 100;
+// Intra-system routes have low demand — nearby planets already trade locally
+export const INTRA_SYSTEM_REVENUE_MULTIPLIER = 0.25;
+// Longer routes command higher freight rates (per distance unit, capped)
+export const DISTANCE_PREMIUM_RATE = 0.0015;
+export const DISTANCE_PREMIUM_CAP = 0.5;
 
 // ── Route License Fees ─────────────────────────────────────────
 

@@ -735,6 +735,7 @@ function openAIRoute(
   for (const origin of sampledOrigins) {
     for (const dest of sampledDests) {
       if (origin.id === dest.id) continue;
+      if (origin.systemId === dest.systemId) continue;
       const key = `${origin.id}→${dest.id}`;
       if (existingRouteKeys.has(key)) continue;
 

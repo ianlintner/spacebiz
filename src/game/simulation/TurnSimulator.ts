@@ -8,7 +8,12 @@ import type {
   CargoType as CargoTypeT,
   Loan,
 } from "../../data/types.ts";
-import { BREAKDOWN_THRESHOLD } from "../../data/constants.ts";
+import {
+  BREAKDOWN_THRESHOLD,
+  INTRA_SYSTEM_REVENUE_MULTIPLIER,
+  DISTANCE_PREMIUM_RATE,
+  DISTANCE_PREMIUM_CAP,
+} from "../../data/constants.ts";
 import { calculatePrice } from "../economy/PriceCalculator.ts";
 import { updateMarket } from "../economy/MarketUpdater.ts";
 import {
@@ -128,7 +133,14 @@ function simulateShipOnRoute(
   const capacity = isPassengers ? ship.passengerCapacity : ship.cargoCapacity;
 
   const totalCargoMoved = capacity * trips;
-  const revenue = price * totalCargoMoved;
+  const originSysId = planetToSystemId(route.originPlanetId);
+  const destSysId = planetToSystemId(route.destinationPlanetId);
+  const isIntraSystem = originSysId !== null && originSysId === destSysId;
+  const distancePremium = Math.min(DISTANCE_PREMIUM_CAP, route.distance * DISTANCE_PREMIUM_RATE);
+  const revenueMultiplier = isIntraSystem
+    ? INTRA_SYSTEM_REVENUE_MULTIPLIER
+    : 1 + distancePremium;
+  const revenue = price * totalCargoMoved * revenueMultiplier;
 
   // Fuel cost = distance * 2 * fuelEfficiency * fuelPrice * trips
   const fuelCost =

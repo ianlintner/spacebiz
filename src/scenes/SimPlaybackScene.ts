@@ -319,6 +319,17 @@ export class SimPlaybackScene extends Phaser.Scene {
       routeRevenueMap.set(rp.routeId, rp.revenue);
     }
 
+    // AI company → empire color for route tinting
+    const empireColorById = new Map(
+      this.newState.galaxy.empires.map((e) => [e.id, e.color]),
+    );
+    const aiCompanyRouteColor = new Map(
+      this.newState.aiCompanies.map((c) => [
+        c.id,
+        empireColorById.get(c.empireId) ?? 0x8899aa,
+      ]),
+    );
+
     // ── Route lines + animated ships (follow hyperlane network) ─────────────
     const routeGraphics = this.add.graphics().setDepth(0);
     const borderPorts = this.newState.borderPorts ?? [];
@@ -432,7 +443,7 @@ export class SimPlaybackScene extends Phaser.Scene {
             : routeRevenue > 0
               ? theme.colors.accent
               : theme.colors.textDim
-          : theme.colors.textDim;
+          : (aiCompanyRouteColor.get(visual.ownerId) ?? 0x8899aa);
 
       // Find the hyperlane path; fall back to direct line if none exists
       const path = findPath(oSysId, dSysId, hyperlanes, borderPorts);
