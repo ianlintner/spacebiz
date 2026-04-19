@@ -56,7 +56,7 @@ jobs:
       - name: Install caretaker
         run: |
           VERSION=$(cat .github/maintainer/.version)
-          pip install "caretaker @ git+https://github.com/ianlintner/caretaker.git@v${VERSION}"
+          pip install "caretaker-github @ git+https://github.com/ianlintner/caretaker.git@v${VERSION}"
 
       - name: Run
         env:
@@ -104,7 +104,7 @@ jobs:
       - name: Install caretaker
         run: |
           VERSION=$(cat .github/maintainer/.version)
-          pip install "caretaker @ git+https://github.com/ianlintner/caretaker.git@v${VERSION}"
+          pip install "caretaker-github @ git+https://github.com/ianlintner/caretaker.git@v${VERSION}"
 
       - name: Self-heal — analyse own failure
         env:
