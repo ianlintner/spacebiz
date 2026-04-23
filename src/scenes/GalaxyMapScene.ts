@@ -68,6 +68,8 @@ export class GalaxyMapScene extends Phaser.Scene {
   private camStartY = 0;
   private routeTrafficLayer: TrafficLayerHandle | null = null;
   private routeTrafficStateKey: string | null = null;
+  /** Camera ID of the fixed HUD camera (zoom=1). Objects with this as cameraFilter skip it. */
+  private hudCamId = 0;
 
   constructor() {
     super({ key: "GalaxyMapScene" });
@@ -92,6 +94,12 @@ export class GalaxyMapScene extends Phaser.Scene {
 
     const galCx = (wMinX + wMaxX) / 2;
     const galCy = (wMinY + wMaxY) / 2 + L.contentTop;
+
+    // Create the fixed HUD camera early so hudCamId is set for all dynamic object creation
+    const uiCam = this.cameras.add(0, 0, L.gameWidth, L.gameHeight, false, "hud-cam");
+    uiCam.setZoom(1);
+    this.hudCamId = uiCam.id;
+
     createStarfield(this, {
       depth: -320,
       drift: true,
@@ -99,8 +107,8 @@ export class GalaxyMapScene extends Phaser.Scene {
       shimmer: true,
       haze: true,
       minZoom: MIN_ZOOM,
-      overscan: 520,
-      edgeFeather: 0.24,
+      overscan: 180,
+      edgeFeather: 0.15,
       worldBounds: {
         minX: wMinX,
         maxX: wMaxX,
@@ -126,9 +134,6 @@ export class GalaxyMapScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(900);
 
-    addHudBackdrop(12, L.contentTop + 6, 156, 46, 0, 0);
-    addHudBackdrop(L.gameWidth - 16, L.contentTop + 6, 250, 48, 1, 0);
-
     // ── Empire territory borders (Stellaris-inspired) ──
     drawEmpireBorders(this, systems, empires, {
       yOffset: L.contentTop,
@@ -152,53 +157,6 @@ export class GalaxyMapScene extends Phaser.Scene {
         .setAlpha(0.85);
       flag.setDisplaySize(FLAG_WIDTH, FLAG_HEIGHT);
     }
-
-    // ── Route slot indicator (fixed to camera) ──
-    const slotsUsed = getUsedRouteSlots(state);
-    const slotsTotal = getAvailableRouteSlots(state);
-    const slotBlocks =
-      "\u25A0".repeat(slotsUsed) +
-      "\u25A1".repeat(Math.max(0, slotsTotal - slotsUsed));
-
-    // ── HUD overlay labels (fixed to camera via setScrollFactor) ──
-    new Label(this, {
-      x: 20,
-      y: L.contentTop + 10,
-      text: "Galaxy Map",
-      style: "caption",
-      color: theme.colors.textDim,
-    })
-      .setScrollFactor(0)
-      .setDepth(901);
-
-    new Label(this, {
-      x: 20,
-      y: L.contentTop + 28,
-      text: `Routes: ${slotsUsed}/${slotsTotal} ${slotBlocks}`,
-      style: "caption",
-      color: slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
-    })
-      .setScrollFactor(0)
-      .setDepth(901);
-
-    this.add
-      .text(
-        L.gameWidth - 20,
-        L.contentTop + 10,
-        "Scroll to zoom \u00b7 Drag to pan\nStar size = planets in system\nLines = active trade routes",
-        {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.textDim),
-          align: "right",
-          stroke: "#000000",
-          strokeThickness: 2,
-        },
-      )
-      .setOrigin(1, 0)
-      .setAlpha(0.85)
-      .setScrollFactor(0)
-      .setDepth(901);
 
     // ── Build empire accessibility lookup ──
     const empireAccessible = new Map<string, boolean>();
@@ -387,6 +345,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       trafficVisuals: RouteTrafficVisual[],
     ): TrafficLayerHandle => {
       const routeGraphics = this.add.graphics().setDepth(3);
+      routeGraphics.cameraFilter = this.hudCamId;
       const sprites: TrafficDisplayObject[] = [];
       const timers: Phaser.Time.TimerEvent[] = [];
 
@@ -446,6 +405,7 @@ export class GalaxyMapScene extends Phaser.Scene {
             unitIndex,
             visual.visibleUnits,
           );
+          sprite.cameraFilter = this.hudCamId;
           sprites.push(sprite);
 
           const phaseDelay = Math.floor((unitIndex / visual.visibleUnits) * 2200);
@@ -684,6 +644,69 @@ export class GalaxyMapScene extends Phaser.Scene {
     // Center camera on galaxy centroid (already computed for parallax above)
     cam.centerOn(galCx, galCy);
 
+    // ── HUD overlay elements (rendered by fixed uiCam only, immune to zoom) ──
+    const hudObjects: Phaser.GameObjects.GameObject[] = [];
+
+    const slotsUsed = getUsedRouteSlots(state);
+    const slotsTotal = getAvailableRouteSlots(state);
+    const slotBlocks =
+      "\u25A0".repeat(slotsUsed) +
+      "\u25A1".repeat(Math.max(0, slotsTotal - slotsUsed));
+
+    hudObjects.push(addHudBackdrop(12, L.contentTop + 6, 156, 46, 0, 0));
+    hudObjects.push(addHudBackdrop(L.gameWidth - 16, L.contentTop + 6, 250, 48, 1, 0));
+
+    hudObjects.push(
+      new Label(this, {
+        x: 20,
+        y: L.contentTop + 10,
+        text: "Galaxy Map",
+        style: "caption",
+        color: theme.colors.textDim,
+      })
+        .setScrollFactor(0)
+        .setDepth(901),
+    );
+    hudObjects.push(
+      new Label(this, {
+        x: 20,
+        y: L.contentTop + 28,
+        text: `Routes: ${slotsUsed}/${slotsTotal} ${slotBlocks}`,
+        style: "caption",
+        color: slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
+      })
+        .setScrollFactor(0)
+        .setDepth(901),
+    );
+    hudObjects.push(
+      this.add
+        .text(
+          L.gameWidth - 20,
+          L.contentTop + 10,
+          "Scroll to zoom \u00b7 Drag to pan\nStar size = planets in system\nLines = active trade routes",
+          {
+            fontSize: `${theme.fonts.caption.size}px`,
+            fontFamily: theme.fonts.caption.family,
+            color: colorToString(theme.colors.textDim),
+            align: "right",
+            stroke: "#000000",
+            strokeThickness: 2,
+          },
+        )
+        .setOrigin(1, 0)
+        .setAlpha(0.85)
+        .setScrollFactor(0)
+        .setDepth(901),
+    );
+
+    // Apply dual-camera filters: world objects → main cam only, HUD → uiCam only
+    const hudSet = new Set(hudObjects);
+    for (const child of this.children.list) {
+      child.cameraFilter = hudSet.has(child as Phaser.GameObjects.GameObject)
+        ? cam.id
+        : this.hudCamId;
+    }
+
     // Mouse-wheel zoom (Phaser emits: pointer, currentlyOver, deltaX, deltaY, deltaZ)
     this.input.on(
       "wheel",
@@ -738,6 +761,7 @@ export class GalaxyMapScene extends Phaser.Scene {
   ): Phaser.GameObjects.Container {
     const theme = getTheme();
     const container = this.add.container(worldX + 20, worldY - 20);
+    container.cameraFilter = this.hudCamId;
     const cardW = 260;
     const lines: string[] = [];
     lines.push(name);

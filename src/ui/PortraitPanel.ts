@@ -21,6 +21,7 @@ import { SHIP_TEMPLATES } from "../data/constants.ts";
 import { getPlanetPortraitTextureKey } from "../data/planetPortraits.ts";
 import { getPortraitTextureKey } from "../data/portraits.ts";
 import { getLeaderTextureKey } from "../data/empireLeaderPortraits.ts";
+import { portraitLoader } from "../game/PortraitLoader.ts";
 
 function fitImageContain(
   image: Phaser.GameObjects.Image,
@@ -275,6 +276,22 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
       stats,
       { textureKey: texKey },
     );
+    // If texture not yet loaded, fetch and refresh
+    if (!this.scene.textures.exists(texKey)) {
+      portraitLoader
+        .ensureCeoPortrait(this.scene, company.ceoPortrait.portraitId)
+        .then((key) => {
+          // Refresh portrait with loaded texture
+          this.updatePortrait(
+            "company",
+            hashString(company.id),
+            company.ceoName,
+            stats,
+            { textureKey: key },
+          );
+        })
+        .catch(() => {/* keep procedural fallback */});
+    }
   }
 
   /** Convenience: show an empire leader portrait with empire stats. */
@@ -290,6 +307,21 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
       stats,
       { textureKey: texKey },
     );
+    // If texture not yet loaded, fetch and refresh
+    if (!this.scene.textures.exists(texKey)) {
+      portraitLoader
+        .ensureLeaderPortrait(this.scene, empire.leaderPortrait.portraitId)
+        .then((key) => {
+          this.updatePortrait(
+            "empire",
+            hashString(empire.id),
+            empire.leaderName,
+            stats,
+            { textureKey: key },
+          );
+        })
+        .catch(() => {/* keep procedural fallback */});
+    }
   }
 
   /** Clear all portrait visuals. */

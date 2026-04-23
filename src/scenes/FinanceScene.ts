@@ -22,6 +22,7 @@ import {
 import { calculateShipValue } from "../game/fleet/FleetManager.ts";
 
 import { getPortraitTextureKey } from "../data/portraits.ts";
+import { portraitLoader, PORTRAIT_PLACEHOLDER_KEY } from "../game/PortraitLoader.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -91,26 +92,39 @@ export class FinanceScene extends Phaser.Scene {
 
     // Overlay CEO portrait image on the sidebar panel
     const ceoPortraitKey = getPortraitTextureKey(state.ceoPortrait.portraitId);
-    if (this.textures.exists(ceoPortraitKey)) {
-      const pSize = Math.min(L.sidebarWidth - 24, 120);
-      const pX = L.sidebarLeft + L.sidebarWidth / 2;
-      const pY = L.contentTop + 16 + pSize / 2;
-      const ceoImg = this.add
-        .image(pX, pY, ceoPortraitKey)
-        .setOrigin(0.5, 0.5)
-        .setDepth(10);
-      fitImageCover(ceoImg, pSize, pSize);
-      // Round mask
-      const mask = this.add
-        .circle(pX, pY, pSize / 2, 0xffffff)
-        .setVisible(false);
-      ceoImg.setMask(mask.createGeometryMask());
-      // Border
-      this.add
-        .circle(pX, pY, pSize / 2 + 1)
-        .setStrokeStyle(2, theme.colors.accent)
-        .setFillStyle(0x000000, 0)
-        .setDepth(11);
+    const pSize = Math.min(L.sidebarWidth - 24, 120);
+    const pX = L.sidebarLeft + L.sidebarWidth / 2;
+    const pY = L.contentTop + 16 + pSize / 2;
+    const initialPortraitKey = this.textures.exists(ceoPortraitKey)
+      ? ceoPortraitKey
+      : PORTRAIT_PLACEHOLDER_KEY;
+    const ceoImg = this.add
+      .image(pX, pY, initialPortraitKey)
+      .setOrigin(0.5, 0.5)
+      .setDepth(10);
+    fitImageCover(ceoImg, pSize, pSize);
+    // Round mask
+    const ceoMask = this.add
+      .circle(pX, pY, pSize / 2, 0xffffff)
+      .setVisible(false);
+    ceoImg.setMask(ceoMask.createGeometryMask());
+    // Border
+    this.add
+      .circle(pX, pY, pSize / 2 + 1)
+      .setStrokeStyle(2, theme.colors.accent)
+      .setFillStyle(0x000000, 0)
+      .setDepth(11);
+    // Fetch on-demand if not already loaded
+    if (!this.textures.exists(ceoPortraitKey)) {
+      portraitLoader
+        .ensureCeoPortrait(this, state.ceoPortrait.portraitId)
+        .then((key) => {
+          if (ceoImg.active) {
+            ceoImg.setTexture(key);
+            fitImageCover(ceoImg, pSize, pSize);
+          }
+        })
+        .catch(() => {/* leave placeholder */});
     }
 
     // --- Main content panel with title ---

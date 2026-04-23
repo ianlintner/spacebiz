@@ -10,24 +10,14 @@ import {
 } from "../ui/index.ts";
 import { getAudioDirector, type SfxKey } from "../audio/AudioDirector.ts";
 import {
-  CEO_PORTRAITS,
-  getPortraitAssetPath,
-  getPortraitTextureKey,
-} from "../data/portraits.ts";
-import {
   PLANET_PORTRAIT_TYPES,
   getPlanetPortraitTextureKey,
-  getPlanetPortraitAssetPath,
+  getPlanetPortraitAssetUrls,
 } from "../data/planetPortraits.ts";
-import {
-  EMPIRE_LEADER_PORTRAITS,
-  getLeaderTextureKey,
-  getLeaderAssetPath,
-} from "../data/empireLeaderPortraits.ts";
 import {
   ROOM_PORTRAIT_TYPES,
   getRoomPortraitTextureKey,
-  getRoomPortraitAssetPath,
+  getRoomPortraitAssetUrls,
 } from "../data/roomPortraits.ts";
 import { generateAdviserSpritesheet } from "../ui/AdviserPortrait.ts";
 
@@ -37,47 +27,64 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image("hero-freight", "concepts/hero/freight-menu.jpg");
-    this.load.image("hero-passenger", "concepts/hero/passenger-menu.jpg");
+    // ── Draw boot progress bar before any loads begin ─────────────────────
+    this.drawBootScreen();
 
-    // Preload CEO portrait images
-    for (const def of CEO_PORTRAITS) {
-      this.load.image(getPortraitTextureKey(def.id), getPortraitAssetPath(def));
-    }
+    this.load.on("progress", (value: number) => {
+      this.updateProgressBar(value);
+    });
 
-    // Preload planet portrait images
+    this.load.on("fileprogress", (file: { key: string }) => {
+      this.updateProgressLabel(`Loading ${file.key}…`);
+    });
+
+    // ── Critical assets only (< 5 MB total with WebP) ─────────────────────
+
+    // Hero images (main menu background) — WebP primary, PNG fallback
+    this.load.image("hero-freight", [
+      "concepts/hero/freight-menu.webp",
+      "concepts/hero/freight-menu.png",
+    ]);
+    this.load.image("hero-passenger", [
+      "concepts/hero/passenger-menu.webp",
+      "concepts/hero/passenger-menu.png",
+    ]);
+
+    // Planet portraits (7 types, ~280 KB WebP total) — always shown on maps
     for (const ptype of PLANET_PORTRAIT_TYPES) {
       this.load.image(
         getPlanetPortraitTextureKey(ptype),
-        getPlanetPortraitAssetPath(ptype),
+        getPlanetPortraitAssetUrls(ptype),
       );
     }
 
-    // Preload empire leader portrait images
-    for (const def of EMPIRE_LEADER_PORTRAITS) {
-      this.load.image(getLeaderTextureKey(def.id), getLeaderAssetPath(def));
-    }
-
-    // Preload hub room portrait images
+    // Room portraits (18 types, ~680 KB WebP total) — StationBuilder shows all
     for (const rtype of ROOM_PORTRAIT_TYPES) {
       this.load.image(
         getRoomPortraitTextureKey(rtype),
-        getRoomPortraitAssetPath(rtype),
+        getRoomPortraitAssetUrls(rtype),
       );
     }
 
-    // Preload Rex adviser portrait images (MCP-generated PNGs, if available)
+    // Rex adviser portraits (4 moods, ~230 KB WebP total) — HUD-wide
     const rexMoods = ["standby", "analyzing", "alert", "success"] as const;
     for (const mood of rexMoods) {
-      this.load.image(
-        `rex-portrait-${mood}`,
+      this.load.image(`rex-portrait-${mood}`, [
+        `portraits/adviser/rex-${mood}.webp`,
         `portraits/adviser/rex-${mood}.png`,
-      );
+      ]);
     }
+
+    // CEO + Empire Leader portraits are NOT preloaded here.
+    // They are fetched on-demand via PortraitLoader when actually needed.
   }
 
   create(): void {
     const theme = getTheme();
+
+    // Fade out the boot screen before switching scenes
+    this.updateProgressBar(1);
+    this.updateProgressLabel("Initializing…");
 
     getAudioDirector().attachScene(this);
     registerUiSoundHandler({
@@ -97,8 +104,101 @@ export class BootScene extends Phaser.Scene {
     generateShipMapSprites(this.textures, this.anims);
     generateAdviserSpritesheet(this.textures);
 
-    // Proceed to main menu after textures are ready
-    this.scene.start("MainMenuScene");
+    // Brief fade-out then hand off to main menu
+    this.cameras.main.fadeOut(200, 0, 0, 0);
+    this.cameras.main.once("camerafadeoutcomplete", () => {
+      this.scene.start("MainMenuScene");
+    });
+  }
+
+  // ── Boot screen progress UI ──────────────────────────────────────────────
+
+  private bootGfx: Phaser.GameObjects.Graphics | null = null;
+  private bootLabel: Phaser.GameObjects.Text | null = null;
+  private bootBarWidth = 0;
+  private bootBarX = 0;
+  private bootBarY = 0;
+
+  private drawBootScreen(): void {
+    const W = this.scale.width;
+    const H = this.scale.height;
+
+    // Dark background
+    const bg = this.add.graphics();
+    bg.fillStyle(0x050a14, 1);
+    bg.fillRect(0, 0, W, H);
+
+    // Title
+    this.add
+      .text(W / 2, H * 0.38, "STAR FREIGHT TYCOON", {
+        fontFamily: "monospace",
+        fontSize: "22px",
+        color: "#7eb8d4",
+        letterSpacing: 6,
+      })
+      .setOrigin(0.5);
+
+    this.add
+      .text(W / 2, H * 0.44, "Booting systems…", {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#3a5a70",
+        letterSpacing: 2,
+      })
+      .setOrigin(0.5);
+
+    // Progress bar track
+    const barW = Math.min(360, W * 0.55);
+    const barH = 4;
+    const barX = W / 2 - barW / 2;
+    const barY = H * 0.54;
+    this.bootBarWidth = barW;
+    this.bootBarX = barX;
+    this.bootBarY = barY;
+
+    const track = this.add.graphics();
+    track.fillStyle(0x0d2033, 1);
+    track.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+
+    this.bootGfx = this.add.graphics();
+    this.updateProgressBar(0);
+
+    // File label below bar
+    this.bootLabel = this.add
+      .text(W / 2, barY + 14, "", {
+        fontFamily: "monospace",
+        fontSize: "9px",
+        color: "#2a4a5e",
+      })
+      .setOrigin(0.5);
+  }
+
+  private updateProgressBar(value: number): void {
+    if (!this.bootGfx) return;
+    this.bootGfx.clear();
+    this.bootGfx.fillStyle(0x3a8ab4, 1);
+    this.bootGfx.fillRect(
+      this.bootBarX,
+      this.bootBarY,
+      Math.floor(this.bootBarWidth * Math.min(value, 1)),
+      4,
+    );
+    // Bright leading edge
+    if (value > 0 && value < 1) {
+      this.bootGfx.fillStyle(0x7eb8d4, 1);
+      this.bootGfx.fillRect(
+        this.bootBarX + Math.floor(this.bootBarWidth * value) - 2,
+        this.bootBarY,
+        2,
+        4,
+      );
+    }
+  }
+
+  private updateProgressLabel(text: string): void {
+    if (this.bootLabel) {
+      this.bootLabel.setText(text);
+    }
   }
 
   /**

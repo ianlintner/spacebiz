@@ -15,6 +15,7 @@ npm run test:watch   # vitest watch mode
 npm run build        # tsc && vite build
 npm run check        # typecheck && test && build (all CI gates)
 npm run preview      # preview production build
+npm run optimize-assets  # re-generate public/portraits/**/*.{webp,png} from assets-source/
 ```
 
 ## CI Gates
@@ -32,7 +33,9 @@ CI runs on every PR and push to main (Node 22, Ubuntu). The three gates are:
 - `src/` — game source: scenes, game logic, data layer, UI, audio, generation, utils
 - `packages/spacebiz-ui/` — shared UI library (alias `@spacebiz/ui`)
 - `styleguide/` — visual styleguide app (separate Vite entry point)
-- `public/` — static assets
+- `public/` — static assets served by Vite (optimized WebP + PNG fallback portraits)
+- `assets-source/` — original high-res source images (not served; input for optimize-assets)
+- `scripts/` — build/asset tooling (Node.js ESM)
 - `docs/plans/` — design docs
 
 ## TypeScript Rules
@@ -47,6 +50,44 @@ CI runs on every PR and push to main (Node 22, Ubuntu). The three gates are:
 
 - Vitest 4, globals enabled, node environment
 - Tests in `__tests__/` dirs alongside source, named `*.test.ts`
+
+## Asset Pipeline
+
+Portrait images are **not served directly from source**. Original high-res PNGs live in
+`assets-source/` (outside Vite's `public/` tree) and optimized versions are committed to
+`public/portraits/` and `public/concepts/hero/`.
+
+**Workflow for adding/updating portrait images:**
+
+1. Drop the new PNG(s) into the appropriate `assets-source/portraits/<dir>/` subdirectory.
+2. Run `npm run optimize-assets` to generate WebP (primary) + compressed PNG (fallback) in `public/`.
+3. Commit both the source file and the generated `public/` output.
+
+**Script behavior:** `scripts/optimize-images.mjs` uses `sharp` to resize to 512×512 max
+(no upscaling), WebP q82, palette PNG. Skips already-up-to-date outputs (mtime check).
+
+**Portrait loading:** CEO and Empire Leader portraits are **not** preloaded at boot.
+Use `portraitLoader` from `src/game/PortraitLoader.ts` to load them on-demand:
+
+```ts
+import { portraitLoader } from "../game/PortraitLoader.ts";
+
+// Single portrait:
+const key = await portraitLoader.ensureCeoPortrait(scene, ceoId);
+image.setTexture(key);
+
+// Batch (rival list):
+await portraitLoader.preloadCeoPortraits(scene, rivalIds);
+
+// With loading overlay:
+import { withLoadingOverlay } from "../ui/LoadingOverlay.ts";
+const key = await withLoadingOverlay(scene, portraitLoader.ensureCeoPortrait(scene, id));
+```
+
+Textures survive scene transitions (live in Phaser's global TextureManager). Always check
+`scene.textures.exists(key)` before triggering a load to avoid redundant fetches —
+`PortraitLoader` does this internally, but callers can use `portraitLoader.isLoaded(key)`
+for a synchronous pre-check.
 
 ## Conventions
 

@@ -1003,7 +1003,7 @@ class AudioDirector {
         EXTERNAL_BGM_PLAYLIST[this.externalBgmTrackIndex].url,
       );
       bgm.loop = false;
-      bgm.preload = "auto";
+      bgm.preload = "metadata"; // fetch only headers at init; stream on play
       bgm.volume = 0;
       bgm.addEventListener("ended", () => this.onExternalTrackEnded());
       this.externalBgm = bgm;

@@ -45,10 +45,10 @@ const DEFAULT_LAYERS: StarfieldLayerConfig[] = [
   {
     count: 110,
     scrollFactor: 0.06,
-    minAlpha: 0.05,
-    maxAlpha: 0.22,
-    minScale: 0.12,
-    maxScale: 0.3,
+    minAlpha: 0.14,
+    maxAlpha: 0.38,
+    minScale: 0.28,
+    maxScale: 0.58,
     tints: [0xffffff, 0xffffff, 0xbfd8ff],
     hazeAlpha: 0.028,
     hazeScale: 3.2,
@@ -56,10 +56,10 @@ const DEFAULT_LAYERS: StarfieldLayerConfig[] = [
   {
     count: 80,
     scrollFactor: 0.16,
-    minAlpha: 0.09,
-    maxAlpha: 0.34,
-    minScale: 0.2,
-    maxScale: 0.52,
+    minAlpha: 0.2,
+    maxAlpha: 0.52,
+    minScale: 0.38,
+    maxScale: 0.8,
     tints: [0xffffff, 0xffffff, 0xaaccff, 0xffffcc],
     hazeAlpha: 0.022,
     hazeScale: 2.4,
@@ -67,10 +67,10 @@ const DEFAULT_LAYERS: StarfieldLayerConfig[] = [
   {
     count: 46,
     scrollFactor: 0.3,
-    minAlpha: 0.16,
-    maxAlpha: 0.5,
-    minScale: 0.35,
-    maxScale: 0.82,
+    minAlpha: 0.28,
+    maxAlpha: 0.68,
+    minScale: 0.55,
+    maxScale: 1.1,
     tints: [0xffffff, 0xaaccff, 0xffffcc],
     hazeAlpha: 0.014,
     hazeScale: 1.7,
@@ -121,7 +121,7 @@ function getEdgeFade(
 export function createStarfield(
   scene: Phaser.Scene,
   config?: StarfieldConfig,
-): Phaser.GameObjects.Container {
+): void {
   const drift = config?.drift ?? true;
   const depth = config?.depth ?? -100;
   const twinkle = config?.twinkle ?? true;
@@ -138,16 +138,16 @@ export function createStarfield(
   const visibleW = scene.scale.width / minZoom;
   const visibleH = scene.scale.height / minZoom;
 
-  const container = scene.add.container(0, 0);
-  container.setDepth(depth);
-
   // Ambient tweens that need explicit cleanup on scene shutdown
   const ambientTweens: Phaser.Tweens.Tween[] = [];
 
   for (const layer of layers) {
+    // Each layer is a top-level scene object so setScrollFactor creates real parallax.
+    // Nesting layers inside a parent Container breaks scrollFactor — Phaser ignores it
+    // for Container children.
     const layerContainer = scene.add.container(0, 0);
     layerContainer.setScrollFactor(layer.scrollFactor);
-    container.add(layerContainer);
+    layerContainer.setDepth(depth);
 
     const layerOverscanX =
       visibleW * (0.85 + (1 - layer.scrollFactor) * 1.65) + overscan;
@@ -255,6 +255,4 @@ export function createStarfield(
   if (ambientTweens.length > 0) {
     registerAmbientCleanup(scene, ambientTweens);
   }
-
-  return container;
 }

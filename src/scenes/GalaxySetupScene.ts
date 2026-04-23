@@ -18,6 +18,8 @@ import type {
 } from "../data/types.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { CEO_PORTRAITS, getPortraitTextureKey } from "../data/portraits.ts";
+import { portraitLoader, PORTRAIT_PLACEHOLDER_KEY } from "../game/PortraitLoader.ts";
+import { withLoadingOverlay } from "../ui/LoadingOverlay.ts";
 
 const PRESET_NAMES = [
   "Stellar Shipping Co.",
@@ -98,11 +100,21 @@ export class GalaxySetupScene extends Phaser.Scene {
     const portraitCenterY = contentTop + portraitSize / 2;
 
     // ── CEO Portrait (large, circular) ──
-    const portraitKey = getPortraitTextureKey(CEO_PORTRAITS[0].id);
+    // Start with placeholder; swap when first portrait loads
     this.portraitImage = this.add
-      .image(portraitCenterX, portraitCenterY, portraitKey)
+      .image(portraitCenterX, portraitCenterY, PORTRAIT_PLACEHOLDER_KEY)
       .setOrigin(0.5, 0.5);
     this.fitPortraitInCircle(this.portraitImage, portraitSize);
+    // Load first CEO portrait on-demand and swap in
+    portraitLoader
+      .ensureCeoPortrait(this, CEO_PORTRAITS[0].id)
+      .then((key) => {
+        if (this.portraitImage) {
+          this.portraitImage.setTexture(key);
+          this.fitPortraitInCircle(this.portraitImage, this.portraitDiameter);
+        }
+      })
+      .catch(() => {/* leave placeholder */});
 
     this.portraitMask = this.add.graphics();
     this.portraitMask.fillStyle(0xffffff);
@@ -290,7 +302,17 @@ export class GalaxySetupScene extends Phaser.Scene {
           category: chosenPortrait.category,
         };
         gameStore.setState(this.currentState);
-        this.scene.start("GameHUDScene");
+        // Ensure the chosen CEO portrait is loaded before GameHUDScene starts
+        // so the HUD top-bar portrait is ready immediately.
+        withLoadingOverlay(
+          this,
+          portraitLoader.ensureCeoPortrait(this, chosenPortrait.id),
+          { label: "Preparing…" },
+        )
+          .catch(() => {/* portrait missing — HUD will show placeholder */})
+          .finally(() => {
+            this.scene.start("GameHUDScene");
+          });
       },
     });
 
@@ -319,15 +341,41 @@ export class GalaxySetupScene extends Phaser.Scene {
 
   private updatePortraitPreview(): void {
     const def = CEO_PORTRAITS[this.portraitIndex];
-    const key = getPortraitTextureKey(def.id);
-    if (this.portraitImage && this.textures.exists(key)) {
-      this.portraitImage.setTexture(key);
-      if (this.portraitDiameter > 0) {
-        this.fitPortraitInCircle(this.portraitImage, this.portraitDiameter);
-      }
-    }
+
     if (this.portraitLabel) {
       this.portraitLabel.setText(def.label);
+    }
+
+    // If already in cache swap immediately; otherwise load on-demand
+    const key = getPortraitTextureKey(def.id);
+    if (this.portraitImage) {
+      if (this.textures.exists(key)) {
+        this.portraitImage.setTexture(key);
+        if (this.portraitDiameter > 0) {
+          this.fitPortraitInCircle(this.portraitImage, this.portraitDiameter);
+        }
+      } else {
+        // Show placeholder while loading
+        this.portraitImage.setTexture(PORTRAIT_PLACEHOLDER_KEY);
+        portraitLoader
+          .ensureCeoPortrait(this, def.id)
+          .then((loadedKey) => {
+            // Only apply if user hasn't navigated away to a different portrait
+            if (
+              this.portraitImage &&
+              CEO_PORTRAITS[this.portraitIndex]?.id === def.id
+            ) {
+              this.portraitImage.setTexture(loadedKey);
+              if (this.portraitDiameter > 0) {
+                this.fitPortraitInCircle(
+                  this.portraitImage,
+                  this.portraitDiameter,
+                );
+              }
+            }
+          })
+          .catch(() => {/* leave placeholder */});
+      }
     }
   }
 

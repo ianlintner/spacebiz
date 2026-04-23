@@ -263,6 +263,15 @@ export function getLeaderAssetPath(def: EmpireLeaderDefinition): string {
   return `portraits/leaders/${def.filename}`;
 }
 
+/**
+ * Get [webp, png] URL pair for Phaser's load.image(key, urls) array form.
+ * Phaser tries the first URL (WebP) and falls back to the second (PNG).
+ */
+export function getLeaderAssetUrls(def: EmpireLeaderDefinition): [string, string] {
+  const stem = def.filename.replace(/\.png$/i, "");
+  return [`portraits/leaders/${stem}.webp`, `portraits/leaders/${stem}.png`];
+}
+
 /** Get an empire leader definition by ID. */
 export function getLeaderById(
   portraitId: string,

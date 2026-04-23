@@ -34,3 +34,14 @@ export function getRoomPortraitTextureKey(roomType: HubRoomType): string {
 export function getRoomPortraitAssetPath(roomType: HubRoomType): string {
   return `portraits/rooms/room-${roomType}.png`;
 }
+
+/**
+ * Get [webp, png] URL pair for Phaser's load.image(key, urls) array form.
+ * Phaser tries the first URL (WebP) and falls back to the second (PNG).
+ */
+export function getRoomPortraitAssetUrls(roomType: HubRoomType): [string, string] {
+  return [
+    `portraits/rooms/room-${roomType}.webp`,
+    `portraits/rooms/room-${roomType}.png`,
+  ];
+}

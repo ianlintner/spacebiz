@@ -21,6 +21,7 @@ import {
   getUsedRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import { getPortraitTextureKey } from "../data/portraits.ts";
+import { portraitLoader, PORTRAIT_PLACEHOLDER_KEY } from "../game/PortraitLoader.ts";
 
 function formatCash(amount: number): string {
   return "\u00A7" + amount.toLocaleString();
@@ -146,30 +147,39 @@ export class GameHUDScene extends Phaser.Scene {
     // CEO portrait (small, left of company name)
     const portraitSize = L.hudTopBarHeight - 12;
     const portraitKey = getPortraitTextureKey(state.ceoPortrait.portraitId);
-    if (this.textures.exists(portraitKey)) {
-      const portraitImg = this.add
-        .image(6 + portraitSize / 2, L.hudTopBarHeight / 2, portraitKey)
-        .setOrigin(0.5, 0.5);
-      fitImageCover(portraitImg, portraitSize, portraitSize);
-      // Round mask
-      const mask = this.add
-        .circle(
-          6 + portraitSize / 2,
-          L.hudTopBarHeight / 2,
-          portraitSize / 2,
-          0xffffff,
-        )
-        .setVisible(false);
-      portraitImg.setMask(mask.createGeometryMask());
-      // Subtle border ring
-      this.add
-        .circle(
-          6 + portraitSize / 2,
-          L.hudTopBarHeight / 2,
-          portraitSize / 2 + 1,
-        )
-        .setStrokeStyle(1, theme.colors.panelBorder)
-        .setFillStyle(0x000000, 0);
+    const hudPortraitX = 6 + portraitSize / 2;
+    const hudPortraitY = L.hudTopBarHeight / 2;
+
+    // Always add the image — start with placeholder if texture not yet loaded
+    const initialKey = this.textures.exists(portraitKey)
+      ? portraitKey
+      : PORTRAIT_PLACEHOLDER_KEY;
+    const portraitImg = this.add
+      .image(hudPortraitX, hudPortraitY, initialKey)
+      .setOrigin(0.5, 0.5);
+    fitImageCover(portraitImg, portraitSize, portraitSize);
+    // Round mask
+    const hudMask = this.add
+      .circle(hudPortraitX, hudPortraitY, portraitSize / 2, 0xffffff)
+      .setVisible(false);
+    portraitImg.setMask(hudMask.createGeometryMask());
+    // Subtle border ring
+    this.add
+      .circle(hudPortraitX, hudPortraitY, portraitSize / 2 + 1)
+      .setStrokeStyle(1, theme.colors.panelBorder)
+      .setFillStyle(0x000000, 0);
+
+    // If portrait wasn't pre-loaded (save-game path), fetch it now
+    if (!this.textures.exists(portraitKey)) {
+      portraitLoader
+        .ensureCeoPortrait(this, state.ceoPortrait.portraitId)
+        .then((key) => {
+          if (portraitImg.active) {
+            portraitImg.setTexture(key);
+            fitImageCover(portraitImg, portraitSize, portraitSize);
+          }
+        })
+        .catch(() => {/* leave placeholder */});
     }
 
     // Company name (left-aligned, shifted right for portrait)

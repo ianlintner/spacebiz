@@ -103,8 +103,9 @@ export function drawEmpireBorders(
         }
       }
 
-      // Every cell is assigned to the nearest empire — no gaps between territories
-      ownership[row * cols + col] = bestEmpire;
+      // Only assign cells within influence radius — prevents rectangular outer borders
+      const influenceSq = cfg.influence * cfg.influence;
+      ownership[row * cols + col] = bestDist <= influenceSq ? bestEmpire : null;
     }
   }
 
