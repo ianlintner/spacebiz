@@ -422,7 +422,17 @@ export class ContractsScene extends Phaser.Scene {
   }
 
   private updateAcceptButton(): void {
-    this.acceptButton.setDisabled(!this.selectedAvailableId);
+    // Stale selection can leave the button enabled after a contract accept
+    // empties the list. Guard against "no selection", "no available contracts
+    // left at all", and "selected id no longer available".
+    const state = gameStore.getState();
+    const available = state.contracts.filter(
+      (c) => c.status === ContractStatus.Available,
+    );
+    const selectionStillValid =
+      this.selectedAvailableId !== null &&
+      available.some((c) => c.id === this.selectedAvailableId);
+    this.acceptButton.setDisabled(available.length === 0 || !selectionStillValid);
   }
 
   private confirmAcceptContract(): void {

@@ -709,10 +709,14 @@ export const HUB_ROOM_DEFINITIONS: Record<HubRoomType, HubRoomDefinition> = {
     type: HubRoomType.SimpleTerminal,
     name: "Simple Terminal",
     description:
-      "Core hub module. Boosts trade and passenger revenue by 5% at hub and neighbors.",
+      "Core hub module, pre-installed rent-free. Boosts trade and passenger revenue by 5% at hub and neighbors.",
     icon: "📡",
     buildCost: 5000,
-    upkeepCost: 500,
+    // Rent-free starter: player begins with one SimpleTerminal pre-installed,
+    // so charging upkeep on turn 1 surprises the player with a -§500/turn
+    // line before they've taken any action. Upkeep kicks in from the first
+    // upgrade (Improved Terminal) onward.
+    upkeepCost: 0,
     limit: 1,
     techRequirement: null,
     bonusScope: "localRadius",

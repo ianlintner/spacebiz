@@ -13,10 +13,10 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: "tut_new_game",
     trigger: "newGame",
-    text: "Welcome, Commander! I'm Rex, your K9-Corp Executive Adviser. I'll guide you through building a freight empire. First, name your company and choose a starting system.",
+    text: "Welcome aboard, Commander! I'm Rex, your K9-Corp Executive Adviser. Your company is chartered and your home system is online — now let's haul some cargo. Open the Routes panel (↔) from the left nav to lay down your first trade corridor.",
     mood: "success",
-    targetScene: "GalaxySetupScene",
-    highlightHint: "company name",
+    targetScene: "GameHUDScene",
+    highlightHint: "routes",
   },
   {
     id: "tut_first_route",

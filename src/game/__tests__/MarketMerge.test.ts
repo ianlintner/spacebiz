@@ -65,7 +65,7 @@ describe("HubBonusCalculator — upkeep", () => {
   });
 
   it("returns upkeep matching the room definition", () => {
-    // SimpleTerminal upkeepCost = 500
+    // SimpleTerminal is rent-free (upkeepCost = 0)
     const expected = HUB_ROOM_DEFINITIONS[HubRoomType.SimpleTerminal].upkeepCost;
     const hub = makeHub([makeRoom(HubRoomType.SimpleTerminal)]);
     expect(getHubUpkeep(hub)).toBe(expected);
@@ -91,10 +91,11 @@ describe("Hub P&L net contribution", () => {
     const lastTurnRevenue = 10_000;
     const estimatedBonus = Math.round(lastTurnRevenue * (multiplier - 1));
     const net = estimatedBonus - upkeep;
-    // bonus = 10_000 × 0.05 = 500; upkeep = 500; net = 0
+    // SimpleTerminal is the rent-free starter room:
+    //   bonus = 10_000 × 0.05 = 500; upkeep = 0; net = +500
     expect(estimatedBonus).toBe(500);
-    expect(upkeep).toBe(500);
-    expect(net).toBe(0);
+    expect(upkeep).toBe(0);
+    expect(net).toBe(500);
   });
 
   it("hub with higher revenue multiplier produces positive net at sufficient revenue", () => {

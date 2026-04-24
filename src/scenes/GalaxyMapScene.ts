@@ -653,13 +653,19 @@ export class GalaxyMapScene extends Phaser.Scene {
       "\u25A0".repeat(slotsUsed) +
       "\u25A1".repeat(Math.max(0, slotsTotal - slotsUsed));
 
-    hudObjects.push(addHudBackdrop(12, L.contentTop + 6, 156, 46, 0, 0));
-    hudObjects.push(addHudBackdrop(L.gameWidth - 16, L.contentTop + 6, 250, 48, 1, 0));
+    // Offset HUD labels further below the top bar so they clear the
+    // company name / cash readout (which can extend slightly past the
+    // nominal hudTopBarHeight via portrait ring + padding).
+    const hudLabelTop = L.contentTop + 18;
+    hudObjects.push(addHudBackdrop(12, hudLabelTop - 4, 156, 46, 0, 0));
+    hudObjects.push(
+      addHudBackdrop(L.gameWidth - 16, hudLabelTop - 4, 250, 58, 1, 0),
+    );
 
     hudObjects.push(
       new Label(this, {
         x: 20,
-        y: L.contentTop + 10,
+        y: hudLabelTop,
         text: "Galaxy Map",
         style: "caption",
         color: theme.colors.textDim,
@@ -670,7 +676,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     hudObjects.push(
       new Label(this, {
         x: 20,
-        y: L.contentTop + 28,
+        y: hudLabelTop + 18,
         text: `Routes: ${slotsUsed}/${slotsTotal} ${slotBlocks}`,
         style: "caption",
         color: slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
@@ -678,17 +684,22 @@ export class GalaxyMapScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(901),
     );
+    // Right-anchored legend. fixedWidth + align:right guarantees the
+    // text occupies a known block that the right-edge origin (1,0)
+    // anchors flush with the viewport edge, so narrower canvases can't
+    // clip the trailing characters ("p[an]", "syst[em]", "rout[es]").
     hudObjects.push(
       this.add
         .text(
           L.gameWidth - 20,
-          L.contentTop + 10,
+          hudLabelTop,
           "Scroll to zoom \u00b7 Drag to pan\nStar size = planets in system\nLines = active trade routes",
           {
             fontSize: `${theme.fonts.caption.size}px`,
             fontFamily: theme.fonts.caption.family,
             color: colorToString(theme.colors.textDim),
             align: "right",
+            fixedWidth: 240,
             stroke: "#000000",
             strokeThickness: 2,
           },

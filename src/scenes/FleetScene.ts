@@ -6,7 +6,6 @@ import { SHIP_TEMPLATES } from "../data/constants.ts";
 import {
   getTheme,
   colorToString,
-  Label,
   Button,
   DataTable,
   Modal,
@@ -52,7 +51,6 @@ export class FleetScene extends Phaser.Scene {
   }
 
   create(): void {
-    const theme = getTheme();
     const L = getLayout();
     this.selectedShipId = null;
     this.ui = new SceneUiDirector(this);
@@ -81,16 +79,7 @@ export class FleetScene extends Phaser.Scene {
     const absX = L.mainContentLeft + content.x;
     const absY = L.contentTop + content.y;
 
-    // Cash display inside content panel header area
-    const state = gameStore.getState();
-    const cashLabel = new Label(this, {
-      x: L.mainContentLeft + L.mainContentWidth - 16,
-      y: absY + 2,
-      text: `Cash: ${formatCash(state.cash)}`,
-      style: "value",
-      color: theme.colors.accent,
-    });
-    cashLabel.setOrigin(1, 0);
+    // Cash is already shown in the HUD top bar — no inline duplicate here.
 
     // Fleet table
     this.fleetTable = new DataTable(this, {
@@ -191,6 +180,7 @@ export class FleetScene extends Phaser.Scene {
 
     // Buttons at bottom of content panel
     const buttonY = absY + content.height - 40;
+    const fleetEmpty = gameStore.getState().fleet.length === 0;
 
     new Button(this, {
       x: absX,
@@ -200,11 +190,14 @@ export class FleetScene extends Phaser.Scene {
       onClick: () => this.showBuyShipPanel(),
     });
 
+    // Sell / Overhaul make no sense with an empty fleet — disable the buttons
+    // outright so clicking them can't raise "no ship selected" modals.
     new Button(this, {
       x: absX + 150,
       y: buttonY,
       width: 130,
       label: "Sell Ship",
+      disabled: fleetEmpty,
       onClick: () => this.confirmSellShip(),
     });
 
@@ -213,6 +206,7 @@ export class FleetScene extends Phaser.Scene {
       y: buttonY,
       width: 130,
       label: "Overhaul",
+      disabled: fleetEmpty,
       onClick: () => this.confirmOverhaul(),
     });
   }

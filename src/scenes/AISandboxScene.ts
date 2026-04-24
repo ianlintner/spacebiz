@@ -176,9 +176,9 @@ export class AISandboxScene extends Phaser.Scene {
       width: 300,
       height: 20,
       value: 0,
-      maxValue: 100,
+      maxValue: 1, // updated to real turn count after first turnComplete
       showLabel: true,
-      labelFormat: (v, m) => `${v} / ${m} turns`,
+      labelFormat: (v, m) => `Turn ${v} / ${m}`,
     });
 
     // ── Layout zones ─────────────────────────────────────────
@@ -495,13 +495,11 @@ export class AISandboxScene extends Phaser.Scene {
   // ── UI Update ────────────────────────────────────────────────
 
   private updateUI(turnLog: TurnLog): void {
-    // Turn counter + progress
+    // Turn counter + progress — single source of truth (drive bar from turns)
     this.turnLabel.setText(`Turn ${this.currentTurn} / ${this.maxTurns}`);
-    // ProgressBar maxValue is set at construction; scale value to percentage
     if (this.maxTurns > 0) {
-      this.progressBar.setValue(
-        Math.round((this.currentTurn / this.maxTurns) * 100),
-      );
+      this.progressBar.setMaxValue(this.maxTurns);
+      this.progressBar.setValue(this.currentTurn);
     }
     this.statusLabel.setText(this.paused ? "Paused" : "Running\u2026");
 
@@ -537,6 +535,15 @@ export class AISandboxScene extends Phaser.Scene {
       this.addFeedItem(`T${this.currentTurn}: ${evt.name}`, th.colors.accent);
     }
 
+    // Build planet id -> name map once per turn for route log resolution
+    const planetNames = new Map<string, string>();
+    if (this.latestGameState) {
+      for (const p of this.latestGameState.galaxy.planets) {
+        planetNames.set(p.id, p.name);
+      }
+    }
+    const resolvePlanet = (id: string): string => planetNames.get(id) ?? id;
+
     // Company actions (purchases, new routes)
     for (const c of turnLog.companies) {
       for (const ship of c.shipsPurchased) {
@@ -546,8 +553,10 @@ export class AISandboxScene extends Phaser.Scene {
         );
       }
       for (const route of c.routesOpened) {
+        const originName = resolvePlanet(route.origin);
+        const destName = resolvePlanet(route.dest);
         this.addFeedItem(
-          `T${this.currentTurn}: ${truncate(c.name, 12)} opened ${route.origin}\u2192${route.dest}`,
+          `T${this.currentTurn}: ${truncate(c.name, 12)} opened ${originName}\u2192${destName}`,
           th.colors.text,
         );
       }

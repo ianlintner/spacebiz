@@ -137,25 +137,28 @@ export class CompetitionScene extends Phaser.Scene {
       columns: [
         { key: "name", label: "Company", width: 120 },
         { key: "empire", label: "Empire", width: 100 },
-        { key: "personality", label: "Style", width: 100 },
+        // "Cherry Picker" is 13 chars — needs ~120px to avoid truncating to
+        // "Cherry" (which reads as a typo). Widen Style column accordingly.
+        { key: "personality", label: "Style", width: 120 },
         {
           key: "cash",
           label: this.intelTier >= 4 ? "Cash" : "Cash (T4)",
-          width: 90,
+          width: 100,
+          align: "right",
         },
         {
           key: "routes",
           label: this.intelTier >= 3 ? "Routes" : "Routes (T3)",
-          width: 60,
+          width: 100,
           align: "right",
         },
         {
           key: "fleet",
           label: this.intelTier >= 3 ? "Ships" : "Ships (T3)",
-          width: 60,
+          width: 90,
           align: "right",
         },
-        { key: "status", label: "Status", width: 80, colorFn: statusColorFn },
+        { key: "status", label: "Status", width: 90, colorFn: statusColorFn },
       ],
       onRowSelect: (_rowIdx: number, rowData: Record<string, unknown>) => {
         this.updatePortraitForCompany(

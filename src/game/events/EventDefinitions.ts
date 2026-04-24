@@ -280,7 +280,7 @@ const emergencyTransport: EventTemplate = {
   id: "emergency_transport",
   name: "Emergency Transport",
   description:
-    "An urgent delivery contract pays a flat bonus of $20,000 upon completion.",
+    "An urgent delivery contract pays a flat bonus of §20,000 upon completion.",
   category: EventCategory.Opportunity,
   duration: 1,
   effects: [{ type: "modifyCash", value: 20000 }],
@@ -530,7 +530,7 @@ const empireSubsidy: EventTemplate = {
   id: "empire_subsidy",
   name: "Empire Subsidy",
   description:
-    "Your home empire is subsidizing freight operations — receive a $15,000 government bonus!",
+    "Your home empire is subsidizing freight operations — receive a §15,000 government bonus!",
   category: EventCategory.Empire,
   duration: 1,
   effects: [{ type: "modifyCash", value: 15000 }],

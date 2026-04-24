@@ -40,6 +40,21 @@ const PRESET_OPTIONS: Array<{
   { preset: "epic", label: "EPIC", description: "~80 min · 12 empires" },
 ];
 
+/**
+ * Module-level cache of the last-chosen setup parameters. Prevents the
+ * scene from regenerating a brand-new seed / preset combo every time the
+ * user backs out and re-enters Setup. Only an explicit "Randomize" click
+ * rerolls the seed.
+ */
+interface LastSetupChoice {
+  seed: number;
+  nameIndex: number;
+  portraitIndex: number;
+  gamePreset: GamePreset;
+  galaxyShape: GalaxyShape;
+}
+let lastSetupChoice: LastSetupChoice | null = null;
+
 export class GalaxySetupScene extends Phaser.Scene {
   private seed = 0;
   private nameIndex = 0;
@@ -75,12 +90,22 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(theme.colors.background);
     getAudioDirector().setMusicState("setup");
 
-    this.seed = Math.floor(Math.random() * 1000000);
-    this.nameIndex = 0;
-    this.portraitIndex = 0;
+    // Restore previous setup choice if present — only reroll seed on an
+    // explicit "Randomize" click.
+    if (lastSetupChoice) {
+      this.seed = lastSetupChoice.seed;
+      this.nameIndex = lastSetupChoice.nameIndex;
+      this.portraitIndex = lastSetupChoice.portraitIndex;
+      this.gamePreset = lastSetupChoice.gamePreset;
+      this.galaxyShape = lastSetupChoice.galaxyShape;
+    } else {
+      this.seed = Math.floor(Math.random() * 1000000);
+      this.nameIndex = 0;
+      this.portraitIndex = 0;
+      this.gamePreset = "standard";
+      this.galaxyShape = "spiral";
+    }
     this.selectedSystemIndex = 0;
-    this.gamePreset = "standard";
-    this.galaxyShape = "spiral";
     this.cardObjects = [];
     this.systemCards = [];
     this.presetButtons = [];
@@ -119,9 +144,10 @@ export class GalaxySetupScene extends Phaser.Scene {
       .image(portraitCenterX, portraitCenterY, PORTRAIT_PLACEHOLDER_KEY)
       .setOrigin(0.5, 0.5);
     this.fitPortraitInCircle(this.portraitImage, portraitSize);
-    // Load first CEO portrait on-demand and swap in
+    // Load CEO portrait (restored or first) on-demand and swap in
+    const initialPortraitId = CEO_PORTRAITS[this.portraitIndex].id;
     portraitLoader
-      .ensureCeoPortrait(this, CEO_PORTRAITS[0].id)
+      .ensureCeoPortrait(this, initialPortraitId)
       .then((key) => {
         if (this.portraitImage) {
           this.portraitImage.setTexture(key);
@@ -150,7 +176,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.portraitLabel = new Label(this, {
       x: portraitCenterX,
       y: portraitCenterY + portraitSize / 2 + theme.spacing.sm,
-      text: CEO_PORTRAITS[0].label,
+      text: CEO_PORTRAITS[this.portraitIndex].label,
       style: "caption",
       color: theme.colors.accent,
     });
@@ -171,6 +197,7 @@ export class GalaxySetupScene extends Phaser.Scene {
           (this.portraitIndex - 1 + CEO_PORTRAITS.length) %
           CEO_PORTRAITS.length;
         this.updatePortraitPreview();
+        this.saveChoice();
       },
     });
     new Button(this, {
@@ -182,6 +209,7 @@ export class GalaxySetupScene extends Phaser.Scene {
       onClick: () => {
         this.portraitIndex = (this.portraitIndex + 1) % CEO_PORTRAITS.length;
         this.updatePortraitPreview();
+        this.saveChoice();
       },
     });
 
@@ -204,7 +232,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.nameLabel = new Label(this, {
       x: fieldX,
       y: rowY + 8,
-      text: PRESET_NAMES[0],
+      text: PRESET_NAMES[this.nameIndex],
       style: "value",
       color: theme.colors.accent,
     });
@@ -212,6 +240,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.nameLabel.on("pointerdown", () => {
       this.nameIndex = (this.nameIndex + 1) % PRESET_NAMES.length;
       this.nameLabel.setText(PRESET_NAMES[this.nameIndex]);
+      this.saveChoice();
     });
 
     rowY += rowH;
@@ -284,18 +313,23 @@ export class GalaxySetupScene extends Phaser.Scene {
 
     // Shape dropdown
     new Label(this, { x: rightX, y: rowY + 6, text: "Shape:", style: "body" });
+    const shapeOptions: Array<{ label: string; value: GalaxyShape }> = [
+      { label: "Spiral", value: "spiral" },
+      { label: "Elliptical", value: "elliptical" },
+      { label: "Ring", value: "ring" },
+      { label: "Irregular", value: "irregular" },
+    ];
+    const shapeDefaultIndex = Math.max(
+      0,
+      shapeOptions.findIndex((o) => o.value === this.galaxyShape),
+    );
     new Dropdown(this, {
       x: fieldX,
       y: rowY + 2,
       width: fieldW,
       height: 32,
-      options: [
-        { label: "Spiral", value: "spiral" },
-        { label: "Elliptical", value: "elliptical" },
-        { label: "Ring", value: "ring" },
-        { label: "Irregular", value: "irregular" },
-      ],
-      defaultIndex: 0,
+      options: shapeOptions,
+      defaultIndex: shapeDefaultIndex,
       onChange: (value) => {
         this.galaxyShape = value as GalaxyShape;
         this.regenerate();
@@ -372,6 +406,19 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.startingOptions = result.startingSystemOptions;
     this.selectedSystemIndex = 0;
     this.buildSystemCards();
+    this.saveChoice();
+  }
+
+  /** Persist the current user choices in the module-level cache so
+   * re-entering Setup doesn't regenerate a fresh seed/preset. */
+  private saveChoice(): void {
+    lastSetupChoice = {
+      seed: this.seed,
+      nameIndex: this.nameIndex,
+      portraitIndex: this.portraitIndex,
+      gamePreset: this.gamePreset,
+      galaxyShape: this.galaxyShape,
+    };
   }
 
   /** Highlight the currently-selected preset button */

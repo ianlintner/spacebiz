@@ -389,15 +389,24 @@ export class GameOverScene extends Phaser.Scene {
     const btnY = L.contentTop + L.contentHeight - 100;
 
     // -----------------------------------------------------------------------
-    // Rex's Reveal — the adviser reveals their true role
+    // Rex's Reveal — the adviser reveals their true role.
+    //
+    // High-score and ranking panels are the primary content on this screen,
+    // so anchor the reveal drawer to the bottom-right (narrow, closed-by-
+    // default) instead of spanning the full width where it would overlap
+    // the Company Rankings table.
     // -----------------------------------------------------------------------
     if (state.adviser && !state.adviser.secretRevealed) {
       const revealMsgs = buildRevealMessages(state);
       if (revealMsgs.length > 0) {
+        const revealPanelW = 220;
+        const revealTabW = 36; // mirrors AdviserPanel TAB_WIDTH
+        const revealX = L.gameWidth - revealPanelW - revealTabW - 12;
+        const revealY = btnY - 200;
         const revealPanel = new AdviserPanel(this, {
-          x: L.fullContentLeft,
-          y: btnY - 120,
-          width: L.gameWidth - L.fullContentLeft * 2,
+          x: revealX,
+          y: revealY,
+          width: revealPanelW,
         });
         revealPanel.setDepth(150);
         revealPanel.showMessages(revealMsgs);

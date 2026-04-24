@@ -43,6 +43,22 @@ export const CARGO_LABELS: Record<CargoTypeValue, string> = {
   medical: "Medical",
 };
 
+/**
+ * Compact 3–4 letter cargo labels for tight tabular contexts (route
+ * tables, market grids, filter chips) where the full label would clip.
+ * Also reused for fixed-width column headers in the Market scene, where
+ * "Technology" / "Raw Materials" otherwise render as "Technolo" / "Raw Mate".
+ */
+export const CARGO_SHORT_LABELS: Record<CargoTypeValue, string> = {
+  passengers: "PAX",
+  rawMaterials: "RAW",
+  food: "FOOD",
+  technology: "TECH",
+  luxury: "LUX",
+  hazmat: "HAZ",
+  medical: "MED",
+};
+
 /** Get the Phaser texture key for a cargo type icon. */
 export function getCargoIconKey(cargoType: string): string {
   return `${CARGO_ICON_PREFIX}${cargoType}`;
@@ -58,6 +74,14 @@ export function getCargoLabel(cargoType: string): string {
   return (
     CARGO_LABELS[cargoType as CargoTypeValue] ??
     cargoType.charAt(0).toUpperCase() + cargoType.slice(1)
+  );
+}
+
+/** Get the short-form label (e.g. "PAX", "RAW") for a cargo type. */
+export function getCargoShortLabel(cargoType: string): string {
+  return (
+    CARGO_SHORT_LABELS[cargoType as CargoTypeValue] ??
+    cargoType.slice(0, 4).toUpperCase()
   );
 }
 

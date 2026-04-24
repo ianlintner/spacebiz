@@ -575,21 +575,23 @@ export class GameHUDScene extends Phaser.Scene {
     this.updateActionPrompt();
 
     // End Turn button cluster (bottom right area)
-    // Turn info display
+    // End Turn button (rounded, bottom-right corner)
+    const endTurnSize = 52;
+    const endTurnX = L.gameWidth - endTurnSize - 12;
+    // Turn info display — sits to the LEFT of the ▶ button with a 12px gap,
+    // not stacked above it (previous placement collided with the button).
     const currentQuarter = ((state.turn - 1) % 4) + 1;
     const currentYear = Math.ceil(state.turn / 4);
     this.bottomTurnInfoLabel = new Label(this, {
-      x: L.gameWidth - 12,
-      y: bottomBarY - 2,
+      x: endTurnX - 12,
+      y: bottomBarY + endTurnSize / 2,
       text: `Q${currentQuarter} Y${currentYear}`,
       style: "caption",
     });
-    this.bottomTurnInfoLabel.setOrigin(1, 1);
+    this.bottomTurnInfoLabel.setOrigin(1, 0.5);
 
-    // End Turn button (rounded, bottom-right corner)
-    const endTurnSize = 52;
     this.endTurnButton = new Button(this, {
-      x: L.gameWidth - endTurnSize - 12,
+      x: endTurnX,
       y: bottomBarY,
       width: endTurnSize,
       height: endTurnSize,
@@ -606,7 +608,9 @@ export class GameHUDScene extends Phaser.Scene {
     // config.x = open position of the container's left edge (tab).
     const advPanelW = 220;
     const advTabW = 36; // must match TAB_WIDTH in AdviserPanel
-    const advPanelX = L.gameWidth - advTabW - advPanelW;
+    // 8px right-edge gutter so the × close button doesn't collide with
+    // right-side HUD nav badges at narrow viewports (~813px).
+    const advPanelX = L.gameWidth - advTabW - advPanelW - 8;
     const advPanelY = L.hudTopBarHeight + 8;
     this.adviserPanel = new AdviserPanel(this, {
       x: advPanelX,

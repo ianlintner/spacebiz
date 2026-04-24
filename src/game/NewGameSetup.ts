@@ -67,27 +67,54 @@ function createShipFromTemplate(shipClass: ShipClass, id: string): Ship {
 
 function selectStartingSystems(
   systems: StarSystem[],
+  planets: { systemId: string }[],
   rng: SeededRNG,
 ): StarSystem[] {
   if (systems.length <= 3) {
     return [...systems];
   }
 
-  // Try to pick systems from different empires
+  // Count planets per system — starter options should feel substantial, so
+  // we prefer systems with ≥2 planets for at least 2 of the 3 options.
+  const planetCount = new Map<string, number>();
+  for (const p of planets) {
+    planetCount.set(p.systemId, (planetCount.get(p.systemId) ?? 0) + 1);
+  }
+  const richSystems = systems.filter((s) => (planetCount.get(s.id) ?? 0) >= 2);
+  const pickRichFrom = (pool: StarSystem[]): StarSystem | null => {
+    const rich = pool.filter((s) => (planetCount.get(s.id) ?? 0) >= 2);
+    if (rich.length === 0) return null;
+    return rng.pick(rich);
+  };
+
   const empireIds = [...new Set(systems.map((s) => s.empireId))];
   const selected: StarSystem[] = [];
 
   if (empireIds.length >= 3) {
-    // Pick one system from each of 3 different empires
+    // Pick one system from each of 3 different empires; for the first 2,
+    // prefer a ≥2-planet system when that empire has one, so starter cards
+    // don't all show "Planets: 1".
     const shuffledEmpires = rng.shuffle([...empireIds]);
     for (let i = 0; i < 3; i++) {
       const empireSystems = systems.filter(
         (s) => s.empireId === shuffledEmpires[i],
       );
-      selected.push(rng.pick(empireSystems));
+      const preferRich = i < 2; // first two slots prefer rich systems
+      const candidate = preferRich ? pickRichFrom(empireSystems) : null;
+      selected.push(candidate ?? rng.pick(empireSystems));
+    }
+  } else if (richSystems.length >= 2) {
+    // Few empires: pick 2 rich systems + 1 random different one.
+    const shuffledRich = rng.shuffle([...richSystems]);
+    selected.push(shuffledRich[0], shuffledRich[1]);
+    const remaining = systems.filter((s) => !selected.includes(s));
+    if (remaining.length > 0) {
+      selected.push(rng.pick(remaining));
+    } else if (shuffledRich.length > 2) {
+      selected.push(shuffledRich[2]);
     }
   } else {
-    // Not enough empires, pick diverse systems
+    // Not enough empires or rich systems, fall back to random diverse picks
     const shuffled = rng.shuffle([...systems]);
     for (let i = 0; i < 3 && i < shuffled.length; i++) {
       selected.push(shuffled[i]);
@@ -153,13 +180,32 @@ function createAICompanies(
     }
   }
 
+  // Prefer a unique prefix per company — previously two rivals could share
+  // the prefix ("Prime Freight Lines" + "Prime Express") and read as the
+  // same company in compact feeds that only show the first word or two.
+  // Shuffle a pool so prefixes are consumed without replacement. Fall back
+  // to the old prefix+suffix dedupe only when the prefix pool is empty.
+  const prefixPool = [...AI_COMPANY_NAME_PREFIXES];
+  rng.shuffle(prefixPool);
+
   for (let i = 0; i < count; i++) {
     let name: string;
-    do {
-      const prefix = rng.pick(AI_COMPANY_NAME_PREFIXES);
+    if (prefixPool.length > 0) {
+      const prefix = prefixPool.pop() as string;
       const suffix = rng.pick(AI_COMPANY_NAME_SUFFIXES);
       name = `${prefix} ${suffix}`;
-    } while (usedNames.has(name));
+      // Extremely rare — same prefix+suffix pulled twice because prefix
+      // pool is disjoint — but guard anyway.
+      if (usedNames.has(name)) {
+        name = `${prefix} ${suffix} ${i + 1}`;
+      }
+    } else {
+      do {
+        const prefix = rng.pick(AI_COMPANY_NAME_PREFIXES);
+        const suffix = rng.pick(AI_COMPANY_NAME_SUFFIXES);
+        name = `${prefix} ${suffix}`;
+      } while (usedNames.has(name));
+    }
     usedNames.add(name);
 
     const empireId = empireQueue[i];
@@ -245,7 +291,11 @@ export function createNewGame(
   };
 
   // Select starting system options
-  const startingSystemOptions = selectStartingSystems(galaxyData.systems, rng);
+  const startingSystemOptions = selectStartingSystems(
+    galaxyData.systems,
+    galaxyData.planets,
+    rng,
+  );
 
   // Default player empire to that of first starting system option
   const playerEmpireId =

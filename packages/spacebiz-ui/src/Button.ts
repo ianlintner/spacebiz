@@ -227,6 +227,40 @@ export class Button extends Phaser.GameObjects.Container {
     this.label.setText(text);
   }
 
+  /**
+   * Visually toggle the button's "selected" state for use in button groups
+   * (e.g. preset pickers, tabs). When highlighted, the button uses the
+   * hover texture and a brighter accent line so the current selection is
+   * visible at a glance.
+   *
+   * NOTE: Phaser's `GameObject.setActive` sets an `active: boolean` flag
+   * with no visual effect; we override it with the same signature so
+   * existing call sites `btn.setActive(true)` light up as expected.
+   */
+  override setActive(value: boolean): this {
+    super.setActive(value);
+    if (this.isDisabled) return this;
+    const theme = getTheme();
+    if (value) {
+      // Stop the idle shimmer — selected state shouldn't pulse.
+      if (this.idleShimmerTween) {
+        this.idleShimmerTween.stop();
+        this.idleShimmerTween = null;
+      }
+      this.bg.setTexture("btn-hover");
+      this.accentLine.setAlpha(1);
+      this.accentLine.setFillStyle(theme.colors.accent);
+      this.label.setColor(colorToString(theme.colors.accent));
+    } else {
+      this.bg.setTexture("btn-normal");
+      this.accentLine.setAlpha(0.4);
+      this.accentLine.setFillStyle(theme.colors.accent);
+      this.label.setColor(colorToString(theme.colors.text));
+      this.startIdleShimmer();
+    }
+    return this;
+  }
+
   override setDepth(value: number): this {
     super.setDepth(value);
     this.hitZone?.setDepth(value);

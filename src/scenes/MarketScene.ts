@@ -14,6 +14,7 @@ import {
   getCargoIconKey,
   getCargoColor,
   getCargoLabel,
+  getCargoShortLabel,
 } from "../ui/index.ts";
 import type { ColumnDef } from "../ui/index.ts";
 
@@ -119,9 +120,13 @@ export class MarketScene extends Phaser.Scene {
     ];
 
     for (const ct of CARGO_TYPE_VALUES) {
+      // Headers use short labels (PAX, RAW, TECH…) so the 7 cargo columns
+      // fit side-by-side without "Passenge[r]", "Raw Mate[rials]",
+      // "Technolo[gy]" clipping. The icon carries the visual identity;
+      // the full name is shown on hover in the sidebar portrait stats.
       columns.push({
         key: ct,
-        label: getCargoLabel(ct),
+        label: getCargoShortLabel(ct),
         width: cargoColWidth,
         sortable: true,
         headerIcon: getCargoIconKey(ct),
@@ -184,7 +189,7 @@ export class MarketScene extends Phaser.Scene {
               const entry = planetMarket[ct];
               if (entry) {
                 stats.push({
-                  label: ct.charAt(0).toUpperCase() + ct.slice(1),
+                  label: getCargoLabel(ct),
                   value: formatCash(entry.currentPrice),
                 });
               }
