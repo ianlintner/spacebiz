@@ -6,6 +6,7 @@
  * `tools/eslint-rules/`.
  */
 import tsParser from "@typescript-eslint/parser";
+import sftPlugin from "./tools/eslint-rules/index.ts";
 
 export default [
   {
@@ -31,8 +32,14 @@ export default [
         sourceType: "module",
       },
     },
+    plugins: {
+      sft: sftPlugin,
+    },
     rules: {
-      // Custom rules are added in follow-up commits.
+      // Bootstrap as warn so the rule can land alongside existing
+      // violations; promote to "error" once call sites are backfilled
+      // with explicit testIds (see PR description).
+      "sft/require-widget-testid": "warn",
     },
   },
 ];
