@@ -19,6 +19,7 @@ import {
   LICENSE_FEE_DISTANCE_DIVISOR,
   LICENSE_FEE_ROUTE_ESCALATION,
 } from "../../data/constants.ts";
+import { getLicenseFeeMultiplier } from "../reputation/ReputationEffects.ts";
 import type { ShipClass } from "../../data/types.ts";
 import { getTechRouteSlotBonus } from "../tech/TechEffects.ts";
 import { getRouteSlotBonus } from "../hub/HubBonusCalculator.ts";
@@ -97,22 +98,42 @@ export function calculateTripsPerTurn(
 /**
  * Calculate the one-time license fee to open a new route.
  * Scales with distance and escalates with each additional route.
+ * Optionally applies a reputation-based multiplier.
  *
- * Fee = BASE_LICENSE_FEE × max(1, distance / 100) × (1 + existingRoutes × 0.25)
+ * Fee = BASE_LICENSE_FEE × max(1, distance / 100) × (1 + existingRoutes × 0.25) × reputationMultiplier
  */
 export function calculateLicenseFee(
   distance: number,
   existingRouteCount: number,
+  reputation?: number,
 ): number {
   const distMult = Math.max(1.0, distance / LICENSE_FEE_DISTANCE_DIVISOR);
   const routeMult = 1.0 + existingRouteCount * LICENSE_FEE_ROUTE_ESCALATION;
-  return Math.round(BASE_LICENSE_FEE * distMult * routeMult);
+  const repMult = reputation !== undefined ? getLicenseFeeMultiplier(reputation) : 1.0;
+  return Math.round(BASE_LICENSE_FEE * distMult * routeMult * repMult);
+}
+
+// ── Local Route Helpers ────────────────────────────────────────────────
+
+/**
+ * Returns true when origin and destination are in the same star system.
+ * These routes use the separate localRouteSlots pool.
+ */
+export function isLocalRoute(
+  route: { originPlanetId: string; destinationPlanetId: string },
+  state: Pick<GameState, 'galaxy'>,
+): boolean {
+  const planets = state.galaxy.planets;
+  const originPlanet = planets.find((p) => p.id === route.originPlanetId);
+  const destPlanet = planets.find((p) => p.id === route.destinationPlanetId);
+  if (!originPlanet || !destPlanet) return false;
+  return originPlanet.systemId === destPlanet.systemId;
 }
 
 // ── Route Slot Helpers ─────────────────────────────────────────────────
 
 /**
- * Total route slots available (base + tech bonus).
+ * Total main route slots available (base + tech bonus).
  */
 export function getAvailableRouteSlots(state: GameState): number {
   return (
@@ -123,17 +144,38 @@ export function getAvailableRouteSlots(state: GameState): number {
 }
 
 /**
- * Number of route slots currently in use.
+ * Total local route slots available.
  */
-export function getUsedRouteSlots(state: GameState): number {
-  return state.activeRoutes.length;
+export function getAvailableLocalRouteSlots(state: GameState): number {
+  return state.localRouteSlots ?? 2;
 }
 
 /**
- * Number of free route slots remaining.
+ * Number of main route slots currently in use (excludes local routes).
+ */
+export function getUsedRouteSlots(state: GameState): number {
+  return state.activeRoutes.filter((r) => !isLocalRoute(r, state)).length;
+}
+
+/**
+ * Number of local route slots currently in use.
+ */
+export function getUsedLocalRouteSlots(state: GameState): number {
+  return state.activeRoutes.filter((r) => isLocalRoute(r, state)).length;
+}
+
+/**
+ * Number of free main route slots remaining.
  */
 export function getFreeRouteSlots(state: GameState): number {
   return Math.max(0, getAvailableRouteSlots(state) - getUsedRouteSlots(state));
+}
+
+/**
+ * Number of free local route slots remaining.
+ */
+export function getFreeLocalRouteSlots(state: GameState): number {
+  return Math.max(0, getAvailableLocalRouteSlots(state) - getUsedLocalRouteSlots(state));
 }
 
 export interface RouteTrafficVisual {

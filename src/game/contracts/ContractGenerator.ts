@@ -16,6 +16,10 @@ import {
 } from "../../data/constants.ts";
 import { SeededRNG } from "../../utils/SeededRNG.ts";
 import { getEmpireForPlanet } from "../empire/EmpireAccessManager.ts";
+import {
+  hasPremiumContractAccess,
+  makePremiumContract,
+} from "../reputation/ReputationEffects.ts";
 
 // ---------------------------------------------------------------------------
 // Contract Generation
@@ -52,6 +56,15 @@ export function generateContracts(
     if (contract) {
       newContracts.push(contract);
     }
+  }
+
+  // If player has premium access (rep >= 75), add 1 premium contract based on
+  // a random existing generated contract template
+  if (hasPremiumContractAccess(state.reputation) && newContracts.length > 0) {
+    const baseIndex = rng.nextInt(0, newContracts.length - 1);
+    const base = newContracts[baseIndex];
+    const premium = makePremiumContract(base);
+    newContracts.push(premium);
   }
 
   return newContracts;
