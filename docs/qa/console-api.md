@@ -110,6 +110,31 @@ test("end turn advances the counter", async ({ sft }) => {
 
 Run: `npm run test:e2e`. Reports land in `playwright-report/`.
 
+### MCP server (recommended for LLM agents)
+
+An MCP server under `packages/spacebiz-qa-mcp/` exposes every `__sft` method
+as a first-class MCP tool (`sft_click`, `sft_snapshot`, `sft_actions_newGame`, …).
+Three-line setup for Claude Code:
+
+```bash
+npm install                     # one-time (installs the workspace)
+npm run dev                     # leave the dev server running
+npx sft-qa-mcp                  # or wire via .mcp.json — see below
+```
+
+Example `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "sft-qa": { "command": "npx", "args": ["-y", "sft-qa-mcp"] }
+  }
+}
+```
+
+See [`packages/spacebiz-qa-mcp/README.md`](../../packages/spacebiz-qa-mcp/README.md)
+for the full tool surface and environment variables (`SFT_URL`, `SFT_HEADLESS`).
+
 ### Raw `page.evaluate` (MCP agents without the fixture)
 
 ```ts
