@@ -39,6 +39,20 @@ const TASKS = [
     out: "public/concepts/hero",
     exts: [".jpg", ".jpeg", ".png"],
   },
+  // Ship map sprites: pixel art — preserve exact pixels, no resize, lossless PNG only
+  {
+    src: "assets-source/ships/map",
+    out: "public/ships/map",
+    exts: [".png"],
+    pixelArt: true,
+  },
+  // Ship portraits: larger pixel art — resize with nearest-neighbor, WebP + PNG
+  {
+    src: "assets-source/ships/portraits",
+    out: "public/ships/portraits",
+    exts: [".png"],
+    pixelArt: true,
+  },
 ];
 
 /** Recursively collect files with given extensions. */
@@ -70,7 +84,7 @@ function fmtBytes(bytes) {
   return `${bytes} B`;
 }
 
-async function processFile(srcPath, srcBase, outBase) {
+async function processFile(srcPath, srcBase, outBase, pixelArt = false) {
   // Compute output path (mirror directory structure)
   const relative = srcPath.slice(srcBase.length + 1);
   const ext = extname(relative).toLowerCase();
@@ -79,8 +93,9 @@ async function processFile(srcPath, srcBase, outBase) {
   const webpOut = join(outBase, stem + ".webp");
   const pngOut = join(outBase, stem + ".png");
 
+  // Pixel-art assets: lossless PNG only (no WebP — lossy destroys hard edges)
   const [needsWebp, needsPng] = await Promise.all([
-    needsUpdate(srcPath, webpOut),
+    pixelArt ? Promise.resolve(false) : needsUpdate(srcPath, webpOut),
     needsUpdate(srcPath, pngOut),
   ]);
 
@@ -89,15 +104,25 @@ async function processFile(srcPath, srcBase, outBase) {
   }
 
   // Ensure output directory exists
-  await mkdir(dirname(webpOut), { recursive: true });
+  await mkdir(dirname(pngOut), { recursive: true });
 
   const srcStatObj = await stat(srcPath);
   const srcSize = srcStatObj.size;
 
-  const pipeline = sharp(srcPath).resize(MAX_DIM, MAX_DIM, {
-    fit: "inside",
-    withoutEnlargement: true,
-  });
+  // Pixel-art pipeline: nearest-neighbor resize (no smoothing), lossless PNG
+  let pipeline;
+  if (pixelArt) {
+    pipeline = sharp(srcPath).resize(MAX_DIM, MAX_DIM, {
+      fit: "inside",
+      withoutEnlargement: true,
+      kernel: "nearest",
+    });
+  } else {
+    pipeline = sharp(srcPath).resize(MAX_DIM, MAX_DIM, {
+      fit: "inside",
+      withoutEnlargement: true,
+    });
+  }
 
   const results = [];
 
@@ -110,23 +135,16 @@ async function processFile(srcPath, srcBase, outBase) {
   }
 
   if (needsPng) {
-    // For PNGs with alpha (RGBA), keep as palette PNG with alpha
-    // For JPEGs, emit palette PNG fallback
-    const meta = await sharp(srcPath).metadata();
-    const hasAlpha = meta.channels === 4 || meta.hasAlpha;
-
     const pngBuf = await pipeline
       .clone()
       .png({
         compressionLevel: PNG_COMPRESSION,
-        palette: true,
-        colors: PNG_PALETTE_COLORS,
-        // Keep dithering for quality
-        dither: 1.0,
+        // Pixel-art: no palette quantization — keep exact color indices
+        palette: !pixelArt,
+        colors: pixelArt ? undefined : PNG_PALETTE_COLORS,
+        dither: pixelArt ? undefined : 1.0,
       })
       .toFile(pngOut);
-
-    void hasAlpha; // already handled by sharp's palette + alpha detection
     results.push({ format: "png", size: pngBuf.size, path: pngOut });
   }
 
@@ -153,7 +171,7 @@ async function run() {
     console.log(`📁 ${task.src}  (${files.length} files → ${task.out})`);
 
     for (const srcPath of files) {
-      const result = await processFile(srcPath, task.src, task.out);
+      const result = await processFile(srcPath, task.src, task.out, task.pixelArt ?? false);
 
       if (result.skipped) {
         skippedFiles++;

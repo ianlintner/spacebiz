@@ -7,6 +7,7 @@ import {
   generateCargoIcons,
   generateShipIcons,
   generateShipMapSprites,
+  SHIP_CLASS_LIST,
 } from "../ui/index.ts";
 import { getAudioDirector, type SfxKey } from "../audio/AudioDirector.ts";
 import {
@@ -77,6 +78,13 @@ export class BootScene extends Phaser.Scene {
 
     // CEO + Empire Leader portraits are NOT preloaded here.
     // They are fetched on-demand via PortraitLoader when actually needed.
+
+    // Ship AI pixel-art sprites — loaded if available; missing files are silently skipped.
+    // When loaded, these take precedence over procedural Canvas sprites in generateShipMapSprites().
+    for (const cls of SHIP_CLASS_LIST) {
+      this.load.image(`ship-map-${cls}`, `ships/map/${cls}.png`);
+      this.load.image(`ship-portrait-${cls}`, `ships/portraits/${cls}.png`);
+    }
   }
 
   create(): void {

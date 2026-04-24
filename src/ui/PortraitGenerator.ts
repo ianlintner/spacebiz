@@ -395,6 +395,11 @@ function renderShipPortrait(
     starLiner: 0x76f7ce,
     megaHauler: 0xe19a6b,
     luxuryLiner: 0xd9a7ff,
+    tug: 0xaaaaaa,
+    refrigeratedHauler: 0x88ddff,
+    armoredFreighter: 0x778899,
+    diplomaticYacht: 0xffd700,
+    colonyShip: 0x66bb88,
   };
 
   const accent = accentMap[shipClass];
@@ -460,6 +465,41 @@ function renderShipPortrait(
       for (let x = 10; x <= 19; x += 2) {
         px(g, grid, x, y - 1, light, 1, 1, 0.8);
       }
+      px(g, grid, 3, y, accent, 2, 1);
+      break;
+    case "tug":
+      px(g, grid, 9, y - 1, body, 7, 3);
+      px(g, grid, 5, y - 1, body, 6, 3);
+      px(g, grid, 16, y, dark, 5, 1);
+      px(g, grid, 21, y - 1, dark, 2, 3);
+      px(g, grid, 5, y, accent, 2, 1);
+      break;
+    case "refrigeratedHauler":
+      px(g, grid, 6, y - 2, body, 15, 5);
+      px(g, grid, 21, y - 1, dark, 3, 3);
+      for (let x = 9; x <= 18; x += 3) {
+        px(g, grid, x, y - 2, accent, 1, 5, 0.5);
+      }
+      px(g, grid, 4, y, accent, 2, 1);
+      break;
+    case "armoredFreighter":
+      px(g, grid, 5, y - 3, body, 17, 7);
+      px(g, grid, 22, y - 2, dark, 3, 5);
+      px(g, grid, 10, y - 6, dark, 5, 2);
+      px(g, grid, 4, y, accent, 2, 1);
+      break;
+    case "diplomaticYacht":
+      px(g, grid, 7, y - 1, body, 15, 3);
+      px(g, grid, 22, y - 1, dark, 3, 2);
+      px(g, grid, 12, y - 4, accent, 1, 4);
+      px(g, grid, 8, y - 5, dark, 8, 1);
+      px(g, grid, 5, y, accent, 2, 1);
+      break;
+    case "colonyShip":
+      px(g, grid, 5, y - 1, body, 17, 3);
+      px(g, grid, 12, y - 5, dark, 4, 2);
+      px(g, grid, 12, y + 3, dark, 4, 2);
+      px(g, grid, 8, y - 3, light, 8, 7, 0.15);
       px(g, grid, 3, y, accent, 2, 1);
       break;
   }

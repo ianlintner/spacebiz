@@ -55,6 +55,24 @@ export function generateShipMapSprites(
       textures.remove(key);
     }
 
+    // If a non-canvas texture exists (e.g. AI pixel art loaded in BootScene preload),
+    // register a static single-frame animation and skip procedural generation.
+    if (textures.exists(key)) {
+      const existing = textures.get(key);
+      if (existing && !(existing instanceof Phaser.Textures.CanvasTexture)) {
+        const animKey = getShipMapAnimKey(cls);
+        if (anims.exists(animKey)) anims.remove(animKey);
+        anims.create({
+          key: animKey,
+          frames: [{ key, frame: "__BASE" }],
+          frameRate: 1,
+          repeat: -1,
+        });
+        continue;
+      }
+      textures.remove(key);
+    }
+
     // Canvas width = frames side-by-side, height = one frame
     const tex = textures.createCanvas(key, s * f, s);
     if (!tex) continue;
@@ -125,6 +143,21 @@ function drawShipClass(
       break;
     case "luxuryLiner":
       drawLuxuryLiner(ctx, s, frame);
+      break;
+    case "tug":
+      drawTug(ctx, s, frame);
+      break;
+    case "refrigeratedHauler":
+      drawRefrigeratedHauler(ctx, s, frame);
+      break;
+    case "armoredFreighter":
+      drawArmoredFreighter(ctx, s, frame);
+      break;
+    case "diplomaticYacht":
+      drawDiplomaticYacht(ctx, s, frame);
+      break;
+    case "colonyShip":
+      drawColonyShip(ctx, s, frame);
       break;
     default:
       drawCargoShuttle(ctx, s, frame);
@@ -716,6 +749,225 @@ function drawMegaHauler(
   drawBeacon(ctx, s * 0.17, s * 0.14, frame);
   drawBeacon(ctx, s * 0.78, s * 0.14, frame);
   drawNavLights(ctx, s * 0.78, s * 0.13, s * 0.78, s * 0.87, frame);
+}
+
+/** System Tug — stubby utility ship with oversized engine and grapple claw */
+function drawTug(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  frame: number,
+): void {
+  ctx.fillStyle = "#dddddd";
+  // Stubby rounded hull
+  ctx.beginPath();
+  ctx.moveTo(s * 0.72, s * 0.5);
+  ctx.lineTo(s * 0.35, s * 0.28);
+  ctx.lineTo(s * 0.2, s * 0.35);
+  ctx.lineTo(s * 0.2, s * 0.65);
+  ctx.lineTo(s * 0.35, s * 0.72);
+  ctx.closePath();
+  ctx.fill();
+  // Oversized engine block
+  ctx.fillRect(s * 0.06, s * 0.32, s * 0.18, s * 0.36);
+  // Grapple claw arm (extending right from nose)
+  ctx.fillRect(s * 0.68, s * 0.46, s * 0.2, s * 0.06);
+  ctx.fillRect(s * 0.84, s * 0.36, s * 0.06, s * 0.26);
+  // Claw tips
+  ctx.fillRect(s * 0.86, s * 0.33, s * 0.08, s * 0.04);
+  ctx.fillRect(s * 0.86, s * 0.63, s * 0.08, s * 0.04);
+
+  panelLine(ctx, s * 0.2, s * 0.5, s * 0.38, s * 0.5);
+  drawCockpit(ctx, s * 0.55, s * 0.44, s * 0.1, s * 0.12, frame);
+  drawExhaustTrail(ctx, s * 0.06, s * 0.5, s * 0.09, frame);
+  drawEnginePlume(ctx, s * 0.1, s * 0.5, s * 0.22, frame);
+  drawBeacon(ctx, s * 0.38, s * 0.28, frame, [180, 180, 180]);
+  drawNavLights(ctx, s * 0.5, s * 0.3, s * 0.5, s * 0.7, frame);
+}
+
+/** Refrigerated Hauler — insulated cargo ship with ribbed cryo tanks */
+function drawRefrigeratedHauler(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  frame: number,
+): void {
+  ctx.fillStyle = "#e8f4ff";
+  // Main hull — rectangular with pointed nose
+  ctx.beginPath();
+  ctx.moveTo(s * 0.82, s * 0.5);
+  ctx.lineTo(s * 0.72, s * 0.22);
+  ctx.lineTo(s * 0.17, s * 0.22);
+  ctx.lineTo(s * 0.08, s * 0.35);
+  ctx.lineTo(s * 0.08, s * 0.65);
+  ctx.lineTo(s * 0.17, s * 0.78);
+  ctx.lineTo(s * 0.72, s * 0.78);
+  ctx.closePath();
+  ctx.fill();
+  // Ribbed insulation panels
+  ctx.strokeStyle = "rgba(100,180,220,0.5)";
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(s * (0.22 + i * 0.13), s * 0.22);
+    ctx.lineTo(s * (0.22 + i * 0.13), s * 0.78);
+    ctx.stroke();
+  }
+  // Frost blue accent strip
+  ctx.fillStyle = "rgba(140,210,255,0.35)";
+  ctx.fillRect(s * 0.17, s * 0.42, s * 0.55, s * 0.16);
+  // Engine block
+  ctx.fillStyle = "#e8f4ff";
+  ctx.fillRect(s * 0.04, s * 0.35, s * 0.08, s * 0.3);
+
+  panelLine(ctx, s * 0.17, s * 0.22, s * 0.72, s * 0.22, 0.2);
+  panelLine(ctx, s * 0.17, s * 0.78, s * 0.72, s * 0.78, 0.2);
+  drawCockpit(ctx, s * 0.71, s * 0.45, s * 0.08, s * 0.1, frame);
+  drawExhaustTrail(ctx, s * 0.04, s * 0.5, s * 0.08, frame);
+  drawEnginePlume(ctx, s * 0.07, s * 0.5, s * 0.2, frame);
+  drawBeacon(ctx, s * 0.2, s * 0.22, frame, [140, 210, 255]);
+  drawNavLights(ctx, s * 0.6, s * 0.23, s * 0.6, s * 0.77, frame);
+}
+
+/** Armored Freighter — dark reinforced hull with turret nub */
+function drawArmoredFreighter(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  frame: number,
+): void {
+  ctx.fillStyle = "#8899aa";
+  // Thick angular hull
+  ctx.beginPath();
+  ctx.moveTo(s * 0.84, s * 0.5);
+  ctx.lineTo(s * 0.72, s * 0.2);
+  ctx.lineTo(s * 0.14, s * 0.2);
+  ctx.lineTo(s * 0.06, s * 0.34);
+  ctx.lineTo(s * 0.06, s * 0.66);
+  ctx.lineTo(s * 0.14, s * 0.8);
+  ctx.lineTo(s * 0.72, s * 0.8);
+  ctx.closePath();
+  ctx.fill();
+  // Heavy armor plating dividers
+  ctx.strokeStyle = "rgba(0,0,0,0.4)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(s * 0.35, s * 0.2);
+  ctx.lineTo(s * 0.35, s * 0.8);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(s * 0.55, s * 0.2);
+  ctx.lineTo(s * 0.55, s * 0.8);
+  ctx.stroke();
+  // Defense turret on top
+  ctx.fillStyle = "#778899";
+  ctx.fillRect(s * 0.38, s * 0.1, s * 0.14, s * 0.12);
+  ctx.fillRect(s * 0.41, s * 0.05, s * 0.08, s * 0.07);
+  // Engine block (heavy)
+  ctx.fillStyle = "#8899aa";
+  ctx.fillRect(s * 0.03, s * 0.32, s * 0.08, s * 0.36);
+
+  drawCockpit(ctx, s * 0.71, s * 0.45, s * 0.08, s * 0.1, frame);
+  drawExhaustTrail(ctx, s * 0.03, s * 0.5, s * 0.08, frame);
+  drawEnginePlume(ctx, s * 0.06, s * 0.5, s * 0.22, frame);
+  drawBeacon(ctx, s * 0.45, s * 0.05, frame, [200, 60, 60]);
+  drawNavLights(ctx, s * 0.72, s * 0.21, s * 0.72, s * 0.79, frame);
+}
+
+/** Diplomatic Yacht — sleek elongated hull with antenna mast */
+function drawDiplomaticYacht(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  frame: number,
+): void {
+  ctx.fillStyle = "#ffffff";
+  // Sleek tapered hull
+  ctx.beginPath();
+  ctx.moveTo(s * 0.92, s * 0.5);
+  ctx.lineTo(s * 0.42, s * 0.28);
+  ctx.lineTo(s * 0.13, s * 0.35);
+  ctx.lineTo(s * 0.13, s * 0.65);
+  ctx.lineTo(s * 0.42, s * 0.72);
+  ctx.closePath();
+  ctx.fill();
+  // Gold accent stripe
+  ctx.fillStyle = "rgba(255,215,0,0.45)";
+  ctx.beginPath();
+  ctx.moveTo(s * 0.88, s * 0.5);
+  ctx.lineTo(s * 0.4, s * 0.34);
+  ctx.lineTo(s * 0.4, s * 0.38);
+  ctx.lineTo(s * 0.88, s * 0.54);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  // Tall antenna mast above hull
+  ctx.fillRect(s * 0.34, s * 0.06, s * 0.02, s * 0.22);
+  ctx.fillRect(s * 0.28, s * 0.06, s * 0.14, s * 0.02);
+  // Engine nozzle
+  ctx.fillRect(s * 0.07, s * 0.42, s * 0.08, s * 0.16);
+  // Elegant swept tail fins
+  ctx.beginPath();
+  ctx.moveTo(s * 0.13, s * 0.35);
+  ctx.lineTo(s * 0.22, s * 0.35);
+  ctx.lineTo(s * 0.06, s * 0.08);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(s * 0.13, s * 0.65);
+  ctx.lineTo(s * 0.22, s * 0.65);
+  ctx.lineTo(s * 0.06, s * 0.92);
+  ctx.closePath();
+  ctx.fill();
+
+  panelLine(ctx, s * 0.42, s * 0.28, s * 0.92, s * 0.5, 0.2);
+  drawCockpit(ctx, s * 0.74, s * 0.46, s * 0.08, s * 0.08, frame);
+  drawExhaustTrail(ctx, s * 0.07, s * 0.5, s * 0.08, frame);
+  drawEnginePlume(ctx, s * 0.09, s * 0.5, s * 0.18, frame);
+  drawBeacon(ctx, s * 0.06, s * 0.08, frame, [255, 215, 0]);
+  drawNavLights(ctx, s * 0.55, s * 0.3, s * 0.55, s * 0.7, frame);
+}
+
+/** Colony Ship — massive slow vessel with habitation ring and solar panels */
+function drawColonyShip(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  frame: number,
+): void {
+  ctx.fillStyle = "#ccddcc";
+  // Long cargo spine
+  ctx.fillRect(s * 0.16, s * 0.42, s * 0.64, s * 0.16);
+  // Blunt command module at bow
+  ctx.beginPath();
+  ctx.moveTo(s * 0.8, s * 0.35);
+  ctx.lineTo(s * 0.93, s * 0.5);
+  ctx.lineTo(s * 0.8, s * 0.65);
+  ctx.lineTo(s * 0.72, s * 0.65);
+  ctx.lineTo(s * 0.72, s * 0.35);
+  ctx.closePath();
+  ctx.fill();
+  // Engine cluster at tail
+  ctx.fillRect(s * 0.06, s * 0.3, s * 0.12, s * 0.15);
+  ctx.fillRect(s * 0.06, s * 0.55, s * 0.12, s * 0.15);
+  // Habitation ring (mid-spine)
+  ctx.strokeStyle = "#aabbaa";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(s * 0.5, s * 0.5, s * 0.2, 0, Math.PI * 2);
+  ctx.stroke();
+  // Solar panel wings
+  ctx.fillStyle = "#aabb88";
+  ctx.fillRect(s * 0.42, s * 0.16, s * 0.16, s * 0.1);
+  ctx.fillRect(s * 0.42, s * 0.74, s * 0.16, s * 0.1);
+  // Panel struts
+  ctx.fillStyle = "#ccddcc";
+  ctx.fillRect(s * 0.49, s * 0.26, s * 0.02, s * 0.1);
+  ctx.fillRect(s * 0.49, s * 0.64, s * 0.02, s * 0.1);
+
+  panelLine(ctx, s * 0.18, s * 0.5, s * 0.7, s * 0.5);
+  drawCockpit(ctx, s * 0.8, s * 0.46, s * 0.08, s * 0.08, frame);
+  drawExhaustTrail(ctx, s * 0.06, s * 0.37, s * 0.07, frame);
+  drawExhaustTrail(ctx, s * 0.06, s * 0.63, s * 0.07, frame);
+  drawEnginePlume(ctx, s * 0.09, s * 0.37, s * 0.16, frame);
+  drawEnginePlume(ctx, s * 0.09, s * 0.63, s * 0.16, frame);
+  drawBeacon(ctx, s * 0.5, s * 0.3, frame, [100, 200, 120]);
+  drawNavLights(ctx, s * 0.8, s * 0.36, s * 0.8, s * 0.64, frame);
 }
 
 /** Luxury Liner — sweeping curved hull with panoramic windows */

@@ -176,6 +176,11 @@ export const ShipClass = {
   StarLiner: "starLiner",
   MegaHauler: "megaHauler",
   LuxuryLiner: "luxuryLiner",
+  Tug: "tug",
+  RefrigeratedHauler: "refrigeratedHauler",
+  ArmoredFreighter: "armoredFreighter",
+  DiplomaticYacht: "diplomaticYacht",
+  ColonyShip: "colonyShip",
 } as const;
 export type ShipClass = (typeof ShipClass)[keyof typeof ShipClass];
 

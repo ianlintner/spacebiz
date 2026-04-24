@@ -39,3 +39,4 @@ export {
   generateShipMapSprites,
   SHIP_MAP_SIZE,
 } from "./ShipMapSprites.ts";
+export { getShipPortraitKey } from "./ShipTextures.ts";

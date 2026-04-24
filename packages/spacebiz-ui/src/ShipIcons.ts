@@ -19,6 +19,11 @@ export const SHIP_CLASS_LIST = [
   "starLiner",
   "megaHauler",
   "luxuryLiner",
+  "tug",
+  "refrigeratedHauler",
+  "armoredFreighter",
+  "diplomaticYacht",
+  "colonyShip",
 ] as const;
 
 export type ShipClassValue = (typeof SHIP_CLASS_LIST)[number];
@@ -33,6 +38,11 @@ export const SHIP_COLORS: Record<ShipClassValue, number> = {
   starLiner: 0x4488ff, // blue — passenger premium
   megaHauler: 0xff6644, // red-orange — massive cargo
   luxuryLiner: 0xd9a7ff, // purple — luxury
+  tug: 0xaaaaaa, // grey — utility workhorse
+  refrigeratedHauler: 0x88ddff, // frost blue — cryo cargo
+  armoredFreighter: 0x778899, // gunmetal — armored
+  diplomaticYacht: 0xffd700, // gold — prestige
+  colonyShip: 0x66bb88, // sage green — settlement
 };
 
 /** Map each ship class to a short human-readable label. */
@@ -45,6 +55,11 @@ export const SHIP_LABELS: Record<ShipClassValue, string> = {
   starLiner: "Star Liner",
   megaHauler: "Mega Hauler",
   luxuryLiner: "Luxury Liner",
+  tug: "System Tug",
+  refrigeratedHauler: "Refrig. Hauler",
+  armoredFreighter: "Armored Frt.",
+  diplomaticYacht: "Diplo. Yacht",
+  colonyShip: "Colony Ship",
 };
 
 /** Get the Phaser texture key for a ship class icon. */
@@ -348,6 +363,148 @@ export function generateShipIcons(
     ctx.lineTo(2, 23);
     ctx.closePath();
     ctx.fill();
+    tex.refresh();
+  }
+
+  // ── System Tug: tiny stubby utility ship with oversized engine ──
+  {
+    const { tex, ctx } = makeCanvas(getShipIconKey("tug"));
+    ctx.fillStyle = col;
+    // Stubby hull
+    ctx.beginPath();
+    ctx.moveTo(16, 12);
+    ctx.lineTo(8, 7);
+    ctx.lineTo(5, 9);
+    ctx.lineTo(5, 15);
+    ctx.lineTo(8, 17);
+    ctx.closePath();
+    ctx.fill();
+    // Oversized engine block
+    ctx.fillRect(2, 8, 5, 8);
+    // Grapple claw arm
+    ctx.fillRect(14, 10, 6, 1.5);
+    ctx.fillRect(19, 8, 2, 5);
+    tex.refresh();
+  }
+
+  // ── Refrigerated Hauler: ribbed insulated cargo ship ──
+  {
+    const { tex, ctx } = makeCanvas(getShipIconKey("refrigeratedHauler"));
+    ctx.fillStyle = col;
+    // Main hull
+    ctx.beginPath();
+    ctx.moveTo(19, 12);
+    ctx.lineTo(15, 5);
+    ctx.lineTo(4, 5);
+    ctx.lineTo(2, 8);
+    ctx.lineTo(2, 16);
+    ctx.lineTo(4, 19);
+    ctx.lineTo(15, 19);
+    ctx.closePath();
+    ctx.fill();
+    // Ribbed insulation panels
+    ctx.strokeStyle = "rgba(0,0,0,0.3)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(6 + i * 3, 5);
+      ctx.lineTo(6 + i * 3, 19);
+      ctx.stroke();
+    }
+    // Frost accent bar
+    ctx.fillStyle = "rgba(180,230,255,0.6)";
+    ctx.fillRect(4, 10, 12, 4);
+    tex.refresh();
+  }
+
+  // ── Armored Freighter: boxy reinforced ship with plating detail ──
+  {
+    const { tex, ctx } = makeCanvas(getShipIconKey("armoredFreighter"));
+    ctx.fillStyle = col;
+    // Thick hull
+    ctx.beginPath();
+    ctx.moveTo(20, 12);
+    ctx.lineTo(16, 5);
+    ctx.lineTo(3, 5);
+    ctx.lineTo(2, 8);
+    ctx.lineTo(2, 16);
+    ctx.lineTo(3, 19);
+    ctx.lineTo(16, 19);
+    ctx.closePath();
+    ctx.fill();
+    // Armor plating lines (heavier)
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(9, 5);
+    ctx.lineTo(9, 19);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(14, 5);
+    ctx.lineTo(14, 19);
+    ctx.stroke();
+    // Defense turret nub on top
+    ctx.fillStyle = col;
+    ctx.fillRect(10, 3, 3, 3);
+    tex.refresh();
+  }
+
+  // ── Diplomatic Yacht: sleek white-and-gold prestige craft ──
+  {
+    const { tex, ctx } = makeCanvas(getShipIconKey("diplomaticYacht"));
+    ctx.fillStyle = col;
+    // Sleek elongated hull
+    ctx.beginPath();
+    ctx.moveTo(22, 12);
+    ctx.lineTo(10, 6);
+    ctx.lineTo(3, 8);
+    ctx.lineTo(3, 16);
+    ctx.lineTo(10, 18);
+    ctx.closePath();
+    ctx.fill();
+    // Tall antenna mast
+    ctx.fillRect(8, 1, 1, 6);
+    ctx.fillRect(6, 1, 5, 1);
+    // Elegant tail fin pair
+    ctx.beginPath();
+    ctx.moveTo(3, 8);
+    ctx.lineTo(5, 8);
+    ctx.lineTo(2, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(3, 16);
+    ctx.lineTo(5, 16);
+    ctx.lineTo(2, 20);
+    ctx.closePath();
+    ctx.fill();
+    tex.refresh();
+  }
+
+  // ── Colony Ship: massive slow ship with habitation ring ──
+  {
+    const { tex, ctx } = makeCanvas(getShipIconKey("colonyShip"));
+    ctx.fillStyle = col;
+    // Long cargo spine
+    ctx.fillRect(3, 10, 18, 4);
+    // Blunt bow
+    ctx.beginPath();
+    ctx.moveTo(21, 10);
+    ctx.lineTo(23, 12);
+    ctx.lineTo(21, 14);
+    ctx.closePath();
+    ctx.fill();
+    // Engine block at tail
+    ctx.fillRect(1, 9, 4, 6);
+    // Habitation ring (circle around mid-spine)
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(12, 12, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    // Solar panel wings
+    ctx.fillRect(9, 5, 6, 2);
+    ctx.fillRect(9, 17, 6, 2);
     tex.refresh();
   }
 }

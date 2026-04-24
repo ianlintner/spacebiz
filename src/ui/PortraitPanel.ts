@@ -133,14 +133,18 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
   ): void {
     const theme = getTheme();
 
-    // Try loaded texture first (CEO portrait or planet portrait)
+    // Try loaded texture first (AI ship portrait, CEO portrait, or planet portrait)
     let usedImage = false;
     const explicitTexKey = data?.textureKey;
     const planetTexKey =
       type === "planet" && data?.planetType
         ? getPlanetPortraitTextureKey(data.planetType)
         : undefined;
-    const texKey = explicitTexKey ?? planetTexKey;
+    const shipPortraitKey =
+      type === "ship" && data?.shipClass
+        ? `ship-portrait-${data.shipClass}`
+        : undefined;
+    const texKey = explicitTexKey ?? planetTexKey ?? shipPortraitKey;
     if (texKey && this.scene.textures.exists(texKey)) {
       this.portraitGraphics.clear();
       this.portraitGraphics.setVisible(false);
