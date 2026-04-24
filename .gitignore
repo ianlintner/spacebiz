@@ -9,3 +9,7 @@ coverage/
 .mcp/
 .DS_Store
 
+qa-*.png
+.hive/issues.jsonl
+*.log
+page*.yml
