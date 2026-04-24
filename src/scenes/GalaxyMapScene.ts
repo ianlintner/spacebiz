@@ -27,6 +27,8 @@ import {
   buildTrafficPatrolWaypoints,
   getAvailableRouteSlots,
   getUsedRouteSlots,
+  getAvailableLocalRouteSlots,
+  getUsedLocalRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import type { RouteTrafficVisual } from "../game/routes/RouteManager.ts";
 
@@ -647,8 +649,8 @@ export class GalaxyMapScene extends Phaser.Scene {
     // ── HUD overlay elements (rendered by fixed uiCam only, immune to zoom) ──
     const hudObjects: Phaser.GameObjects.GameObject[] = [];
 
-    const slotsUsed = getUsedRouteSlots(state);
-    const slotsTotal = getAvailableRouteSlots(state);
+    const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
+    const slotsTotal = getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
     const slotBlocks =
       "\u25A0".repeat(slotsUsed) +
       "\u25A1".repeat(Math.max(0, slotsTotal - slotsUsed));

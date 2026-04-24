@@ -20,7 +20,7 @@ import { getAudioDirector } from "../audio/AudioDirector.ts";
 function formatCash(amount: number): string {
   const sign = amount < 0 ? "-" : "";
   const abs = Math.abs(Math.round(amount));
-  return sign + "\u00A7" + abs.toLocaleString();
+  return sign + "\u00A7" + abs.toLocaleString("en-US");
 }
 
 /** Grade the turn: S/A/B/C/D/F based on net-profit margin. */
@@ -338,7 +338,7 @@ export class TurnReportScene extends Phaser.Scene {
             this,
             "big_profit",
             "PROFITABLE!",
-            "+" + "\u00A7" + Math.round(lastTurn.netProfit).toLocaleString(),
+            "+" + "\u00A7" + Math.round(lastTurn.netProfit).toLocaleString("en-US"),
           );
         } else if (streakTurns >= 3) {
           MilestoneOverlay.show(
@@ -617,7 +617,7 @@ export class TurnReportScene extends Phaser.Scene {
         const cargoLine = this.add.text(
           mpContent.x + 16,
           marketY,
-          `${cargoType}: ${(amount as number).toLocaleString()} units`,
+          `${cargoType}: ${(amount as number).toLocaleString("en-US")} units`,
           {
             fontSize: `${theme.fonts.caption.size}px`,
             fontFamily: theme.fonts.caption.family,
@@ -633,7 +633,7 @@ export class TurnReportScene extends Phaser.Scene {
       const paxText = this.add.text(
         mpContent.x + 8,
         marketY + 4,
-        `Passengers: ${lastTurn.passengersTransported.toLocaleString()}`,
+        `Passengers: ${lastTurn.passengersTransported.toLocaleString("en-US")}`,
         {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,

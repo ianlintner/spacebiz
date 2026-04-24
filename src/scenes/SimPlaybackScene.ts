@@ -34,7 +34,7 @@ const MAX_ZOOM = 3.0;
 const ZOOM_STEP = 0.08;
 const DRAG_THRESHOLD = 5;
 function formatCash(amount: number): string {
-  return "\u00A7" + amount.toLocaleString();
+  return "\u00A7" + Math.round(amount).toLocaleString("en-US");
 }
 
 // Entry for the live competition leaderboard
@@ -1122,7 +1122,7 @@ export class SimPlaybackScene extends Phaser.Scene {
         this,
         "sim_complete",
         "SIM COMPLETE",
-        sign + "\u00A7" + Math.abs(Math.round(net)).toLocaleString() + " Net",
+        sign + "\u00A7" + Math.abs(Math.round(net)).toLocaleString("en-US") + " Net",
       );
     }
     this.time.timeScale = 1;

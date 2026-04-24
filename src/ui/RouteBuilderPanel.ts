@@ -867,8 +867,8 @@ class RouteBuilderPanel {
     return {
       originPrice: `Origin price: ${formatCash(originEntry.currentPrice)}`,
       destPrice: `Destination price: ${formatCash(destEntry.currentPrice)}`,
-      originSupply: `Origin  supply: ${originEntry.baseSupply}  demand: ${originEntry.baseDemand}`,
-      destDemand: `Dest  supply: ${destEntry.baseSupply}  demand: ${destEntry.baseDemand}`,
+      originSupply: `Origin  supply: ${Math.round(originEntry.baseSupply)}  demand: ${Math.round(originEntry.baseDemand)}`,
+      destDemand: `Dest  supply: ${Math.round(destEntry.baseSupply)}  demand: ${Math.round(destEntry.baseDemand)}`,
       trend: `Dest trend: ${trendArrow}`,
       saturation: `Dest saturation: ${satPct}%  ${satBar}`,
       saturationColor,
@@ -955,7 +955,7 @@ class RouteBuilderPanel {
     );
     if (latestState.cash < licenseFee) {
       this.statusValue.setText(
-        `\u26A0 Insufficient funds — license fee: §${licenseFee.toLocaleString()}`,
+        `\u26A0 Insufficient funds — license fee: §${licenseFee.toLocaleString("en-US")}`,
       );
       this.statusValue.setLabelColor(getTheme().colors.loss);
       return;

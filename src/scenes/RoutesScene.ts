@@ -37,6 +37,8 @@ import {
   removeCargoLocks,
   getAvailableRouteSlots,
   getUsedRouteSlots,
+  getAvailableLocalRouteSlots,
+  getUsedLocalRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import type { RouteOpportunity } from "../game/routes/RouteManager.ts";
 import {
@@ -590,8 +592,8 @@ export class RoutesScene extends Phaser.Scene {
     const filterLabel = this.finderCargoFilter
       ? getCargoLabel(this.finderCargoFilter)
       : "all cargo";
-    const slotsUsed = getUsedRouteSlots(state);
-    const slotsTotal = getAvailableRouteSlots(state);
+    const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
+    const slotsTotal = getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
     this.finderSummary.setText(
       `${profitableCount} ${filterLabel} routes found \u2022 Slots ${slotsUsed}/${slotsTotal} \u2022 ${availableShips} idle ships \u2022 §${state.cash.toLocaleString("en-US")} cash \u2022 Enter to create`,
     );
@@ -805,7 +807,7 @@ export class RoutesScene extends Phaser.Scene {
     if (state.cash < licenseFee) {
       const m2 = new Modal(this, {
         title: "Insufficient Funds",
-        body: `License fee: $${licenseFee.toLocaleString()}. You only have $${Math.floor(state.cash).toLocaleString()}.`,
+        body: `License fee: §${licenseFee.toLocaleString("en-US")}. You only have §${Math.floor(state.cash).toLocaleString("en-US")}.`,
         onOk: () => m2.destroy(),
       });
       m2.show();
@@ -1237,6 +1239,7 @@ export class RoutesScene extends Phaser.Scene {
         title: "Assign Ship",
       }),
     );
+    shipPanel.setDepth(1000);
 
     const content = shipPanel.getContentArea();
     const routeId = this.selectedRouteId;
@@ -1275,6 +1278,7 @@ export class RoutesScene extends Phaser.Scene {
         },
       }),
     );
+    shipList.setDepth(1000);
 
     for (const ship of availableShips) {
       const itemContainer = this.add.container(0, 0);
@@ -1309,7 +1313,7 @@ export class RoutesScene extends Phaser.Scene {
           layer.destroy();
         },
       }),
-    );
+    ).setDepth(1000);
   }
 
   private showSetCargo(): void {
@@ -1351,6 +1355,7 @@ export class RoutesScene extends Phaser.Scene {
         title: "Set Cargo Type",
       }),
     );
+    cargoPanel.setDepth(1000);
 
     const content = cargoPanel.getContentArea();
 
@@ -1382,6 +1387,7 @@ export class RoutesScene extends Phaser.Scene {
         },
       }),
     );
+    cargoList.setDepth(1000);
 
     for (const ct of cargoTypes) {
       const itemContainer = this.add.container(0, 0);
@@ -1404,6 +1410,6 @@ export class RoutesScene extends Phaser.Scene {
           layer.destroy();
         },
       }),
-    );
+    ).setDepth(1000);
   }
 }

@@ -527,7 +527,7 @@ export class SimSummaryScene extends Phaser.Scene {
           .text(
             pad + 240,
             y,
-            `\u00A7${Math.round(rank.netWorth).toLocaleString()}`,
+            `\u00A7${Math.round(rank.netWorth).toLocaleString("en-US")}`,
             {
               ...rowStyle,
               color: colorToString(theme.colors.text),
