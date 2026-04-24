@@ -20,6 +20,8 @@ import {
   getLayout,
 } from "../ui/index.ts";
 import { calculateShipValue } from "../game/fleet/FleetManager.ts";
+import { getHubUpkeep } from "../game/hub/HubManager.ts";
+import { getRevenueMultiplier } from "../game/hub/HubBonusCalculator.ts";
 
 import { getPortraitTextureKey } from "../data/portraits.ts";
 import { portraitLoader, PORTRAIT_PLACEHOLDER_KEY } from "../game/PortraitLoader.ts";
@@ -269,6 +271,50 @@ export class FinanceScene extends Phaser.Scene {
         "Total Net Profit",
         formatCash(totalProfit),
         totalProfit >= 0 ? theme.colors.profit : theme.colors.loss,
+      );
+    }
+
+    // ── Hub Station P&L ────────────────────────────────────────
+    if (state.stationHub !== null) {
+      const hub = state.stationHub;
+      y += 24;
+      const hubHeaderText = this.add.text(x, y, "Hub Station P&L", {
+        fontSize: `${theme.fonts.heading.size}px`,
+        fontFamily: theme.fonts.heading.family,
+        color: colorToString(theme.colors.accent),
+      });
+      container.add(hubHeaderText);
+      y += 40;
+
+      const hubUpkeep = getHubUpkeep(hub);
+      const revenueMultiplier = getRevenueMultiplier(hub);
+      const revenueBonusPct = Math.round((revenueMultiplier - 1) * 100);
+
+      // Estimate revenue bonus using last turn's revenue if available
+      const lastTurnRevenue =
+        history.length > 0 ? (history[history.length - 1]?.revenue ?? 0) : 0;
+      const estimatedRevenueBonus = Math.round(
+        lastTurnRevenue * (revenueMultiplier - 1),
+      );
+      const hubNet = estimatedRevenueBonus - hubUpkeep;
+
+      addRow("Hub Level", `${hub.level}`, theme.colors.text);
+      addRow("Rooms Installed", `${hub.rooms.length}`, theme.colors.text);
+      addRow(
+        "Upkeep / Turn",
+        formatCash(-hubUpkeep),
+        hubUpkeep > 0 ? theme.colors.loss : theme.colors.text,
+      );
+      addRow(
+        "Revenue Bonus",
+        `+${revenueBonusPct}%${lastTurnRevenue > 0 ? `  (≈ ${formatCash(estimatedRevenueBonus)}/turn)` : ""}`,
+        theme.colors.profit,
+      );
+      addSeparator();
+      addRow(
+        "Hub Net / Turn",
+        formatCash(hubNet),
+        hubNet >= 0 ? theme.colors.profit : theme.colors.loss,
       );
     }
 

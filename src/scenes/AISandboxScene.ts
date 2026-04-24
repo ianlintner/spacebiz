@@ -53,7 +53,7 @@ function truncate(text: string, maxLen: number): string {
 
 export interface SandboxSceneData {
   seed: number;
-  gameSize: "small" | "medium" | "large";
+  gameSize: "quick" | "standard" | "epic";
   galaxyShape: "spiral" | "elliptical" | "ring" | "irregular";
   companyCount: number;
   speed: string;

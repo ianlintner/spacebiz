@@ -325,19 +325,21 @@ export class MainMenuScene extends Phaser.Scene {
       });
     }
 
-    // Style Guide link — small caption-style button at bottom-right
-    const sgBtnW = 120;
-    const sgBtnH = 32;
-    new Button(this, {
-      x: L.gameWidth - sgBtnW - 16,
-      y: L.gameHeight - sgBtnH - 8,
-      width: sgBtnW,
-      height: sgBtnH,
-      label: "Style Guide",
-      onClick: () => {
-        window.open("./styleguide/index.html", "_blank");
-      },
-    });
+    // Style Guide link — only shown in development builds
+    if (import.meta.env.DEV) {
+      const sgBtnW = 120;
+      const sgBtnH = 32;
+      new Button(this, {
+        x: L.gameWidth - sgBtnW - 16,
+        y: L.gameHeight - sgBtnH - 8,
+        width: sgBtnW,
+        height: sgBtnH,
+        label: "Style Guide",
+        onClick: () => {
+          window.open("./styleguide/index.html", "_blank");
+        },
+      });
+    }
 
     // Restart scene on resize so layout recalculates
     const onResize = () => {

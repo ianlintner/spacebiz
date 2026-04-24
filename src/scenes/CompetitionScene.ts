@@ -9,6 +9,12 @@ import {
   createStarfield,
   getLayout,
 } from "../ui/index.ts";
+import {
+  getIntelTier,
+  buildRivalView,
+  getNextIntelUnlockDescription,
+} from "../game/intel/IntelLevel.ts";
+import type { IntelTier } from "../game/intel/IntelLevel.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -32,6 +38,7 @@ function personalityLabel(p: string): string {
 export class CompetitionScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
   private table!: DataTable;
+  private intelTier: IntelTier = 0;
 
   constructor() {
     super({ key: "CompetitionScene" });
@@ -48,6 +55,9 @@ export class CompetitionScene extends Phaser.Scene {
     const empires = state.galaxy.empires;
     const empireMap = new Map(empires.map((e) => [e.id, e]));
 
+    // Determine player's intel tier (gates what rival data is visible)
+    this.intelTier = getIntelTier(state);
+
     // Sidebar portrait
     this.portrait = new PortraitPanel(this, {
       x: L.sidebarLeft,
@@ -57,10 +67,22 @@ export class CompetitionScene extends Phaser.Scene {
     });
 
     const activeCount = companies.filter((c) => !c.bankrupt).length;
-    this.portrait.updatePortrait("company", 0, "Competition", [
+
+    // Show intel unlock hint if not at max tier
+    const intelHint = getNextIntelUnlockDescription(this.intelTier);
+    const sidebarStats: { label: string; value: string }[] = [
       { label: "Active", value: String(activeCount) },
       { label: "Bankrupt", value: String(companies.length - activeCount) },
-    ]);
+      {
+        label: "Intel Tier",
+        value: `${this.intelTier}/4`,
+      },
+    ];
+    if (intelHint) {
+      sidebarStats.push({ label: "Next Intel", value: intelHint.slice(0, 30) });
+    }
+
+    this.portrait.updatePortrait("company", 0, "Competition", sidebarStats);
 
     // Content panel
     const contentPanel = new Panel(this, {
@@ -74,17 +96,31 @@ export class CompetitionScene extends Phaser.Scene {
     const absX = L.mainContentLeft + content.x;
     const absY = L.contentTop + content.y;
 
-    // Build table rows
-    const rows = companies.map((company) => {
+    // Build table rows — use intel-gated views
+    const rows = companies.map((company, index) => {
       const empire = empireMap.get(company.empireId);
+      const view = buildRivalView(company, this.intelTier, index + 1, 0);
+
+      // Cash: only visible at Intel T4
+      const cashDisplay =
+        view.cash !== undefined ? formatCash(view.cash) : "???";
+
+      // Routes: only visible at Intel T3
+      const routesDisplay =
+        view.routeCount !== undefined ? view.routeCount : "???";
+
+      // Fleet: only visible at Intel T3
+      const fleetDisplay =
+        view.fleetSize !== undefined ? view.fleetSize : "???";
+
       return {
         companyId: company.id,
         name: company.name,
         empire: empire?.name ?? "Unknown",
         personality: personalityLabel(company.personality),
-        cash: formatCash(company.cash),
-        routes: company.activeRoutes.length,
-        fleet: company.fleet.length,
+        cash: cashDisplay,
+        routes: routesDisplay,
+        fleet: fleetDisplay,
         status: company.bankrupt ? "Bankrupt" : "Active",
       };
     });
@@ -102,9 +138,23 @@ export class CompetitionScene extends Phaser.Scene {
         { key: "name", label: "Company", width: 120 },
         { key: "empire", label: "Empire", width: 100 },
         { key: "personality", label: "Style", width: 100 },
-        { key: "cash", label: "Cash", width: 90 },
-        { key: "routes", label: "Routes", width: 60, align: "right" },
-        { key: "fleet", label: "Ships", width: 60, align: "right" },
+        {
+          key: "cash",
+          label: this.intelTier >= 4 ? "Cash" : "Cash (T4)",
+          width: 90,
+        },
+        {
+          key: "routes",
+          label: this.intelTier >= 3 ? "Routes" : "Routes (T3)",
+          width: 60,
+          align: "right",
+        },
+        {
+          key: "fleet",
+          label: this.intelTier >= 3 ? "Ships" : "Ships (T3)",
+          width: 60,
+          align: "right",
+        },
         { key: "status", label: "Status", width: 80, colorFn: statusColorFn },
       ],
       onRowSelect: (_rowIdx: number, rowData: Record<string, unknown>) => {
@@ -126,21 +176,63 @@ export class CompetitionScene extends Phaser.Scene {
 
     const state = gameStore.getState();
     const empire = state.galaxy.empires.find((e) => e.id === company.empireId);
+    const view = buildRivalView(company, this.intelTier, 0, 0);
 
     const assignedShips = company.activeRoutes.reduce(
       (sum: number, r) => sum + r.assignedShipIds.length,
       0,
     );
 
-    this.portrait.showCEO(company, [
+    const details: { label: string; value: string }[] = [
       { label: "Company", value: company.name },
       { label: "Empire", value: empire?.name ?? "Unknown" },
       { label: "Style", value: personalityLabel(company.personality) },
-      { label: "Cash", value: formatCash(company.cash) },
-      { label: "Routes", value: String(company.activeRoutes.length) },
-      { label: "Ships", value: String(company.fleet.length) },
-      { label: "Assigned", value: String(assignedShips) },
-      { label: "Status", value: company.bankrupt ? "BANKRUPT" : "Active" },
-    ]);
+    ];
+
+    // Tier 1: tech info
+    if (view.techBranch !== undefined) {
+      details.push({ label: "Tech Branch", value: view.techBranch });
+      details.push({
+        label: "Tech Tier",
+        value: `T${view.techTier ?? 0}`,
+      });
+    } else {
+      details.push({ label: "Tech Branch", value: "???" });
+    }
+
+    // Tier 2: hub + contracts
+    if (view.hubTier !== undefined) {
+      details.push({ label: "Hub Tier", value: String(view.hubTier) });
+      details.push({
+        label: "Contracts",
+        value: String(view.contractsCompleted ?? 0),
+      });
+    } else {
+      details.push({ label: "Hub Tier", value: "???" });
+    }
+
+    // Tier 3: routes + fleet
+    if (view.routeCount !== undefined) {
+      details.push({ label: "Routes", value: String(view.routeCount) });
+      details.push({ label: "Ships", value: String(view.fleetSize) });
+      details.push({ label: "Assigned", value: String(assignedShips) });
+    } else {
+      details.push({ label: "Routes", value: "???" });
+      details.push({ label: "Ships", value: "???" });
+    }
+
+    // Tier 4: cash
+    if (view.cash !== undefined) {
+      details.push({ label: "Cash", value: formatCash(view.cash) });
+    } else {
+      details.push({ label: "Cash", value: "???" });
+    }
+
+    details.push({
+      label: "Status",
+      value: company.bankrupt ? "BANKRUPT" : "Active",
+    });
+
+    this.portrait.showCEO(company, details);
   }
 }

@@ -451,6 +451,18 @@ export class ContractsScene extends Phaser.Scene {
     const origin = planets.find((p) => p.id === c.originPlanetId);
     const dest = planets.find((p) => p.id === c.destinationPlanetId);
 
+    // ── FUTURE: Negotiation Modal (Track 2.3) ──────────────────────────────
+    // Before showing the simple confirm dialog below, present a 3-option
+    // negotiation panel to the player using getNegotiationOptions() from
+    // ContractNegotiation.ts. The player picks one of:
+    //   • Standard Terms  — no changes (always available)
+    //   • Haggle          — 1.3× reward / 0.9× deadline, 60% success (rep ≥ 25)
+    //   • Early Bonus     — 1.5× reward + 1.5× deposit / 0.7× deadline (rep ≥ 50)
+    // On confirm, call acceptContractWithNegotiation(c.id, choice, state, rng)
+    // from ContractManager.ts instead of acceptContract().
+    // The backend logic is fully implemented; only the UI modal is pending.
+    // ───────────────────────────────────────────────────────────────────────
+
     new Modal(this, {
       title: "Accept Contract?",
       body: [

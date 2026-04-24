@@ -3,6 +3,11 @@ import { SeededRNG } from "../utils/SeededRNG.ts";
 import type { EventCategory, PlanetType, ShipClass } from "../data/types.ts";
 import { getTheme, lerpColor } from "./Theme.ts";
 
+// Re-export expression types from the Phaser-free module so callers can
+// import from either PortraitGenerator or PortraitExpression as needed.
+export type { PortraitExpression } from "./PortraitExpression.ts";
+export { getExpressionFromGameState } from "./PortraitExpression.ts";
+
 export type PortraitType =
   | "planet"
   | "ship"

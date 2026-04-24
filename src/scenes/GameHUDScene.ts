@@ -14,7 +14,7 @@ import {
 import { gameStore } from "../data/GameStore.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { checkTutorialAdvancement } from "../game/adviser/AdviserEngine.ts";
-import type { TutorialTrigger, AdviserMessage } from "../data/types.ts";
+import type { TutorialTrigger, AdviserMessage, NavTabId } from "../data/types.ts";
 import { TUTORIAL_STEPS } from "../game/adviser/TutorialDefinitions.ts";
 import {
   getAvailableRouteSlots,
@@ -22,6 +22,21 @@ import {
 } from "../game/routes/RouteManager.ts";
 import { getPortraitTextureKey } from "../data/portraits.ts";
 import { portraitLoader, PORTRAIT_PLACEHOLDER_KEY } from "../game/PortraitLoader.ts";
+import { getNewlyUnlockedTabs } from "../game/nav/NavUnlocks.ts";
+
+/** Mapping from NavTabId to the Phaser scene key used for that nav item. */
+const NAV_TAB_TO_SCENE: Record<NavTabId, string> = {
+  map: "GalaxyMapScene",
+  routes: "RoutesScene",
+  fleet: "FleetScene",
+  contracts: "ContractsScene",
+  market: "MarketScene",
+  research: "TechTreeScene",
+  finance: "FinanceScene",
+  empires: "EmpireScene",
+  rivals: "CompetitionScene",
+  hub: "StationBuilderScene",
+};
 
 function formatCash(amount: number): string {
   return "\u00A7" + amount.toLocaleString();
@@ -54,6 +69,8 @@ export class GameHUDScene extends Phaser.Scene {
   private navIcons = new Map<string, Phaser.GameObjects.Image>();
   private navHitAreas = new Map<string, Phaser.GameObjects.Rectangle>();
   private navTooltip!: Tooltip;
+  /** Tracks the tabs that were visible last time we updated, for unlock animation. */
+  private knownUnlockedNavTabs: NavTabId[] = [];
   private audioPanelObjects: Phaser.GameObjects.GameObject[] = [];
   private audioPanelOpen = false;
   private musicVolumeValueLabel: Label | null = null;
@@ -67,6 +84,7 @@ export class GameHUDScene extends Phaser.Scene {
   private actionPromptLabel!: Label;
   private routeSlotLabel!: Label;
   private researchLabel!: Label;
+  private apBadgeLabel!: Label;
   private navBadges = new Map<string, Phaser.GameObjects.Arc>();
   private endTurnModal: Modal | null = null;
   private readonly navIconButtonSize = 46;
@@ -227,6 +245,18 @@ export class GameHUDScene extends Phaser.Scene {
       }
     });
 
+    // AP badge (right of turn label, shows current action points)
+    const apCurrent = state.actionPoints?.current ?? 0;
+    const apMax = state.actionPoints?.max ?? 0;
+    this.apBadgeLabel = new Label(this, {
+      x: L.gameWidth / 2 + 80,
+      y: L.hudTopBarHeight / 2,
+      text: `\u2B21 ${apCurrent}/${apMax} AP`,
+      style: "caption",
+      color: apCurrent > 0 ? theme.colors.accent : theme.colors.textDim,
+    });
+    this.apBadgeLabel.setOrigin(0, 0.5);
+
     // Cash display (right-aligned, green/red conditional)
     this.cashLabel = new Label(this, {
       x: L.gameWidth - 20,
@@ -267,7 +297,8 @@ export class GameHUDScene extends Phaser.Scene {
       { label: "Routes", scene: "RoutesScene", icon: "icon-routes" },
       { label: "Fleet", scene: "FleetScene", icon: "icon-fleet" },
       { label: "Contracts", scene: "ContractsScene", icon: "icon-contracts" },
-      { label: "Market", scene: "MarketScene", icon: "icon-market" },
+      // Market nav removed (Track 2.6): market intel is now embedded in RouteBuilderPanel.
+      // MarketScene file is retained for potential future use.
       { label: "Research", scene: "TechTreeScene", icon: "icon-research" },
       { label: "Finance", scene: "FinanceScene", icon: "icon-finance" },
       { label: "Empires", scene: "EmpireScene", icon: "icon-empire" },
@@ -419,6 +450,7 @@ export class GameHUDScene extends Phaser.Scene {
     }
 
     this.updateNavBadges();
+    this.updateNavVisibility();
 
     // (Adviser tab is now integrated into the AdviserPanel drawer — see below)
 
@@ -654,6 +686,14 @@ export class GameHUDScene extends Phaser.Scene {
     this.turnLabel.setText(`Q${quarter} Year ${year}`);
     this.bottomTurnInfoLabel.setText(`Q${quarter} Y${year}`);
 
+    // AP badge update
+    const apCurrent = state.actionPoints?.current ?? 0;
+    const apMax = state.actionPoints?.max ?? 0;
+    this.apBadgeLabel.setText(`\u2B21 ${apCurrent}/${apMax} AP`);
+    this.apBadgeLabel.setLabelColor(
+      apCurrent > 0 ? theme.colors.accent : theme.colors.textDim,
+    );
+
     // Cash display with flash effect on change
     const newCash = state.cash;
     this.cashLabel.setText(formatCash(newCash));
@@ -706,6 +746,7 @@ export class GameHUDScene extends Phaser.Scene {
     this.endTurnButton.setVisible(state.phase === "planning");
     this.updateActionPrompt();
     this.updateNavBadges();
+    this.updateNavVisibility();
 
     // Route slot indicator
     const slotsUsed = getUsedRouteSlots(state);
@@ -1388,6 +1429,73 @@ export class GameHUDScene extends Phaser.Scene {
 
     this.actionPromptLabel.setText("✓ Ready — press ▶ to end turn");
     this.actionPromptLabel.setLabelColor(theme.colors.profit);
+  }
+
+  /**
+   * Shows/hides nav icons based on `unlockedNavTabs` in the current game state.
+   * Icons for locked tabs are hidden (alpha 0, non-interactive).
+   * Icons for newly unlocked tabs play a brief scale-in tween.
+   */
+  private updateNavVisibility(): void {
+    const state = gameStore.getState();
+    const unlocked = new Set(state.unlockedNavTabs);
+
+    // Determine which tabs are newly unlocked since last call
+    const newlyUnlocked = getNewlyUnlockedTabs(
+      this.knownUnlockedNavTabs,
+      state.unlockedNavTabs,
+    );
+    const newlyUnlockedScenes = new Set(
+      newlyUnlocked.map((tab) => NAV_TAB_TO_SCENE[tab]),
+    );
+
+    // Update visibility for every nav item
+    for (const [tabId, sceneKey] of Object.entries(NAV_TAB_TO_SCENE) as Array<[NavTabId, string]>) {
+      const icon = this.navIcons.get(sceneKey);
+      const hitArea = this.navHitAreas.get(sceneKey);
+      const bg = this.navBackgrounds.get(sceneKey);
+      const indicator = this.navIndicators.get(sceneKey);
+      const badge = this.navBadges.get(sceneKey);
+
+      if (!icon || !hitArea) continue;
+
+      const isUnlocked = unlocked.has(tabId);
+
+      if (isUnlocked) {
+        // Make visible
+        icon.setAlpha(1);
+        if (bg) bg.setAlpha(sceneKey === this.activeContentScene ? 0.32 : 0.0);
+        if (indicator) indicator.setVisible(sceneKey === this.activeContentScene);
+        if (badge) badge.setAlpha(1);
+
+        // Re-enable interaction if it was previously disabled due to locking
+        if (!hitArea.input) {
+          hitArea.setInteractive({ useHandCursor: true });
+        }
+
+        // Unlock animation for newly revealed tabs
+        if (newlyUnlockedScenes.has(sceneKey)) {
+          icon.setScale(0.5);
+          this.tweens.add({
+            targets: icon,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 300,
+            ease: "Back.Out",
+          });
+        }
+      } else {
+        // Hide: fully transparent, no interaction
+        icon.setAlpha(0);
+        if (bg) bg.setAlpha(0);
+        if (indicator) indicator.setVisible(false);
+        if (badge) badge.setAlpha(0);
+        hitArea.disableInteractive();
+      }
+    }
+
+    // Remember the current set for next call
+    this.knownUnlockedNavTabs = [...state.unlockedNavTabs];
   }
 
   private updateNavBadges(): void {

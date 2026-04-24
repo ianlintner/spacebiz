@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { AdviserMood } from "../data/types.ts";
 import { getTheme } from "./Theme.ts";
+import type { PortraitExpression } from "./PortraitExpression.ts";
 
 // ── Pixel grid helpers (same pattern as PortraitGenerator) ─
 
@@ -797,5 +798,53 @@ export function getMoodAccentColor(mood: AdviserMood): number {
     case "standby":
     default:
       return PALETTE.headsetGlow;
+  }
+}
+
+/**
+ * Apply a portrait expression tint/animation to a Phaser GameObject.
+ * This can be called on the adviser sprite or CEO portrait image.
+ *
+ *   happy   → warm tint (0xffdd88) + brief upward scale tween
+ *   neutral → clear tint
+ *   worried → cool tint (0x88aaff) + brief downward scale tween
+ *   angry   → red tint (0xff8888)
+ */
+export function setExpression(
+  scene: Phaser.Scene,
+  gameObject: Phaser.GameObjects.Components.Tint & Phaser.GameObjects.Components.Transform & { scene: Phaser.Scene },
+  expression: PortraitExpression,
+): void {
+  // Clear any existing tint first
+  (gameObject as unknown as Phaser.GameObjects.Image).clearTint();
+
+  switch (expression) {
+    case 'happy':
+      (gameObject as unknown as Phaser.GameObjects.Image).setTint(0xffdd88);
+      scene.tweens.add({
+        targets: gameObject,
+        scaleY: { from: gameObject.scaleY, to: gameObject.scaleY * 1.03 },
+        duration: 200,
+        yoyo: true,
+        ease: 'Sine.easeInOut',
+      });
+      break;
+    case 'worried':
+      (gameObject as unknown as Phaser.GameObjects.Image).setTint(0x88aaff);
+      scene.tweens.add({
+        targets: gameObject,
+        scaleY: { from: gameObject.scaleY, to: gameObject.scaleY * 0.97 },
+        duration: 200,
+        yoyo: true,
+        ease: 'Sine.easeInOut',
+      });
+      break;
+    case 'angry':
+      (gameObject as unknown as Phaser.GameObjects.Image).setTint(0xff8888);
+      break;
+    case 'neutral':
+    default:
+      // No tint applied — already cleared above
+      break;
   }
 }
