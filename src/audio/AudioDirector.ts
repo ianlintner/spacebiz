@@ -270,6 +270,7 @@ class AudioDirector {
   private usingExternalBgm = false;
   private externalBgm: HTMLAudioElement | null = null;
   private externalBgmTrackIndex = 0;
+  private externalBgmPlayAttempted = false;
   private settingsHydrated = false;
   private currentState: MusicState = "menu";
   private currentPlanningSubstate: PlanningSubstate = "galaxy";
@@ -1025,6 +1026,12 @@ class AudioDirector {
   private async playExternalBgmIfNeeded(): Promise<void> {
     if (!this.externalBgm || !this.enabled) return;
     if (!this.externalBgm.paused) return;
+    // iOS Safari leaves the element in a broken state after a failed play() —
+    // subsequent play() calls also fail until load() resets it.
+    if (this.externalBgmPlayAttempted) {
+      this.externalBgm.load();
+    }
+    this.externalBgmPlayAttempted = true;
     try {
       await this.externalBgm.play();
     } catch {
@@ -1055,6 +1062,7 @@ class AudioDirector {
     this.externalBgm.src = track.url;
     this.externalBgm.currentTime = 0;
     this.externalBgm.load();
+    this.externalBgmPlayAttempted = false; // load() already called; no pre-load needed
 
     if (shouldPlay) {
       void this.playExternalBgmIfNeeded();
@@ -1667,7 +1675,12 @@ class AudioDirector {
     if (this.usingExternalBgm) {
       this.initialized = true;
       this.applyBusVolumes();
-      void this.playExternalBgmIfNeeded();
+      // Only autoplay if the context is already running (e.g. scene transitions after
+      // first interaction). On initial prod load the context is suspended — resume()
+      // fires on the first pointer gesture instead.
+      if (this.ctx.state === "running") {
+        void this.playExternalBgmIfNeeded();
+      }
       return;
     }
 
