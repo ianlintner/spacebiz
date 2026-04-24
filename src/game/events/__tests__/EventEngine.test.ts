@@ -101,6 +101,7 @@ function makeStorytellerNeutral(): StorytellerState {
     headwindBias: 0,
     turnsInDebt: 0,
     consecutiveProfitTurns: 0,
+      turnsSinceLastDecision: 0,
   };
 }
 
@@ -147,7 +148,7 @@ function makeMinimalGameState(): GameState {
     companyName: "Test Corp",
     ceoName: "Commander",
     ceoPortrait: { portraitId: "ceo-01", category: "human" },
-    gameSize: "small",
+    gameSize: "standard",
     galaxyShape: "spiral",
     playerEmpireId: "",
     galaxy: {
@@ -199,6 +200,17 @@ function makeMinimalGameState(): GameState {
     empireTradePolicies: {},
     interEmpireCargoLocks: [],
     stationHub: null,
+    saveVersion: 6,
+    actionPoints: { current: 2, max: 2 },
+    turnBrief: [],
+    pendingChoiceEvents: [],
+    activeEventChains: [],
+    captains: [],
+    routeMarket: [],
+    researchEvents: [],
+    unlockedNavTabs: ["map", "routes", "fleet", "finance"] as import("../../../data/types.ts").NavTabId[],
+    reputationTier: "unknown" as import("../../../data/types.ts").ReputationTier,
+    localRouteSlots: 2,
   };
 }
 

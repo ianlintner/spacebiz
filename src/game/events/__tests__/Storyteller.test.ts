@@ -28,6 +28,7 @@ const INITIAL_STATE: StorytellerState = {
   headwindBias: 0,
   turnsInDebt: 0,
   consecutiveProfitTurns: 0,
+  turnsSinceLastDecision: 0,
 };
 
 describe("Storyteller", () => {
