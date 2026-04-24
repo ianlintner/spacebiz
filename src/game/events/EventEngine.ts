@@ -62,6 +62,10 @@ function computeWeights(
       // Player is struggling → boost tailwind events
       w += Math.abs(storyteller.headwindBias) * t.tailwindWeight;
     }
+    // Boost choice-requiring events when player hasn't made a decision recently
+    if (storyteller.turnsSinceLastDecision > 2 && t.requiresChoice) {
+      w += 1.5;
+    }
     return Math.max(0, w);
   });
 }
@@ -351,9 +355,8 @@ export function applyEventEffects(
       }
 
       case "modifySpeed": {
-        // Modify speed of ships assigned to routes in the target system
-        // For now we store the event — the simulation layer reads activeEvents
-        // No direct state mutation needed beyond adding to activeEvents
+        // Speed modifier is read by getRouteSpeedModifier from activeEvents
+        // No direct state mutation needed — the simulation layer reads activeEvents
         break;
       }
 
@@ -363,7 +366,8 @@ export function applyEventEffects(
       }
 
       case "blockPassengers": {
-        // Blocking is checked by simulation reading activeEvents
+        // Passenger block is handled in simulateShipOnRoute via isPassengerRouteBlocked
+        // No direct state mutation needed — the simulation layer reads activeEvents
         break;
       }
 
@@ -763,6 +767,82 @@ export function getEventTariffModifier(
     }
   }
   return modifier;
+}
+
+// ---------------------------------------------------------------------------
+// Speed Modifier & Passenger Block Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive the system ID from a planet ID: "planet-{si}-{syi}-{pi}" → "system-{si}-{syi}".
+ * Returns null if the planet ID does not match the expected format.
+ */
+function planetIdToSystemId(planetId: string): string | null {
+  const parts = planetId.split("-");
+  if (parts.length >= 4 && parts[0] === "planet") {
+    return `system-${parts[1]}-${parts[2]}`;
+  }
+  return null;
+}
+
+/**
+ * Returns the combined speed multiplier for a route based on active events.
+ * Each modifySpeed effect's value is a delta (e.g. -0.2 = 20% slower),
+ * so the multiplier contribution is (1 + value). Multipliers are composed
+ * multiplicatively: 1.0 = no change, 0.7 = 30% slower overall.
+ *
+ * modifySpeed events target a system ID. The effect applies to a route if
+ * either the origin or destination planet belongs to the targeted system.
+ */
+export function getRouteSpeedModifier(
+  activeEvents: GameEvent[],
+  route: ActiveRoute,
+): number {
+  const originSysId = planetIdToSystemId(route.originPlanetId);
+  const destSysId = planetIdToSystemId(route.destinationPlanetId);
+  let modifier = 1.0;
+  for (const event of activeEvents) {
+    for (const effect of event.effects) {
+      if (effect.type === "modifySpeed") {
+        const tid = effect.targetId;
+        if (
+          tid !== undefined &&
+          (tid === originSysId ||
+            tid === destSysId ||
+            tid === route.originPlanetId ||
+            tid === route.destinationPlanetId)
+        ) {
+          // effect.value is a delta (e.g. -0.2), so the multiplier is (1 + value)
+          modifier *= 1 + effect.value;
+        }
+      }
+    }
+  }
+  return modifier;
+}
+
+/**
+ * Returns true if any active event blocks passenger traffic on this route.
+ * A blockPassengers effect targets a planet; if either endpoint of the route
+ * matches, all passenger movement on the route is suspended.
+ */
+export function isPassengerRouteBlocked(
+  activeEvents: GameEvent[],
+  route: ActiveRoute,
+): boolean {
+  for (const event of activeEvents) {
+    for (const effect of event.effects) {
+      if (effect.type === "blockPassengers") {
+        if (
+          effect.targetId === route.originPlanetId ||
+          effect.targetId === route.destinationPlanetId
+        ) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------

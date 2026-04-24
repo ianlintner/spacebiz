@@ -3,7 +3,9 @@ import { gameStore } from "../data/GameStore.ts";
 import type { DiplomaticRelation, Empire } from "../data/types.ts";
 import {
   getTheme,
+  Button,
   DataTable,
+  Label,
   Panel,
   PortraitPanel,
   createStarfield,
@@ -41,6 +43,10 @@ function statusColor(value: unknown): number | null {
 export class EmpireScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
   private table!: DataTable;
+  private filterToPlayer = true;
+  private cachedRows: Array<Record<string, unknown>> = [];
+  private filterToggleBtn!: Button;
+  private filterSummaryLabel!: Label;
 
   constructor() {
     super({ key: "EmpireScene" });
@@ -83,11 +89,44 @@ export class EmpireScene extends Phaser.Scene {
     const absX = L.mainContentLeft + content.x;
     const absY = L.contentTop + content.y;
 
-    this.table = new DataTable(this, {
+    // ── Filter toolbar ────────────────────────────────
+    // With 8 empires the relation list is n*(n-1)/2 = 28 rows (56 for two-way
+    // tables); most players only care about relations involving their own
+    // empire. Default the filter on; players can toggle it off to see the
+    // full galactic picture.
+    const toolbarH = 32;
+    const toggleBtn = new Button(this, {
       x: absX,
       y: absY,
+      height: toolbarH - 4,
+      label: "Involves my empire",
+      autoWidth: true,
+      fontSize: 11,
+      onClick: () => {
+        this.filterToPlayer = !this.filterToPlayer;
+        this.filterToggleBtn.setActive(this.filterToPlayer);
+        this.applyRowFilter();
+      },
+    });
+    toggleBtn.setActive(this.filterToPlayer);
+    this.filterToggleBtn = toggleBtn;
+
+    this.filterSummaryLabel = new Label(this, {
+      x: absX + 8,
+      y: absY + toolbarH / 2,
+      text: "",
+      style: "caption",
+    });
+    // Align label vertically with button
+    this.filterSummaryLabel.setOrigin(0, 0.5);
+
+    const tableY = absY + toolbarH + 4;
+
+    this.table = new DataTable(this, {
+      x: absX,
+      y: tableY,
       width: content.width,
-      height: content.height - 20,
+      height: content.height - 20 - toolbarH - 4,
       columns: [
         { key: "empireA", label: "Empire A", width: 120 },
         { key: "empireB", label: "Empire B", width: 120 },
@@ -101,9 +140,32 @@ export class EmpireScene extends Phaser.Scene {
       },
     });
 
-    // Build and set row data
-    const rows = this.buildRelationRows(empires, relations, systems);
-    this.table.setRows(rows);
+    // Position summary label to the right of the toggle button
+    // (autoWidth button has variable width, so query after construction)
+    this.filterSummaryLabel.setPosition(
+      toggleBtn.x + toggleBtn.width + 8,
+      absY + toolbarH / 2,
+    );
+
+    // Build all rows once; the filter just hides/shows.
+    this.cachedRows = this.buildRelationRows(empires, relations, systems);
+    this.applyRowFilter();
+  }
+
+  private applyRowFilter(): void {
+    const playerId = gameStore.getState().playerEmpireId;
+    const visible = this.filterToPlayer && playerId
+      ? this.cachedRows.filter(
+          (r) =>
+            r["empireAId"] === playerId || r["empireBId"] === playerId,
+        )
+      : this.cachedRows;
+    this.table.setRows(visible);
+    const total = this.cachedRows.length;
+    const shown = visible.length;
+    this.filterSummaryLabel.setText(
+      this.filterToPlayer ? `${shown} of ${total} relations` : `${total} relations`,
+    );
   }
 
   private buildRelationRows(

@@ -1,4 +1,148 @@
 export type GamePhase = "planning" | "simulation" | "review";
+
+// ── Action Points ──────────────────────────────────────────────
+export interface ActionPoints {
+  current: number;
+  max: number;
+}
+
+// ── Captain types ──────────────────────────────────────────────
+export type CaptainTrait =
+  | "Cautious"
+  | "Reckless"
+  | "Opportunist"
+  | "Loyal"
+  | "Mercenary";
+
+export interface Captain {
+  id: string;
+  shipId: string;
+  name: string;
+  trait: CaptainTrait;
+  veteranTurns: number;
+  /** Turn of the last captain event for this captain */
+  lastEventTurn: number;
+}
+
+// ── Route Market types ─────────────────────────────────────────
+export type RouteRiskTag =
+  | "pirate_activity"
+  | "war_zone"
+  | "embargo_risk"
+  | "high_saturation"
+  | "volatile_market"
+  | "long_distance"
+  | "low_competition"
+  | "passenger_route";
+
+export interface RouteMarketEntry {
+  id: string;
+  originPlanetId: string;
+  destinationPlanetId: string;
+  cargoType: CargoType;
+  /** Estimated profit range shown before scouting */
+  estimatedProfitMin: number;
+  estimatedProfitMax: number;
+  /** Exact profit revealed only after scouting */
+  exactProfitPerTurn: number | null;
+  riskTags: RouteRiskTag[];
+  scouted: boolean;
+  expiresOnTurn: number;
+  /** AI company id if claimed, null if unclaimed */
+  claimedByAiId: string | null;
+}
+
+// ── Choice Event types ─────────────────────────────────────────
+export interface ChoiceOption {
+  id: string;
+  label: string;
+  outcomeDescription: string;
+  effects: EventEffect[];
+  requiresAp?: number;
+  requiresReputation?: number;
+  requiresCash?: number;
+}
+
+export interface ChoiceEvent {
+  id: string;
+  eventId: string;
+  prompt: string;
+  options: ChoiceOption[];
+  /** For chained events — the chain identifier */
+  chainId?: string;
+  /** Position in the chain (0-based) */
+  chainStep?: number;
+  turnCreated: number;
+}
+
+// ── Event Chain types ──────────────────────────────────────────
+export type EventChainId =
+  | "pirate_campaign"
+  | "diplomatic_crisis"
+  | "plague"
+  | "fuel_crisis"
+  | "black_market_scandal"
+  | "empire_succession";
+
+export interface EventChainState {
+  chainId: EventChainId;
+  currentStep: number;
+  totalSteps: number;
+  startTurn: number;
+  data: Record<string, string | number | boolean>;
+}
+
+// ── Turn Brief types ───────────────────────────────────────────
+export type TurnBriefCategory =
+  | "choice_event"
+  | "contract"
+  | "research"
+  | "captain"
+  | "warning"
+  | "opportunity";
+
+export type TurnBriefUrgency = "critical" | "high" | "medium" | "low";
+
+export interface TurnBriefCard {
+  id: string;
+  category: TurnBriefCategory;
+  urgency: TurnBriefUrgency;
+  title: string;
+  summary: string;
+  action: "resolve" | "dismiss";
+  /** Reference id for the linked entity (event id, contract id, etc.) */
+  linkedId?: string;
+}
+
+// ── Research Event types ───────────────────────────────────────
+export interface ResearchEvent {
+  id: string;
+  techId: string;
+  prompt: string;
+  options: ChoiceOption[];
+  turnCreated: number;
+}
+
+// ── Nav Tab types ──────────────────────────────────────────────
+export type NavTabId =
+  | "map"
+  | "routes"
+  | "fleet"
+  | "contracts"
+  | "market"
+  | "research"
+  | "finance"
+  | "empires"
+  | "rivals"
+  | "hub";
+
+// ── Reputation Tier ────────────────────────────────────────────
+export type ReputationTier =
+  | "notorious"   // < 25
+  | "unknown"     // 25–49
+  | "respected"   // 50–74
+  | "renowned"    // 75–89
+  | "legendary";  // 90+
 export type Trend = "rising" | "stable" | "falling";
 
 export const CargoType = {
@@ -44,12 +188,8 @@ export const EventCategory = {
 } as const;
 export type EventCategory = (typeof EventCategory)[keyof typeof EventCategory];
 
-export const GameSize = {
-  Small: "small",
-  Medium: "medium",
-  Large: "large",
-} as const;
-export type GameSize = (typeof GameSize)[keyof typeof GameSize];
+/** @deprecated Use GamePreset from constants.ts instead */
+export type GameSize = "quick" | "standard" | "epic";
 
 export const GalaxyShape = {
   Spiral: "spiral",
@@ -290,6 +430,8 @@ export interface Ship {
   purchaseCost: number;
   maintenanceCost: number;
   assignedRouteId: string | null;
+  /** Captain assigned to this ship, if any */
+  captainId?: string;
 }
 
 export interface ActiveRoute {
@@ -395,6 +537,8 @@ export interface StorytellerState {
   headwindBias: number;
   turnsInDebt: number;
   consecutiveProfitTurns: number;
+  /** Turns since the player last made a meaningful decision (choice event) */
+  turnsSinceLastDecision: number;
 }
 
 // ── Adviser types ──────────────────────────────────────────
@@ -443,6 +587,16 @@ export interface AdviserState {
   statsAdviserHindered: number;
 }
 
+// ── AI Hub State ───────────────────────────────────────────
+
+export interface AIHubState {
+  tier: number; // 0–3
+  bonusRevenueMultiplier: number; // e.g. 1.05 at tier 1
+  bonusFuelMultiplier: number; // e.g. 0.95 at tier 1
+  bonusMaintenanceMultiplier: number; // e.g. 0.97
+  lastUpgradeTurn: number;
+}
+
 export interface AICompany {
   id: string;
   name: string;
@@ -460,6 +614,12 @@ export interface AICompany {
   generation?: number;
   ceoName: string;
   ceoPortrait: CharacterPortrait;
+  /** AI tech research state (Wave 3) */
+  techState?: TechState;
+  /** AI abstract hub state (Wave 3) */
+  aiHub?: AIHubState;
+  /** Number of contracts this AI has completed (Wave 3) */
+  contractsCompleted?: number;
 }
 
 // ── Contract types ─────────────────────────────────────────
@@ -485,6 +645,8 @@ export interface Contract {
   status: ContractStatus;
   linkedRouteId: string | null;
   turnsWithoutShip: number;
+  /** AI company id that accepted this contract (Wave 3) */
+  aiCompanyId?: string;
 }
 
 // ── Empire trade policy types ──────────────────────────────
@@ -662,6 +824,8 @@ export interface GameState {
 
   // Phase 3: Strategic Depth
   routeSlots: number;
+  /** Separate pool of local (intra-system) route slots — starts at 2 */
+  localRouteSlots: number;
   unlockedEmpireIds: string[];
   contracts: Contract[];
   tech: TechState;
@@ -676,4 +840,26 @@ export interface GameState {
 
   // Phase 5: Hub Station
   stationHub: StationHub | null;
+
+  // Phase 6: Interaction Overhaul
+  /** Save file version — used to detect incompatible saves */
+  saveVersion: number;
+  /** Action points for the current turn */
+  actionPoints: ActionPoints;
+  /** Cards shown in the turn brief panel at planning phase start */
+  turnBrief: TurnBriefCard[];
+  /** Pending choice events awaiting player decision */
+  pendingChoiceEvents: ChoiceEvent[];
+  /** Active event chains */
+  activeEventChains: EventChainState[];
+  /** Captain roster — one per ship */
+  captains: Captain[];
+  /** Curated route market entries for the current turn */
+  routeMarket: RouteMarketEntry[];
+  /** Active research events awaiting player decision */
+  researchEvents: ResearchEvent[];
+  /** Which nav tabs have been unlocked (progressive reveal) */
+  unlockedNavTabs: NavTabId[];
+  /** Derived reputation tier */
+  reputationTier: ReputationTier;
 }

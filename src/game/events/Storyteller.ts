@@ -68,10 +68,14 @@ export function updateStorytellerState(
     headwindBias = (playerHealthScore - 40) / 40;
   }
 
+  // Increment turns since last player decision
+  const turnsSinceLastDecision = state.turnsSinceLastDecision + 1;
+
   return {
     playerHealthScore,
     headwindBias,
     turnsInDebt,
     consecutiveProfitTurns,
+    turnsSinceLastDecision,
   };
 }

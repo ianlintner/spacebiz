@@ -7,7 +7,7 @@ export type SimLogLevel = "summary" | "standard" | "verbose";
 
 export interface SimulationConfig {
   seed: number;
-  gameSize: "small" | "medium" | "large";
+  gameSize: "quick" | "standard" | "epic";
   galaxyShape: "spiral" | "elliptical" | "ring" | "irregular";
   companyCount: number;
   maxTurns: number;

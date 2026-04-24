@@ -14,14 +14,13 @@ import type {
   StarSystem,
   Planet,
   Hyperlane,
-  GameSize,
   GalaxyShape as GalaxyShapeT,
   HyperlaneDensity as HyperlaneDensityT,
   PlanetType as PlanetTypeT,
   EmpireDisposition as EmpireDispositionT,
 } from "../data/types.ts";
 import {
-  GAME_SIZE_CONFIGS,
+  GAME_LENGTH_PRESETS,
   TARIFF_FRIENDLY_MIN,
   TARIFF_FRIENDLY_MAX,
   TARIFF_NEUTRAL_MIN,
@@ -32,6 +31,7 @@ import {
   HYPERLANE_SHAPE_BIAS,
   HYPERLANE_MIN_CONNECTIONS,
 } from "../data/constants.ts";
+import type { GamePreset } from "../data/constants.ts";
 
 export interface GalaxyData {
   sectors: Sector[];
@@ -482,14 +482,14 @@ function generateSystemPoints(
 
 export function generateGalaxy(
   seed: number,
-  gameSize: GameSize = "small",
+  gamePreset: GamePreset = "standard",
   galaxyShape: GalaxyShapeT = "spiral",
   hyperlaneDensity: HyperlaneDensityT = HyperlaneDensity.Medium,
 ): GalaxyData {
   const rng = new SeededRNG(seed);
   const nameGen = new NameGenerator(rng);
 
-  const config = GAME_SIZE_CONFIGS[gameSize];
+  const config = GAME_LENGTH_PRESETS[gamePreset];
 
   const sectors: Sector[] = [];
   const empires: Empire[] = [];

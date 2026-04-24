@@ -95,8 +95,10 @@ export {
   getCargoIconKey,
   getCargoColor,
   getCargoLabel,
+  getCargoShortLabel,
   CARGO_COLORS,
   CARGO_LABELS,
+  CARGO_SHORT_LABELS,
   CARGO_ICON_PREFIX,
   CARGO_TYPE_LIST,
 } from "./CargoIcons.ts";

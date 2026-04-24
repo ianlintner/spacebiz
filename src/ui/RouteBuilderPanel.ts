@@ -110,7 +110,7 @@ class RouteBuilderPanel {
   private readonly panelX: number;
   private readonly panelY: number;
   private readonly panelWidth = 620;
-  private readonly panelHeight = 620;
+  private readonly panelHeight = 760;
   private originIndex: number;
   private destinationIndex: number;
   private cargoIndex: number;
@@ -134,6 +134,13 @@ class RouteBuilderPanel {
   private fieldLabels = new Map<FieldKey, Label>();
   private fieldValues = new Map<FieldKey, Label>();
   private miniMap: MiniMap | null = null;
+  // Market Intel labels
+  private mktOriginPriceValue!: Label;
+  private mktDestPriceValue!: Label;
+  private mktOriginSupplyValue!: Label;
+  private mktDestDemandValue!: Label;
+  private mktTrendValue!: Label;
+  private mktSaturationValue!: Label;
 
   constructor(
     scene: Phaser.Scene,
@@ -257,6 +264,31 @@ class RouteBuilderPanel {
     this.fuelValue = this.createSummaryLabel(content.x, rowY);
     rowY += 24;
     this.profitValue = this.createSummaryLabel(content.x, rowY);
+    rowY += 36;
+
+    // ── Market Intel section ──────────────────────────────────
+    const mktTitle = new Label(scene, {
+      x: this.panelX + content.x,
+      y: this.panelY + rowY,
+      text: "Market Intel",
+      style: "body",
+      color: getTheme().colors.accent,
+    });
+    mktTitle.setDepth(DEPTH_MODAL);
+    layer.track(mktTitle);
+    rowY += 26;
+
+    this.mktOriginPriceValue = this.createSummaryLabel(content.x, rowY);
+    rowY += 22;
+    this.mktDestPriceValue = this.createSummaryLabel(content.x, rowY);
+    rowY += 22;
+    this.mktOriginSupplyValue = this.createSummaryLabel(content.x, rowY);
+    rowY += 22;
+    this.mktDestDemandValue = this.createSummaryLabel(content.x, rowY);
+    rowY += 22;
+    this.mktTrendValue = this.createSummaryLabel(content.x, rowY);
+    rowY += 22;
+    this.mktSaturationValue = this.createSummaryLabel(content.x, rowY);
 
     // Mini-map: positioned bottom-right, above the confirm buttons
     const miniMapWidth = 160;
@@ -573,6 +605,16 @@ class RouteBuilderPanel {
           : theme.colors.loss,
     );
 
+    // Market Intel
+    const mkt = this.buildMarketIntel();
+    this.mktOriginPriceValue.setText(mkt.originPrice);
+    this.mktDestPriceValue.setText(mkt.destPrice);
+    this.mktOriginSupplyValue.setText(mkt.originSupply);
+    this.mktDestDemandValue.setText(mkt.destDemand);
+    this.mktTrendValue.setText(mkt.trend);
+    this.mktSaturationValue.setText(mkt.saturation);
+    this.mktSaturationValue.setLabelColor(mkt.saturationColor);
+
     for (const [field, label] of this.fieldLabels) {
       const isActive = this.fieldOrder[this.focusedFieldIndex] === field;
       label.setLabelColor(
@@ -732,6 +774,7 @@ class RouteBuilderPanel {
       routePreview,
       previewShip as Ship,
       state.market,
+      state,
     );
     const fuel = estimateRouteFuelCost(
       routePreview,
@@ -756,6 +799,79 @@ class RouteBuilderPanel {
       fuelLabel: formatCash(fuel),
       profitLabel: formatCash(profit),
       profitValue: profit,
+    };
+  }
+
+  private buildMarketIntel(): {
+    originPrice: string;
+    destPrice: string;
+    originSupply: string;
+    destDemand: string;
+    trend: string;
+    saturation: string;
+    saturationColor: number;
+  } {
+    const theme = getTheme();
+    const origin = this.getSelectedOrigin();
+    const destination = this.getSelectedDestination();
+    const cargo = this.getSelectedCargo();
+    const state = gameStore.getState();
+
+    const noData = {
+      originPrice: "Origin price: —",
+      destPrice: "Destination price: —",
+      originSupply: "Origin supply: —",
+      destDemand: "Destination demand: —",
+      trend: "Trend: —",
+      saturation: "Destination saturation: —",
+      saturationColor: theme.colors.textDim,
+    };
+
+    if (!origin || !destination || origin.id === destination.id) {
+      return noData;
+    }
+
+    const originMarket = state.market.planetMarkets[origin.id];
+    const destMarket = state.market.planetMarkets[destination.id];
+
+    if (!originMarket || !destMarket) {
+      return noData;
+    }
+
+    const originEntry = originMarket[cargo];
+    const destEntry = destMarket[cargo];
+
+    if (!originEntry || !destEntry) {
+      return noData;
+    }
+
+    const trendArrow =
+      destEntry.trend === "rising"
+        ? "\u25B2 rising"
+        : destEntry.trend === "falling"
+          ? "\u25BC falling"
+          : "\u2500 stable";
+
+    const satPct = Math.round(destEntry.saturation * 100);
+    let saturationColor: number;
+    if (satPct >= 80) {
+      saturationColor = theme.colors.loss;
+    } else if (satPct >= 50) {
+      saturationColor = theme.colors.accent;
+    } else {
+      saturationColor = theme.colors.profit;
+    }
+
+    const satBar = buildSaturationBar(destEntry.saturation);
+
+    return {
+      originPrice: `Origin price: ${formatCash(originEntry.currentPrice)}`,
+      destPrice: `Destination price: ${formatCash(destEntry.currentPrice)}`,
+      originSupply: `Origin  supply: ${originEntry.baseSupply}  demand: ${originEntry.baseDemand}`,
+      destDemand: `Dest  supply: ${destEntry.baseSupply}  demand: ${destEntry.baseDemand}`,
+      trend: `Dest trend: ${trendArrow}`,
+      saturation: `Dest saturation: ${satPct}%  ${satBar}`,
+      saturationColor,
     };
   }
 
@@ -1033,6 +1149,12 @@ function templateToPreviewShip(template: ShipTemplate): PreviewShip {
 function wrapIndex(index: number, length: number): number {
   if (length <= 0) return 0;
   return ((index % length) + length) % length;
+}
+
+/** Build a simple ASCII saturation bar (10 segments) */
+function buildSaturationBar(saturation: number): string {
+  const filled = Math.round(Math.min(1, Math.max(0, saturation)) * 10);
+  return "[" + "\u2588".repeat(filled) + "\u2591".repeat(10 - filled) + "]";
 }
 
 function formatCash(value: number): string {

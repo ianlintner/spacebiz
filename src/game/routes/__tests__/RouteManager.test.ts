@@ -154,7 +154,7 @@ function makeTrafficState(overrides: Partial<GameState> = {}): GameState {
     turn: 1,
     maxTurns: 100,
     phase: "planning",
-    gameSize: "small",
+    gameSize: "standard",
     galaxyShape: "spiral",
     cash: 100000,
     loans: [],
@@ -183,6 +183,7 @@ function makeTrafficState(overrides: Partial<GameState> = {}): GameState {
       headwindBias: 0,
       turnsInDebt: 0,
       consecutiveProfitTurns: 0,
+      turnsSinceLastDecision: 0,
     },
     adviser: {
       tutorialStepIndex: 0,
@@ -211,6 +212,17 @@ function makeTrafficState(overrides: Partial<GameState> = {}): GameState {
     hyperlanes: [],
     borderPorts: [],
     stationHub: null,
+    saveVersion: 6,
+    actionPoints: { current: 2, max: 2 },
+    turnBrief: [],
+    pendingChoiceEvents: [],
+    activeEventChains: [],
+    captains: [],
+    routeMarket: [],
+    researchEvents: [],
+    unlockedNavTabs: ["map", "routes", "fleet", "finance"] as import("../../../data/types.ts").NavTabId[],
+    reputationTier: "unknown" as import("../../../data/types.ts").ReputationTier,
+    localRouteSlots: 2,
     ...overrides,
   };
 }
@@ -269,17 +281,21 @@ describe("RouteManager", () => {
   });
 
   describe("calculateTripsPerTurn", () => {
-    it("returns floor of TURN_DURATION / (distance * 2 / speed)", () => {
-      // TURN_DURATION = 100, distance = 10, speed = 4
-      // roundTrip = 10 * 2 / 4 = 5
-      // trips = floor(100 / 5) = 20
-      const trips = calculateTripsPerTurn(10, 4);
-      expect(trips).toBe(20);
+    it("returns floor of TURN_DURATION / (distance * 2 / speed), capped at MAX_TRIPS_PER_TURN", () => {
+      // TURN_DURATION = 100, MAX_TRIPS_PER_TURN = 10
+      // distance = 10, speed = 4: roundTrip = 5, raw trips = 20, capped to 10
+      const tripsShort = calculateTripsPerTurn(10, 4);
+      expect(tripsShort).toBe(10);
+
+      // distance = 100, speed = 4: roundTrip = 50, raw trips = 2, under cap
+      const tripsLong = calculateTripsPerTurn(100, 4);
+      expect(tripsLong).toBe(2);
     });
 
-    it("faster ships make more trips", () => {
-      const slowTrips = calculateTripsPerTurn(10, 2);
-      const fastTrips = calculateTripsPerTurn(10, 8);
+    it("faster ships make more trips when both are under the cap", () => {
+      // distance = 100: speed=2 → floor(100/100)=1, speed=8 → floor(100/25)=4
+      const slowTrips = calculateTripsPerTurn(100, 2);
+      const fastTrips = calculateTripsPerTurn(100, 8);
 
       expect(fastTrips).toBeGreaterThan(slowTrips);
     });

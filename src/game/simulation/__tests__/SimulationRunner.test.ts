@@ -15,7 +15,7 @@ function makeConfig(
 ): SimulationConfig {
   return {
     seed: 42,
-    gameSize: "small",
+    gameSize: "standard",
     galaxyShape: "spiral",
     companyCount: 4,
     maxTurns: 10,
@@ -142,7 +142,7 @@ describe("SimulationRunner.run", () => {
   });
 
   it("handles different game sizes", () => {
-    for (const size of ["small", "medium", "large"] as const) {
+    for (const size of ["quick", "standard", "epic"] as const) {
       const runner = new SimulationRunner();
       const result = runner.run(makeConfig({ gameSize: size, maxTurns: 3 }));
       expect(result.summary.totalTurns).toBeGreaterThan(0);

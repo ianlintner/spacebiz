@@ -14,11 +14,17 @@ import type {
 import { CargoType as CargoTypeEnum } from "../../data/types.ts";
 import {
   TURN_DURATION,
+  MAX_TRIPS_PER_TURN,
   SHIP_TEMPLATES,
   BASE_LICENSE_FEE,
   LICENSE_FEE_DISTANCE_DIVISOR,
   LICENSE_FEE_ROUTE_ESCALATION,
+  INTRA_SYSTEM_REVENUE_MULTIPLIER,
+  DISTANCE_PREMIUM_RATE,
+  DISTANCE_PREMIUM_CAP,
 } from "../../data/constants.ts";
+import { calculatePrice } from "../economy/PriceCalculator.ts";
+import { getLicenseFeeMultiplier } from "../reputation/ReputationEffects.ts";
 import type { ShipClass } from "../../data/types.ts";
 import { getTechRouteSlotBonus } from "../tech/TechEffects.ts";
 import { getRouteSlotBonus } from "../hub/HubBonusCalculator.ts";
@@ -83,7 +89,7 @@ export function calculateDistance(
 
 /**
  * How many round trips a ship can make in one turn.
- * = floor(TURN_DURATION / (distance * 2 / speed)), min 1
+ * = floor(TURN_DURATION / (distance * 2 / speed)), min 1, capped at MAX_TRIPS_PER_TURN.
  */
 export function calculateTripsPerTurn(
   distance: number,
@@ -91,28 +97,51 @@ export function calculateTripsPerTurn(
 ): number {
   const roundTripTime = (distance * 2) / shipSpeed;
   if (roundTripTime <= 0) return 1;
-  return Math.max(1, Math.floor(TURN_DURATION / roundTripTime));
+  return Math.min(
+    MAX_TRIPS_PER_TURN,
+    Math.max(1, Math.floor(TURN_DURATION / roundTripTime)),
+  );
 }
 
 /**
  * Calculate the one-time license fee to open a new route.
  * Scales with distance and escalates with each additional route.
+ * Optionally applies a reputation-based multiplier.
  *
- * Fee = BASE_LICENSE_FEE × max(1, distance / 100) × (1 + existingRoutes × 0.25)
+ * Fee = BASE_LICENSE_FEE × max(1, distance / 100) × (1 + existingRoutes × 0.25) × reputationMultiplier
  */
 export function calculateLicenseFee(
   distance: number,
   existingRouteCount: number,
+  reputation?: number,
 ): number {
   const distMult = Math.max(1.0, distance / LICENSE_FEE_DISTANCE_DIVISOR);
   const routeMult = 1.0 + existingRouteCount * LICENSE_FEE_ROUTE_ESCALATION;
-  return Math.round(BASE_LICENSE_FEE * distMult * routeMult);
+  const repMult = reputation !== undefined ? getLicenseFeeMultiplier(reputation) : 1.0;
+  return Math.round(BASE_LICENSE_FEE * distMult * routeMult * repMult);
+}
+
+// ── Local Route Helpers ────────────────────────────────────────────────
+
+/**
+ * Returns true when origin and destination are in the same star system.
+ * These routes use the separate localRouteSlots pool.
+ */
+export function isLocalRoute(
+  route: { originPlanetId: string; destinationPlanetId: string },
+  state: Pick<GameState, 'galaxy'>,
+): boolean {
+  const planets = state.galaxy.planets;
+  const originPlanet = planets.find((p) => p.id === route.originPlanetId);
+  const destPlanet = planets.find((p) => p.id === route.destinationPlanetId);
+  if (!originPlanet || !destPlanet) return false;
+  return originPlanet.systemId === destPlanet.systemId;
 }
 
 // ── Route Slot Helpers ─────────────────────────────────────────────────
 
 /**
- * Total route slots available (base + tech bonus).
+ * Total main route slots available (base + tech bonus).
  */
 export function getAvailableRouteSlots(state: GameState): number {
   return (
@@ -123,17 +152,38 @@ export function getAvailableRouteSlots(state: GameState): number {
 }
 
 /**
- * Number of route slots currently in use.
+ * Total local route slots available.
  */
-export function getUsedRouteSlots(state: GameState): number {
-  return state.activeRoutes.length;
+export function getAvailableLocalRouteSlots(state: GameState): number {
+  return state.localRouteSlots ?? 2;
 }
 
 /**
- * Number of free route slots remaining.
+ * Number of main route slots currently in use (excludes local routes).
+ */
+export function getUsedRouteSlots(state: GameState): number {
+  return state.activeRoutes.filter((r) => !isLocalRoute(r, state)).length;
+}
+
+/**
+ * Number of local route slots currently in use.
+ */
+export function getUsedLocalRouteSlots(state: GameState): number {
+  return state.activeRoutes.filter((r) => isLocalRoute(r, state)).length;
+}
+
+/**
+ * Number of free main route slots remaining.
  */
 export function getFreeRouteSlots(state: GameState): number {
   return Math.max(0, getAvailableRouteSlots(state) - getUsedRouteSlots(state));
+}
+
+/**
+ * Number of free local route slots remaining.
+ */
+export function getFreeLocalRouteSlots(state: GameState): number {
+  return Math.max(0, getAvailableLocalRouteSlots(state) - getUsedLocalRouteSlots(state));
 }
 
 export interface RouteTrafficVisual {
@@ -547,14 +597,14 @@ export function deleteRoute(
 
 /**
  * Estimate revenue for a route+ship for one turn.
- * Revenue = trips * capacity * destinationPrice
- * For passengers: uses passengerCapacity and Passengers price at destination
- * For cargo: uses cargoCapacity and cargo price at destination
+ * Matches the TurnSimulator formula: applies calculatePrice, distancePremium,
+ * and INTRA_SYSTEM_REVENUE_MULTIPLIER so the displayed estimate is accurate.
  */
 export function estimateRouteRevenue(
   route: ActiveRoute,
   ship: Ship,
   market: MarketState,
+  state?: Pick<GameState, "galaxy">,
 ): number {
   if (!route.cargoType) return 0;
 
@@ -562,7 +612,7 @@ export function estimateRouteRevenue(
   if (!destMarket) return 0;
 
   const destEntry = destMarket[route.cargoType];
-  const price = destEntry.currentPrice;
+  const price = calculatePrice(destEntry, route.cargoType);
 
   const trips = calculateTripsPerTurn(route.distance, ship.speed);
 
@@ -572,7 +622,29 @@ export function estimateRouteRevenue(
       ? ship.passengerCapacity
       : ship.cargoCapacity;
 
-  return Math.round(trips * capacity * price * 100) / 100;
+  const totalCargoMoved = capacity * trips;
+
+  // Determine intra-system status: extract system from planet ID "planet-{si}-{syi}-{pi}"
+  const originParts = route.originPlanetId.split("-");
+  const destParts = route.destinationPlanetId.split("-");
+  const isIntraSystem =
+    state != null
+      ? isLocalRoute(route, state)
+      : originParts.length >= 4 &&
+        destParts.length >= 4 &&
+        originParts[0] === "planet" &&
+        destParts[0] === "planet" &&
+        `${originParts[1]}-${originParts[2]}` === `${destParts[1]}-${destParts[2]}`;
+
+  const distancePremium = Math.min(
+    DISTANCE_PREMIUM_CAP,
+    route.distance * DISTANCE_PREMIUM_RATE,
+  );
+  const revenueMultiplier = isIntraSystem
+    ? INTRA_SYSTEM_REVENUE_MULTIPLIER
+    : 1 + distancePremium;
+
+  return Math.round(totalCargoMoved * price * revenueMultiplier * 100) / 100;
 }
 
 /**
@@ -720,7 +792,7 @@ export function scanAllRouteOpportunities(
         }
 
         const destEntry = destMarket[cargoType];
-        const price = destEntry.currentPrice;
+        const price = calculatePrice(destEntry, cargoType);
         const isPassenger = cargoType === "passengers";
 
         // Try owned ships first
@@ -737,7 +809,10 @@ export function scanAllRouteOpportunities(
         if (capacity <= 0) continue;
 
         const trips = calculateTripsPerTurn(distance, candidate.speed);
-        const revenue = Math.round(trips * capacity * price * 100) / 100;
+        const isIntraSystem = origin.systemId === dest.systemId;
+        const distancePremium = Math.min(DISTANCE_PREMIUM_CAP, distance * DISTANCE_PREMIUM_RATE);
+        const revenueMultiplier = isIntraSystem ? INTRA_SYSTEM_REVENUE_MULTIPLIER : 1 + distancePremium;
+        const revenue = Math.round(trips * capacity * price * revenueMultiplier * 100) / 100;
         const totalDist = trips * distance * 2;
         const fuelCost =
           Math.round(

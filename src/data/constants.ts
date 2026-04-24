@@ -3,13 +3,34 @@ import {
   type ShipTemplate,
   PlanetType,
   CargoType,
-  GameSize,
   TechBranch,
   HyperlaneDensity,
   HubRoomType,
   type Technology,
   type HubRoomDefinition,
+  type NavTabId,
 } from "./types";
+
+// ── Save Version ───────────────────────────────────────────────
+/** Increment when GameState shape changes in a save-incompatible way */
+export const SAVE_VERSION = 6;
+
+// ── Action Points ──────────────────────────────────────────────
+export const ACTION_POINTS_PER_TURN = 2;
+
+// ── Route Market ───────────────────────────────────────────────
+/** Number of route market entries generated per turn, by game preset */
+export const ROUTE_MARKET_SIZE: Record<string, number> = {
+  quick: 8,
+  standard: 10,
+  epic: 12,
+};
+/** AP cost to scout a route market entry (reveals exact profit) */
+export const SCOUT_COST_AP = 1;
+/** Cash cost to scout a route market entry */
+export const SCOUT_COST_CASH = 500;
+/** How many turns a route market entry remains available */
+export const ROUTE_MARKET_ENTRY_DURATION = 3;
 
 export const STARTING_CASH = 200000;
 export const MAX_TURNS = 20;
@@ -25,8 +46,14 @@ export const OVERHAUL_COST_RATIO = 0.3;
 export const OVERHAUL_RESTORE_CONDITION = 90;
 export const BREAKDOWN_THRESHOLD = 50;
 export const TURN_DURATION = 100;
-// Intra-system routes have low demand — nearby planets already trade locally
-export const INTRA_SYSTEM_REVENUE_MULTIPLIER = 0.25;
+/** Hard cap on trips per turn to prevent intra-system routes from being exploited */
+export const MAX_TRIPS_PER_TURN = 10;
+// Local (intra-system) route slot pool — separate from main route slots
+export const LOCAL_ROUTE_SLOTS = 2;
+// Local routes are capped at 50% of equivalent inter-system revenue
+export const LOCAL_ROUTE_REVENUE_CAP = 0.5;
+// INTRA_SYSTEM_REVENUE_MULTIPLIER is now set to the cap for backwards compatibility
+export const INTRA_SYSTEM_REVENUE_MULTIPLIER = LOCAL_ROUTE_REVENUE_CAP;
 // Longer routes command higher freight rates (per distance unit, capped)
 export const DISTANCE_PREMIUM_RATE = 0.0015;
 export const DISTANCE_PREMIUM_CAP = 0.5;
@@ -138,9 +165,13 @@ export const TARIFF_DIPLOMATIC_MULTIPLIER = {
 export const AI_SLOT_GROWTH_INTERVAL = 10;
 export const AI_EMPIRE_UNLOCK_INTERVAL = 12;
 
-// ── Game Size Presets ──────────────────────────────────────────
+// ── Game Length Presets ────────────────────────────────────────
 
-export interface GameSizeConfig {
+export type GamePreset = "quick" | "standard" | "epic";
+
+export interface GamePresetConfig {
+  id: GamePreset;
+  label: string;
   maxTurns: number;
   empireCount: number;
   systemsPerEmpireMin: number;
@@ -150,48 +181,94 @@ export interface GameSizeConfig {
   aiCompanyCount: number;
   startingCash: number;
   startingShips: number;
-  /** Map coordinate bounds scale factor (1.0 = base 2400×1600) */
   mapScale: number;
+  /** Base RP per turn (slightly faster in shorter games) */
+  baseRpPerTurn: number;
+  /** How often AI companies get replaced after bankruptcy */
+  aiReplacementDelay: number;
 }
 
-export const GAME_SIZE_CONFIGS: Record<GameSize, GameSizeConfig> = {
-  [GameSize.Small]: {
-    maxTurns: 60,
+export const GAME_LENGTH_PRESETS: Record<GamePreset, GamePresetConfig> = {
+  quick: {
+    id: "quick",
+    label: "Quick (25 turns)",
+    maxTurns: 25,
+    empireCount: 6,
+    systemsPerEmpireMin: 4,
+    systemsPerEmpireMax: 6,
+    planetsPerSystemMin: 1,
+    planetsPerSystemMax: 3,
+    aiCompanyCount: 3,
+    startingCash: 250000,
+    startingShips: 0,
+    mapScale: 0.8,
+    baseRpPerTurn: 2,
+    aiReplacementDelay: 2,
+  },
+  standard: {
+    id: "standard",
+    label: "Standard (45 turns)",
+    maxTurns: 45,
     empireCount: 8,
     systemsPerEmpireMin: 6,
     systemsPerEmpireMax: 8,
     planetsPerSystemMin: 1,
     planetsPerSystemMax: 3,
     aiCompanyCount: 4,
-    startingCash: 250000,
+    startingCash: 275000,
     startingShips: 0,
     mapScale: 1.0,
+    baseRpPerTurn: 1,
+    aiReplacementDelay: 3,
   },
-  [GameSize.Medium]: {
+  epic: {
+    id: "epic",
+    label: "Epic (80 turns)",
     maxTurns: 80,
-    empireCount: 10,
-    systemsPerEmpireMin: 7,
-    systemsPerEmpireMax: 9,
-    planetsPerSystemMin: 1,
-    planetsPerSystemMax: 4,
-    aiCompanyCount: 6,
-    startingCash: 300000,
-    startingShips: 0,
-    mapScale: 1.3,
-  },
-  [GameSize.Large]: {
-    maxTurns: 100,
     empireCount: 12,
     systemsPerEmpireMin: 8,
     systemsPerEmpireMax: 10,
     planetsPerSystemMin: 1,
     planetsPerSystemMax: 4,
-    aiCompanyCount: 8,
-    startingCash: 350000,
+    aiCompanyCount: 6,
+    startingCash: 300000,
     startingShips: 0,
-    mapScale: 1.6,
+    mapScale: 1.4,
+    baseRpPerTurn: 1,
+    aiReplacementDelay: 3,
   },
 };
+
+// ── Nav Unlock Rules ───────────────────────────────────────────
+
+/** Tabs visible from turn 1 with no prerequisites */
+export const NAV_ALWAYS_VISIBLE: NavTabId[] = ["map", "routes", "fleet", "finance"];
+
+/** Rules that unlock nav tabs progressively */
+export const NAV_UNLOCK_RULES: Array<{
+  tabId: NavTabId;
+  description: string;
+  /** Turn >= this unlocks the tab (if set) */
+  minTurn?: number;
+  /** State trigger key — checked in NavUnlocks.ts */
+  trigger?: "first_contract_offer" | "second_empire_unlock" | "hub_available";
+}> = [
+  { tabId: "research",  description: "Unlocks on turn 3", minTurn: 3 },
+  { tabId: "contracts", description: "Unlocks when first contract is offered", trigger: "first_contract_offer" },
+  { tabId: "empires",   description: "Unlocks after 2nd empire unlock", trigger: "second_empire_unlock" },
+  { tabId: "rivals",    description: "Unlocks on turn 5", minTurn: 5 },
+  { tabId: "hub",       description: "Unlocks on turn 5", minTurn: 5 },
+  { tabId: "market",    description: "Unlocks on turn 5", minTurn: 5 },
+];
+
+// ── Game Size Configs (legacy alias — backed by GAME_LENGTH_PRESETS) ─────────
+
+/** @deprecated Use GAME_LENGTH_PRESETS instead */
+export type GameSizeConfig = GamePresetConfig;
+
+/** @deprecated Use GAME_LENGTH_PRESETS instead */
+export const GAME_SIZE_CONFIGS: Record<GamePreset, GamePresetConfig> =
+  GAME_LENGTH_PRESETS;
 
 // ── Empire Tariff Ranges ───────────────────────────────────────
 
@@ -634,10 +711,14 @@ export const HUB_ROOM_DEFINITIONS: Record<HubRoomType, HubRoomDefinition> = {
     type: HubRoomType.SimpleTerminal,
     name: "Simple Terminal",
     description:
-      "Core hub module. Boosts trade and passenger revenue by 5% at hub and neighbors.",
+      "Core hub module, pre-installed rent-free. Boosts trade and passenger revenue by 5% at hub and neighbors.",
     icon: "📡",
     buildCost: 5000,
-    upkeepCost: 500,
+    // Rent-free starter: player begins with one SimpleTerminal pre-installed,
+    // so charging upkeep on turn 1 surprises the player with a -§500/turn
+    // line before they've taken any action. Upkeep kicks in from the first
+    // upgrade (Improved Terminal) onward.
+    upkeepCost: 0,
     limit: 1,
     techRequirement: null,
     bonusScope: "localRadius",

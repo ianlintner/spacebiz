@@ -129,6 +129,12 @@ export class ProgressBar extends Phaser.GameObjects.Container {
     return this.currentValue;
   }
 
+  setMaxValue(max: number, animate = false): void {
+    this.maxValue = Math.max(1, max);
+    this.currentValue = Phaser.Math.Clamp(this.currentValue, 0, this.maxValue);
+    this.setValue(this.currentValue, animate);
+  }
+
   setFillColor(color: number): void {
     this.fillColor = color;
     this.fill.setFillStyle(color);

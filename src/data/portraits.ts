@@ -1202,6 +1202,29 @@ export const CEO_PORTRAITS: PortraitDefinition[] = [
   },
 ];
 
+/**
+ * Curated selection of 12 portraits for the player-facing portrait picker.
+ * Covers humans, aliens, and cyborgs with good visual variety.
+ * The full CEO_PORTRAITS list is still used for the "Random" option and AI CEOs.
+ */
+export const CEO_CURATED_PORTRAITS: PortraitDefinition[] = [
+  // Humans
+  CEO_PORTRAITS.find((p) => p.id === "ceo-01")!, // Commander Hale
+  CEO_PORTRAITS.find((p) => p.id === "ceo-04")!, // Captain Reyes
+  CEO_PORTRAITS.find((p) => p.id === "ceo-10")!, // Aria Solenne
+  CEO_PORTRAITS.find((p) => p.id === "ceo-13")!, // Kirchner
+  // Aliens
+  CEO_PORTRAITS.find((p) => p.id === "ceo-16")!, // Scythe Vorra (Insectoid)
+  CEO_PORTRAITS.find((p) => p.id === "ceo-18")!, // Zennith Lux (Ethereal)
+  CEO_PORTRAITS.find((p) => p.id === "ceo-20")!, // Venn Strix (Avian)
+  CEO_PORTRAITS.find((p) => p.id === "ceo-24")!, // Lyrica Fenn (Feline)
+  // Cyborgs
+  CEO_PORTRAITS.find((p) => p.id === "ceo-26")!, // Overseer Kira
+  CEO_PORTRAITS.find((p) => p.id === "ceo-28")!, // Nexus Prime (Android)
+  CEO_PORTRAITS.find((p) => p.id === "ceo-31")!, // Synth-Marlow
+  CEO_PORTRAITS.find((p) => p.id === "ceo-38")!, // Dr. Lumen Ash
+] as PortraitDefinition[];
+
 /** Names used for auto-generated AI company CEOs and empire leaders. */
 const AI_CEO_FIRST_NAMES = [
   "Aris",

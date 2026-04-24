@@ -252,7 +252,7 @@ export class PlanetDetailScene extends Phaser.Scene {
           : "Assign later in Routes";
         const modal = new Modal(this, {
           title: "Route Ready",
-          body: `Route ${originPlanet.name} → ${destination?.name ?? "Destination"} created.\nCargo: ${result.cargoType}\nShip: ${shipSummary}`,
+          body: `Route ${originPlanet.name} → ${destination?.name ?? "Destination"} created.\nCargo: ${getCargoLabel(result.cargoType)}\nShip: ${shipSummary}`,
           width: 440,
           height: 260,
           onOk: () => {

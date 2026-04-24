@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { generateGalaxy } from "../GalaxyGenerator.ts";
 import {
   PlanetType,
-  GameSize,
   GalaxyShape,
   HyperlaneDensity,
 } from "../../data/types.ts";
@@ -142,7 +141,7 @@ describe("GalaxyGenerator", () => {
     for (const seed of [7, 42, 99, 777, 2026]) {
       const galaxy = generateGalaxy(
         seed,
-        GameSize.Large,
+        "epic",
         GalaxyShape.Spiral,
         HyperlaneDensity.Medium,
       );
@@ -166,7 +165,7 @@ describe("GalaxyGenerator", () => {
     for (const seed of [13, 42, 101, 500, 9001]) {
       const galaxy = generateGalaxy(
         seed,
-        GameSize.Large,
+        "epic",
         GalaxyShape.Ring,
         HyperlaneDensity.Medium,
       );

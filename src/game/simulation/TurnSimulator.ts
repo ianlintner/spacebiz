@@ -8,6 +8,8 @@ import type {
   CargoType as CargoTypeT,
   Loan,
 } from "../../data/types.ts";
+import { buildTurnBrief } from "../turn/TurnBriefBuilder.ts";
+import { evaluateNavUnlocks } from "../nav/NavUnlocks.ts";
 import {
   BREAKDOWN_THRESHOLD,
   INTRA_SYSTEM_REVENUE_MULTIPLIER,
@@ -29,7 +31,14 @@ import {
   tickEvents,
   isRouteGrounded,
   calculateMothballFee,
+  getRouteSpeedModifier,
+  isPassengerRouteBlocked,
 } from "../events/EventEngine.ts";
+import {
+  tickEventChains,
+  checkChainTriggers,
+} from "../events/ChoiceEventResolver.ts";
+import type { GameEvent } from "../../data/types.ts";
 import { updateStorytellerState } from "../events/Storyteller.ts";
 import { generateTurnMessages } from "../adviser/AdviserEngine.ts";
 import { simulateAITurns } from "../ai/AISimulator.ts";
@@ -49,6 +58,8 @@ import {
   getTariffMultiplier,
   getSaturationMultiplier,
 } from "../hub/HubBonusCalculator.ts";
+import { tickRouteMarket } from "../routes/RouteMarket.ts";
+import { computeReputationTier } from "../reputation/ReputationEffects.ts";
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -80,6 +91,7 @@ function simulateShipOnRoute(
   route: ActiveRoute,
   state: GameState,
   rng: SeededRNG,
+  activeEvents: GameEvent[],
 ): ShipRouteResult {
   if (!route.cargoType) {
     return {
@@ -92,7 +104,11 @@ function simulateShipOnRoute(
     };
   }
 
-  const trips = calculateTripsPerTurn(route.distance, ship.speed);
+  const rawTrips = calculateTripsPerTurn(route.distance, ship.speed);
+
+  // Apply speed modifier from active events (e.g. pirate activity, solar flare)
+  const speedMod = getRouteSpeedModifier(activeEvents, route);
+  const effectiveTrips = Math.max(0, Math.floor(rawTrips * speedMod));
 
   // Check for breakdown
   const brokeDown =
@@ -121,7 +137,7 @@ function simulateShipOnRoute(
       fuelCost: 0,
       cargoMoved: 0,
       passengersMoved: 0,
-      trips,
+      trips: effectiveTrips,
       breakdowns: 0,
     };
   }
@@ -130,9 +146,24 @@ function simulateShipOnRoute(
   const price = calculatePrice(destEntry, route.cargoType);
 
   const isPassengers = route.cargoType === CargoType.Passengers;
+
+  // Block passenger routes affected by quarantine or similar events
+  if (isPassengers && isPassengerRouteBlocked(activeEvents, route)) {
+    const fuelCost =
+      route.distance * 2 * ship.fuelEfficiency * state.market.fuelPrice * effectiveTrips;
+    return {
+      revenue: 0,
+      fuelCost: Math.round(fuelCost * 100) / 100,
+      cargoMoved: 0,
+      passengersMoved: 0,
+      trips: effectiveTrips,
+      breakdowns: 0,
+    };
+  }
+
   const capacity = isPassengers ? ship.passengerCapacity : ship.cargoCapacity;
 
-  const totalCargoMoved = capacity * trips;
+  const totalCargoMoved = capacity * effectiveTrips;
   const originSysId = planetToSystemId(route.originPlanetId);
   const destSysId = planetToSystemId(route.destinationPlanetId);
   const isIntraSystem = originSysId !== null && originSysId === destSysId;
@@ -142,16 +173,16 @@ function simulateShipOnRoute(
     : 1 + distancePremium;
   const revenue = price * totalCargoMoved * revenueMultiplier;
 
-  // Fuel cost = distance * 2 * fuelEfficiency * fuelPrice * trips
+  // Fuel cost = distance * 2 * fuelEfficiency * fuelPrice * effectiveTrips
   const fuelCost =
-    route.distance * 2 * ship.fuelEfficiency * state.market.fuelPrice * trips;
+    route.distance * 2 * ship.fuelEfficiency * state.market.fuelPrice * effectiveTrips;
 
   return {
     revenue: Math.round(revenue * 100) / 100,
     fuelCost: Math.round(fuelCost * 100) / 100,
     cargoMoved: isPassengers ? 0 : totalCargoMoved,
     passengersMoved: isPassengers ? totalCargoMoved : 0,
-    trips,
+    trips: effectiveTrips,
     breakdowns: 0,
   };
 }
@@ -328,7 +359,7 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       const ship = nextState.fleet.find((s) => s.id === shipId);
       if (!ship) continue;
 
-      const result = simulateShipOnRoute(ship, route, nextState, rng);
+      const result = simulateShipOnRoute(ship, route, nextState, rng, nextState.activeEvents);
       routeRevenue += result.revenue;
       routeFuelCost += result.fuelCost;
       routeCargoMoved += result.cargoMoved;
@@ -388,6 +419,8 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       nextState.playerEmpireId,
       nextState.galaxy.systems,
       nextState.galaxy.empires,
+      nextState.reputation,
+      nextState.diplomaticRelations,
     );
     totalTariffCosts += tariff;
   }
@@ -496,6 +529,11 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
     };
   }
 
+  // ----- Step 8a-ii: Tick active event chains (may add new pendingChoiceEvents) -----
+  nextState = tickEventChains(nextState, rng);
+  // Check if new chains should start
+  nextState = checkChainTriggers(nextState, rng);
+
   // ----- Step 8b: Process contracts -----
   const contractResult = processContracts(nextState);
   nextState = { ...nextState, ...contractResult };
@@ -506,6 +544,12 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   const rpThisTurn = baseRP + hubRPBonus;
   const updatedTech = processResearch(nextState, rpThisTurn);
   nextState = { ...nextState, tech: updatedTech };
+
+  // ----- Step 8d: Tick route market (expire old entries, add new ones) -----
+  nextState = {
+    ...nextState,
+    routeMarket: tickRouteMarket(nextState, rng),
+  };
 
   // ----- Step 9: Calculate net profit and update cash -----
   const netProfit =
@@ -520,12 +564,20 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   nextState = { ...nextState, cash: Math.round(newCash * 100) / 100 };
 
   // ----- Step 10: Update storyteller -----
+  // Check if the player resolved a choice event this turn BEFORE incrementing the counter,
+  // so the increment is skipped on turns where a decision was made.
+  const playerMadeDecision =
+    state.pendingChoiceEvents.length > nextState.pendingChoiceEvents.length;
+
   const updatedStoryteller = updateStorytellerState(
-    nextState.storyteller,
+    playerMadeDecision
+      ? { ...nextState.storyteller, turnsSinceLastDecision: -1 }
+      : nextState.storyteller,
     nextState.cash,
     nextState.fleet,
     netProfit,
   );
+  // If player resolved a choice this turn, the +1 in updateStorytellerState brings it to 0
   nextState = { ...nextState, storyteller: updatedStoryteller };
 
   // ----- Step 11: Build TurnResult -----
@@ -591,6 +643,31 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       gameOverReason: "completed",
     };
   }
+
+  // ----- Step 13: Reset action points for next planning phase -----
+  nextState = {
+    ...nextState,
+    actionPoints: {
+      current: nextState.actionPoints.max,
+      max: nextState.actionPoints.max,
+    },
+  };
+
+  // ----- Step 14: Build turn brief for next planning phase -----
+  nextState = {
+    ...nextState,
+    turnBrief: buildTurnBrief(nextState),
+  };
+
+  // ----- Step 15: Evaluate progressive nav tab unlocks -----
+  const updatedNavTabs = evaluateNavUnlocks(nextState);
+  nextState = { ...nextState, unlockedNavTabs: updatedNavTabs };
+
+  // ----- Step 16: Update derived reputation tier -----
+  nextState = {
+    ...nextState,
+    reputationTier: computeReputationTier(nextState.reputation),
+  };
 
   return nextState;
 }

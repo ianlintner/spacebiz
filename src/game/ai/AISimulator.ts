@@ -1,43 +1,17 @@
-import { CargoType, AIPersonality, ShipClass } from "../../data/types.ts";
+import { ShipClass } from "../../data/types.ts";
 import type {
   AICompany,
   GameState,
   Ship,
-  ActiveRoute,
-  Planet,
   MarketState,
-  CargoType as CargoTypeT,
   AITurnSummary,
 } from "../../data/types.ts";
-import {
-  SHIP_TEMPLATES,
-  BREAKDOWN_THRESHOLD,
-  AI_BUY_THRESHOLD_MULTIPLIER,
-  AI_MAX_ROUTES,
-  AI_MAX_FLEET,
-  AI_MAX_PURCHASES_PER_TURN,
-  AI_PERSONALITY_SLOTS,
-  AI_SLOT_GROWTH_INTERVAL,
-  OVERHAUL_COST_RATIO,
-  OVERHAUL_RESTORE_CONDITION,
-  AI_STARTING_CASH,
-  AI_REPLACEMENT_DELAY,
-  AI_REPLACEMENT_CASH_RATIO,
-  AI_OVERHAUL_CONDITION,
-  AI_MAX_SHIP_SPEND_RATIO,
-} from "../../data/constants.ts";
-import {
-  calculateDistance,
-  calculateTripsPerTurn,
-  calculateLicenseFee,
-} from "../routes/RouteManager.ts";
-import { calculatePrice } from "../economy/PriceCalculator.ts";
+import { SHIP_TEMPLATES, AI_STARTING_CASH, AI_REPLACEMENT_DELAY, AI_REPLACEMENT_CASH_RATIO } from "../../data/constants.ts";
+import { calculateShipValue } from "../fleet/FleetManager.ts";
 import {
   ageFleet,
   calculateMaintenanceCosts,
-  calculateShipValue,
 } from "../fleet/FleetManager.ts";
-import { calculateTariff } from "../routes/TariffCalculator.ts";
 import {
   AI_COMPANY_NAME_PREFIXES,
   AI_COMPANY_NAME_SUFFIXES,
@@ -45,11 +19,28 @@ import {
 } from "../NewGameSetup.ts";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 import { pickRandomPortrait } from "../../data/portraits.ts";
-import { isRouteGrounded } from "../events/EventEngine.ts";
 import {
   getAIRevenueDebuff,
   getAIMaintenanceDebuff,
 } from "../hub/HubBonusCalculator.ts";
+
+// ── Step imports ─────────────────────────────────────────────
+import {
+  simulateAIRoutes,
+  applyAISaturation,
+} from "./steps/aiRouteStep.ts";
+import { makeAIDecisions } from "./steps/aiDecisionStep.ts";
+import { processAITech } from "./steps/aiTechStep.ts";
+import {
+  processAIContracts,
+  applyAIContractRewards,
+} from "./steps/aiContractStep.ts";
+import { processAIHub, applyAIHubBonuses } from "./steps/aiHubStep.ts";
+
+// Re-export step utilities used by other modules
+export { getAISlotLimit } from "./steps/aiDecisionStep.ts";
+export { getAITechBranch } from "./steps/aiTechStep.ts";
+export { applyAIHubBonuses } from "./steps/aiHubStep.ts";
 
 // ---------------------------------------------------------------------------
 // AI turn simulation
@@ -69,6 +60,8 @@ export function simulateAITurns(
 } {
   let marketState = state.market;
   const summaries: AITurnSummary[] = [];
+  // We'll mutate the contracts list across companies
+  let currentContracts = [...state.contracts];
 
   const updatedCompanies = state.aiCompanies.map((company) => {
     if (company.bankrupt) {
@@ -97,8 +90,16 @@ export function simulateAITurns(
     const aiMaintenanceDebuff = aiInPlayerEmpire
       ? getAIMaintenanceDebuff(state.stationHub)
       : 0;
-    const maintenanceCosts =
-      calculateMaintenanceCosts(company.fleet) * (1 + aiMaintenanceDebuff);
+
+    // Apply AI hub maintenance bonus
+    const rawMaintenance = calculateMaintenanceCosts(company.fleet);
+    const hubAdjustedMaint = applyAIHubBonuses(
+      0,
+      0,
+      rawMaintenance,
+      company.aiHub,
+    ).maintenance;
+    const maintenanceCosts = hubAdjustedMaint * (1 + aiMaintenanceDebuff);
 
     // 4. Age fleet
     const agedFleet = ageFleet(company.fleet, rng);
@@ -131,18 +132,50 @@ export function simulateAITurns(
     updatedRoutes = decisionResult.routes;
     newCash = decisionResult.cash;
 
-    // 7. Check bankruptcy
-    const totalFleetValue = updatedFleet.reduce(
+    // 7. AI tech research (Wave 3)
+    let updatedCompanyWithTech = processAITech(
+      { ...company, fleet: updatedFleet, activeRoutes: updatedRoutes, cash: newCash },
+      state,
+      rng,
+    );
+
+    // 8. AI contracts (Wave 3)
+    const contractResult = processAIContracts(
+      updatedCompanyWithTech,
+      { ...state, contracts: currentContracts },
+      rng,
+    );
+    updatedCompanyWithTech = contractResult.company;
+    currentContracts = contractResult.updatedContracts;
+
+    // Apply contract rewards for completed AI contracts
+    updatedCompanyWithTech = applyAIContractRewards(
+      updatedCompanyWithTech,
+      currentContracts,
+    );
+    newCash = updatedCompanyWithTech.cash;
+
+    // Remove contracts that the AI just completed so their rewards aren't applied again next turn
+    currentContracts = currentContracts.filter(
+      (c) => !(c.aiCompanyId === updatedCompanyWithTech.id && c.status === "completed"),
+    );
+
+    // 9. AI hub upgrades (Wave 3)
+    updatedCompanyWithTech = processAIHub(updatedCompanyWithTech, state);
+
+    // 10. Check bankruptcy
+    const finalFleet = updatedCompanyWithTech.fleet;
+    const totalFleetValue = finalFleet.reduce(
       (sum, s) => sum + calculateShipValue(s),
       0,
     );
     const bankrupt = newCash < 0 && totalFleetValue < Math.abs(newCash);
 
     const updatedCompany: AICompany = {
-      ...company,
+      ...updatedCompanyWithTech,
       cash: Math.round(newCash * 100) / 100,
-      fleet: updatedFleet,
-      activeRoutes: bankrupt ? [] : updatedRoutes,
+      fleet: finalFleet,
+      activeRoutes: bankrupt ? [] : updatedCompanyWithTech.activeRoutes,
       totalCargoDelivered: company.totalCargoDelivered + routeResult.totalCargo,
       bankrupt,
       // Track the turn bankruptcy occurred (keep existing value if already bankrupt)
@@ -167,9 +200,10 @@ export function simulateAITurns(
   // ── Replace bankrupt companies after a delay (Aerobiz-style) ──
   const finalCompanies = replaceBankruptCompanies(updatedCompanies, state, rng);
 
+  // Merge updated contracts back into the state (caller receives via return)
   return {
     aiCompanies: finalCompanies,
-    marketUpdate: marketState,
+    marketUpdate: { ...marketState },
     summaries,
   };
 }
@@ -272,565 +306,4 @@ function replaceBankruptCompanies(
 
     return replacement;
   });
-}
-
-// ---------------------------------------------------------------------------
-// Route simulation for one AI company
-// ---------------------------------------------------------------------------
-
-interface AIRouteResult {
-  revenue: number;
-  fuelCost: number;
-  tariffCost: number;
-  totalCargo: number;
-  deliveries: Map<string, Map<CargoTypeT, number>>;
-}
-
-function simulateAIRoutes(
-  company: AICompany,
-  state: GameState,
-  market: MarketState,
-  rng: SeededRNG,
-): AIRouteResult {
-  let totalRevenue = 0;
-  let totalFuelCost = 0;
-  let totalTariffCost = 0;
-  let totalCargo = 0;
-
-  const deliveries = new Map<string, Map<CargoTypeT, number>>();
-
-  for (const route of company.activeRoutes) {
-    if (!route.cargoType) continue;
-
-    // Skip grounded routes (embargoes, blockades, border closures)
-    const grounded = isRouteGrounded(
-      route,
-      state.activeEvents,
-      state.galaxy.systems,
-      state.galaxy.planets,
-    );
-    if (grounded) continue;
-
-    for (const shipId of route.assignedShipIds) {
-      const ship = company.fleet.find((s) => s.id === shipId);
-      if (!ship) continue;
-
-      // Breakdown check
-      if (
-        ship.condition < BREAKDOWN_THRESHOLD &&
-        rng.chance(1 - ship.condition / 100)
-      ) {
-        totalFuelCost +=
-          route.distance * 2 * ship.fuelEfficiency * market.fuelPrice;
-        continue;
-      }
-
-      const trips = calculateTripsPerTurn(route.distance, ship.speed);
-      const destMarket = market.planetMarkets[route.destinationPlanetId];
-      if (!destMarket) continue;
-
-      const destEntry = destMarket[route.cargoType];
-      const price = calculatePrice(destEntry, route.cargoType);
-
-      const isPassengers = route.cargoType === CargoType.Passengers;
-      const capacity = isPassengers
-        ? ship.passengerCapacity
-        : ship.cargoCapacity;
-
-      const moved = capacity * trips;
-      const revenue = price * moved;
-      const fuelCost =
-        route.distance * 2 * ship.fuelEfficiency * market.fuelPrice * trips;
-
-      // Tariff
-      const tariff = calculateTariff(
-        route,
-        revenue,
-        company.empireId,
-        state.galaxy.systems,
-        state.galaxy.empires,
-      );
-
-      totalRevenue += revenue;
-      totalFuelCost += fuelCost;
-      totalTariffCost += tariff;
-      totalCargo += moved;
-
-      // Track deliveries for saturation
-      if (moved > 0) {
-        if (!deliveries.has(route.destinationPlanetId)) {
-          deliveries.set(route.destinationPlanetId, new Map());
-        }
-        const planetMap = deliveries.get(route.destinationPlanetId)!;
-        const prev = planetMap.get(route.cargoType) ?? 0;
-        planetMap.set(route.cargoType, prev + moved);
-      }
-    }
-  }
-
-  return {
-    revenue: totalRevenue,
-    fuelCost: totalFuelCost,
-    tariffCost: totalTariffCost,
-    totalCargo,
-    deliveries,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Apply AI saturation to market
-// ---------------------------------------------------------------------------
-
-function applyAISaturation(
-  market: MarketState,
-  deliveries: Map<string, Map<CargoTypeT, number>>,
-): MarketState {
-  const updatedMarkets = { ...market.planetMarkets };
-
-  for (const [planetId, cargoMap] of deliveries) {
-    if (!updatedMarkets[planetId]) continue;
-    const planetMarket = { ...updatedMarkets[planetId] };
-
-    for (const [cargoType, amount] of cargoMap) {
-      const entry = planetMarket[cargoType];
-      if (!entry) continue;
-
-      const saturationIncrease = amount / (entry.baseDemand * 5);
-      planetMarket[cargoType] = {
-        ...entry,
-        saturation: Math.min(
-          1,
-          Math.max(0, entry.saturation + saturationIncrease),
-        ),
-      };
-    }
-
-    updatedMarkets[planetId] = planetMarket;
-  }
-
-  return { ...market, planetMarkets: updatedMarkets };
-}
-
-// ---------------------------------------------------------------------------
-// AI slot calculation
-// ---------------------------------------------------------------------------
-
-function getAISlotLimit(
-  personality: (typeof AIPersonality)[keyof typeof AIPersonality],
-  turn: number,
-): number {
-  const config = AI_PERSONALITY_SLOTS[personality] ?? {
-    baseSlots: 4,
-    maxSlots: AI_MAX_ROUTES,
-  };
-  const growth = Math.floor(turn / AI_SLOT_GROWTH_INTERVAL);
-  return Math.min(config.baseSlots + growth, config.maxSlots);
-}
-
-// ---------------------------------------------------------------------------
-// AI decision-making
-// ---------------------------------------------------------------------------
-
-interface DecisionResult {
-  fleet: Ship[];
-  routes: ActiveRoute[];
-  cash: number;
-}
-
-function makeAIDecisions(
-  company: AICompany,
-  fleet: Ship[],
-  routes: ActiveRoute[],
-  cash: number,
-  state: GameState,
-  market: MarketState,
-  rng: SeededRNG,
-): DecisionResult {
-  let currentFleet = fleet;
-  let currentRoutes = routes;
-  let currentCash = cash;
-
-  // ── Overhaul worn-out ships before they break down ──
-  currentFleet = currentFleet.map((ship) => {
-    if (ship.condition >= AI_OVERHAUL_CONDITION) return ship;
-    const cost = ship.purchaseCost * OVERHAUL_COST_RATIO;
-    if (currentCash >= cost) {
-      currentCash -= cost;
-      return { ...ship, condition: OVERHAUL_RESTORE_CONDITION };
-    }
-    return ship;
-  });
-
-  // ── Abandon unprofitable routes ──
-  // Estimate per-route profit; drop routes that are losing money
-  currentRoutes = currentRoutes.filter((route) => {
-    if (!route.cargoType) return true; // keep even if no cargo assignment
-    const assignedShips = currentFleet.filter(
-      (s) => s.assignedRouteId === route.id,
-    );
-    if (assignedShips.length === 0) return true; // no ships to evaluate
-
-    let routeProfit = 0;
-    for (const ship of assignedShips) {
-      const trips = calculateTripsPerTurn(route.distance, ship.speed);
-      const destMarket = market.planetMarkets[route.destinationPlanetId];
-      if (!destMarket) continue;
-      const destEntry = destMarket[route.cargoType];
-      const price = calculatePrice(destEntry, route.cargoType);
-      const isPassengers = route.cargoType === CargoType.Passengers;
-      const capacity = isPassengers
-        ? ship.passengerCapacity
-        : ship.cargoCapacity;
-      const revenue = price * capacity * trips;
-      const fuelCost =
-        route.distance * 2 * ship.fuelEfficiency * market.fuelPrice * trips;
-      routeProfit += revenue - fuelCost;
-    }
-
-    if (routeProfit < 0) {
-      // Unassign ships from this route
-      currentFleet = currentFleet.map((s) =>
-        s.assignedRouteId === route.id ? { ...s, assignedRouteId: null } : s,
-      );
-      return false; // drop the route
-    }
-    return true;
-  });
-
-  // Find cheapest ship cost for buy threshold
-  const cheapestShipCost = Math.min(
-    ...Object.values(SHIP_TEMPLATES).map((t) => t.purchaseCost),
-  );
-
-  // ── Buy ships (may buy multiple per turn) ──
-  const buyThreshold = cheapestShipCost * AI_BUY_THRESHOLD_MULTIPLIER;
-  let purchasesMade = 0;
-
-  while (
-    currentCash > buyThreshold &&
-    purchasesMade < AI_MAX_PURCHASES_PER_TURN &&
-    currentFleet.filter((s) => !s.assignedRouteId).length < 2 &&
-    currentFleet.length < AI_MAX_FLEET
-  ) {
-    // Pick a ship class based on personality
-    const shipClass = pickShipClassForPersonality(
-      company.personality,
-      currentCash,
-      rng,
-    );
-    if (!shipClass) break;
-
-    const template = SHIP_TEMPLATES[shipClass];
-    if (template.purchaseCost > currentCash) break;
-
-    const newShip: Ship = {
-      id: `${company.id}-ship-${currentFleet.length}`,
-      name: template.name,
-      class: template.class,
-      cargoCapacity: template.cargoCapacity,
-      passengerCapacity: template.passengerCapacity,
-      speed: template.speed,
-      fuelEfficiency: template.fuelEfficiency,
-      reliability: template.baseReliability,
-      age: 0,
-      condition: 100,
-      purchaseCost: template.purchaseCost,
-      maintenanceCost: template.baseMaintenance,
-      assignedRouteId: null,
-    };
-    currentFleet = [...currentFleet, newShip];
-    currentCash -= template.purchaseCost;
-    purchasesMade++;
-  }
-
-  // ── Open routes (may open multiple per turn) ──
-  const aiSlotLimit = getAISlotLimit(company.personality, state.turn);
-  let routeAttempts = 0;
-  const maxRouteAttempts = 2;
-  while (
-    currentRoutes.length < aiSlotLimit &&
-    routeAttempts < maxRouteAttempts
-  ) {
-    const newIdleShips = currentFleet.filter((s) => !s.assignedRouteId);
-    if (newIdleShips.length === 0) break;
-
-    const routeResult = openAIRoute(
-      company,
-      newIdleShips,
-      currentFleet,
-      currentRoutes,
-      state,
-      market,
-      rng,
-    );
-    if (!routeResult) break;
-
-    // Deduct license fee for the new route
-    const newRoute = routeResult.routes[routeResult.routes.length - 1];
-    const licenseFee = calculateLicenseFee(
-      newRoute.distance,
-      currentRoutes.length,
-    );
-    if (currentCash >= licenseFee) {
-      currentRoutes = routeResult.routes;
-      currentFleet = routeResult.fleet;
-      currentCash -= licenseFee;
-    } else {
-      break;
-    }
-    routeAttempts++;
-  }
-
-  // ── Sell idle ships when cash is critically low ──
-  if (currentCash < 0) {
-    const idleToSell = currentFleet
-      .filter((s) => !s.assignedRouteId)
-      .sort((a, b) => calculateShipValue(b) - calculateShipValue(a));
-    for (const ship of idleToSell) {
-      if (currentCash >= 0) break;
-      const salePrice = calculateShipValue(ship);
-      currentFleet = currentFleet.filter((s) => s.id !== ship.id);
-      currentCash += salePrice;
-    }
-  }
-
-  return { fleet: currentFleet, routes: currentRoutes, cash: currentCash };
-}
-
-function pickShipClassForPersonality(
-  personality: (typeof AIPersonality)[keyof typeof AIPersonality],
-  cash: number,
-  rng: SeededRNG,
-): ShipClass | null {
-  const affordable = (Object.keys(SHIP_TEMPLATES) as ShipClass[]).filter(
-    (sc) => SHIP_TEMPLATES[sc].purchaseCost <= cash,
-  );
-  if (affordable.length === 0) return null;
-
-  switch (personality) {
-    case AIPersonality.AggressiveExpander:
-      // Buy upper-mid range ship — aggressive but not reckless
-      affordable.sort(
-        (a, b) =>
-          SHIP_TEMPLATES[b].purchaseCost - SHIP_TEMPLATES[a].purchaseCost,
-      );
-      // Pick from upper third, not always the most expensive
-      return affordable[
-        Math.min(Math.floor(affordable.length / 3), affordable.length - 1)
-      ];
-
-    case AIPersonality.SteadyHauler: {
-      // Limit spend to AI_MAX_SHIP_SPEND_RATIO of current cash — avoid going broke on one ship
-      const maxSpend = cash * AI_MAX_SHIP_SPEND_RATIO;
-      const prudent = affordable.filter(
-        (sc) => SHIP_TEMPLATES[sc].purchaseCost <= maxSpend,
-      );
-      const pool = prudent.length > 0 ? prudent : affordable;
-      // Buy the highest-capacity cargo ship affordable within budget
-      pool.sort(
-        (a, b) =>
-          SHIP_TEMPLATES[b].cargoCapacity - SHIP_TEMPLATES[a].cargoCapacity,
-      );
-      return pool[0];
-    }
-
-    case AIPersonality.CherryPicker:
-      // Pick ships by efficiency ratio: (speed × cargoCapacity) / cost
-      // This balances speed with earning potential per credit spent
-      affordable.sort((a, b) => {
-        const ta = SHIP_TEMPLATES[a];
-        const tb = SHIP_TEMPLATES[b];
-        const effA =
-          (ta.speed * Math.max(ta.cargoCapacity, ta.passengerCapacity)) /
-          ta.purchaseCost;
-        const effB =
-          (tb.speed * Math.max(tb.cargoCapacity, tb.passengerCapacity)) /
-          tb.purchaseCost;
-        return effB - effA;
-      });
-      return affordable[0];
-
-    default:
-      return rng.pick(affordable);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Route opening logic
-// ---------------------------------------------------------------------------
-
-function openAIRoute(
-  company: AICompany,
-  idleShips: Ship[],
-  currentFleet: Ship[],
-  existingRoutes: ActiveRoute[],
-  state: GameState,
-  market: MarketState,
-  rng: SeededRNG,
-): { routes: ActiveRoute[]; fleet: Ship[] } | null {
-  const planets = state.galaxy.planets;
-  const systems = state.galaxy.systems;
-  const empires = state.galaxy.empires;
-
-  // Find planets in AI's home empire
-  const homeSystems = new Set(
-    systems.filter((s) => s.empireId === company.empireId).map((s) => s.id),
-  );
-  const homePlanets = planets.filter((p) => homeSystems.has(p.systemId));
-
-  // Based on personality, choose candidate destinations
-  let candidateOrigins: Planet[];
-  let candidateDestinations: Planet[];
-
-  switch (company.personality) {
-    case AIPersonality.SteadyHauler:
-      // Prefer home empire origins, but look at all destinations
-      candidateOrigins = homePlanets;
-      candidateDestinations = planets;
-      break;
-
-    case AIPersonality.CherryPicker:
-      // Look everywhere for best margins
-      candidateOrigins = homePlanets.length > 0 ? homePlanets : planets;
-      candidateDestinations = planets;
-      break;
-
-    case AIPersonality.AggressiveExpander:
-    default:
-      // Expand broadly
-      candidateOrigins = homePlanets.length > 0 ? homePlanets : planets;
-      candidateDestinations = planets;
-      break;
-  }
-
-  if (candidateOrigins.length === 0 || candidateDestinations.length === 0) {
-    return null;
-  }
-
-  // Score candidate routes
-  const existingRouteKeys = new Set(
-    existingRoutes.map((r) => `${r.originPlanetId}→${r.destinationPlanetId}`),
-  );
-
-  const cargoTypes = Object.values(CargoType) as CargoTypeT[];
-  let bestProfit = -Infinity;
-  let bestRoute: {
-    origin: Planet;
-    dest: Planet;
-    cargoType: CargoTypeT;
-    distance: number;
-    profit: number;
-  } | null = null;
-
-  // Sample routes (don't evaluate all — too expensive for AI)
-  const sampleSize = Math.min(candidateOrigins.length, 12);
-  const sampledOrigins = rng
-    .shuffle([...candidateOrigins])
-    .slice(0, sampleSize);
-  const destSampleSize = Math.min(candidateDestinations.length, 12);
-  const sampledDests = rng
-    .shuffle([...candidateDestinations])
-    .slice(0, destSampleSize);
-
-  for (const origin of sampledOrigins) {
-    for (const dest of sampledDests) {
-      if (origin.id === dest.id) continue;
-      if (origin.systemId === dest.systemId) continue;
-      const key = `${origin.id}→${dest.id}`;
-      if (existingRouteKeys.has(key)) continue;
-
-      const destMarket = market.planetMarkets[dest.id];
-      if (!destMarket) continue;
-
-      // Calculate distance (uses hyperlane routing when available)
-      const distance = calculateDistance(
-        origin,
-        dest,
-        systems,
-        state.hyperlanes,
-        state.borderPorts,
-      );
-      if (distance < 1 || distance === -1) continue;
-
-      // Find best cargo for this route
-      for (const cargoType of cargoTypes) {
-        const entry = destMarket[cargoType];
-        const price = calculatePrice(entry, cargoType);
-        const isPassenger = cargoType === CargoType.Passengers;
-
-        // Find best idle ship for this cargo
-        const ship = idleShips.find((s) =>
-          isPassenger ? s.passengerCapacity > 0 : s.cargoCapacity > 0,
-        );
-        if (!ship) continue;
-
-        const capacity = isPassenger
-          ? ship.passengerCapacity
-          : ship.cargoCapacity;
-        const trips = calculateTripsPerTurn(distance, ship.speed);
-        const revenue = trips * capacity * price;
-        const fuelCost =
-          trips * distance * 2 * ship.fuelEfficiency * market.fuelPrice;
-
-        // Estimate tariff
-        const originSystem = systems.find((s) => s.id === origin.systemId);
-        const destSystem = systems.find((s) => s.id === dest.systemId);
-        let tariff = 0;
-        if (
-          originSystem &&
-          destSystem &&
-          originSystem.empireId !== destSystem.empireId
-        ) {
-          const destEmpire = empires.find((e) => e.id === destSystem.empireId);
-          if (destEmpire) {
-            tariff = revenue * destEmpire.tariffRate;
-          }
-        }
-
-        const profit = revenue - fuelCost - tariff;
-        if (profit > bestProfit) {
-          bestProfit = profit;
-          bestRoute = { origin, dest, cargoType, distance, profit };
-        }
-      }
-    }
-  }
-
-  // Accept profitable routes always. When most ships are idle (desperate),
-  // also accept marginal routes that aren't deeply unprofitable — better
-  // than sitting idle earning nothing.
-  // CherryPickers are more selective — they require higher profit margins.
-  const totalShips = company.fleet.length;
-  const idleRatio = totalShips > 0 ? idleShips.length / totalShips : 0;
-  const desperate = idleRatio > 0.5;
-  const isCherryPicker = company.personality === AIPersonality.CherryPicker;
-  const cherryMinProfit = isCherryPicker ? 200 : 0;
-  const profitFloor = desperate ? -500 : cherryMinProfit;
-
-  if (!bestRoute || bestRoute.profit <= profitFloor) return null;
-
-  // Create the route and assign the best idle ship
-  const isPassenger = bestRoute.cargoType === CargoType.Passengers;
-  const bestShip = idleShips.find((s) =>
-    isPassenger ? s.passengerCapacity > 0 : s.cargoCapacity > 0,
-  );
-  if (!bestShip) return null;
-
-  const newRoute: ActiveRoute = {
-    id: `${company.id}-route-${existingRoutes.length}-${rng.nextInt(0, 9999)}`,
-    originPlanetId: bestRoute.origin.id,
-    destinationPlanetId: bestRoute.dest.id,
-    distance: bestRoute.distance,
-    assignedShipIds: [bestShip.id],
-    cargoType: bestRoute.cargoType,
-  };
-
-  const updatedFleet = currentFleet.map((s) =>
-    s.id === bestShip.id ? { ...s, assignedRouteId: newRoute.id } : s,
-  );
-
-  return {
-    routes: [...existingRoutes, newRoute],
-    fleet: updatedFleet,
-  };
 }

@@ -1106,11 +1106,19 @@ details[open] summary::after {
   }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 900px) {
+  /*
+   * Narrow viewports (tablet/mobile): stop forcing the frame to viewport
+   * height. At desktop the Phaser canvas (~4:3 internal) fills the tall
+   * frame nicely, but below ~900px the FIT scaler letterboxes the canvas
+   * inside a much taller frame, producing hundreds of px of black space
+   * that pushes the hero copy + CTAs off-screen. Let the canvas drive the
+   * frame height via an aspect-ratio on the viewport instead.
+   */
   .game-frame--hero {
-    height: calc(100vh - var(--nav-height) - 1.5rem);
-    height: calc(100dvh - var(--nav-height) - 1.5rem);
-    min-height: 320px;
+    height: auto;
+    min-height: auto;
+    max-height: calc(100dvh - var(--nav-height) - 1rem);
   }
 
   .game-frame__screen--hero {
@@ -1118,6 +1126,14 @@ details[open] summary::after {
   }
 
   .viewport--hero {
+    height: auto;
+    /*
+     * 4:3 matches the Phaser internal base (MIN_WIDTH 960 × BASE_HEIGHT 720)
+     * at square-ish viewports. On true portrait phones we relax further in
+     * the 560 breakpoint below.
+     */
+    aspect-ratio: 4 / 3;
+    max-height: calc(100dvh - var(--nav-height) - 5rem);
     border-radius: 14px;
   }
 
@@ -1193,10 +1209,10 @@ details[open] summary::after {
     display: none;
   }
 
-  .game-frame--hero {
-    height: calc(100vh - var(--nav-height) - 1rem);
-    height: calc(100dvh - var(--nav-height) - 1rem);
-    min-height: 280px;
+  .viewport--hero {
+    /* Phone portrait — Phaser scales to MIN_WIDTH 960 × tall height.
+       Match a taller 3:4 box so the canvas fills without horizontal bars. */
+    aspect-ratio: 3 / 4;
   }
 
   .game-frame__hud {

@@ -10,7 +10,8 @@ import {
   BASE_CARGO_TYPES_PER_PAIR,
   STARTING_ADJACENT_EMPIRES,
 } from "../../data/constants.ts";
-import { getTechEffectTotal } from "../tech/TechEffects.ts";
+import { getTechEffectTotal, getTechRouteSlotBonus } from "../tech/TechEffects.ts";
+import { getRouteSlotBonus } from "../hub/HubBonusCalculator.ts";
 import { findPath } from "../routes/HyperlaneRouter.ts";
 
 // ---------------------------------------------------------------------------
@@ -174,9 +175,31 @@ export function validateRouteCreation(
     return "Destination empire is not yet accessible";
   }
 
-  // Check route slot availability
-  if (state.activeRoutes.length >= state.routeSlots) {
-    return "No available route slots";
+  // Check route slot availability (local and main routes use separate pools)
+  const isLocal = originPlanet.systemId === destinationPlanet.systemId;
+  if (isLocal) {
+    const availableLocalSlots = state.localRouteSlots ?? 2;
+    const usedLocalSlots = state.activeRoutes.filter((r) => {
+      const rOrigin = planets.find((p) => p.id === r.originPlanetId);
+      const rDest = planets.find((p) => p.id === r.destinationPlanetId);
+      return rOrigin && rDest && rOrigin.systemId === rDest.systemId;
+    }).length;
+    if (availableLocalSlots - usedLocalSlots <= 0) {
+      return "No available local route slots";
+    }
+  } else {
+    const availableSlots =
+      state.routeSlots +
+      getTechRouteSlotBonus(state) +
+      getRouteSlotBonus(state.stationHub);
+    const usedSlots = state.activeRoutes.filter((r) => {
+      const rOrigin = planets.find((p) => p.id === r.originPlanetId);
+      const rDest = planets.find((p) => p.id === r.destinationPlanetId);
+      return !(rOrigin && rDest && rOrigin.systemId === rDest.systemId);
+    }).length;
+    if (availableSlots - usedSlots <= 0) {
+      return "No available route slots";
+    }
   }
 
   if (

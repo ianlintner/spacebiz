@@ -7,6 +7,13 @@ import {
 } from "../../data/constants.ts";
 import { createRoute } from "../routes/RouteManager.ts";
 import { calculateDistance } from "../routes/RouteManager.ts";
+import type { NegotiationChoice } from "./ContractNegotiation.ts";
+import { applyNegotiation } from "./ContractNegotiation.ts";
+import {
+  findBestShipForContract,
+  autoAssignShipToContract,
+} from "./ContractShipMatcher.ts";
+import type { SeededRNG } from "../../utils/SeededRNG.ts";
 
 // ---------------------------------------------------------------------------
 // Contract Lifecycle
@@ -153,6 +160,59 @@ export function processContracts(state: GameState): Partial<GameState> {
     activeRoutes,
     tech: { ...state.tech, researchPoints },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Negotiation + Accept + Auto-assign
+// ---------------------------------------------------------------------------
+
+/**
+ * Accept a contract with a negotiation choice applied.
+ *
+ * Steps:
+ *   1. Locate the contract.
+ *   2. Apply negotiation to get modified terms.
+ *   3. Accept the contract (create linked route, deduct deposit).
+ *   4. Auto-assign the best idle ship to the newly created route.
+ *
+ * Returns the updated GameState, or the original state if the contract
+ * cannot be found / is not available.
+ */
+export function acceptContractWithNegotiation(
+  contractId: string,
+  choice: NegotiationChoice,
+  state: GameState,
+  rng: SeededRNG,
+): GameState {
+  const contract = state.contracts.find(
+    (c) => c.id === contractId && c.status === ContractStatus.Available,
+  );
+  if (!contract) return state;
+
+  // 1. Apply negotiation to get updated contract terms
+  const { negotiatedContract } = applyNegotiation(contract, choice, state, rng);
+
+  // 2. Temporarily substitute negotiated contract so acceptContract sees it
+  const stateWithNegotiated: GameState = {
+    ...state,
+    contracts: state.contracts.map((c) =>
+      c.id === contractId ? negotiatedContract : c,
+    ),
+  };
+
+  // 3. Accept: creates route, deducts deposit
+  const patch = acceptContract(contractId, stateWithNegotiated);
+  if (!patch) return state;
+
+  let updatedState: GameState = { ...stateWithNegotiated, ...patch };
+
+  // 4. Auto-assign best idle ship
+  const match = findBestShipForContract(negotiatedContract, updatedState);
+  if (match.shipId !== null) {
+    updatedState = autoAssignShipToContract(contractId, match.shipId, updatedState);
+  }
+
+  return updatedState;
 }
 
 // ---------------------------------------------------------------------------

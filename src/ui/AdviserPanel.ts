@@ -92,6 +92,8 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   private drawerOpen = false;
   private closedX: number; // x when drawer is closed (only tab visible)
   private openX: number; // x when drawer is open (tab + panel visible)
+  private escKey: Phaser.Input.Keyboard.Key | null = null;
+  private escHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor(scene: Phaser.Scene, config: AdviserPanelConfig) {
     // Container starts at closedX (only tab visible)
@@ -337,6 +339,25 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
 
     // Start animation timer
     this.startAnimationLoop();
+
+    // ── ESC key: dismiss drawer when open ──
+    // Bind via the scene's Phaser keyboard plugin so it plays nicely with
+    // scene lifecycle. Captured (scene-scoped) handler ignores key events
+    // while the drawer is closed so other scenes / overlays can still claim
+    // ESC for their own modals.
+    if (scene.input.keyboard) {
+      this.escKey = scene.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.ESC,
+        false, // don't swallow — let other listeners see it too
+        false,
+      );
+      this.escHandler = () => {
+        if (this.drawerOpen) {
+          this.closeDrawer();
+        }
+      };
+      this.escKey.on("down", this.escHandler);
+    }
 
     // Always visible — starts in closed position
     this.setAlpha(1);
@@ -690,6 +711,11 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     if (this.slideTween) {
       this.slideTween.stop();
       this.slideTween = null;
+    }
+    if (this.escKey && this.escHandler) {
+      this.escKey.off("down", this.escHandler);
+      this.escKey = null;
+      this.escHandler = null;
     }
     super.destroy(fromScene);
   }

@@ -1,9 +1,11 @@
-import type { ActiveRoute, StarSystem, Empire } from "../../data/types.ts";
+import type { ActiveRoute, StarSystem, Empire, DiplomaticRelation } from "../../data/types.ts";
+import { getReputationTariffMultiplier } from "../reputation/ReputationEffects.ts";
 
 /**
  * Calculate the tariff cost for a route if it crosses empire borders.
  * Tariff = revenue × destination empire's tariffRate (only if origin and
  * destination are in different empires).
+ * Optionally applies a reputation-based surcharge for low-rep players.
  */
 export function calculateTariff(
   route: ActiveRoute,
@@ -11,6 +13,8 @@ export function calculateTariff(
   ownerEmpireId: string,
   systems: StarSystem[],
   empires: Empire[],
+  reputation?: number,
+  diplomaticRelations?: DiplomaticRelation[],
 ): number {
   const originPlanetSystemId = findSystemForPlanet(
     route.originPlanetId,
@@ -41,7 +45,25 @@ export function calculateTariff(
   const crossingEmpire = empires.find((e) => e.id === crossingEmpireId);
   if (!crossingEmpire) return 0;
 
-  return Math.round(revenue * crossingEmpire.tariffRate * 100) / 100;
+  const baseTariff = revenue * crossingEmpire.tariffRate;
+
+  // Apply reputation-based tariff surcharge for non-allied empires
+  let repMult = 1.0;
+  if (reputation !== undefined) {
+    // Find the diplomatic status between owner's empire and the crossing empire
+    let diplomaticStatus = 'peace';
+    if (diplomaticRelations) {
+      const relation = diplomaticRelations.find(
+        (r) =>
+          (r.empireA === ownerEmpireId && r.empireB === crossingEmpireId) ||
+          (r.empireB === ownerEmpireId && r.empireA === crossingEmpireId),
+      );
+      if (relation) diplomaticStatus = relation.status;
+    }
+    repMult = getReputationTariffMultiplier(reputation, diplomaticStatus);
+  }
+
+  return Math.round(baseTariff * repMult * 100) / 100;
 }
 
 /**

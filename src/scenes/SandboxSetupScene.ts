@@ -21,7 +21,7 @@ import type { SaveSlotMeta } from "../game/simulation/SandboxSaveManager.ts";
 
 export class SandboxSetupScene extends Phaser.Scene {
   private seed = 0;
-  private selectedSize: "small" | "medium" | "large" = "medium";
+  private selectedSize: "quick" | "standard" | "epic" = "standard";
   private selectedShape: "spiral" | "elliptical" | "ring" | "irregular" =
     "spiral";
   private selectedCompanyCount = 6;
@@ -46,7 +46,7 @@ export class SandboxSetupScene extends Phaser.Scene {
     getAudioDirector().setMusicState("setup");
 
     this.seed = Math.floor(Math.random() * 1000000);
-    this.selectedSize = "medium";
+    this.selectedSize = "standard";
     this.selectedShape = "spiral";
     this.selectedCompanyCount = 6;
     this.selectedSpeed = "normal";
@@ -142,10 +142,10 @@ export class SandboxSetupScene extends Phaser.Scene {
     });
 
     rowY += 24;
-    const sizes: { label: string; value: "small" | "medium" | "large" }[] = [
-      { label: "Small", value: "small" },
-      { label: "Medium", value: "medium" },
-      { label: "Large", value: "large" },
+    const sizes: { label: string; value: "quick" | "standard" | "epic" }[] = [
+      { label: "Quick", value: "quick" },
+      { label: "Standard", value: "standard" },
+      { label: "Epic", value: "epic" },
     ];
     const sizeBtnW = 120;
     let sizeBtnX =

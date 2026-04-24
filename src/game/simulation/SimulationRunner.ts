@@ -3,9 +3,10 @@ import { GameEventEmitter } from "../../utils/EventEmitter.ts";
 import { createNewGame } from "../NewGameSetup.ts";
 import { simulateTurn } from "./TurnSimulator.ts";
 import { convertToFullAIState } from "./AIPlayerAdapter.ts";
-import { GameSize, GalaxyShape } from "../../data/types.ts";
-import type { GameState } from "../../data/types.ts";
-import { GAME_SIZE_CONFIGS } from "../../data/constants.ts";
+import { GalaxyShape } from "../../data/types.ts";
+import type { GameState, GalaxyShape as GalaxyShapeT } from "../../data/types.ts";
+import { GAME_LENGTH_PRESETS } from "../../data/constants.ts";
+import type { GamePreset } from "../../data/constants.ts";
 import { rankCompanies } from "../scoring/ScoreCalculator.ts";
 import { SimulationLogger } from "./SimulationLogger.ts";
 import type {
@@ -20,19 +21,9 @@ import type {
 
 export type { SimulationConfig, SimulationResult, SimulationSummary, TurnLog };
 
-// ── Game-size / galaxy-shape mapping ───────────────────────────
+// ── Galaxy-shape mapping ────────────────────────────────────────
 
-const GAME_SIZE_MAP: Record<string, (typeof GameSize)[keyof typeof GameSize]> =
-  {
-    small: GameSize.Small,
-    medium: GameSize.Medium,
-    large: GameSize.Large,
-  };
-
-const GALAXY_SHAPE_MAP: Record<
-  string,
-  (typeof GalaxyShape)[keyof typeof GalaxyShape]
-> = {
+const GALAXY_SHAPE_MAP: Record<string, GalaxyShapeT> = {
   spiral: GalaxyShape.Spiral,
   elliptical: GalaxyShape.Elliptical,
   ring: GalaxyShape.Ring,
@@ -74,21 +65,23 @@ export class SimulationRunner extends GameEventEmitter {
     const startTime = performance.now();
     this.aborted = false;
 
-    // Resolve game size & shape enums
-    const gameSize = GAME_SIZE_MAP[config.gameSize] ?? GameSize.Small;
+    // Resolve game preset & shape
+    const gamePreset = (config.gameSize as GamePreset) in GAME_LENGTH_PRESETS
+      ? (config.gameSize as GamePreset)
+      : "standard";
     const galaxyShape =
       GALAXY_SHAPE_MAP[config.galaxyShape] ?? GalaxyShape.Spiral;
 
-    // Determine max turns — config override or from game size preset
-    const sizeConfig = GAME_SIZE_CONFIGS[gameSize];
+    // Determine max turns — config override or from game preset
+    const presetConfig = GAME_LENGTH_PRESETS[gamePreset];
     const maxTurns =
-      config.maxTurns > 0 ? config.maxTurns : sizeConfig.maxTurns;
+      config.maxTurns > 0 ? config.maxTurns : presetConfig.maxTurns;
 
     // Create a new game and convert to full-AI mode
     const { state: baseState } = createNewGame(
       config.seed,
       "AI Sandbox Corp",
-      gameSize,
+      gamePreset,
       galaxyShape,
     );
 
@@ -175,17 +168,19 @@ export class SimulationRunner extends GameEventEmitter {
     const startTime = performance.now();
     this.aborted = false;
 
-    const gameSize = GAME_SIZE_MAP[config.gameSize] ?? GameSize.Small;
+    const gamePreset = (config.gameSize as GamePreset) in GAME_LENGTH_PRESETS
+      ? (config.gameSize as GamePreset)
+      : "standard";
     const galaxyShape =
       GALAXY_SHAPE_MAP[config.galaxyShape] ?? GalaxyShape.Spiral;
-    const sizeConfig = GAME_SIZE_CONFIGS[gameSize];
+    const presetConfig = GAME_LENGTH_PRESETS[gamePreset];
     const maxTurns =
-      config.maxTurns > 0 ? config.maxTurns : sizeConfig.maxTurns;
+      config.maxTurns > 0 ? config.maxTurns : presetConfig.maxTurns;
 
     const { state: baseState } = createNewGame(
       config.seed,
       "AI Sandbox Corp",
-      gameSize,
+      gamePreset,
       galaxyShape,
     );
 

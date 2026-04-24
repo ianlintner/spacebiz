@@ -16,6 +16,7 @@ import {
   getShipIconKey,
   getShipMapAnimKey,
   getShipMapKey,
+  getCargoShortLabel,
 } from "../ui/index.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { SeededRNG } from "../utils/SeededRNG.ts";
@@ -140,32 +141,42 @@ export class SystemMapScene extends Phaser.Scene {
       color: theme.colors.textDim,
     }).setOrigin(0.5, 0);
 
-    this.add
-      .rectangle(
-        L.mainContentLeft + L.mainContentWidth - 8,
-        L.contentTop + 8,
-        360,
-        42,
-        theme.colors.background,
-        0.44,
-      )
-      .setStrokeStyle(1, theme.colors.panelBorder, 0.2)
-      .setOrigin(1, 0);
+    // Right-edge hint — placed BELOW the system title on its own row so the
+    // 3-line hint can't bleed leftward into the centered title at narrow
+    // widths (previously rendered as "GaLineos planet for local market …"
+    // where the system name and hint collided on the same y coordinate).
+    const hintBoxWidth = Math.min(280, L.mainContentWidth - 232);
+    if (hintBoxWidth > 160) {
+      const hintX = L.mainContentLeft + L.mainContentWidth - 8;
+      const hintY = L.contentTop + 34;
+      this.add
+        .rectangle(
+          hintX,
+          hintY,
+          hintBoxWidth,
+          46,
+          theme.colors.background,
+          0.44,
+        )
+        .setStrokeStyle(1, theme.colors.panelBorder, 0.2)
+        .setOrigin(1, 0);
 
-    this.add
-      .text(
-        L.mainContentLeft + L.mainContentWidth - 8,
-        L.contentTop + 10,
-        "Click a planet for local market details and route setup\nConcentric orbits: inner industry → outer leisure/hubs\nPlanet size scales with population",
-        {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.textDim),
-          align: "right",
-        },
-      )
-      .setOrigin(1, 0)
-      .setAlpha(0.85);
+      this.add
+        .text(
+          hintX - 6,
+          hintY + 4,
+          "Click a planet for local market details and route setup\nConcentric orbits: inner industry \u2192 outer leisure/hubs\nPlanet size scales with population",
+          {
+            fontSize: `${theme.fonts.caption.size}px`,
+            fontFamily: theme.fonts.caption.family,
+            color: colorToString(theme.colors.textDim),
+            align: "right",
+            fixedWidth: hintBoxWidth - 12,
+          },
+        )
+        .setOrigin(1, 0)
+        .setAlpha(0.85);
+    }
 
     // Back button: glass styled, using Layout constants
     new Button(this, {
@@ -447,9 +458,15 @@ export class SystemMapScene extends Phaser.Scene {
 
       // Trade policy restriction icons (show banned cargo types)
       if (empirePolicy && systemEmpireAccessible) {
+        // Route through getCargoShortLabel so banned cargo types render
+        // as e.g. "❌RAW" instead of the camelCase enum id "❌rawMaterials".
         const bans = [
-          ...empirePolicy.bannedImports.map((c) => `\u274C${c}`),
-          ...empirePolicy.bannedExports.map((c) => `\u26D4${c}`),
+          ...empirePolicy.bannedImports.map(
+            (c) => `\u274C${getCargoShortLabel(c)}`,
+          ),
+          ...empirePolicy.bannedExports.map(
+            (c) => `\u26D4${getCargoShortLabel(c)}`,
+          ),
         ];
         if (bans.length > 0) {
           this.add

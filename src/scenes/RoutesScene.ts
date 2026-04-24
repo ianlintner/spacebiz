@@ -20,6 +20,7 @@ import {
   getCargoIconKey,
   getCargoColor,
   getCargoLabel,
+  getCargoShortLabel,
   getShipIconKey,
   getShipColor,
 } from "../ui/index.ts";
@@ -70,11 +71,6 @@ function trendArrow(trend: "rising" | "stable" | "falling"): string {
   if (trend === "rising") return "\u25B2";
   if (trend === "falling") return "\u25BC";
   return "\u25C6";
-}
-
-function humanizeCargo(ct: CargoTypeValue): string {
-  if (ct === "rawMaterials") return "Raw Mat.";
-  return ct.charAt(0).toUpperCase() + ct.slice(1);
 }
 
 export class RoutesScene extends Phaser.Scene {
@@ -204,22 +200,13 @@ export class RoutesScene extends Phaser.Scene {
 
     // ── Cargo type filter buttons ──
     const filterY = tabContentY + summaryHeight - 4;
-    const filterShortLabels: Record<string, string> = {
-      passengers: "Pax",
-      rawMaterials: "Raw",
-      food: "Food",
-      technology: "Tech",
-      luxury: "Lux",
-      hazmat: "Haz",
-      medical: "Med",
-    };
     const allCargoFilters: Array<{
       label: string;
       value: CargoTypeValue | null;
     }> = [
       { label: "All", value: null },
       ...Object.values(CargoType).map((ct) => ({
-        label: filterShortLabels[ct] ?? humanizeCargo(ct as CargoTypeValue),
+        label: getCargoShortLabel(ct),
         value: ct as CargoTypeValue,
       })),
     ];
@@ -267,7 +254,7 @@ export class RoutesScene extends Phaser.Scene {
           label: "Cargo",
           width: 90,
           sortable: true,
-          format: (v) => getCargoLabel(v as string),
+          format: (v) => getCargoShortLabel(v as string),
           iconFn: (v) => getCargoIconKey(v as string),
           iconTintFn: (v) => getCargoColor(v as string),
         },
@@ -321,7 +308,7 @@ export class RoutesScene extends Phaser.Scene {
         },
         {
           key: "profit",
-          label: "Profit",
+          label: "Profit/turn",
           width: 80,
           align: "right",
           sortable: true,
@@ -457,7 +444,7 @@ export class RoutesScene extends Phaser.Scene {
           label: "Cargo",
           width: 90,
           sortable: true,
-          format: (v) => getCargoLabel(v as string),
+          format: (v) => getCargoShortLabel(v as string),
           iconFn: (v) => {
             const val = v as string;
             return val && val !== "None" ? getCargoIconKey(val) : null;
@@ -601,7 +588,7 @@ export class RoutesScene extends Phaser.Scene {
       (o) => o.estProfit > 0 && !o.alreadyActive,
     ).length;
     const filterLabel = this.finderCargoFilter
-      ? humanizeCargo(this.finderCargoFilter)
+      ? getCargoLabel(this.finderCargoFilter)
       : "all cargo";
     const slotsUsed = getUsedRouteSlots(state);
     const slotsTotal = getAvailableRouteSlots(state);
@@ -747,7 +734,7 @@ export class RoutesScene extends Phaser.Scene {
       `${opp.originName} → ${dest.name}`,
       [
         { label: "Type", value: dest.type },
-        { label: "Cargo", value: humanizeCargo(opp.bestCargoType) },
+        { label: "Cargo", value: getCargoLabel(opp.bestCargoType) },
         {
           label: "Price",
           value: `§${opp.destPrice.toFixed(0)} ${trendArrow(opp.destTrend)}`,
@@ -947,7 +934,7 @@ export class RoutesScene extends Phaser.Scene {
       let profit: number | string = "\u2014";
 
       if (firstShip && route.cargoType) {
-        const rev = estimateRouteRevenue(route, firstShip, state.market);
+        const rev = estimateRouteRevenue(route, firstShip, state.market, state);
         const fuel = estimateRouteFuelCost(
           route,
           firstShip,
@@ -1070,7 +1057,7 @@ export class RoutesScene extends Phaser.Scene {
       this.assignShipButton.setLabel("Assign Ship");
     } else {
       const revenue = route.cargoType
-        ? estimateRouteRevenue(route, firstShip, state.market)
+        ? estimateRouteRevenue(route, firstShip, state.market, state)
         : null;
       const fuel = route.cargoType
         ? estimateRouteFuelCost(route, firstShip, state.market.fuelPrice)
