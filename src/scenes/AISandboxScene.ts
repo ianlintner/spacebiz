@@ -43,7 +43,7 @@ const SPEED_DELAYS: Record<string, number> = {
 // ── Helpers ────────────────────────────────────────────────────
 
 function formatCash(amount: number): string {
-  return "\u00A7" + Math.round(amount).toLocaleString();
+  return "\u00A7" + Math.round(amount).toLocaleString("en-US");
 }
 
 function truncate(text: string, maxLen: number): string {

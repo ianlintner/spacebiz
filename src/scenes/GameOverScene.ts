@@ -27,7 +27,7 @@ import { CARGO_DIVERSITY_BONUS } from "../data/constants.ts";
 function formatCash(amount: number): string {
   const sign = amount < 0 ? "-" : "";
   const abs = Math.abs(Math.round(amount));
-  return sign + "\u00A7" + abs.toLocaleString();
+  return sign + "\u00A7" + abs.toLocaleString("en-US");
 }
 
 export class GameOverScene extends Phaser.Scene {
@@ -153,27 +153,27 @@ export class GameOverScene extends Phaser.Scene {
       },
       {
         label: "Reputation Bonus",
-        value: `+${Math.round(reputationBonus).toLocaleString()}`,
+        value: `+${Math.round(reputationBonus).toLocaleString("en-US")}`,
         color: theme.colors.accent,
       },
       {
         label: "Cargo Bonus",
-        value: `+${Math.round(cargoBonus).toLocaleString()}`,
+        value: `+${Math.round(cargoBonus).toLocaleString("en-US")}`,
         color: theme.colors.accent,
       },
       {
         label: `Diversity Bonus (${cargoTypeTotals.size} types)`,
-        value: `+${diversityBonus.toLocaleString()}`,
+        value: `+${diversityBonus.toLocaleString("en-US")}`,
         color: theme.colors.accent,
       },
       {
         label: "Route Bonus",
-        value: `+${routeBonus.toLocaleString()}`,
+        value: `+${routeBonus.toLocaleString("en-US")}`,
         color: theme.colors.accent,
       },
       {
         label: "Empire Bonus",
-        value: `+${empireBonus.toLocaleString()}`,
+        value: `+${empireBonus.toLocaleString("en-US")}`,
         color: theme.colors.accent,
       },
     ];
@@ -238,10 +238,10 @@ export class GameOverScene extends Phaser.Scene {
       delay: 400,
       ease: "Cubic.easeOut",
       onUpdate: () => {
-        totalValue.setText(Math.round(scoreCounter.value).toLocaleString());
+        totalValue.setText(Math.round(scoreCounter.value).toLocaleString("en-US"));
       },
       onComplete: () => {
-        totalValue.setText(finalScore.toLocaleString());
+        totalValue.setText(finalScore.toLocaleString("en-US"));
         this.tweens.add({
           targets: totalValue,
           scaleX: 1.15,
@@ -298,7 +298,7 @@ export class GameOverScene extends Phaser.Scene {
           label: "Score",
           width: 140,
           align: "right",
-          format: (v) => (v as number).toLocaleString(),
+          format: (v) => (v as number).toLocaleString("en-US"),
           colorFn: () => theme.colors.accent,
         },
         {
@@ -364,7 +364,7 @@ export class GameOverScene extends Phaser.Scene {
           label: "Score",
           width: 150,
           align: "right",
-          format: (v) => (v as number).toLocaleString(),
+          format: (v) => (v as number).toLocaleString("en-US"),
           colorFn: () => theme.colors.accent,
         },
       ],

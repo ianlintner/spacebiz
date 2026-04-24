@@ -19,6 +19,8 @@ import { TUTORIAL_STEPS } from "../game/adviser/TutorialDefinitions.ts";
 import {
   getAvailableRouteSlots,
   getUsedRouteSlots,
+  getAvailableLocalRouteSlots,
+  getUsedLocalRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import { getPortraitTextureKey } from "../data/portraits.ts";
 import { portraitLoader, PORTRAIT_PLACEHOLDER_KEY } from "../game/PortraitLoader.ts";
@@ -39,7 +41,7 @@ const NAV_TAB_TO_SCENE: Record<NavTabId, string> = {
 };
 
 function formatCash(amount: number): string {
-  return "\u00A7" + amount.toLocaleString();
+  return "\u00A7" + Math.round(amount).toLocaleString("en-US");
 }
 
 function fitImageCover(
@@ -545,8 +547,8 @@ export class GameHUDScene extends Phaser.Scene {
     this.actionPromptLabel.setOrigin(0, 0.5);
 
     // Route slot indicator (bottom bar, to the left of the end turn area)
-    const slotsUsed = getUsedRouteSlots(state);
-    const slotsTotal = getAvailableRouteSlots(state);
+    const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
+    const slotsTotal = getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
     this.routeSlotLabel = new Label(this, {
       x: L.gameWidth - 200,
       y: L.gameHeight - L.hudBottomBarHeight / 2 - 8,
@@ -752,9 +754,9 @@ export class GameHUDScene extends Phaser.Scene {
     this.updateNavBadges();
     this.updateNavVisibility();
 
-    // Route slot indicator
-    const slotsUsed = getUsedRouteSlots(state);
-    const slotsTotal = getAvailableRouteSlots(state);
+    // Route slot indicator (main + local combined)
+    const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
+    const slotsTotal = getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
     this.routeSlotLabel.setText(`Routes ${slotsUsed}/${slotsTotal}`);
     this.routeSlotLabel.setLabelColor(
       slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
