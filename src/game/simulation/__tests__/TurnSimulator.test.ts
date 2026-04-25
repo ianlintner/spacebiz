@@ -252,6 +252,18 @@ describe("TurnSimulator", () => {
       expect(turnResult.revenue).toBe(expectedRevenue);
     });
 
+    it("skips paused routes — no revenue and no fuel charged", () => {
+      const state = makeGameState();
+      // Mark the only route as paused
+      state.activeRoutes[0].paused = true;
+      const rng = new SeededRNG(42);
+
+      const result = simulateTurn(state, rng);
+      const turnResult = result.history[result.history.length - 1];
+      expect(turnResult.revenue).toBe(0);
+      expect(turnResult.fuelCosts).toBe(0);
+    });
+
     it("deducts fuel costs correctly", () => {
       const state = makeGameState();
       const rng = new SeededRNG(42);
