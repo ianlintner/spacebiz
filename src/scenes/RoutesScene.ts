@@ -1132,11 +1132,31 @@ export class RoutesScene extends Phaser.Scene {
   }
 
   private startCreateRoute(): void {
+    // Map the table's selected display row back to the unfiltered opportunities
+    // array via the row's `_index` field. The DataTable position alone is wrong
+    // when a cargo filter is active — position 0 in the filtered view is rarely
+    // index 0 in the unfiltered list.
+    const selectedRow = this.finderTable?.getSelectedRow?.();
+    const oppIndex =
+      typeof selectedRow?.["_index"] === "number"
+        ? (selectedRow["_index"] as number)
+        : -1;
+    const selectedOpp =
+      oppIndex >= 0 && oppIndex < this.opportunities.length
+        ? this.opportunities[oppIndex]
+        : null;
+
+    const initialCargoType =
+      selectedOpp?.bestCargoType ?? this.finderCargoFilter ?? undefined;
+
     openRouteBuilder(this, {
       ui: this.ui,
       title: "Create Trade Route",
       confirmLabel: "Create Route",
       allowAutoBuy: true,
+      initialOriginPlanetId: selectedOpp?.originPlanetId,
+      initialDestinationPlanetId: selectedOpp?.destinationPlanetId,
+      initialCargoType,
       onComplete: () => {
         this.refreshFinderTable();
         this.refreshActiveTable();
