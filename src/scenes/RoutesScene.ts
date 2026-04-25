@@ -1,5 +1,7 @@
 import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
+import { isInDistanceBand } from "./routesFinderFilters.ts";
+import type { DistanceBand } from "./routesFinderFilters.ts";
 import { CargoType } from "../data/types.ts";
 import type { CargoType as CargoTypeValue } from "../data/types.ts";
 import {
@@ -94,7 +96,9 @@ export class RoutesScene extends Phaser.Scene {
   private finderSummary!: Phaser.GameObjects.Text;
   private opportunities: RouteOpportunity[] = [];
   private finderCargoFilter: CargoTypeValue | null = null;
+  private finderDistanceBand: DistanceBand = null;
   private filterButtons: Button[] = [];
+  private distanceBandButtons: Button[] = [];
 
   // ── Sidebar mini-map ──
   private miniMap!: MiniMap;
@@ -173,7 +177,7 @@ export class RoutesScene extends Phaser.Scene {
     const contentInnerW = panelW - 24;
     const tabBarHeight = 40; // theme.button.height
     const summaryHeight = 50;
-    const filterRowHeight = 32; // cargo filter buttons
+    const filterRowHeight = 64; // cargo filter row + distance-band row
     const buttonAreaHeight = 52; // 8px gap + 40px button + 4px pad
     const tableTop = tabContentY + summaryHeight + filterRowHeight;
     const tableHeight =
@@ -238,6 +242,38 @@ export class RoutesScene extends Phaser.Scene {
       filterX += btn.width + 4;
     }
     this.updateFilterButtonStyles();
+
+    // ── Distance-band filter buttons (second row) ──
+    const distanceBandY = filterY + 30;
+    const distanceBands: Array<{ label: string; value: DistanceBand }> = [
+      { label: "Any dist.", value: null },
+      { label: "Short (<50)", value: "short" },
+      { label: "Med (50-150)", value: "medium" },
+      { label: "Long (>150)", value: "long" },
+    ];
+    this.distanceBandButtons = [];
+    let distanceX = contentInnerX;
+    for (let i = 0; i < distanceBands.length; i++) {
+      const band = distanceBands[i];
+      const btn = new Button(this, {
+        x: distanceX,
+        y: distanceBandY,
+        autoWidth: true,
+        paddingX: filterBtnPadX,
+        height: 26,
+        label: band.label,
+        fontSize: 11,
+        onClick: () => {
+          this.finderDistanceBand = band.value;
+          this.updateDistanceBandButtonStyles();
+          this.refreshFinderTable();
+        },
+      });
+      this.distanceBandButtons.push(btn);
+      finderContent.add(btn);
+      distanceX += btn.width + 4;
+    }
+    this.updateDistanceBandButtonStyles();
 
     this.finderTable = new DataTable(this, {
       x: contentInnerX,
@@ -590,12 +626,13 @@ export class RoutesScene extends Phaser.Scene {
       state,
     );
 
-    // Apply cargo type filter
-    const filtered = this.finderCargoFilter
-      ? this.opportunities.filter(
-          (o) => o.bestCargoType === this.finderCargoFilter,
-        )
-      : this.opportunities;
+    // Apply cargo type + distance band filters
+    const filtered = this.opportunities.filter((o) => {
+      if (this.finderCargoFilter && o.bestCargoType !== this.finderCargoFilter)
+        return false;
+      if (!isInDistanceBand(o.distance, this.finderDistanceBand)) return false;
+      return true;
+    });
 
     const availableShips = state.fleet.filter((s) => !s.assignedRouteId).length;
     const profitableCount = filtered.filter(
@@ -706,6 +743,20 @@ export class RoutesScene extends Phaser.Scene {
     for (let i = 0; i < this.filterButtons.length; i++) {
       const btn = this.filterButtons[i];
       const isActive = allCargoFilters[i] === this.finderCargoFilter;
+      btn.setAlpha(isActive ? 1.0 : 0.5);
+    }
+  }
+
+  private updateDistanceBandButtonStyles(): void {
+    const bands: Array<DistanceBand> = [
+      null,
+      "short",
+      "medium",
+      "long",
+    ];
+    for (let i = 0; i < this.distanceBandButtons.length; i++) {
+      const btn = this.distanceBandButtons[i];
+      const isActive = bands[i] === this.finderDistanceBand;
       btn.setAlpha(isActive ? 1.0 : 0.5);
     }
   }
