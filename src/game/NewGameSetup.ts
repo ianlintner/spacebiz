@@ -281,13 +281,17 @@ export function createNewGame(
     startingShips.push(createShipFromTemplate(shipClass, `ship-${i}`));
   }
 
-  // Initialize storyteller
+  // Initialize storyteller. `turnsSinceLastDilemma` starts high so the first
+  // dilemma can fire as soon as the player has cleared the early-game ramp.
   const storyteller: StorytellerState = {
     playerHealthScore: 50,
     headwindBias: 0,
     turnsInDebt: 0,
     consecutiveProfitTurns: 0,
     turnsSinceLastDecision: 0,
+    turnsSinceLastDilemma: 999,
+    recentIntensity: 0,
+    mode: "steady",
   };
 
   // Select starting system options

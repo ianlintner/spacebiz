@@ -110,13 +110,40 @@ function applyEffect(state: GameState, effect: EventEffect): GameState {
 }
 
 // ---------------------------------------------------------------------------
-// Internal: apply all effects from a ChoiceOption
+// Internal: apply all effects from a ChoiceOption, scaled by success%.
+// `successPercent` is in [10, 100]; effect numeric `value` fields are
+// multiplied by (successPercent / 100). Floor at 10 ensures every option
+// always succeeds with at least a small effect.
 // ---------------------------------------------------------------------------
 
-function applyChoiceEffects(state: GameState, option: ChoiceOption): GameState {
+function scaleEffect(effect: EventEffect, successPercent: number): EventEffect {
+  const factor = Math.max(0.1, Math.min(1, successPercent / 100));
+  // Most effect types use `value` as their magnitude. Diplomatic effects
+  // (declareWar, signPeace, etc.) are categorical and don't scale numerically;
+  // for those we leave `value` alone.
+  switch (effect.type) {
+    case "modifyCash":
+    case "modifyReputation":
+    case "modifyPrice":
+    case "modifyDemand":
+    case "modifySpeed":
+    case "modifyTariff":
+      return { ...effect, value: effect.value * factor };
+    default:
+      return effect;
+  }
+}
+
+function applyChoiceEffects(
+  state: GameState,
+  option: ChoiceOption,
+  successPercent: number | null,
+): GameState {
   let nextState = state;
   for (const effect of option.effects) {
-    nextState = applyEffect(nextState, effect);
+    const scaled =
+      successPercent === null ? effect : scaleEffect(effect, successPercent);
+    nextState = applyEffect(nextState, scaled);
   }
   return nextState;
 }
@@ -229,8 +256,9 @@ export function resolveChoiceEvent(
     nextState = deductAp(nextState, option.requiresAp);
   }
 
-  // 4b. Apply effects
-  nextState = applyChoiceEffects(nextState, option);
+  // 4b. Apply effects, scaled by success% if this is a dilemma
+  const successPercent = event.optionSuccess?.[option.id] ?? null;
+  nextState = applyChoiceEffects(nextState, option, successPercent);
 
   // 5. Remove the resolved event from pending list
   nextState = {

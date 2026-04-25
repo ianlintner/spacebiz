@@ -677,3 +677,69 @@ describe("EventChainDefinitions", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Dilemma success% scaling — magnitude-only model.
+// ---------------------------------------------------------------------------
+
+describe("resolveChoiceEvent — dilemma success% scaling", () => {
+  it("scales modifyCash magnitude by success%", () => {
+    const event: ChoiceEvent = {
+      id: "dilemma-1",
+      eventId: "test_dilemma",
+      prompt: "test",
+      options: [
+        {
+          id: "spend",
+          label: "Spend",
+          outcomeDescription: "",
+          effects: [{ type: "modifyCash", value: -10000 }],
+        },
+      ],
+      turnCreated: 1,
+      optionSuccess: { spend: 50 },
+      dilemmaId: "test_dilemma",
+    };
+    const state = makeMinimalState({ pendingChoiceEvents: [event] });
+
+    const result = resolveChoiceEvent(state, event.id, "spend");
+
+    // 50% scales -10000 to -5000.
+    expect(result.cash).toBe(STARTING_CASH - 5000);
+  });
+
+  it("respects the 10% magnitude floor", () => {
+    const event: ChoiceEvent = {
+      id: "dilemma-2",
+      eventId: "test_dilemma",
+      prompt: "test",
+      options: [
+        {
+          id: "spend",
+          label: "Spend",
+          outcomeDescription: "",
+          effects: [{ type: "modifyCash", value: -10000 }],
+        },
+      ],
+      turnCreated: 1,
+      optionSuccess: { spend: 5 }, // below the 10% floor
+      dilemmaId: "test_dilemma",
+    };
+    const state = makeMinimalState({ pendingChoiceEvents: [event] });
+
+    const result = resolveChoiceEvent(state, event.id, "spend");
+
+    // Floor at 10% → -1000.
+    expect(result.cash).toBe(STARTING_CASH - 1000);
+  });
+
+  it("does not scale when no optionSuccess provided (legacy choice events)", () => {
+    const event = makePendingChoiceEvent();
+    const state = makeMinimalState({ pendingChoiceEvents: [event] });
+
+    // Legacy event has no optionSuccess; resolver should apply 100% magnitude.
+    const result = resolveChoiceEvent(state, event.id, "pay_protection");
+
+    expect(result.cash).toBe(STARTING_CASH - 2000);
+  });
+});

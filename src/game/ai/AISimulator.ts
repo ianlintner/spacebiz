@@ -36,6 +36,7 @@ import {
   applyAIContractRewards,
 } from "./steps/aiContractStep.ts";
 import { processAIHub, applyAIHubBonuses } from "./steps/aiHubStep.ts";
+import { applyAINarrativeEvents } from "./steps/aiNarrativeStep.ts";
 
 // Re-export step utilities used by other modules
 export { getAISlotLimit } from "./steps/aiDecisionStep.ts";
@@ -163,6 +164,26 @@ export function simulateAITurns(
     // 9. AI hub upgrades (Wave 3)
     updatedCompanyWithTech = processAIHub(updatedCompanyWithTech, state);
 
+    // 9a. Storyteller-driven AI narrative beats (buff/debuff with optional headline)
+    const narrative = applyAINarrativeEvents(
+      updatedCompanyWithTech,
+      state,
+      rng,
+      adjustedRevenue,
+      maintenanceCosts,
+    );
+    newCash += narrative.cashAdjustment;
+    const updatedReputation = Math.max(
+      0,
+      Math.min(100, updatedCompanyWithTech.reputation + narrative.reputationAdjustment),
+    );
+    updatedCompanyWithTech = {
+      ...updatedCompanyWithTech,
+      cash: newCash,
+      reputation: updatedReputation,
+      activeNarrativeEffects: narrative.activeNarrativeEffects,
+    };
+
     // 10. Check bankruptcy
     const finalFleet = updatedCompanyWithTech.fleet;
     const totalFleetValue = finalFleet.reduce(
@@ -192,6 +213,7 @@ export function simulateAITurns(
       routeCount: updatedCompany.activeRoutes.length,
       fleetSize: updatedCompany.fleet.length,
       bankrupt: updatedCompany.bankrupt,
+      narrativeBeat: narrative.beat,
     });
 
     return updatedCompany;
