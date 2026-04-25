@@ -54,6 +54,9 @@ export class SimPlaybackScene extends Phaser.Scene {
   private turnResult!: TurnResult;
   private animationComplete = false;
 
+  // Camera IDs for dual-camera setup (main = world, hudCam = fixed UI at zoom 1)
+  private hudCamId = 0;
+
   // Camera drag state
   private isDragging = false;
   private dragStartX = 0;
@@ -169,9 +172,16 @@ export class SimPlaybackScene extends Phaser.Scene {
     cam.setZoom(startZoom);
     cam.centerOn(focusCx, focusCy);
 
-    // Virtual coordinate space for scrollFactor(0) HUD elements
-    const sfW = vpW / startZoom;
-    const sfH = vpH / startZoom;
+    // Fixed-zoom HUD camera — immune to main cam zoom/pan so UI stays anchored
+    // to the viewport. Route world objects → main cam, HUD → uiCam via
+    // cameraFilter pass at end of create().
+    const uiCam = this.cameras.add(vpX, vpY, vpW, vpH, false, "sim-hud-cam");
+    uiCam.setZoom(1);
+    this.hudCamId = uiCam.id;
+
+    // HUD coords are plain viewport-space since uiCam is at zoom 1
+    const sfW = vpW;
+    const sfH = vpH;
 
     // ── Parallax starfield (3 depth layers) ───────────────────────────────────
     const spreadW = galW + 2400;
@@ -986,6 +996,15 @@ export class SimPlaybackScene extends Phaser.Scene {
       });
       btn.setScrollFactor(0);
     }
+
+    // ── Dual-camera filter pass ──────────────────────────────────────────────
+    // HUD elements (scrollFactor 0) render only on uiCam; everything else only
+    // on the main (world) cam. cameraFilter is a skip-bitmask: setting it to a
+    // camera's id hides the object from that camera.
+    for (const child of this.children.list) {
+      const sf = (child as unknown as { scrollFactorX?: number }).scrollFactorX;
+      child.cameraFilter = sf === 0 ? cam.id : this.hudCamId;
+    }
   }
 
   // ── Speed control ─────────────────────────────────────────────────────────
@@ -1003,7 +1022,7 @@ export class SimPlaybackScene extends Phaser.Scene {
   ): void {
     const theme = getTheme();
     const cam = this.cameras.main;
-    const sfW = cam.width / cam.zoom;
+    const sfW = cam.width;
     const popupH = 72;
     const popupW = 300;
     const containerY = 60 + index * (popupH + 8);
@@ -1011,6 +1030,7 @@ export class SimPlaybackScene extends Phaser.Scene {
       .container(sfW + popupW, containerY)
       .setScrollFactor(0)
       .setDepth(60);
+    container.cameraFilter = cam.id;
     const isHazard = category === EventCategory.Hazard;
     const isOpportunity = category === EventCategory.Opportunity;
     const borderColor = isHazard
@@ -1118,10 +1138,13 @@ export class SimPlaybackScene extends Phaser.Scene {
       cam2.setZoom(1);
       cam2.centerOn(L2.gameWidth / 2, L2.gameHeight / 2);
       const sign = net >= 0 ? "+" : "";
+      const turn = this.newState.turn;
+      const q = ((turn - 1) % 4) + 1;
+      const y = Math.ceil(turn / 4);
       MilestoneOverlay.show(
         this,
         "sim_complete",
-        "SIM COMPLETE",
+        `END OF QUARTER Q${q} Y${y}`,
         sign + "\u00A7" + Math.abs(Math.round(net)).toLocaleString("en-US") + " Net",
       );
     }
