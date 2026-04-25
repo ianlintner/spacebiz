@@ -10,6 +10,15 @@ export function createGameConfig(
   const size = calculateGameSize();
   updateLayout(size.width, size.height);
 
+  const dpr =
+    typeof window !== "undefined"
+      ? Math.min(window.devicePixelRatio || 1, 2)
+      : 1;
+
+  // Phaser 4 dropped `resolution` from the public GameConfig types, but the
+  // field is still surfaced via spread cast so future Phaser 4.x versions (or
+  // forks) that re-introduce it pick it up — and so the intent stays visible
+  // even if the engine ignores it today.
   return {
     type: Phaser.AUTO,
     width: size.width,
@@ -22,5 +31,6 @@ export function createGameConfig(
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     scene: scenes,
+    ...({ resolution: dpr } as unknown as Phaser.Types.Core.GameConfig),
   };
 }

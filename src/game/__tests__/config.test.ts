@@ -28,6 +28,35 @@ describe("calculateGameSize", () => {
       expect(size.height).toBe(BASE_HEIGHT);
     });
 
+    // 16" MacBook Pro effective viewport — the new MAX_WIDTH cap of 2400
+    // should easily accommodate this without clamping.
+    it("scales width proportionally for the 16-inch MacBook viewport", () => {
+      const size = calculateGameSize(1728, 1117);
+      expect(size.height).toBe(BASE_HEIGHT);
+      const expected = Math.round(BASE_HEIGHT * (1728 / 1117));
+      expect(size.width).toBe(expected);
+      expect(size.width).toBeLessThan(MAX_WIDTH);
+    });
+
+    // External 4K panel (16:9) — width comes out at 720 * 16/9 = 1280, well
+    // under the new cap. MAX_WIDTH only activates for ultra-wide aspects.
+    it("returns a 1280-wide canvas for a 2560x1440 16:9 panel", () => {
+      const size = calculateGameSize(2560, 1440);
+      expect(size.height).toBe(BASE_HEIGHT);
+      expect(size.width).toBe(Math.round(BASE_HEIGHT * (2560 / 1440)));
+      expect(size.width).toBeLessThan(MAX_WIDTH);
+    });
+
+    // MAX_WIDTH was bumped from 1920 to 2400 — confirm the new ceiling is
+    // exposed and that an ultra-wide aspect ratio that previously clamped to
+    // 1920 now resolves higher.
+    it("uses the bumped MAX_WIDTH ceiling on ultra-wide aspects", () => {
+      expect(MAX_WIDTH).toBe(2400);
+      // 720 * (3.4) = 2448, which is between the old (1920) and new (2400) caps.
+      const size = calculateGameSize(3440, 1000);
+      expect(size.width).toBe(MAX_WIDTH);
+    });
+
     it("is stable when called twice with the same inputs", () => {
       const a = calculateGameSize(1440, 900);
       const b = calculateGameSize(1440, 900);

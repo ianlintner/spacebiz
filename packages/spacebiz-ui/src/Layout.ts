@@ -5,7 +5,7 @@
 
 export const BASE_HEIGHT = 720;
 export const MIN_WIDTH = 960;
-export const MAX_WIDTH = 1920;
+export const MAX_WIDTH = 2400;
 
 // ── Reactive layout metrics ─────────────────────────────────────────────────
 
