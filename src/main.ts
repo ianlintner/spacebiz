@@ -281,7 +281,7 @@ function renderSite(): void {
           <span class="brand__mark">SF</span>
           <span class="brand__text">
             <span class="brand__title">Star Freight Tycoon</span>
-            <span class="brand__subtitle">Trade lanes, quarter reports, and long-horizon strategy.</span>
+            <span class="brand__subtitle">Trade lanes, quarterly P&Ls, and the slow art of empire.</span>
           </span>
         </a>
 
@@ -333,18 +333,18 @@ function renderSite(): void {
 
               <div class="frame-caption frame-caption--hero">
                 <p>
-                  The game now owns the top of the page as a true hero banner, while the briefings, manual, and disclosures dock neatly underneath it.
+                  Captain on deck. Charters drawn, hulls fueled, market open.
                 </p>
-                <span class="frame-caption__meta">Phaser 3 • TypeScript • Vite</span>
+                <span class="frame-caption__meta">Phaser 4 • TypeScript • Vite</span>
               </div>
             </div>
 
             <div class="hero-copy-wrap panel-surface">
               <div class="hero-copy hero-copy--full">
-                <span class="kicker">Playable Home Screen</span>
-                <h1>Operate a freight empire from a live, playable command interface.</h1>
+                <span class="kicker">Cleared for Launch</span>
+                <h1>Run a freight empire across a procedural galaxy.</h1>
                 <p>
-                  The website is designed as an operational hub: a playable build at the top, then strategy documentation, encyclopedia-style references, and transparent production notes.
+                  Buy low, sell high, expand the fleet, weather the events. Twenty quarters to build something that lasts.
                 </p>
 
                 <div class="hero-actions">
@@ -355,21 +355,21 @@ function renderSite(): void {
 
                 <div class="hero-badges">
                   <article class="badge">
-                    <span>Game Loop</span>
+                    <span>Loop</span>
                     <strong>Plan → Simulate → Review</strong>
                   </article>
                   <article class="badge">
                     <span>Systems</span>
-                    <strong>Economy, routes, fleets, events</strong>
+                    <strong>Routes, fleets, contracts, dilemmas, AI rivals</strong>
                   </article>
                   <article class="badge">
-                    <span>Style</span>
-                    <strong>Retro-futurist control room presentation</strong>
+                    <span>Vibes</span>
+                    <strong>Retro command-deck — Aerobiz meets MOO2</strong>
                   </article>
                 </div>
 
                 <div class="hero-metrics">
-                  <h2 class="hero-metrics__title">Current mission profile</h2>
+                  <h2 class="hero-metrics__title">Mission briefing</h2>
                   <div class="metrics-grid">
                     ${renderHeroMetrics()}
                   </div>
@@ -382,12 +382,9 @@ function renderSite(): void {
         <section id="command-deck" class="section panel-surface">
           <div class="section-head">
             <div>
-              <span class="kicker">Site Menu</span>
-              <h2>Clear navigation for gameplay, documentation, and review.</h2>
+              <span class="kicker">Command Deck</span>
+              <h2>Pick a heading.</h2>
             </div>
-            <p>
-              Navigation is intentionally direct: sticky section menu, active section indicators, and collapsible briefings for quick scanning.
-            </p>
           </div>
 
           <div class="command-layout">
@@ -396,30 +393,27 @@ function renderSite(): void {
             </div>
 
             <div class="copy-block">
-              <h3 class="panel-title">Command shortcuts</h3>
-              <p>
-                Use these shortcuts to move between gameplay, documentation, and visual reference material without context switching.
-              </p>
+              <h3 class="panel-title">Quick warps</h3>
               <div class="quick-links">
                 <a class="quick-link" href="#overview">
-                  <strong>Return to bridge</strong>
-                  <span>Snap back to the framed playable build.</span>
+                  <strong>Back to the bridge</strong>
+                  <span>Hands on the controls.</span>
                 </a>
                 <a class="quick-link" href="#manual">
                   <strong>Operations manual</strong>
-                  <span>See the campaign loop, starter loadout, planets, and cargo logic.</span>
+                  <span>Opening moves, cargo logic, expansion timing.</span>
                 </a>
                 <a class="quick-link" href="#help">
-                  <strong>Quick help</strong>
-                  <span>Open concise strategy panels and the operational FAQ.</span>
+                  <strong>Strategy panels</strong>
+                  <span>Mid-run answers when something's off.</span>
                 </a>
                 <a class="quick-link" href="#ai-disclosure">
                   <strong>Production notes</strong>
-                  <span>Review the disclosure for AI-assisted music and visual material usage.</span>
+                  <span>Receipts and credits.</span>
                 </a>
                 <a class="quick-link" href="#wiki">
-                  <strong>Game wiki</strong>
-                  <span>Browse CEOs, leaders, and ship classes in one indexed section.</span>
+                  <strong>Codex</strong>
+                  <span>CEOs, empire leaders, every ship class.</span>
                 </a>
               </div>
             </div>
@@ -429,12 +423,9 @@ function renderSite(): void {
         <section id="manual" class="section panel-surface">
           <div class="section-head">
             <div>
-              <span class="kicker">Gameplay Manual</span>
-              <h2>Everything you need to play without opening a second tab.</h2>
+              <span class="kicker">Operations Manual</span>
+              <h2>Six chapters between you and a profitable run.</h2>
             </div>
-            <p>
-              Start here for the complete loop: opening setup, route economics, expansion timing, and risk control.
-            </p>
           </div>
 
           <div class="manual-layout">
@@ -463,12 +454,9 @@ function renderSite(): void {
         <section id="wiki" class="section panel-surface">
           <div class="section-head">
             <div>
-              <span class="kicker">Game Wiki</span>
-              <h2>Dedicated reference pages for characters, leaders, and ships.</h2>
+              <span class="kicker">Codex</span>
+              <h2>CEOs, empire leaders, every ship in the catalog.</h2>
             </div>
-            <p>
-              The homepage now stays compact while full wiki pages open separately for deeper reading and QA workflows.
-            </p>
           </div>
 
           <div class="qa-grid">
@@ -480,11 +468,8 @@ function renderSite(): void {
           <div class="section-head">
             <div>
               <span class="kicker">Portrait QA</span>
-              <h2>Dedicated compact galleries for art and agent QA workflows.</h2>
+              <h2>Compact galleries for fast art review.</h2>
             </div>
-            <p>
-              Open these standalone pages to review full portrait sets quickly. They are optimized for scanning, mismatch spotting, and prompt iteration loops.
-            </p>
           </div>
 
           <div class="qa-grid">
@@ -495,12 +480,9 @@ function renderSite(): void {
         <section id="help" class="section panel-surface">
           <div class="section-head">
             <div>
-              <span class="kicker">Help & Strategy</span>
-              <h2>Fast strategic answers for mid-run decision points.</h2>
+              <span class="kicker">Strategy Tips</span>
+              <h2>Fast answers for the decisions that actually swing a run.</h2>
             </div>
-            <p>
-              These panels focus on practical decisions: opening routes, fleet expansion timing, and recovery patterns after weak turns.
-            </p>
           </div>
 
           <div class="help-layout">
@@ -510,9 +492,6 @@ function renderSite(): void {
 
             <div class="help-panel">
               <h3>Fast answers</h3>
-              <p>
-                If you are already mid-run, this FAQ is the shortest route back to confidence.
-              </p>
               <div class="faq-list">
                 ${renderFaqItems()}
               </div>
@@ -523,12 +502,9 @@ function renderSite(): void {
         <section id="ai-disclosure" class="section panel-surface">
           <div class="section-head">
             <div>
-              <span class="kicker">AI Disclosure</span>
-              <h2>Clear credits and production notes, right where players can find them.</h2>
+              <span class="kicker">Production Notes</span>
+              <h2>Receipts, credits, and an honest map of who made what.</h2>
             </div>
-            <p>
-              The site explicitly discloses AI-assisted music and visual materials while keeping authorship, editing, and implementation responsibility plainly human and easy to understand.
-            </p>
           </div>
 
           <div class="disclosure-grid">
@@ -537,25 +513,19 @@ function renderSite(): void {
 
           <div class="footer-layout" style="margin-top: 1rem;">
             <div class="footer-panel">
-              <h3>Why this structure works</h3>
-              <p>
-                The site keeps the build playable while surfacing strategy docs, wiki content, QA galleries, and transparent credits in a single reliable flow.
-              </p>
-            </div>
-            <div class="footer-panel">
               <h3>Quick links</h3>
               <div class="footer-links">
                 <a class="quick-link" href="#overview">
-                  <strong>Play view</strong>
-                  <span>Back to the framed build.</span>
+                  <strong>Bridge</strong>
+                  <span>Take the controls.</span>
                 </a>
                 <a class="quick-link" href="#manual">
                   <strong>Manual</strong>
-                  <span>Full loop and cheat sheets.</span>
+                  <span>Loop, hulls, cheat sheets.</span>
                 </a>
                 <a class="quick-link" href="#portrait-qa">
                   <strong>Portrait QA</strong>
-                  <span>Open compact gallery pages for visual review.</span>
+                  <span>Compact art galleries.</span>
                 </a>
               </div>
             </div>
@@ -565,7 +535,7 @@ function renderSite(): void {
 
       <footer class="footer">
         <p class="footer-note">
-          <strong>Star Freight Tycoon</strong> — playable web build, strategy manual, in-site wiki, and portrait QA tooling in one documentation-driven interface. <span id="site-year"></span> · ${renderBuildLink("footer-build-link")}
+          <strong>Star Freight Tycoon</strong> <span id="site-year"></span> · ${renderBuildLink("footer-build-link")}
         </p>
       </footer>
     </div>

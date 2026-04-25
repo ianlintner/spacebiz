@@ -2,98 +2,137 @@
 
 <img width="512" alt="cargo" src="https://github.com/user-attachments/assets/ab5101f7-1d86-456c-9fa2-6f9821a846f9" />
 
-A browser-based, turn-driven space trading and fleet management game built with **TypeScript**, **Phaser**, and **Vite**.
+> **GREETINGS, CAPTAIN.** A freshly-printed corporate charter, two starter
+> hulls, and a quarterly P&L stand between you and a galaxy of cargo waiting
+> to be moved. Welcome to **Star Freight Tycoon** — a browser-based, turn-driven
+> space-trade sim built in **TypeScript**, **Phaser 4**, and **Vite**.
 
-You run a growing freight company in a living galaxy: buy low, sell high, expand your fleet, optimize routes, survive market swings, and chase the high score.
+Buy low, sell high, expand your fleet, optimize routes, weather the market
+swings, and climb the high-score table — across procedurally generated
+galaxies. It's the spiritual lovechild of **Aerobiz Supersonic**,
+**Master of Orion 2**, and **Transport Tycoon**, with the build pipeline of
+2026 and the operating manual energy of 1996.
 
-## Features
+## What's in the box
 
-- Procedurally generated galaxy and market setup
-- Turn simulation with economy updates and events
-- Fleet, routes, and finance management scenes
-- Retro-inspired UI and audio systems
-- Strong unit test coverage across core game systems
+- **Procedural galaxies** with seeded RNG — same seed, same map, every time.
+- **Hybrid turn loop** — Plan → Simulate → Review. Set your routes, hit
+  *End Quarter*, watch the simulation play out, then read the report.
+- **Living economy** — planet types produce and demand; saturate a market
+  and prices crater; events shake everything up.
+- **Rival AI empires** with named CEOs, portraits, and competing fleets.
+- **Mid-quarter dilemmas** — narrative choices with success-rate scaling
+  and AI-generated story beats.
+- **Save / load** — autosaves to localStorage every turn; full state
+  resume across browser refreshes.
+- **Phaser-canvas-only UI** — no DOM overlays. Reusable component library
+  with theme primitives, scrollable lists, data tables, modals, tooltips.
+- **In-app QA console** — `window.__sft` lets you script the game from
+  devtools, Playwright, or an MCP-driven agent. See
+  [`docs/qa/console-api.md`](docs/qa/console-api.md).
 
-## Tech Stack
+## Tech stack
 
-- **Engine/UI:** Phaser 3
-- **Language:** TypeScript
-- **Build Tool:** Vite
-- **Testing:** Vitest
+| Layer        | Choice                                                              |
+| ------------ | ------------------------------------------------------------------- |
+| Engine       | **Phaser 4** (WebGL renderer, RenderNode arch, unified Filter API)  |
+| Language     | TypeScript (strict, `verbatimModuleSyntax`, `erasableSyntaxOnly`)   |
+| Bundler      | Vite 8                                                              |
+| Tests        | Vitest 4 — **723 tests across 50 files**, all pure-function         |
+| Runtime      | Node 22+, npm 10+                                                   |
+| Optional MCP | `@spacebiz/qa-mcp` — drive the running game from an LLM agent       |
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 22+
-- npm 10+
-
-### Install
-
-```bash
-npm ci
-```
-
-### Run locally
-
-```bash
-npm run dev
-```
-
-### Build
-
-```bash
-npm run build
-```
-
-### Run tests
+## Getting started
 
 ```bash
-npm run test
+npm ci              # install (uses workspaces; pulls @spacebiz/ui too)
+npm run dev         # localhost:5173
+npm run typecheck   # strict TS, no unused locals/params
+npm run test        # vitest
+npm run build       # tsc && vite build
+npm run check       # all three CI gates back-to-back
 ```
 
-## Quality Gates (CI)
+`npm run optimize-assets` regenerates the WebP/PNG portrait set under
+`public/portraits/` from the high-res sources in `assets-source/`. See the
+[asset pipeline notes in `CLAUDE.md`](CLAUDE.md) before adding new portraits.
 
-On pull requests and pushes to `main`, CI runs:
+## Project layout
 
-1. Type checking (`npm run typecheck`)
-2. Unit tests (`npm run test`)
-3. Production build (`npm run build`)
+```
+src/
+├── scenes/            # 23 Phaser scenes (one screen each)
+│   ├── BootScene, MainMenuScene, GalaxySetupScene
+│   ├── GalaxyMapScene, SystemMapScene, PlanetDetailScene
+│   ├── FleetScene, RoutesScene, ContractsScene, MarketScene
+│   ├── TechTreeScene, FinanceScene, StationBuilderScene
+│   ├── EmpireScene, CompetitionScene
+│   ├── DilemmaScene, SimPlaybackScene, TurnReportScene
+│   └── GameOverScene, SimSummaryScene, AISandboxScene, …
+├── game/              # simulation, save, portrait loader, scoring
+├── data/              # GameStore (state + EventEmitter), constants, types
+├── ui/                # game-specific widgets (PortraitPanel, MiniMap, …)
+├── audio/             # AudioDirector + retro-pop SFX hooks
+├── generation/        # procedural galaxy + market generation
+├── testing/           # window.__sft QA façade (DEV + ?debug=1 in prod)
+└── siteContent.ts     # homepage manual + cheat sheets
 
+packages/
+├── spacebiz-ui/       # 28-file Phaser UI component library (@spacebiz/ui)
+└── spacebiz-qa-mcp/   # optional MCP server for agent-driven QA
 
-GitHub Pages deployment also enforces these gates before publish.
+styleguide/            # visual styleguide app — separate Vite entry
+docs/plans/            # design + implementation plans (dated artifacts)
+docs/qa/console-api.md # QA façade reference
+```
+
+## CI gates
+
+CI runs Node 22 on Ubuntu and enforces three gates on every push:
+
+1. `npm run typecheck` — strict TS, no unused locals/params.
+2. `npm run test` — full Vitest run.
+3. `npm run build` — production bundle.
+
+GitHub Pages deployment also runs these gates before publishing.
 
 ## Deployment
 
-This repository is configured to deploy automatically to **GitHub Pages** from `main` using GitHub Actions.
+Auto-deploys to **GitHub Pages** from `main` via Actions. First time:
 
-If this is your first time enabling Pages for the repo:
+1. **Settings → Pages** → Source: **GitHub Actions**.
+2. Push to `main` (or trigger the deploy workflow manually).
 
-1. Open **Settings → Pages**.
-2. Set **Source** to **GitHub Actions**.
-3. Push to `main` (or manually run the deploy workflow).
+## Conventions worth knowing
 
-## Project Structure
-
-- `src/scenes/` – game scenes and flow
-- `src/game/` – simulation, economy, events, fleet, routes, scoring
-- `src/generation/` – world/market/name generation
-- `src/ui/` – reusable UI components and theme primitives
-- `src/data/` – game state store, constants, shared types
+- Game state lives in `src/data/GameStore.ts` (singleton, plain objects + EventEmitter).
+- Game logic is **pure** — every simulation function is testable without Phaser.
+- Deterministic RNG via `src/utils/SeededRNG.ts`.
+- No TS enums; use `as const` objects (the tsconfig forbids enums).
+- Phaser is imported as `import * as Phaser from "phaser"` (v4 dropped the
+  default export).
+- For masks, use the v4 filter API:
+  `gameObject.filters?.internal.addMask(maskShape)` — not `setMask()`.
 
 ## Contributing
 
-Contributions are welcome! If you’d like to help:
+PRs welcome. Keep simulation logic deterministic. Add or update Vitest
+coverage for non-visual systems. Run `npm run check` before pushing.
 
+```
 1. Fork the repo
-2. Create a feature branch
-3. Add or update tests for your changes
-4. Open a PR
-
-Please keep gameplay logic deterministic where possible and maintain/expand test coverage for non-visual systems.
+2. Branch off main
+3. Add tests with your changes
+4. Open a PR — CI will run all three gates
+```
 
 ## License
 
-No license file has been added yet.
+No license file yet. If this project should be open source, MIT is a
+reasonable default for indie game projects.
 
-If you want this to be fully open source, add a license (MIT is a common choice for indie game projects).
+---
+
+> *"Profit is just gravity in disguise. Find a producer, find a buyer,
+> point the ship between them, and let the universe do the rest."*
+> — Apocryphal, attributed to every freight captain who ever lived.
