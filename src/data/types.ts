@@ -86,7 +86,12 @@ export interface ChoiceOption {
 }
 
 // ── Dilemma template (authoring-side) ─────────────────────────
-export type DilemmaCategory = "diplomatic" | "operational" | "financial" | "narrative";
+export type DilemmaCategory =
+  | "diplomatic"
+  | "operational"
+  | "financial"
+  | "narrative"
+  | "opportunity";
 
 export interface DilemmaTemplate {
   id: string;
@@ -99,6 +104,12 @@ export interface DilemmaTemplate {
   tailwindWeight: number;
   /** Optional eligibility predicate evaluated against GameState; defaults to always-eligible. */
   eligibility?: "anyTime" | "midGame" | "lateGame";
+  /**
+   * Pre-generated banner illustration key, loaded by BootScene from
+   * `public/dilemmas/<imageKey>.png`. When undefined, the DilemmaScene
+   * renders a category-tinted placeholder instead.
+   */
+  imageKey?: string;
 }
 
 // ── AI narrative event (no choice — pure buff/debuff text) ────
@@ -153,6 +164,8 @@ export interface ChoiceEvent {
   dilemmaId?: string;
   /** Dilemma category, surfaced for UI grouping/iconography. */
   category?: DilemmaCategory;
+  /** Banner image key (matches a Phaser texture key loaded in BootScene). */
+  imageKey?: string;
 }
 
 // ── Event Chain types ──────────────────────────────────────────
