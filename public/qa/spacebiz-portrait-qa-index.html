@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spacebiz Portrait QA Index</title>
+    <style>
+      :root {
+        --bg: #070712;
+        --panel: #111128;
+        --border: rgba(0, 255, 204, 0.45);
+        --text: #dbe8ff;
+        --muted: #8ea7c8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: radial-gradient(
+          circle at top,
+          #162043 0%,
+          #0a0a1a 38%,
+          var(--bg) 100%
+        );
+        color: var(--text);
+        padding: 16px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+      p {
+        margin: 0 0 14px;
+        color: var(--muted);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+      }
+      a {
+        display: block;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        color: var(--text);
+        text-decoration: none;
+        background: rgba(17, 17, 40, 0.94);
+      }
+      a:hover {
+        background: rgba(26, 26, 58, 0.96);
+      }
+      strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+      span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Spacebiz Portrait QA Index</h1>
+    <p>Open any sheet for rapid visual QA and mismatch detection.</p>
+    <div class="grid">
+      <a href="./spacebiz-ceo-gallery-compact.html"
+        ><strong>CEO Compact Gallery</strong
+        ><span>100 portraits, fixed square cards.</span></a
+      >
+      <a href="./spacebiz-leader-gallery-compact.html"
+        ><strong>Leader Compact Gallery</strong
+        ><span>20 empire leader portraits.</span></a
+      >
+      <a href="./spacebiz-planet-gallery-compact.html"
+        ><strong>Planet Compact Gallery</strong
+        ><span>7 biome portraits with labels.</span></a
+      >
+      <a href="./spacebiz-ship-reference.html"
+        ><strong>Ship Reference Sheet</strong
+        ><span>Ship classes and stats for balancing QA.</span></a
+      >
+    </div>
+  </body>
+</html>

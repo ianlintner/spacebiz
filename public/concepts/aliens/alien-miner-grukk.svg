@@ -1,0 +1,65 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="58" y1="26" x2="452" y2="482" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#171620"/>
+      <stop offset="1" stop-color="#090A10"/>
+    </linearGradient>
+    <radialGradient id="dust" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 225) rotate(90) scale(188 184)">
+      <stop stop-color="#FF8E47" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#FF8E47" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="skin" x1="156" y1="110" x2="350" y2="342" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8E8A8D"/>
+      <stop offset="0.45" stop-color="#625D61"/>
+      <stop offset="1" stop-color="#2C292F"/>
+    </linearGradient>
+    <linearGradient id="armor" x1="160" y1="316" x2="354" y2="458" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#46362E"/>
+      <stop offset="1" stop-color="#1D1614"/>
+    </linearGradient>
+    <filter id="emberGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="32" fill="url(#bg)"/>
+  <rect x="18" y="18" width="476" height="476" rx="24" stroke="#4E403A" stroke-width="4"/>
+  <circle cx="256" cy="225" r="176" fill="url(#dust)"/>
+  <circle cx="256" cy="225" r="166" stroke="#FF9250" stroke-opacity="0.26" stroke-width="2"/>
+  <circle cx="256" cy="225" r="138" stroke="#F3C186" stroke-opacity="0.2" stroke-width="1.5" stroke-dasharray="14 9"/>
+
+  <path d="M134 458C145 368 191 324 256 324C321 324 367 368 378 458H134Z" fill="url(#armor)"/>
+  <path d="M187 336H325L345 458H167L187 336Z" fill="#141114" fill-opacity="0.72"/>
+  <path d="M222 336L256 376L290 336" stroke="#FF9A58" stroke-opacity="0.6" stroke-width="4"/>
+
+  <path d="M202 111L168 157L196 175L222 136L202 111Z" fill="#54443B"/>
+  <path d="M310 111L344 157L316 175L290 136L310 111Z" fill="#54443B"/>
+  <path d="M182 178C182 129 215 93 256 93C297 93 330 129 330 178V247C330 302 301 334 256 334C211 334 182 302 182 247V178Z" fill="url(#skin)"/>
+
+  <path d="M190 152L162 126L170 96L202 90L225 111L207 145L190 152Z" fill="#70635D"/>
+  <path d="M322 152L350 126L342 96L310 90L287 111L305 145L322 152Z" fill="#70635D"/>
+  <path d="M202 90L214 66L238 56L256 76L244 102L202 90Z" fill="#615553"/>
+  <path d="M310 90L298 66L274 56L256 76L268 102L310 90Z" fill="#615553"/>
+
+  <ellipse cx="218" cy="211" rx="28" ry="18" fill="#100E10"/>
+  <ellipse cx="294" cy="211" rx="28" ry="18" fill="#100E10"/>
+  <ellipse cx="218" cy="211" rx="14" ry="10" fill="#FFD7A4" filter="url(#emberGlow)"/>
+  <ellipse cx="294" cy="211" rx="14" ry="10" fill="#FFD7A4" filter="url(#emberGlow)"/>
+  <circle cx="218" cy="211" r="5" fill="#FF7B2C"/>
+  <circle cx="294" cy="211" r="5" fill="#FF7B2C"/>
+
+  <path d="M234 251H278" stroke="#171215" stroke-width="8" stroke-linecap="round"/>
+  <path d="M224 273C241 286 271 286 288 273" stroke="#1B171B" stroke-width="5" stroke-linecap="round"/>
+  <path d="M196 286C213 300 231 307 256 307C281 307 299 300 316 286" stroke="#FF9A58" stroke-opacity="0.35" stroke-width="3"/>
+
+  <path d="M156 364L196 352" stroke="#FF9250" stroke-opacity="0.5" stroke-width="3"/>
+  <path d="M356 364L316 352" stroke="#FF9250" stroke-opacity="0.5" stroke-width="3"/>
+  <path d="M206 395H306" stroke="#F3C186" stroke-opacity="0.34" stroke-width="2" stroke-dasharray="6 6"/>
+
+  <rect x="42" y="426" width="164" height="34" rx="17" fill="#120E10" stroke="#FF9152" stroke-opacity="0.42"/>
+  <text x="58" y="448" fill="#FFF1E4" font-family="monospace" font-size="18">GRUKK FOREMAN</text>
+</svg>

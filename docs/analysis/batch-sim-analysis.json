@@ -1,0 +1,153 @@
+{
+  "totalRuns": 65,
+  "avgWallTimeMs": 32.81785009230771,
+  "personalityWinRate": {
+    "aggressiveExpander": {
+      "wins": 25,
+      "total": 135,
+      "rate": 0.38461538461538464
+    },
+    "steadyHauler": {
+      "wins": 30,
+      "total": 235,
+      "rate": 0.46153846153846156
+    },
+    "cherryPicker": {
+      "wins": 10,
+      "total": 90,
+      "rate": 0.15384615384615385
+    }
+  },
+  "personalityAvgScore": {
+    "aggressiveExpander": {
+      "total": 2722846543,
+      "count": 135,
+      "avg": 20169233.65185185
+    },
+    "steadyHauler": {
+      "total": 3857790264,
+      "count": 235,
+      "avg": 16416128.782978723
+    },
+    "cherryPicker": {
+      "total": 1145500648,
+      "count": 90,
+      "avg": 12727784.977777777
+    }
+  },
+  "personalityBankruptcyRate": {
+    "aggressiveExpander": {
+      "bankruptcies": 43,
+      "total": 135,
+      "rate": 0.31851851851851853
+    },
+    "steadyHauler": {
+      "bankruptcies": 98,
+      "total": 235,
+      "rate": 0.41702127659574467
+    },
+    "cherryPicker": {
+      "bankruptcies": 22,
+      "total": 90,
+      "rate": 0.24444444444444444
+    }
+  },
+  "bySizeStats": {
+    "small": {
+      "runs": 30,
+      "avgBankruptcies": 1.3,
+      "avgScoreSpread": 55588237.63333333,
+      "avgGini": 0.4675614052637706,
+      "avgWinnerScore": 57878965.7,
+      "avgFuelPrice": 8.159937166666667,
+      "avgCargoPrice": 67.44679232709389
+    },
+    "medium": {
+      "runs": 25,
+      "avgBankruptcies": 1.8,
+      "avgScoreSpread": 49205672.68,
+      "avgGini": 0.4744984708784273,
+      "avgWinnerScore": 53852290.48,
+      "avgFuelPrice": 7.383913249999998,
+      "avgCargoPrice": 67.96296803513857
+    },
+    "large": {
+      "runs": 10,
+      "avgBankruptcies": 4.8,
+      "avgScoreSpread": 34031299.9,
+      "avgGini": 0.4952846847143813,
+      "avgWinnerScore": 36589188.4,
+      "avgFuelPrice": 7.299507700000001,
+      "avgCargoPrice": 67.88014888049989
+    }
+  },
+  "byShapeStats": {
+    "spiral": {
+      "runs": 50,
+      "avgBankruptcies": 2.22,
+      "avgGini": 0.471470299649352
+    },
+    "elliptical": {
+      "runs": 5,
+      "avgBankruptcies": 1,
+      "avgGini": 0.4758798167208078
+    },
+    "ring": {
+      "runs": 5,
+      "avgBankruptcies": 1.6,
+      "avgGini": 0.5032439949713848
+    },
+    "irregular": {
+      "runs": 5,
+      "avgBankruptcies": 1.6,
+      "avgGini": 0.4746033472178108
+    }
+  },
+  "eventFrequency": {
+    "Ore Boom": 859,
+    "Celebrity Passenger": 299,
+    "Solar Flare": 419,
+    "Trade Agreement": 825,
+    "Tech Glut": 731,
+    "Border Dispute": 669,
+    "Trade Embargo": 570,
+    "Empire Subsidy": 308,
+    "Empire Embargo": 414,
+    "Famine Crisis": 1043,
+    "Emergency Transport": 401,
+    "Alien Ambassador": 225,
+    "Scientific Breakthrough": 454,
+    "Empire Trade Pact": 1183,
+    "New Colony": 851,
+    "Pirate Corridors": 510,
+    "Galactic Festival": 399,
+    "Tariff War": 864,
+    "Government Subsidy": 777,
+    "Free Trade Summit": 610,
+    "Derelict Ship": 279,
+    "Historical Discovery": 361,
+    "Fuel Shortage": 614,
+    "Pirate Activity": 658,
+    "Quarantine": 763,
+    "Holovid Premiere": 463,
+    "Smuggling Opportunity": 169,
+    "Economic Recession": 760,
+    "Asteroid Storm": 690,
+    "Import Crackdown": 906
+  },
+  "warningFrequency": {
+    "FUEL_CRISIS": 532,
+    "BALANCE_OUTLIER": 1145,
+    "MASS_BANKRUPTCY": 360
+  },
+  "economyStats": {
+    "avgFinalFuelPrice": 8.92966153846154,
+    "avgPeakFuelPrice": 23.054000000000006,
+    "avgFinalCargoPrice": 67.71199168455816,
+    "fuelPriceVariance": 27.450504562366863
+  },
+  "balanceIssues": [
+    "HIGH_BANKRUPTCY: steadyHauler goes bankrupt 41.7% of the time (98/235)",
+    "MASS_BANKRUPTCY: Average 2.0 bankruptcies per game"
+  ]
+}

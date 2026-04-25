@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spacebiz Wiki — Ships</title>
+    <style>
+      :root {
+        --bg: #070712;
+        --panel: #111128;
+        --border: rgba(0, 255, 204, 0.45);
+        --text: #dbe8ff;
+        --muted: #8ea7c8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: radial-gradient(
+          circle at top,
+          #162043 0%,
+          #0a0a1a 38%,
+          var(--bg) 100%
+        );
+        color: var(--text);
+        padding: 16px;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 24px;
+      }
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+      }
+      .nav {
+        margin-bottom: 12px;
+      }
+      .nav a {
+        color: var(--muted);
+        text-decoration: none;
+        margin-right: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: rgba(17, 17, 40, 0.94);
+        border: 1px solid var(--border);
+      }
+      th,
+      td {
+        border: 1px solid rgba(0, 255, 204, 0.2);
+        padding: 8px;
+        font-size: 12px;
+        text-align: left;
+      }
+      th {
+        background: rgba(0, 255, 204, 0.08);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Ship Directory</h1>
+    <p>Core fleet classes and baseline configuration stats.</p>
+    <div class="nav">
+      <a href="./index.html">Wiki Home</a>
+      <a href="./ceos.html">CEOs</a>
+      <a href="./leaders.html">Leaders</a>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Ship</th>
+          <th>Class</th>
+          <th>Cargo</th>
+          <th>Passengers</th>
+          <th>Speed</th>
+          <th>Fuel Eff.</th>
+          <th>Reliability</th>
+          <th>Cost</th>
+          <th>Maintenance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Cargo Shuttle</td>
+          <td>cargoShuttle</td>
+          <td>80</td>
+          <td>0</td>
+          <td>4</td>
+          <td>0.8</td>
+          <td>92</td>
+          <td>40000</td>
+          <td>2000</td>
+        </tr>
+        <tr>
+          <td>Passenger Shuttle</td>
+          <td>passengerShuttle</td>
+          <td>0</td>
+          <td>60</td>
+          <td>5</td>
+          <td>1.0</td>
+          <td>90</td>
+          <td>55000</td>
+          <td>3000</td>
+        </tr>
+        <tr>
+          <td>Mixed Hauler</td>
+          <td>mixedHauler</td>
+          <td>50</td>
+          <td>30</td>
+          <td>3</td>
+          <td>1.2</td>
+          <td>88</td>
+          <td>60000</td>
+          <td>3500</td>
+        </tr>
+        <tr>
+          <td>Fast Courier</td>
+          <td>fastCourier</td>
+          <td>30</td>
+          <td>10</td>
+          <td>8</td>
+          <td>2.0</td>
+          <td>85</td>
+          <td>80000</td>
+          <td>5000</td>
+        </tr>
+        <tr>
+          <td>Bulk Freighter</td>
+          <td>bulkFreighter</td>
+          <td>200</td>
+          <td>0</td>
+          <td>2</td>
+          <td>1.0</td>
+          <td>94</td>
+          <td>180000</td>
+          <td>8000</td>
+        </tr>
+        <tr>
+          <td>Star Liner</td>
+          <td>starLiner</td>
+          <td>0</td>
+          <td>150</td>
+          <td>6</td>
+          <td>1.5</td>
+          <td>88</td>
+          <td>280000</td>
+          <td>12000</td>
+        </tr>
+        <tr>
+          <td>Mega Hauler</td>
+          <td>megaHauler</td>
+          <td>400</td>
+          <td>0</td>
+          <td>2</td>
+          <td>1.2</td>
+          <td>90</td>
+          <td>500000</td>
+          <td>22000</td>
+        </tr>
+        <tr>
+          <td>Luxury Liner</td>
+          <td>luxuryLiner</td>
+          <td>20</td>
+          <td>120</td>
+          <td>7</td>
+          <td>1.8</td>
+          <td>86</td>
+          <td>600000</td>
+          <td>25000</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

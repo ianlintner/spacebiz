@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spacebiz Wiki — CEOs</title>
+    <style>
+      :root {
+        --bg: #070712;
+        --panel: #111128;
+        --border: rgba(0, 255, 204, 0.45);
+        --text: #dbe8ff;
+        --muted: #8ea7c8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: radial-gradient(
+          circle at top,
+          #162043 0%,
+          #0a0a1a 38%,
+          var(--bg) 100%
+        );
+        color: var(--text);
+        padding: 16px;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 24px;
+      }
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+      }
+      .nav {
+        margin-bottom: 12px;
+      }
+      .nav a {
+        color: var(--muted);
+        text-decoration: none;
+        margin-right: 12px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 10px;
+      }
+      .card {
+        background: rgba(17, 17, 40, 0.94);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        display: block;
+      }
+      .meta {
+        padding: 8px;
+      }
+      .meta strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 3px;
+      }
+      .meta span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CEO Directory</h1>
+    <p>Company leader portrait roster and reference IDs.</p>
+    <div class="nav">
+      <a href="./index.html">Wiki Home</a>
+      <a href="./leaders.html">Leaders</a>
+      <a href="./ships.html">Ships</a>
+    </div>
+    <div class="grid" id="grid"></div>
+
+    <script>
+      const grid = document.getElementById("grid");
+      for (let i = 1; i <= 100; i += 1) {
+        const id = i === 100 ? "100" : String(i).padStart(2, "0");
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = `
+          <img src="../portraits/ceo/ceo-${id}.png" alt="CEO ${id}" />
+          <div class="meta">
+            <strong>CEO ${id}</strong>
+            <span>portrait id: ceo-${id}</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      }
+    </script>
+  </body>
+</html>

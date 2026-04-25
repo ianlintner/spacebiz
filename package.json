@@ -1,0 +1,42 @@
+{
+  "name": "star-freight-tycoon",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "PWDEBUG=1 playwright test",
+    "test:mcp": "npm run build --workspace @spacebiz/qa-mcp && node packages/spacebiz-qa-mcp/scripts/smoke.mjs",
+    "build": "tsc && vite build",
+    "lint": "eslint .",
+    "test:lint-rules": "vitest run tools/eslint-rules",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "preview": "vite preview",
+    "optimize-assets": "node scripts/optimize-images.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@typescript-eslint/parser": "^8.59.0",
+    "@typescript-eslint/rule-tester": "^8.59.0",
+    "@typescript-eslint/utils": "^8.59.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "eslint": "^9.39.4",
+    "jiti": "^2.6.1",
+    "sharp": "^0.34.5",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  }
+}

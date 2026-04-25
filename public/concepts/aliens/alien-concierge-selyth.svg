@@ -1,0 +1,62 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="54" y1="30" x2="458" y2="486" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#14182F"/>
+      <stop offset="1" stop-color="#070B15"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 214) rotate(90) scale(190 188)">
+      <stop stop-color="#FF5BCB" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#FF5BCB" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="feather" x1="158" y1="96" x2="350" y2="344" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B7FFF5"/>
+      <stop offset="0.48" stop-color="#67D8D0"/>
+      <stop offset="1" stop-color="#207C8A"/>
+    </linearGradient>
+    <linearGradient id="garment" x1="176" y1="302" x2="336" y2="456" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23385B"/>
+      <stop offset="1" stop-color="#0D1627"/>
+    </linearGradient>
+    <filter id="pinkGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="32" fill="url(#bg)"/>
+  <rect x="18" y="18" width="476" height="476" rx="24" stroke="#30416D" stroke-width="4"/>
+  <circle cx="256" cy="214" r="170" fill="url(#halo)"/>
+  <circle cx="256" cy="214" r="170" stroke="#5FF4E9" stroke-opacity="0.28" stroke-width="2"/>
+  <circle cx="256" cy="214" r="142" stroke="#FF72D3" stroke-opacity="0.24" stroke-width="1.5" stroke-dasharray="9 7"/>
+
+  <path d="M145 458C163 370 200 326 256 326C312 326 349 370 367 458H145Z" fill="url(#garment)"/>
+  <path d="M193 336C214 349 235 355 256 355C277 355 298 349 319 336L334 458H178L193 336Z" fill="#0A1020" fill-opacity="0.6"/>
+  <path d="M194 389C218 376 234 372 256 372C278 372 294 376 318 389" stroke="#5FF4E9" stroke-opacity="0.38" stroke-width="2"/>
+
+  <path d="M180 202C180 129 214 92 256 92C298 92 332 129 332 202V244C332 299 303 334 256 334C209 334 180 299 180 244V202Z" fill="url(#feather)"/>
+  <path d="M225 124C236 114 246 108 256 106C266 108 276 114 287 124" stroke="#E6FFFC" stroke-opacity="0.8" stroke-width="4" stroke-linecap="round"/>
+  <path d="M176 158C150 144 133 122 126 95" stroke="#5FF4E9" stroke-opacity="0.45" stroke-width="5" stroke-linecap="round"/>
+  <path d="M336 158C362 144 379 122 386 95" stroke="#5FF4E9" stroke-opacity="0.45" stroke-width="5" stroke-linecap="round"/>
+  <path d="M206 106L172 76" stroke="#FF72D3" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round"/>
+  <path d="M306 106L340 76" stroke="#FF72D3" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round"/>
+
+  <ellipse cx="222" cy="202" rx="18" ry="24" fill="#07131E"/>
+  <ellipse cx="290" cy="202" rx="18" ry="24" fill="#07131E"/>
+  <ellipse cx="222" cy="202" rx="8" ry="14" fill="#FFF8FF" filter="url(#pinkGlow)"/>
+  <ellipse cx="290" cy="202" rx="8" ry="14" fill="#FFF8FF" filter="url(#pinkGlow)"/>
+  <circle cx="222" cy="202" r="4" fill="#FF72D3"/>
+  <circle cx="290" cy="202" r="4" fill="#FF72D3"/>
+
+  <path d="M242 237H270" stroke="#0A5666" stroke-width="4" stroke-linecap="round"/>
+  <path d="M232 262C242 273 270 273 280 262" stroke="#0E6570" stroke-width="4" stroke-linecap="round"/>
+  <path d="M200 279C217 295 234 303 256 303C278 303 295 295 312 279" stroke="#FF72D3" stroke-opacity="0.42" stroke-width="3"/>
+
+  <path d="M214 338L256 372L298 338" stroke="#FFB2E7" stroke-opacity="0.6" stroke-width="3"/>
+  <path d="M225 392H287" stroke="#FF72D3" stroke-opacity="0.32" stroke-width="2" stroke-dasharray="6 6"/>
+
+  <rect x="42" y="426" width="174" height="34" rx="17" fill="#0A1022" stroke="#5FF4E9" stroke-opacity="0.4"/>
+  <text x="58" y="448" fill="#F4FFFD" font-family="monospace" font-size="18">SELYTH HOST</text>
+</svg>

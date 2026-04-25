@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spacebiz Wiki</title>
+    <style>
+      :root {
+        --bg: #070712;
+        --panel: #111128;
+        --border: rgba(0, 255, 204, 0.45);
+        --text: #dbe8ff;
+        --muted: #8ea7c8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: radial-gradient(
+          circle at top,
+          #162043 0%,
+          #0a0a1a 38%,
+          var(--bg) 100%
+        );
+        color: var(--text);
+        padding: 18px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      p {
+        margin: 0 0 14px;
+        color: var(--muted);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+      }
+      a {
+        display: block;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(17, 17, 40, 0.94);
+        padding: 12px;
+        color: var(--text);
+        text-decoration: none;
+      }
+      a:hover {
+        background: rgba(27, 27, 58, 0.95);
+      }
+      strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+      span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Star Freight Tycoon Wiki</h1>
+    <p>Reference hub for CEOs, empire leaders, ships, and QA sheets.</p>
+    <div class="grid">
+      <a href="./ceos.html"
+        ><strong>CEO Directory</strong
+        ><span>100 CEO profiles and portraits.</span></a
+      >
+      <a href="./leaders.html"
+        ><strong>Leader Directory</strong
+        ><span>20 empire leader profiles.</span></a
+      >
+      <a href="./ships.html"
+        ><strong>Ship Directory</strong
+        ><span>All ship classes with core stats.</span></a
+      >
+      <a href="/qa/spacebiz-portrait-qa-index.html"
+        ><strong>Portrait QA Index</strong
+        ><span>Compact scan sheets for fast visual checks.</span></a
+      >
+    </div>
+  </body>
+</html>

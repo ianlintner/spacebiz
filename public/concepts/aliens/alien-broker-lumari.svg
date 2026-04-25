@@ -1,0 +1,67 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="48" y1="32" x2="464" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#121833"/>
+      <stop offset="1" stop-color="#080B17"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 210) rotate(90) scale(200 180)">
+      <stop stop-color="#30F2E2" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#30F2E2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="skin" x1="160" y1="138" x2="352" y2="340" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A6FFF4"/>
+      <stop offset="0.52" stop-color="#62D8E0"/>
+      <stop offset="1" stop-color="#278FB8"/>
+    </linearGradient>
+    <linearGradient id="robe" x1="176" y1="300" x2="342" y2="462" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1B3F58"/>
+      <stop offset="1" stop-color="#102131"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="167" y1="98" x2="356" y2="370" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD88E"/>
+      <stop offset="1" stop-color="#9C6B2B"/>
+    </linearGradient>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="512" height="512" rx="32" fill="url(#bg)"/>
+  <rect x="18" y="18" width="476" height="476" rx="24" stroke="#2B3566" stroke-width="4"/>
+  <circle cx="256" cy="230" r="174" fill="url(#halo)"/>
+  <circle cx="256" cy="230" r="174" stroke="#1BE3D2" stroke-opacity="0.32" stroke-width="2"/>
+  <circle cx="256" cy="230" r="146" stroke="#FFD88E" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="10 8"/>
+
+  <path d="M146 458C158 365 195 320 256 320C317 320 354 365 366 458H146Z" fill="url(#robe)"/>
+  <path d="M204 330C219 346 236 354 256 354C276 354 293 346 308 330L332 458H180L204 330Z" fill="#0D1826" fill-opacity="0.66"/>
+  <path d="M175 378C206 356 227 349 256 349C285 349 306 356 337 378" stroke="#30F2E2" stroke-opacity="0.35" stroke-width="2"/>
+
+  <path d="M208 138C223 108 244 92 256 92C268 92 289 108 304 138C322 134 339 143 346 160C356 185 334 208 322 218C322 298 293 330 256 330C219 330 190 298 190 218C178 208 156 185 166 160C173 143 190 134 208 138Z" fill="url(#skin)"/>
+  <path d="M210 126C223 111 239 103 256 103C273 103 289 111 302 126" stroke="#D8FFF6" stroke-opacity="0.75" stroke-width="4" stroke-linecap="round"/>
+
+  <path d="M189 212C204 198 218 191 230 188" stroke="#30F2E2" stroke-width="4" stroke-linecap="round"/>
+  <path d="M323 212C308 198 294 191 282 188" stroke="#30F2E2" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="220" cy="204" rx="20" ry="14" fill="#06111D"/>
+  <ellipse cx="292" cy="204" rx="20" ry="14" fill="#06111D"/>
+  <ellipse cx="220" cy="204" rx="10" ry="8" fill="#D8FFF7" filter="url(#softGlow)"/>
+  <ellipse cx="292" cy="204" rx="10" ry="8" fill="#D8FFF7" filter="url(#softGlow)"/>
+  <circle cx="220" cy="204" r="3.5" fill="#30F2E2"/>
+  <circle cx="292" cy="204" r="3.5" fill="#30F2E2"/>
+
+  <path d="M236 242C249 248 263 248 276 242" stroke="#084356" stroke-width="4" stroke-linecap="round"/>
+  <path d="M224 266C240 278 272 278 288 266" stroke="#0D4C65" stroke-width="4" stroke-linecap="round"/>
+
+  <path d="M214 88C224 65 238 50 256 42C274 50 288 65 298 88" stroke="url(#gold)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M168 186C145 172 136 146 145 124C169 131 183 152 188 174" stroke="url(#gold)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M344 186C367 172 376 146 367 124C343 131 329 152 324 174" stroke="url(#gold)" stroke-width="6" stroke-linecap="round"/>
+
+  <path d="M204 296C219 309 236 316 256 316C276 316 293 309 308 296" stroke="#FFD88E" stroke-opacity="0.7" stroke-width="3"/>
+  <path d="M227 338L256 370L285 338" stroke="#FFD88E" stroke-opacity="0.6" stroke-width="3"/>
+
+  <rect x="42" y="426" width="160" height="34" rx="17" fill="#0C1327" stroke="#2DE5D4" stroke-opacity="0.4"/>
+  <text x="58" y="448" fill="#E0FDF9" font-family="monospace" font-size="18">LUMARI BROKER</text>
+</svg>

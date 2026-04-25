@@ -1,0 +1,62 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="56" y1="40" x2="458" y2="488" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101229"/>
+      <stop offset="1" stop-color="#060913"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 216) rotate(90) scale(198 186)">
+      <stop stop-color="#A460FF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#A460FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="membrane" x1="140" y1="94" x2="352" y2="340" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C4F6FF" stop-opacity="0.92"/>
+      <stop offset="0.4" stop-color="#8B8BFF" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#3642A9" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="robe" x1="174" y1="306" x2="336" y2="454" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D2356"/>
+      <stop offset="1" stop-color="#0E122A"/>
+    </linearGradient>
+    <filter id="violetGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="32" fill="url(#bg)"/>
+  <rect x="18" y="18" width="476" height="476" rx="24" stroke="#323E82" stroke-width="4"/>
+  <circle cx="256" cy="216" r="174" fill="url(#halo)"/>
+  <circle cx="256" cy="216" r="174" stroke="#A460FF" stroke-opacity="0.3" stroke-width="2"/>
+  <circle cx="256" cy="216" r="148" stroke="#52E9F8" stroke-opacity="0.28" stroke-width="1.5" stroke-dasharray="11 8"/>
+
+  <path d="M151 458C164 366 201 323 256 323C311 323 348 366 361 458H151Z" fill="url(#robe)"/>
+  <path d="M205 332C220 344 237 350 256 350C275 350 292 344 307 332L325 458H187L205 332Z" fill="#090F25" fill-opacity="0.62"/>
+  <path d="M196 392C214 382 231 377 256 377C281 377 298 382 316 392" stroke="#52E9F8" stroke-opacity="0.4" stroke-width="2"/>
+
+  <path d="M177 204C177 127 212 86 256 86C300 86 335 127 335 204V242C335 300 303 336 256 336C209 336 177 300 177 242V204Z" fill="url(#membrane)"/>
+  <path d="M194 150C206 133 226 118 256 108C286 118 306 133 318 150" stroke="#E3FAFF" stroke-opacity="0.74" stroke-width="4" stroke-linecap="round"/>
+  <path d="M197 110C177 132 165 162 164 201" stroke="#A460FF" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+  <path d="M315 110C335 132 347 162 348 201" stroke="#A460FF" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+
+  <ellipse cx="223" cy="202" rx="17" ry="26" fill="#10142F"/>
+  <ellipse cx="289" cy="202" rx="17" ry="26" fill="#10142F"/>
+  <ellipse cx="223" cy="202" rx="8" ry="17" fill="#FFFFFF" filter="url(#violetGlow)"/>
+  <ellipse cx="289" cy="202" rx="8" ry="17" fill="#FFFFFF" filter="url(#violetGlow)"/>
+  <circle cx="223" cy="202" r="4" fill="#52E9F8"/>
+  <circle cx="289" cy="202" r="4" fill="#52E9F8"/>
+
+  <path d="M243 239C250 244 262 244 269 239" stroke="#2B2F6F" stroke-width="4" stroke-linecap="round"/>
+  <path d="M226 268C238 282 274 282 286 268" stroke="#404EA3" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="256" cy="275" r="30" stroke="#A460FF" stroke-opacity="0.35" stroke-width="2"/>
+  <circle cx="256" cy="275" r="18" stroke="#52E9F8" stroke-opacity="0.3" stroke-width="1.5" stroke-dasharray="4 6"/>
+
+  <path d="M205 93C219 63 237 46 256 38C275 46 293 63 307 93" stroke="#C3AAFF" stroke-opacity="0.7" stroke-width="6" stroke-linecap="round"/>
+  <path d="M164 252C144 241 130 225 122 205" stroke="#52E9F8" stroke-opacity="0.38" stroke-width="3" stroke-linecap="round"/>
+  <path d="M348 252C368 241 382 225 390 205" stroke="#52E9F8" stroke-opacity="0.38" stroke-width="3" stroke-linecap="round"/>
+
+  <rect x="42" y="426" width="168" height="34" rx="17" fill="#0A0F23" stroke="#9E6BFF" stroke-opacity="0.44"/>
+  <text x="58" y="448" fill="#F2EEFF" font-family="monospace" font-size="18">VELIS ARCHIVIST</text>
+</svg>

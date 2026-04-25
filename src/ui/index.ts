@@ -1,0 +1,42 @@
+// ─── Library components (source lives in packages/spacebiz-ui) ───────────────
+export * from "@spacebiz/ui";
+
+// ─── Game-specific components ─────────────────────────────────────────────────
+export {
+  drawPortrait,
+  drawTerranPortrait,
+  drawMiningPortrait,
+  drawAgriculturalPortrait,
+  drawIndustrialPortrait,
+  drawHubStationPortrait,
+  drawResortPortrait,
+  drawResearchPortrait,
+  drawShipPortrait,
+  drawSystemPortrait,
+  drawEventPortrait,
+  drawAlienPortrait,
+  fillGradientV,
+  fillGradientH,
+  type PortraitType,
+  type AlienRole,
+  type PortraitData,
+} from "./PortraitGenerator.ts";
+export { PortraitPanel, type PortraitPanelConfig } from "./PortraitPanel.ts";
+export { AdviserPanel, type AdviserPanelConfig } from "./AdviserPanel.ts";
+export {
+  openRouteBuilder,
+  type RouteBuilderResult,
+  type RouteBuilderOptions,
+} from "./RouteBuilderPanel.ts";
+export {
+  TutorialOverlay,
+  type TutorialOverlayConfig,
+} from "./TutorialOverlay.ts";
+export { MiniMap, type MiniMapConfig } from "./MiniMap.ts";
+export {
+  getShipMapKey,
+  getShipMapAnimKey,
+  generateShipMapSprites,
+  SHIP_MAP_SIZE,
+} from "./ShipMapSprites.ts";
+export { getShipPortraitKey } from "./ShipTextures.ts";

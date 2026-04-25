@@ -1,0 +1,30 @@
+{
+  "name": "@spacebiz/qa-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server wrapping the Star Freight Tycoon QA console (window.__sft) for LLM agents.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "sft-qa-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/index.js",
+    "dev": "tsc -p tsconfig.json --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "playwright": "^1.59.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "~5.9.3"
+  }
+}

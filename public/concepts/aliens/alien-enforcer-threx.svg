@@ -1,0 +1,62 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="50" y1="28" x2="460" y2="490" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111A1D"/>
+      <stop offset="1" stop-color="#060A0C"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 220) rotate(90) scale(198 186)">
+      <stop stop-color="#5DFF8A" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#5DFF8A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="scales" x1="150" y1="88" x2="352" y2="344" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B8F59B"/>
+      <stop offset="0.4" stop-color="#5FAA4D"/>
+      <stop offset="1" stop-color="#2F5A2A"/>
+    </linearGradient>
+    <linearGradient id="armor" x1="168" y1="308" x2="338" y2="458" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#223228"/>
+      <stop offset="1" stop-color="#0E1511"/>
+    </linearGradient>
+    <filter id="greenGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="32" fill="url(#bg)"/>
+  <rect x="18" y="18" width="476" height="476" rx="24" stroke="#314B34" stroke-width="4"/>
+  <circle cx="256" cy="220" r="176" fill="url(#halo)"/>
+  <circle cx="256" cy="220" r="168" stroke="#5DFF8A" stroke-opacity="0.28" stroke-width="2"/>
+  <circle cx="256" cy="220" r="140" stroke="#FF4D4D" stroke-opacity="0.22" stroke-width="1.5" stroke-dasharray="10 10"/>
+
+  <path d="M141 458C153 367 194 322 256 322C318 322 359 367 371 458H141Z" fill="url(#armor)"/>
+  <path d="M187 334H325L340 458H172L187 334Z" fill="#0A110D" fill-opacity="0.68"/>
+  <path d="M214 334L256 368L298 334" stroke="#FF5A5A" stroke-opacity="0.56" stroke-width="4"/>
+
+  <path d="M175 194C175 124 212 88 256 88C300 88 337 124 337 194V243C337 299 306 336 256 336C206 336 175 299 175 243V194Z" fill="url(#scales)"/>
+  <path d="M184 158L148 138L162 102L206 100L222 129L184 158Z" fill="#4E7C3F"/>
+  <path d="M328 158L364 138L350 102L306 100L290 129L328 158Z" fill="#4E7C3F"/>
+  <path d="M224 96L236 60H276L288 96" stroke="#88D56A" stroke-width="8" stroke-linecap="round"/>
+
+  <ellipse cx="220" cy="207" rx="20" ry="18" fill="#061108"/>
+  <ellipse cx="292" cy="207" rx="20" ry="18" fill="#061108"/>
+  <ellipse cx="220" cy="207" rx="9" ry="10" fill="#F3FFB0" filter="url(#greenGlow)"/>
+  <ellipse cx="292" cy="207" rx="9" ry="10" fill="#F3FFB0" filter="url(#greenGlow)"/>
+  <circle cx="220" cy="207" r="4" fill="#5DFF8A"/>
+  <circle cx="292" cy="207" r="4" fill="#5DFF8A"/>
+
+  <path d="M214 242H298" stroke="#102A15" stroke-width="5" stroke-linecap="round"/>
+  <path d="M228 262L238 283" stroke="#112918" stroke-width="4" stroke-linecap="round"/>
+  <path d="M284 262L274 283" stroke="#112918" stroke-width="4" stroke-linecap="round"/>
+  <path d="M216 284C232 301 280 301 296 284" stroke="#FF5A5A" stroke-opacity="0.36" stroke-width="3"/>
+
+  <path d="M166 244C151 252 137 266 126 287" stroke="#5DFF8A" stroke-opacity="0.36" stroke-width="3" stroke-linecap="round"/>
+  <path d="M346 244C361 252 375 266 386 287" stroke="#5DFF8A" stroke-opacity="0.36" stroke-width="3" stroke-linecap="round"/>
+  <path d="M208 398H304" stroke="#5DFF8A" stroke-opacity="0.28" stroke-width="2" stroke-dasharray="7 7"/>
+
+  <rect x="42" y="426" width="174" height="34" rx="17" fill="#091109" stroke="#5DFF8A" stroke-opacity="0.42"/>
+  <text x="58" y="448" fill="#F2FFF2" font-family="monospace" font-size="18">THREX MARSHAL</text>
+</svg>

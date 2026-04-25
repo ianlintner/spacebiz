@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spacebiz Planet Portrait Gallery Compact</title>
+    <style>
+      :root {
+        --bg: #070712;
+        --panel: #111128;
+        --border: rgba(0, 255, 204, 0.45);
+        --text: #dbe8ff;
+        --muted: #8ea7c8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: radial-gradient(
+          circle at top,
+          #162043 0%,
+          #0a0a1a 38%,
+          var(--bg) 100%
+        );
+        color: var(--text);
+        padding: 16px;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 20px;
+      }
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .card {
+        background: rgba(17, 17, 40, 0.94);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        background: #0a0a1a;
+      }
+      .label {
+        padding: 6px 8px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Spacebiz Planet Portrait Set</h1>
+    <p>Compact QA sheet</p>
+    <div class="grid" id="grid"></div>
+
+    <script>
+      const types = [
+        "terran",
+        "industrial",
+        "mining",
+        "agricultural",
+        "hubStation",
+        "resort",
+        "research",
+      ];
+      const grid = document.getElementById("grid");
+      for (const type of types) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <img src="../portraits/planets/planet-${type}.png" alt="planet-${type}" />
+          <div class="label">${type}</div>
+        `;
+        grid.appendChild(card);
+      }
+    </script>
+  </body>
+</html>

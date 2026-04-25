@@ -1,0 +1,370 @@
+import Phaser from "phaser";
+import type { ThemeConfig } from "@spacebiz/ui";
+import { getTheme, lerpColor, generateCargoIcons } from "@spacebiz/ui";
+
+/**
+ * Generates all procedural canvas textures that the @spacebiz/ui
+ * components depend on, then starts the showcase scene.
+ */
+export class StyleguideBootScene extends Phaser.Scene {
+  constructor() {
+    super({ key: "StyleguideBootScene" });
+  }
+
+  create(): void {
+    const theme = getTheme();
+    this.generatePanelBg(theme);
+    this.generatePanelGlow(theme);
+    this.generateButtonTextures(theme);
+    this.generateHudBarBg(theme);
+    this.generateDividerH(theme);
+    this.generateGlowDot();
+    this.generatePixelWhite();
+    this.generateNavIcons();
+    generateCargoIcons(this.textures);
+    this.scene.start("StyleguideScene");
+  }
+
+  /* ── helpers ─────────────────────────────────────────────── */
+
+  private makeCanvas(
+    key: string,
+    w: number,
+    h: number,
+  ): { tex: Phaser.Textures.CanvasTexture; ctx: CanvasRenderingContext2D } {
+    const tex = this.textures.createCanvas(key, w, h);
+    if (!tex) throw new Error(`Failed to create canvas texture "${key}"`);
+    return { tex, ctx: tex.getContext() };
+  }
+
+  private rgba(color: number, alpha: number): string {
+    const r = (color >> 16) & 0xff;
+    const g = (color >> 8) & 0xff;
+    const b = color & 0xff;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  private traceChamferedRect(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    c: number,
+  ): void {
+    ctx.beginPath();
+    ctx.moveTo(x + c, y);
+    ctx.lineTo(x + w - c, y);
+    ctx.lineTo(x + w, y + c);
+    ctx.lineTo(x + w, y + h - c);
+    ctx.lineTo(x + w - c, y + h);
+    ctx.lineTo(x + c, y + h);
+    ctx.lineTo(x, y + h - c);
+    ctx.lineTo(x, y + c);
+    ctx.closePath();
+  }
+
+  /* ── texture generators ──────────────────────────────────── */
+
+  private generatePanelBg(theme: ThemeConfig): void {
+    const size = 64;
+    const { glass, chamfer, panel, colors } = theme;
+    const { tex, ctx } = this.makeCanvas("panel-bg", size, size);
+    const grad = ctx.createLinearGradient(0, 0, 0, size);
+    grad.addColorStop(0, this.rgba(glass.topTint, glass.bgAlpha));
+    grad.addColorStop(1, this.rgba(glass.bottomTint, glass.bgAlpha));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    ctx.lineWidth = panel.borderWidth;
+    ctx.strokeStyle = this.rgba(colors.panelBorder, 0.8);
+    this.traceChamferedRect(ctx, 1, 1, size - 2, size - 2, chamfer.size);
+    ctx.stroke();
+    const inset = panel.borderWidth + 1;
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = this.rgba(colors.accent, glass.innerBorderAlpha);
+    this.traceChamferedRect(
+      ctx,
+      inset,
+      inset,
+      size - inset * 2,
+      size - inset * 2,
+      Math.max(chamfer.size - inset, 1),
+    );
+    ctx.stroke();
+    tex.refresh();
+  }
+
+  private generatePanelGlow(theme: ThemeConfig): void {
+    const size = 72;
+    const { glow, chamfer, colors } = theme;
+    const { tex, ctx } = this.makeCanvas("panel-glow", size, size);
+    const layers = 3;
+    for (let i = 0; i < layers; i++) {
+      const alpha = glow.alpha * (1 - i / layers);
+      const offset = i + 2;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = this.rgba(colors.accent, alpha);
+      this.traceChamferedRect(
+        ctx,
+        offset,
+        offset,
+        size - offset * 2,
+        size - offset * 2,
+        chamfer.size + (layers - i),
+      );
+      ctx.stroke();
+    }
+    tex.refresh();
+  }
+
+  private generateButtonTextures(theme: ThemeConfig): void {
+    const size = 64;
+    const { chamfer, panel, glass, colors } = theme;
+    const buttons: ReadonlyArray<[string, number]> = [
+      ["btn-normal", colors.buttonBg],
+      ["btn-hover", colors.buttonHover],
+      ["btn-pressed", colors.buttonPressed],
+      ["btn-disabled", colors.buttonDisabled],
+    ];
+    for (const [key, baseColor] of buttons) {
+      const { tex, ctx } = this.makeCanvas(key, size, size);
+      const topColor = lerpColor(baseColor, 0x000000, 0.15);
+      const bottomColor = lerpColor(baseColor, 0xffffff, 0.08);
+      const grad = ctx.createLinearGradient(0, 0, 0, size);
+      grad.addColorStop(0, this.rgba(topColor, glass.bgAlpha));
+      grad.addColorStop(1, this.rgba(bottomColor, glass.bgAlpha));
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+      ctx.lineWidth = panel.borderWidth;
+      ctx.strokeStyle = this.rgba(colors.panelBorder, 1);
+      this.traceChamferedRect(ctx, 1, 1, size - 2, size - 2, chamfer.size);
+      ctx.stroke();
+      const c = chamfer.size;
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = this.rgba(colors.accent, 0.4);
+      ctx.beginPath();
+      ctx.moveTo(c, size - 1);
+      ctx.lineTo(size - c, size - 1);
+      ctx.stroke();
+      tex.refresh();
+    }
+  }
+
+  private generateGlowDot(): void {
+    const size = 16;
+    const half = size / 2;
+    const { tex, ctx } = this.makeCanvas("glow-dot", size, size);
+    const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
+    grad.addColorStop(0, "rgba(255,255,255,1)");
+    grad.addColorStop(0.3, "rgba(255,255,255,0.5)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    tex.refresh();
+  }
+
+  private generatePixelWhite(): void {
+    const { tex, ctx } = this.makeCanvas("pixel-white", 4, 4);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, 4, 4);
+    tex.refresh();
+  }
+
+  private generateHudBarBg(theme: ThemeConfig): void {
+    const w = 256;
+    const h = 4;
+    const darkerHeader = lerpColor(theme.colors.headerBg, 0x000000, 0.2);
+    const { tex, ctx } = this.makeCanvas("hud-bar-bg", w, h);
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0, this.rgba(darkerHeader, 0.85));
+    grad.addColorStop(0.5, this.rgba(theme.colors.headerBg, 0.9));
+    grad.addColorStop(1, this.rgba(darkerHeader, 0.85));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    tex.refresh();
+  }
+
+  private generateDividerH(theme: ThemeConfig): void {
+    const w = 128;
+    const h = 2;
+    const { tex, ctx } = this.makeCanvas("divider-h", w, h);
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0, this.rgba(theme.colors.accent, 1));
+    grad.addColorStop(1, this.rgba(theme.colors.accent, 0));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    tex.refresh();
+  }
+
+  private generateNavIcons(): void {
+    const s = 24;
+    const col = "#ffffff";
+
+    // icon-map: 4-pointed star (galaxy)
+    {
+      const { tex, ctx } = this.makeCanvas("icon-map", s, s);
+      const cx = s / 2,
+        cy = s / 2;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      const spikes = 4,
+        outerR = 10,
+        innerR = 4;
+      for (let i = 0; i < spikes * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = (Math.PI * i) / spikes - Math.PI / 2;
+        const px = cx + Math.cos(angle) * r;
+        const py = cy + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      tex.refresh();
+    }
+
+    // icon-fleet: Spaceship silhouette
+    {
+      const { tex, ctx } = this.makeCanvas("icon-fleet", s, s);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(12, 2);
+      ctx.lineTo(17, 14);
+      ctx.lineTo(20, 22);
+      ctx.lineTo(15, 18);
+      ctx.lineTo(12, 20);
+      ctx.lineTo(9, 18);
+      ctx.lineTo(4, 22);
+      ctx.lineTo(7, 14);
+      ctx.closePath();
+      ctx.fill();
+      tex.refresh();
+    }
+
+    // icon-routes: Two nodes connected by a line
+    {
+      const { tex, ctx } = this.makeCanvas("icon-routes", s, s);
+      ctx.strokeStyle = col;
+      ctx.fillStyle = col;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(6, 6);
+      ctx.lineTo(18, 18);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(6, 6, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(18, 18, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(12, 12, 2, 0, Math.PI * 2);
+      ctx.fill();
+      tex.refresh();
+    }
+
+    // icon-finance: Bar chart (3 ascending bars)
+    {
+      const { tex, ctx } = this.makeCanvas("icon-finance", s, s);
+      ctx.fillStyle = col;
+      const barW = 5,
+        gap = 2;
+      const startX = 3;
+      ctx.fillRect(startX, 15, barW, 7);
+      ctx.fillRect(startX + barW + gap, 10, barW, 12);
+      ctx.fillRect(startX + (barW + gap) * 2, 4, barW, 18);
+      tex.refresh();
+    }
+
+    // icon-market: Exchange arrows
+    {
+      const { tex, ctx } = this.makeCanvas("icon-market", s, s);
+      ctx.fillStyle = col;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(4, 8);
+      ctx.lineTo(18, 8);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(14, 4);
+      ctx.lineTo(20, 8);
+      ctx.lineTo(14, 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(20, 16);
+      ctx.lineTo(6, 16);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(10, 12);
+      ctx.lineTo(4, 16);
+      ctx.lineTo(10, 20);
+      ctx.closePath();
+      ctx.fill();
+      tex.refresh();
+    }
+
+    // icon-audio: Speaker with sound wave
+    {
+      const { tex, ctx } = this.makeCanvas("icon-audio", s, s);
+      ctx.fillStyle = col;
+      ctx.strokeStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(3, 9);
+      ctx.lineTo(7, 9);
+      ctx.lineTo(12, 5);
+      ctx.lineTo(12, 19);
+      ctx.lineTo(7, 15);
+      ctx.lineTo(3, 15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(13, 12, 4, -Math.PI / 3, Math.PI / 3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(13, 12, 7, -Math.PI / 4, Math.PI / 4);
+      ctx.stroke();
+      tex.refresh();
+    }
+
+    // icon-end-turn: Play/forward arrow
+    {
+      const { tex, ctx } = this.makeCanvas("icon-end-turn", s, s);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(6, 3);
+      ctx.lineTo(20, 12);
+      ctx.lineTo(6, 21);
+      ctx.closePath();
+      ctx.fill();
+      tex.refresh();
+    }
+
+    // icon-adviser: Husky face silhouette
+    {
+      const { tex, ctx } = this.makeCanvas("icon-adviser", s, s);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(5, 14);
+      ctx.lineTo(8, 3);
+      ctx.lineTo(11, 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(19, 14);
+      ctx.lineTo(16, 3);
+      ctx.lineTo(13, 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(12, 14, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(12, 18, 3, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      tex.refresh();
+    }
+  }
+}
