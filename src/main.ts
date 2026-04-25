@@ -656,15 +656,46 @@ function updateFooterYear(): void {
   }
 }
 
+// Cache the last applied dimensions so we can no-op when the resize event
+// fires for the same size (common during scroll-bar toggling reflows).
+let lastAppliedWidth = 0;
+let lastAppliedHeight = 0;
+
 function resizeGameToViewport(): void {
   if (!activeGame) {
     return;
   }
 
-  const size = calculateGameSize();
+  // Prefer the canvas parent's bounding box. Reading window.innerWidth/Height
+  // includes scrollbar width on some browsers, which flips when the canvas
+  // resize itself toggles a page scrollbar — that's the feedback loop we
+  // want to break. Fall back to the window when the parent isn't laid out yet.
+  const parent = document.getElementById("game-container");
+  const parentRect = parent?.getBoundingClientRect();
+  const parentW = parentRect && parentRect.width > 0 ? parentRect.width : 0;
+  const parentH = parentRect && parentRect.height > 0 ? parentRect.height : 0;
+  const sourceW = parentW > 0 ? parentW : window.innerWidth || 1280;
+  const sourceH = parentH > 0 ? parentH : window.innerHeight || 720;
+
+  const size = calculateGameSize(sourceW, sourceH);
+
+  // Skip the round-trip if the resulting virtual size hasn't changed by at
+  // least 1px in either axis. Phaser's scale.resize triggers a layout pass
+  // and emits its own internal events; calling it for a no-op size starts the
+  // exact thrash we're trying to avoid.
+  if (
+    size.width === lastAppliedWidth &&
+    size.height === lastAppliedHeight
+  ) {
+    return;
+  }
+  lastAppliedWidth = size.width;
+  lastAppliedHeight = size.height;
+
   updateLayout(size.width, size.height);
+  // scale.resize internally refreshes the layout — calling scale.refresh()
+  // afterwards is redundant and triggers an extra layout pass.
   activeGame.scale.resize(size.width, size.height);
-  activeGame.scale.refresh();
 }
 
 function setupFullscreenControl(): void {
@@ -760,14 +791,28 @@ function mountGame(): void {
     );
   }
 
-  // Recalculate virtual resolution on significant viewport changes (orientation flip)
-  let resizeTimer: ReturnType<typeof setTimeout> | null = null;
-  window.addEventListener("resize", () => {
-    if (resizeTimer) clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
+  // Track resizes via a ResizeObserver on the canvas parent. This is more
+  // accurate than window.resize because the game cares about its own
+  // container's box, not the window — and it avoids the scrollbar-flicker
+  // feedback loop where a window.resize fires every time the canvas resize
+  // itself toggles a page scrollbar.
+  let pendingFrame = 0;
+  const scheduleResize = (): void => {
+    if (pendingFrame) return;
+    pendingFrame = window.requestAnimationFrame(() => {
+      pendingFrame = 0;
       resizeGameToViewport();
-    }, 250);
-  });
+    });
+  };
+
+  const parent = document.getElementById("game-container");
+  if (parent && typeof ResizeObserver !== "undefined") {
+    const observer = new ResizeObserver(scheduleResize);
+    observer.observe(parent);
+  }
+  // Keep a window.resize fallback for orientation flips and browsers that
+  // don't fire the ResizeObserver on viewport-driven CSS changes.
+  window.addEventListener("resize", scheduleResize);
 }
 
 renderSite();
@@ -782,5 +827,7 @@ if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     activeGame?.destroy(true);
     activeGame = null;
+    lastAppliedWidth = 0;
+    lastAppliedHeight = 0;
   });
 }
