@@ -281,18 +281,21 @@ export class RoutesScene extends Phaser.Scene {
       width: contentInnerW,
       height: tableHeight,
       columns: [
-        { key: "origin", label: "From", width: 100, sortable: true },
-        { key: "destination", label: "To", width: 100, sortable: true },
+        // Column widths sum to 695 — fits inside contentInnerW (~696) at the
+        // smallest supported game width (1152). Trimmed from a 776-px set
+        // that overflowed the panel right edge.
+        { key: "origin", label: "From", width: 92, sortable: true },
+        { key: "destination", label: "To", width: 92, sortable: true },
         {
           key: "empire",
           label: "Empire",
-          width: 80,
+          width: 70,
           sortable: true,
         },
         {
           key: "cargo",
           label: "Cargo",
-          width: 90,
+          width: 80,
           sortable: true,
           format: (v) => getCargoShortLabel(v as string),
           iconFn: (v) => getCargoIconKey(v as string),
@@ -322,7 +325,7 @@ export class RoutesScene extends Phaser.Scene {
         {
           key: "price",
           label: "Price",
-          width: 70,
+          width: 65,
           align: "right",
           sortable: true,
           format: (v) => `§${(v as number).toFixed(0)}`,
@@ -342,14 +345,14 @@ export class RoutesScene extends Phaser.Scene {
         {
           key: "dist",
           label: "Dist",
-          width: 45,
+          width: 40,
           align: "right",
           sortable: true,
         },
         {
           key: "profit",
           label: "Profit/turn",
-          width: 80,
+          width: 75,
           align: "right",
           sortable: true,
           format: (v) => formatCompact(v as number),
@@ -361,7 +364,7 @@ export class RoutesScene extends Phaser.Scene {
         {
           key: "ship",
           label: "Ship",
-          width: 110,
+          width: 80,
           sortable: true,
           iconFn: (_v, row) => {
             const sc = row?.["shipClass"] as string | undefined;
@@ -731,6 +734,28 @@ export class RoutesScene extends Phaser.Scene {
             : opp.shipName,
       };
     });
+
+    // Context-aware empty-state hint. The default ("Generate a galaxy first")
+    // is misleading once a galaxy exists — the real reason for an empty
+    // table is almost always a too-narrow filter or no compatible ship.
+    if (rows.length === 0) {
+      const noGalaxy = state.galaxy.planets.length === 0;
+      const hasFilter =
+        this.finderCargoFilter !== null || this.finderDistanceBand !== null;
+      let emptyText = "No route opportunities found";
+      let emptyHint: string;
+      if (noGalaxy) {
+        emptyHint = "Generate a galaxy first.";
+      } else if (hasFilter) {
+        emptyText = `No ${filterLabel} routes match your filter`;
+        emptyHint = "Widen the cargo or distance filter — or try All.";
+      } else if (availableShips === 0 && state.fleet.length === 0) {
+        emptyHint = "Buy a ship from the Fleet screen to unlock routes.";
+      } else {
+        emptyHint = "Tech and luxury cargo unlocks more options later.";
+      }
+      this.finderTable.setEmptyState(emptyText, emptyHint);
+    }
 
     this.finderTable.setRows(rows);
   }

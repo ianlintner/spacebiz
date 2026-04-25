@@ -687,6 +687,17 @@ export class DataTable extends Phaser.GameObjects.Container {
     return this.rows[this.selectedRowIndex] ?? null;
   }
 
+  /**
+   * Override the empty-state copy at runtime. Lets callers swap a generic
+   * "no data yet" hint for a context-aware one (e.g. "Try a different filter"
+   * vs "Generate a galaxy first") without rebuilding the table.
+   */
+  setEmptyState(text?: string, hint?: string): void {
+    if (text !== undefined) this.tableConfig.emptyStateText = text;
+    if (hint !== undefined) this.tableConfig.emptyStateHint = hint;
+    this.setRows(this.rows);
+  }
+
   /** Scroll by one visible page height in the given direction (-1 up, +1 down). */
   private scrollPage(direction: number): void {
     const pageSize = this.tableConfig.height - this.headerHeight;
