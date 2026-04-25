@@ -217,6 +217,7 @@ function materializeDilemma(
     optionSuccess,
     dilemmaId: template.id,
     category: template.category,
+    imageKey: template.imageKey,
   };
 }
 

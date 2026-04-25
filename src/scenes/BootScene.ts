@@ -85,6 +85,24 @@ export class BootScene extends Phaser.Scene {
       this.load.image(`ship-map-${cls}`, `ships/map/${cls}.png`);
       this.load.image(`ship-portrait-${cls}`, `ships/portraits/${cls}.png`);
     }
+
+    // Dilemma banner illustrations (~10 × 480×240 PNG, ~1.2 MB total) — loaded
+    // up front so the modal can display instantly when a dilemma fires.
+    const dilemmaImageKeys = [
+      "dilemma_engineer_strike",
+      "dilemma_tariff_brinkmanship",
+      "dilemma_credit_squeeze",
+      "dilemma_rival_recruits",
+      "dilemma_retrofit_offer",
+      "dilemma_quarantine_outbreak",
+      "dilemma_corporate_espionage",
+      "dilemma_bandit_warlord_offer",
+      "dilemma_data_breach",
+      "dilemma_legacy_freighter",
+    ];
+    for (const key of dilemmaImageKeys) {
+      this.load.image(key, `dilemmas/${key}.png`);
+    }
   }
 
   create(): void {
