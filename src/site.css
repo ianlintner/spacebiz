@@ -639,16 +639,80 @@ canvas {
 .game-frame__status {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.55rem;
 }
 
 .game-frame__cluster span,
 .game-frame__status span,
+.game-frame__status a,
 .frame-caption__meta {
   color: var(--text-soft);
   font-size: 0.72rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+.build-chip,
+.footer-build-link {
+  color: var(--accent);
+}
+
+.build-chip:hover,
+.build-chip:focus-visible,
+.footer-build-link:hover,
+.footer-build-link:focus-visible {
+  color: var(--text);
+}
+
+.game-frame__control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.55rem;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid rgba(110, 255, 235, 0.34);
+  border-radius: 999px;
+  background: rgba(8, 15, 30, 0.72);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.game-frame__control:hover,
+.game-frame__control:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(110, 255, 235, 0.72);
+  background: rgba(18, 35, 66, 0.92);
+  color: var(--text);
+}
+
+.game-frame:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+  background: #03060c;
+}
+
+.game-frame:fullscreen .game-frame__screen,
+.game-frame.is-browser-fullscreen .game-frame__screen {
+  padding: 0.2rem;
+}
+
+.game-frame:fullscreen .viewport,
+.game-frame.is-browser-fullscreen .viewport {
+  height: 100%;
+  border-radius: 0;
 }
 
 .signal-light {
@@ -1219,7 +1283,8 @@ details[open] summary::after {
     padding: 0.2rem 0.5rem;
   }
 
-  .game-frame__hud .game-frame__status {
+  .game-frame__hud .build-chip,
+  .game-frame__hud .launch-state {
     display: none;
   }
 

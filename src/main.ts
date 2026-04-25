@@ -45,6 +45,15 @@ interface NavItem {
   label: string;
 }
 
+interface BuildInfo {
+  buildNumber: string;
+  commitSha: string;
+  shortCommit: string;
+  githubUrl: string;
+}
+
+declare const __SFT_BUILD_INFO__: BuildInfo;
+
 const NAV_ITEMS: NavItem[] = [
   { id: "overview", label: "Overview" },
   { id: "command-deck", label: "Command Deck" },
@@ -56,6 +65,24 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 let activeGame: Phaser.Game | null = null;
+const BUILD_INFO = __SFT_BUILD_INFO__;
+
+function escapeHtml(value: string): string {
+  const div = document.createElement("div");
+  div.textContent = value;
+  return div.innerHTML;
+}
+
+function renderBuildLink(className: string): string {
+  const label = `Build ${BUILD_INFO.buildNumber} / ${BUILD_INFO.shortCommit}`;
+  const safeLabel = escapeHtml(label);
+
+  if (!BUILD_INFO.githubUrl) {
+    return `<span class="${className}">${safeLabel}</span>`;
+  }
+
+  return `<a class="${className}" href="${escapeHtml(BUILD_INFO.githubUrl)}" target="_blank" rel="noreferrer noopener">${safeLabel}</a>`;
+}
 
 function renderNavLinks(): string {
   return NAV_ITEMS.map(
@@ -282,7 +309,7 @@ function renderSite(): void {
         <section id="overview" class="section hero hero--full-bleed">
           <div class="hero-shell">
             <div class="hero-stage hero-stage--full">
-              <div class="game-frame game-frame--hero">
+              <div class="game-frame game-frame--hero" data-game-frame>
                 <div class="game-frame__hud">
                   <div class="game-frame__cluster">
                     <span class="signal-light signal-light--teal"></span>
@@ -291,8 +318,9 @@ function renderSite(): void {
                     <span>Bridge View</span>
                   </div>
                   <div class="game-frame__status">
-                    <span>Interactive Build</span>
-                    <span>Ready for Launch</span>
+                    ${renderBuildLink("build-chip")}
+                    <span class="launch-state">Ready for Launch</span>
+                    <button class="game-frame__control" type="button" data-fullscreen-toggle aria-pressed="false">Full Screen</button>
                   </div>
                 </div>
 
@@ -537,7 +565,7 @@ function renderSite(): void {
 
       <footer class="footer">
         <p class="footer-note">
-          <strong>Star Freight Tycoon</strong> — playable web build, strategy manual, in-site wiki, and portrait QA tooling in one documentation-driven interface. <span id="site-year"></span>
+          <strong>Star Freight Tycoon</strong> — playable web build, strategy manual, in-site wiki, and portrait QA tooling in one documentation-driven interface. <span id="site-year"></span> · ${renderBuildLink("footer-build-link")}
         </p>
       </footer>
     </div>
@@ -658,6 +686,54 @@ function updateFooterYear(): void {
   }
 }
 
+function resizeGameToViewport(): void {
+  if (!activeGame) {
+    return;
+  }
+
+  const size = calculateGameSize();
+  updateLayout(size.width, size.height);
+  activeGame.scale.resize(size.width, size.height);
+  activeGame.scale.refresh();
+}
+
+function setupFullscreenControl(): void {
+  const frame = document.querySelector<HTMLElement>("[data-game-frame]");
+  const toggle = document.querySelector<HTMLButtonElement>(
+    "[data-fullscreen-toggle]",
+  );
+
+  if (!frame || !toggle) {
+    return;
+  }
+
+  if (!document.fullscreenEnabled || !frame.requestFullscreen) {
+    toggle.hidden = true;
+    return;
+  }
+
+  const syncButton = (): void => {
+    const isFullscreen = document.fullscreenElement === frame;
+    toggle.textContent = isFullscreen ? "Exit Full Screen" : "Full Screen";
+    toggle.setAttribute("aria-pressed", String(isFullscreen));
+    frame.classList.toggle("is-browser-fullscreen", isFullscreen);
+    window.requestAnimationFrame(resizeGameToViewport);
+  };
+
+  toggle.addEventListener("click", () => {
+    const request = document.fullscreenElement === frame
+      ? document.exitFullscreen()
+      : frame.requestFullscreen({ navigationUI: "hide" });
+
+    request.catch((error: unknown) => {
+      console.warn("Fullscreen request failed", error);
+    });
+  });
+
+  document.addEventListener("fullscreenchange", syncButton);
+  syncButton();
+}
+
 function mountGame(): void {
   if (activeGame) {
     return;
@@ -719,11 +795,7 @@ function mountGame(): void {
   window.addEventListener("resize", () => {
     if (resizeTimer) clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      if (!activeGame) return;
-      const size = calculateGameSize();
-      updateLayout(size.width, size.height);
-      activeGame.scale.resize(size.width, size.height);
-      activeGame.scale.refresh();
+      resizeGameToViewport();
     }, 250);
   });
 }
@@ -734,6 +806,7 @@ setupSectionObserver();
 setupAccordions();
 updateFooterYear();
 mountGame();
+setupFullscreenControl();
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
