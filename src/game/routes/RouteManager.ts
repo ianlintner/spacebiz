@@ -595,6 +595,24 @@ export function deleteRoute(
   return { fleet: updatedFleet, routes: updatedRoutes };
 }
 
+export function setRoutePaused(
+  routeId: string,
+  paused: boolean,
+  routes: ActiveRoute[],
+): ActiveRoute[] {
+  return routes.map((r) => (r.id === routeId ? { ...r, paused } : r));
+}
+
+export function setRouteCargo(
+  routeId: string,
+  newCargo: ActiveRoute["cargoType"],
+  routes: ActiveRoute[],
+): ActiveRoute[] {
+  return routes.map((r) =>
+    r.id === routeId ? { ...r, cargoType: newCargo } : r,
+  );
+}
+
 /**
  * Estimate revenue for a route+ship for one turn.
  * Matches the TurnSimulator formula: applies calculatePrice, distancePremium,

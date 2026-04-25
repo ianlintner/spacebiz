@@ -539,6 +539,13 @@ export interface ActiveRoute {
   distance: number;
   assignedShipIds: string[];
   cargoType: CargoType | null;
+  /**
+   * If true, the route is paused: the simulator skips revenue and fuel for
+   * this route while the slot and license fee remain. Players resume from the
+   * Edit Route panel. Default falsy (active) for backwards compatibility with
+   * older saves.
+   */
+  paused?: boolean;
 }
 
 export interface GameEvent {

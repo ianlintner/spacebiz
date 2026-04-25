@@ -35,6 +35,7 @@ import {
   scanAllRouteOpportunities,
   addCargoLock,
   removeCargoLocks,
+  setRoutePaused,
   getAvailableRouteSlots,
   getUsedRouteSlots,
   getAvailableLocalRouteSlots,
@@ -86,6 +87,7 @@ export class RoutesScene extends Phaser.Scene {
   private deleteRouteButton!: Button;
   private assignShipButton!: Button;
   private setCargoButton!: Button;
+  private pauseRouteButton!: Button;
 
   // ── Route Finder tab state ──
   private finderTable!: DataTable;
@@ -547,8 +549,18 @@ export class RoutesScene extends Phaser.Scene {
     });
     activeContent.add(this.setCargoButton);
 
-    const addRouteBtn = new Button(this, {
+    this.pauseRouteButton = new Button(this, {
       x: contentInnerX + 420,
+      y: activeButtonY,
+      width: 120,
+      label: "Pause",
+      disabled: true,
+      onClick: () => this.toggleRoutePause(),
+    });
+    activeContent.add(this.pauseRouteButton);
+
+    const addRouteBtn = new Button(this, {
+      x: contentInnerX + 560,
       y: activeButtonY,
       width: 140,
       label: "Create Route",
@@ -935,7 +947,11 @@ export class RoutesScene extends Phaser.Scene {
       let fuelCost: number | string = "\u2014";
       let profit: number | string = "\u2014";
 
-      if (firstShip && route.cargoType) {
+      if (route.paused) {
+        revenue = "\u23f8 paused";
+        fuelCost = 0;
+        profit = 0;
+      } else if (firstShip && route.cargoType) {
         const rev = estimateRouteRevenue(route, firstShip, state.market, state);
         const fuel = estimateRouteFuelCost(
           route,
@@ -947,11 +963,15 @@ export class RoutesScene extends Phaser.Scene {
         profit = rev - fuel;
       }
 
+      const originName =
+        planetMap.get(route.originPlanetId) ?? route.originPlanetId;
+      const destinationName =
+        planetMap.get(route.destinationPlanetId) ?? route.destinationPlanetId;
+
       return {
         id: route.id,
-        origin: planetMap.get(route.originPlanetId) ?? route.originPlanetId,
-        destination:
-          planetMap.get(route.destinationPlanetId) ?? route.destinationPlanetId,
+        origin: route.paused ? `\u23f8 ${originName}` : originName,
+        destination: destinationName,
         distance: route.distance,
         ships: route.assignedShipIds.length,
         shipClass: firstShip?.class ?? null,
@@ -959,6 +979,7 @@ export class RoutesScene extends Phaser.Scene {
         revenue,
         fuelCost,
         profit,
+        paused: route.paused ?? false,
       };
     });
 
@@ -977,6 +998,8 @@ export class RoutesScene extends Phaser.Scene {
     this.deleteRouteButton?.setDisabled(!hasSelection);
     this.assignShipButton?.setDisabled(!hasSelection);
     this.setCargoButton?.setDisabled(!hasSelection);
+    this.pauseRouteButton?.setDisabled(!hasSelection);
+    this.pauseRouteButton?.setLabel(route?.paused ? "Resume" : "Pause");
 
     if (!route) {
       this.selectedRouteSummary?.setText("Pick a route to manage it");
@@ -1162,6 +1185,23 @@ export class RoutesScene extends Phaser.Scene {
         this.refreshActiveTable();
       },
     });
+  }
+
+  private toggleRoutePause(): void {
+    if (!this.selectedRouteId) return;
+    const state = gameStore.getState();
+    const route = state.activeRoutes.find(
+      (r) => r.id === this.selectedRouteId,
+    );
+    if (!route) return;
+    const updated = setRoutePaused(
+      this.selectedRouteId,
+      !route.paused,
+      state.activeRoutes,
+    );
+    gameStore.update({ activeRoutes: updated });
+    this.refreshActiveTable();
+    this.refreshFinderTable();
   }
 
   private confirmDeleteRoute(): void {

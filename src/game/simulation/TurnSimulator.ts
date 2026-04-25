@@ -348,6 +348,13 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   const fuelMultiplier = getFuelMultiplier(nextState);
 
   for (const route of nextState.activeRoutes) {
+    // Player-paused routes skip the simulation entirely — no revenue, no fuel
+    // burn, no mothball fee. The slot and license fee stay paid so the route
+    // can be resumed without re-buying the slot.
+    if (route.paused) {
+      continue;
+    }
+
     // Check if route is grounded by events (embargo, blockade, etc.)
     const grounded = isRouteGrounded(
       route,
