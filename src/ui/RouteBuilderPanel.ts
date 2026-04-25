@@ -26,7 +26,7 @@ import {
 import { getLayout } from "./Layout.ts";
 import { Button } from "./Button.ts";
 import { Label } from "./Label.ts";
-import { MiniMap } from "./MiniMap.ts";
+import { RoutePickerMap } from "./RoutePickerMap.ts";
 import { Panel } from "./Panel.ts";
 import { DEPTH_MODAL } from "./DepthLayers.ts";
 import type { SceneUiDirector } from "./SceneUiDirector.ts";
@@ -136,7 +136,9 @@ class RouteBuilderPanel {
   private cargoIcon!: Phaser.GameObjects.Image;
   private fieldLabels = new Map<FieldKey, Label>();
   private fieldValues = new Map<FieldKey, Label>();
-  private miniMap: MiniMap | null = null;
+  private pickerMap: RoutePickerMap | null = null;
+  private nextClickSlot: "origin" | "destination" = "origin";
+  private hoveredPlanetId: string | null = null;
   // Market Intel labels
   private mktOriginPriceValue!: Label;
   private mktDestPriceValue!: Label;
@@ -158,8 +160,9 @@ class RouteBuilderPanel {
 
     const L = getLayout();
     // Clamp panel size to viewport so it never overflows on smaller screens.
-    // Reserve margin for the side gutters and overlay framing.
-    this.panelWidth = Math.min(620, Math.max(420, L.gameWidth - 64));
+    // Wider than the legacy modal so the interactive picker map can live in
+    // a right column without crowding the field selectors on the left.
+    this.panelWidth = Math.min(900, Math.max(420, L.gameWidth - 64));
     this.panelHeight = Math.min(720, Math.max(500, L.gameHeight - 80));
     this.panelX = Math.floor((L.gameWidth - this.panelWidth) / 2);
     this.panelY = Math.floor((L.gameHeight - this.panelHeight) / 2);
@@ -297,22 +300,44 @@ class RouteBuilderPanel {
     rowY += 22;
     this.mktSaturationValue = this.createSummaryLabel(content.x, rowY);
 
-    // Mini-map: positioned bottom-right, above the confirm buttons
-    const miniMapWidth = 160;
-    const miniMapHeight = 120;
-    const miniMapX = this.panelX + this.panelWidth - miniMapWidth - 16;
-    const miniMapY = this.panelY + this.panelHeight - miniMapHeight - 58;
-    this.miniMap = new MiniMap({
+    // Interactive picker map: right column. The left column holds the field
+    // selectors (origin/dest/cargo/ship) which extend to roughly x=520; the
+    // map starts at x≈540 and runs to the inside edge of the panel.
+    const pickerMapPadding = 16;
+    const pickerColumnLeft = 540;
+    const pickerMapWidth = Math.max(
+      220,
+      this.panelWidth - pickerColumnLeft - pickerMapPadding,
+    );
+    const pickerMapHeight = Math.min(360, this.panelHeight - 220);
+    const pickerMapX = this.panelX + pickerColumnLeft;
+    const pickerMapY = this.panelY + content.y + 70;
+    this.pickerMap = new RoutePickerMap({
       scene,
-      x: miniMapX,
-      y: miniMapY,
-      width: miniMapWidth,
-      height: miniMapHeight,
+      x: pickerMapX,
+      y: pickerMapY,
+      width: pickerMapWidth,
+      height: pickerMapHeight,
       depth: DEPTH_MODAL,
+      onPlanetClick: (planetId) => this.handlePlanetClick(planetId),
+      onPlanetHover: (planetId) => {
+        this.hoveredPlanetId = planetId;
+        this.refreshPickerMap();
+      },
     });
-    for (const obj of this.miniMap.getGameObjects()) {
+    for (const obj of this.pickerMap.getGameObjects()) {
       layer.track(obj);
     }
+    const pickerHint = new Label(scene, {
+      x: pickerMapX,
+      y: pickerMapY - 18,
+      text: "Click a planet to set origin → click another for destination",
+      style: "caption",
+      color: getTheme().colors.textDim,
+      maxWidth: pickerMapWidth,
+    });
+    pickerHint.setDepth(DEPTH_MODAL);
+    layer.track(pickerHint);
 
     const confirmButton = new Button(scene, {
       x: this.panelX + content.x,
@@ -627,47 +652,58 @@ class RouteBuilderPanel {
       value?.setLabelColor(isActive ? theme.colors.text : theme.colors.accent);
     }
 
-    this.updateMiniMap();
+    this.refreshPickerMap();
   }
 
-  private updateMiniMap(): void {
-    if (!this.miniMap) return;
-
+  private refreshPickerMap(): void {
+    if (!this.pickerMap) return;
+    const state = gameStore.getState();
     const origin = this.getSelectedOrigin();
     const destination = this.getSelectedDestination();
-    const state = gameStore.getState();
+    this.pickerMap.draw({
+      systems: state.galaxy.systems,
+      planets: state.galaxy.planets,
+      activeRoutes: state.activeRoutes,
+      originPlanetId: origin?.id ?? null,
+      destinationPlanetId: destination?.id ?? null,
+      cargoType: this.getSelectedCargo(),
+      hoveredPlanetId: this.hoveredPlanetId,
+    });
+  }
 
-    if (!origin || !destination || origin.id === destination.id) {
-      this.miniMap.drawEmpty();
+  private handlePlanetClick(planetId: string): void {
+    const planetIndex = this.planets.findIndex((p) => p.id === planetId);
+    if (planetIndex < 0) return;
+
+    if (this.options.lockOrigin) {
+      // Origin is locked — clicks only set destination
+      if (planetIndex !== this.originIndex) {
+        this.destinationIndex = planetIndex;
+      }
+      this.refreshUi();
       return;
     }
 
-    const isInterSystem = origin.systemId !== destination.systemId;
-
-    if (isInterSystem) {
-      this.miniMap.drawGalaxyRoute(
-        state.galaxy.systems,
-        origin.systemId,
-        destination.systemId,
-        state.activeRoutes,
-        state.galaxy.planets,
-      );
+    if (this.nextClickSlot === "origin") {
+      this.originIndex = planetIndex;
+      // Ensure destination is different
+      if (this.destinationIndex === this.originIndex) {
+        this.destinationIndex = wrapIndex(
+          this.originIndex + 1,
+          this.planets.length,
+        );
+      }
+      this.nextClickSlot = "destination";
     } else {
-      const system = state.galaxy.systems.find((s) => s.id === origin.systemId);
-      if (!system) {
-        this.miniMap.drawEmpty();
+      if (planetIndex === this.originIndex) {
+        // Clicking origin again resets — treat next click as origin
+        this.nextClickSlot = "origin";
         return;
       }
-      const systemPlanets = state.galaxy.planets.filter(
-        (p) => p.systemId === system.id,
-      );
-      this.miniMap.drawSystemRoute(
-        system,
-        systemPlanets,
-        origin.id,
-        destination.id,
-      );
+      this.destinationIndex = planetIndex;
+      this.nextClickSlot = "origin";
     }
+    this.refreshUi();
   }
 
   private buildPreview(): {
