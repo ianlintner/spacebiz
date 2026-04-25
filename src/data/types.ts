@@ -53,6 +53,18 @@ export interface RouteMarketEntry {
 }
 
 // ── Choice Event types ─────────────────────────────────────────
+/**
+ * State inputs that scale a dilemma option's success%. Each option declares
+ * which inputs apply; SuccessFormula sums their contributions on top of
+ * `baseSuccess` to produce a final success% in [10, 100].
+ */
+export type OptionScalingTag =
+  | "fleetCondition"
+  | "fleetSize"
+  | "tech"
+  | "rep"
+  | "cash";
+
 export interface ChoiceOption {
   id: string;
   label: string;
@@ -61,6 +73,65 @@ export interface ChoiceOption {
   requiresAp?: number;
   requiresReputation?: number;
   requiresCash?: number;
+  /**
+   * Dilemma-only fields. When present, this option behaves as a dilemma branch:
+   * effect magnitudes are scaled by `successPercent / 100` at resolve-time, and
+   * the UI surfaces the scaling chips/contribution breakdown.
+   */
+  baseSuccess?: number;
+  scalingTags?: OptionScalingTag[];
+  /** Tech ids that, if researched, contribute extra success% on top of the "tech" tag. */
+  scalingTechIds?: string[];
+  /** Computed at fire-time and frozen on the ChoiceEvent (see ChoiceEvent.optionSuccess). */
+}
+
+// ── Dilemma template (authoring-side) ─────────────────────────
+export type DilemmaCategory = "diplomatic" | "operational" | "financial" | "narrative";
+
+export interface DilemmaTemplate {
+  id: string;
+  category: DilemmaCategory;
+  prompt: string;
+  options: ChoiceOption[];
+  /** Selection weighting */
+  weight: number;
+  headwindWeight: number;
+  tailwindWeight: number;
+  /** Optional eligibility predicate evaluated against GameState; defaults to always-eligible. */
+  eligibility?: "anyTime" | "midGame" | "lateGame";
+}
+
+// ── AI narrative event (no choice — pure buff/debuff text) ────
+export interface AINarrativeEffect {
+  /** Affects AI cash directly when applied. */
+  cashDelta?: number;
+  /** Multiplier applied to AI revenue this turn (1 = no change). Stored on AICompany.activeNarrativeEffects and consumed by the AI route step. */
+  revenueMultiplier?: number;
+  /** Multiplier applied to AI maintenance costs this turn. */
+  maintenanceMultiplier?: number;
+  /** Reputation delta applied immediately. */
+  reputationDelta?: number;
+  /** Number of turns the multiplier effects persist (cashDelta and reputationDelta apply once on fire). */
+  duration: number;
+}
+
+export interface AINarrativeTemplate {
+  id: string;
+  /** Headline for the news digest, with {company} and {empire} tokens substituted at fire-time. */
+  headline: string;
+  /** Short tooltip describing the mechanical effect. */
+  tooltip: string;
+  effect: AINarrativeEffect;
+  /** "boon" → favorable for the AI (used to buff trailing AI), "bane" → unfavorable. */
+  flavor: "boon" | "bane";
+  weight: number;
+}
+
+/** Active narrative effect attached to an AICompany, ticks down each turn. */
+export interface ActiveAINarrativeEffect extends AINarrativeEffect {
+  templateId: string;
+  headline: string;
+  remainingTurns: number;
 }
 
 export interface ChoiceEvent {
@@ -73,6 +144,15 @@ export interface ChoiceEvent {
   /** Position in the chain (0-based) */
   chainStep?: number;
   turnCreated: number;
+  /**
+   * Dilemma-only: success% per option, frozen at fire-time. Keys are option ids.
+   * When present, the resolver scales effect magnitudes by these values.
+   */
+  optionSuccess?: Record<string, number>;
+  /** Source dilemma template id, if generated from a DilemmaTemplate. */
+  dilemmaId?: string;
+  /** Dilemma category, surfaced for UI grouping/iconography. */
+  category?: DilemmaCategory;
 }
 
 // ── Event Chain types ──────────────────────────────────────────
@@ -520,6 +600,13 @@ export interface AITurnSummary {
   routeCount: number;
   fleetSize: number;
   bankrupt: boolean;
+  /** Storyteller-fired narrative beat for this AI this turn, if any. Surfaced through News Digest / Rival Snapshot panels. */
+  narrativeBeat?: {
+    templateId: string;
+    headline: string;
+    tooltip: string;
+    flavor: "boon" | "bane";
+  };
 }
 
 export interface RoutePerformance {
@@ -539,6 +626,23 @@ export interface StorytellerState {
   consecutiveProfitTurns: number;
   /** Turns since the player last made a meaningful decision (choice event) */
   turnsSinceLastDecision: number;
+  /**
+   * Turns since the storyteller last fired a dilemma at the player.
+   * Optional for backward-compatibility with saves and older test fixtures —
+   * consumers default to a high value (no recent dilemma) when missing.
+   */
+  turnsSinceLastDilemma?: number;
+  /**
+   * Decaying sum of recent effect magnitudes — high values suppress new
+   * dilemmas ("no piling on"). Optional with default 0.
+   */
+  recentIntensity?: number;
+  /**
+   * Pacing mode. v1 ships only "steady"; future variants are described purely
+   * by their curve shape ("breather" = longer downtime, "variance" = wider
+   * magnitude spread).
+   */
+  mode?: "steady" | "breather" | "variance";
 }
 
 // ── Adviser types ──────────────────────────────────────────
@@ -620,6 +724,8 @@ export interface AICompany {
   aiHub?: AIHubState;
   /** Number of contracts this AI has completed (Wave 3) */
   contractsCompleted?: number;
+  /** Active storyteller-fired narrative effects (buffs/debuffs) ticking down each turn. */
+  activeNarrativeEffects?: ActiveAINarrativeEffect[];
 }
 
 // ── Contract types ─────────────────────────────────────────

@@ -39,7 +39,11 @@ import {
   checkChainTriggers,
 } from "../events/ChoiceEventResolver.ts";
 import type { GameEvent } from "../../data/types.ts";
-import { updateStorytellerState } from "../events/Storyteller.ts";
+import {
+  updateStorytellerState,
+  selectDilemma,
+  recordDilemmaFired,
+} from "../events/Storyteller.ts";
 import { generateTurnMessages } from "../adviser/AdviserEngine.ts";
 import { simulateAITurns } from "../ai/AISimulator.ts";
 import { processContracts } from "../contracts/ContractManager.ts";
@@ -64,6 +68,33 @@ import { computeReputationTier } from "../reputation/ReputationEffects.ts";
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Score a dilemma's intensity (0–4 scale) for storyteller pacing.
+ * Heuristic: take the largest scaled-cash hit across all options, normalized
+ * against starting cash. Bigger swings = bigger intensity = longer cooldown.
+ */
+function computeDilemmaIntensity(event: {
+  options: Array<{ effects: Array<{ type: string; value?: number }> }>;
+}): number {
+  let maxMagnitude = 0;
+  for (const opt of event.options) {
+    for (const eff of opt.effects) {
+      if (eff.type === "modifyCash" && typeof eff.value === "number") {
+        maxMagnitude = Math.max(maxMagnitude, Math.abs(eff.value));
+      } else if (
+        eff.type === "modifyReputation" &&
+        typeof eff.value === "number"
+      ) {
+        // 1 rep ≈ §200 of intensity for normalization purposes
+        maxMagnitude = Math.max(maxMagnitude, Math.abs(eff.value) * 200);
+      }
+    }
+  }
+  // §0–§15k → 0–3 intensity, §15k+ → 3–4
+  if (maxMagnitude < 15000) return maxMagnitude / 5000;
+  return Math.min(4, 3 + (maxMagnitude - 15000) / 15000);
+}
 
 /** Extract system ID from planet ID: "planet-{si}-{syi}-{pi}" → "system-{si}-{syi}" */
 function planetToSystemId(planetId: string): string | null {
@@ -533,6 +564,23 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   nextState = tickEventChains(nextState, rng);
   // Check if new chains should start
   nextState = checkChainTriggers(nextState, rng);
+
+  // ----- Step 8a-iii: Storyteller-driven dilemma firing -----
+  // Skip if a chain step already enqueued a choice this turn (no piling on).
+  const hadPendingBefore = state.pendingChoiceEvents.length;
+  const hasChoiceFromChainsThisTurn =
+    nextState.pendingChoiceEvents.length > hadPendingBefore;
+  if (!hasChoiceFromChainsThisTurn) {
+    const dilemma = selectDilemma(rng, nextState);
+    if (dilemma) {
+      const intensity = computeDilemmaIntensity(dilemma);
+      nextState = {
+        ...nextState,
+        pendingChoiceEvents: [...nextState.pendingChoiceEvents, dilemma],
+        storyteller: recordDilemmaFired(nextState.storyteller, intensity),
+      };
+    }
+  }
 
   // ----- Step 8b: Process contracts -----
   const contractResult = processContracts(nextState);

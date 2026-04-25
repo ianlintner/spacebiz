@@ -120,10 +120,11 @@ export class GameHUDScene extends Phaser.Scene {
     "TurnReportScene",
   ];
 
-  private readonly overlaySceneKeys = ["PlanetDetailScene"];
+  private readonly overlaySceneKeys = ["PlanetDetailScene", "DilemmaScene"];
 
   private stateListener = (_data: unknown) => {
     this.updateHUD();
+    this.maybeShowDilemma();
   };
 
   constructor() {
@@ -675,6 +676,20 @@ export class GameHUDScene extends Phaser.Scene {
     // Launch content scene (restored on resize, default GalaxyMapScene)
     this.scene.launch(this.activeContentScene, this.activeContentData);
     this.scene.bringToTop();
+
+    // If a dilemma was already pending (e.g. resumed save), surface it now.
+    this.maybeShowDilemma();
+  }
+
+  private maybeShowDilemma(): void {
+    const state = gameStore.getState();
+    const hasDilemma = state.pendingChoiceEvents.some(
+      (e) => e.dilemmaId !== undefined,
+    );
+    if (hasDilemma && !this.scene.isActive("DilemmaScene")) {
+      this.scene.launch("DilemmaScene");
+      this.scene.bringToTop("DilemmaScene");
+    }
   }
 
   private updateHUD(): void {
@@ -828,7 +843,9 @@ export class GameHUDScene extends Phaser.Scene {
       audio.setMusicState("sim");
       audio.sfx("ui_end_turn");
     } else if (sceneName === "TurnReportScene") {
-      gameStore.update({ phase: "review" });
+      // Quarter summary is non-blocking — keep phase as planning so the
+      // player can navigate freely while the report is on screen.
+      gameStore.update({ phase: "planning" });
       audio.setMusicState("report");
       audio.sfx("ui_confirm");
     } else {

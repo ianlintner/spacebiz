@@ -644,25 +644,27 @@ export class TurnReportScene extends Phaser.Scene {
     }
 
     // -----------------------------------------------------------------------
-    // Continue button — centered above bottom HUD bar
+    // Quarter summary is non-blocking — players can navigate freely while it
+    // is open, and the persistent End Quarter button in the HUD advances the
+    // turn when they're ready. The only forced flow is GameOver.
     // -----------------------------------------------------------------------
-    const btnY = bottomY + TR_BOTTOM_H + TR_GAP;
-    new Button(this, {
-      x: L.gameWidth / 2 - 80,
-      y: btnY,
-      width: 160,
-      height: 40,
-      label: state.gameOver ? "View Results" : "Continue",
-      onClick: () => {
-        if (state.gameOver) {
-          // GameOver exits HUD-managed flow entirely — use scene.start directly
+    if (state.gameOver) {
+      const btnY = bottomY + TR_BOTTOM_H + TR_GAP;
+      new Button(this, {
+        x: L.gameWidth / 2 - 80,
+        y: btnY,
+        width: 160,
+        height: 40,
+        label: "View Results",
+        onClick: () => {
           this.scene.start("GameOverScene");
-        } else {
-          gameStore.update({ phase: "planning" });
-          const hud = this.scene.get("GameHUDScene") as GameHUDScene;
-          hud.switchContentScene(hud.getSmartPostTurnScene());
-        }
-      },
-    });
+        },
+      });
+    } else {
+      // Ensure the rest of the HUD is unlocked for browsing.
+      if (state.phase !== "planning") {
+        gameStore.update({ phase: "planning" });
+      }
+    }
   }
 }
