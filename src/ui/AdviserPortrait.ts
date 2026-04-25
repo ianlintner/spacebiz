@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import type { AdviserMood } from "../data/types.ts";
 import { getTheme } from "./Theme.ts";
 import type { PortraitExpression } from "./PortraitExpression.ts";

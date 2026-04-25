@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import {
   getTheme,
   Button,
@@ -496,6 +496,10 @@ export class AISandboxScene extends Phaser.Scene {
   // ── UI Update ────────────────────────────────────────────────
 
   private updateUI(turnLog: TurnLog): void {
+    // Guard against post-shutdown turn events: Phaser 4 throws when setText
+    // hits a Frame whose backing data was already destroyed. cleanup() flips
+    // `running` to false on shutdown — bail before touching any GameObject.
+    if (!this.running || !this.scene?.isActive()) return;
     // Turn counter + progress — single source of truth (drive bar from turns)
     this.turnLabel.setText(`Turn ${this.currentTurn} / ${this.maxTurns}`);
     if (this.maxTurns > 0) {

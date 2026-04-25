@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
 import { CargoType } from "../data/types.ts";
 import type { Planet, CargoMarketEntry } from "../data/types.ts";

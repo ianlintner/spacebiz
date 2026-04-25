@@ -1,4 +1,4 @@
-import type Phaser from "phaser";
+import type * as Phaser from "phaser";
 
 export type WidgetKind =
   | "button"

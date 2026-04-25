@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import {
   Button,
   Label,
@@ -179,11 +179,11 @@ export class GameHUDScene extends Phaser.Scene {
       .image(hudPortraitX, hudPortraitY, initialKey)
       .setOrigin(0.5, 0.5);
     fitImageCover(portraitImg, portraitSize, portraitSize);
-    // Round mask
+    // Round mask (Phaser 4 Mask filter)
     const hudMask = this.add
       .circle(hudPortraitX, hudPortraitY, portraitSize / 2, 0xffffff)
       .setVisible(false);
-    portraitImg.setMask(hudMask.createGeometryMask());
+    portraitImg.filters?.internal.addMask(hudMask);
     // Subtle border ring
     this.add
       .circle(hudPortraitX, hudPortraitY, portraitSize / 2 + 1)

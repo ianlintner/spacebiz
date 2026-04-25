@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
 import type { Loan } from "../data/types.ts";
 import {
@@ -105,11 +105,11 @@ export class FinanceScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5)
       .setDepth(10);
     fitImageCover(ceoImg, pSize, pSize);
-    // Round mask
+    // Round mask (Phaser 4 Mask filter)
     const ceoMask = this.add
       .circle(pX, pY, pSize / 2, 0xffffff)
       .setVisible(false);
-    ceoImg.setMask(ceoMask.createGeometryMask());
+    ceoImg.filters?.internal.addMask(ceoMask);
     // Border
     this.add
       .circle(pX, pY, pSize / 2 + 1)

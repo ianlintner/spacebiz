@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { lerpColor, getTheme } from "./Theme.ts";
 import { addTwinkleTween, registerAmbientCleanup } from "./AmbientFX.ts";
 

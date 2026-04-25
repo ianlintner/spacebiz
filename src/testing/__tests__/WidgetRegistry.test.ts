@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { WidgetRegistry } from "../WidgetRegistry";
-import type Phaser from "phaser";
+import type * as Phaser from "phaser";
 
 /**
  * Minimal scene stub. WidgetRegistry only reads `scene.events` (for lifecycle),

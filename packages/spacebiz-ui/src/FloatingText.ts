@@ -7,7 +7,7 @@
  *
  * The object self-destructs after the animation completes; no cleanup needed.
  */
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { getTheme } from "./Theme.ts";
 
 export interface FloatingTextConfig {

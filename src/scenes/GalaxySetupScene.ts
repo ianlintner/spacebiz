@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import {
   createStarfield,
   Panel,
@@ -164,7 +164,7 @@ export class GalaxySetupScene extends Phaser.Scene {
       portraitSize / 2,
     );
     this.portraitMask.setVisible(false);
-    this.portraitImage.setMask(this.portraitMask.createGeometryMask());
+    this.portraitImage.filters?.internal.addMask(this.portraitMask);
 
     // Accent border ring
     this.add

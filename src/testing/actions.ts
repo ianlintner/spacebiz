@@ -1,4 +1,4 @@
-import type Phaser from "phaser";
+import type * as Phaser from "phaser";
 import { SftTestError } from "./types.ts";
 import type { ClickResult } from "./types.ts";
 import { widgetRegistry } from "./WidgetRegistry.ts";

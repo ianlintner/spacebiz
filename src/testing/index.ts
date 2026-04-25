@@ -1,4 +1,4 @@
-import type Phaser from "phaser";
+import type * as Phaser from "phaser";
 import { setWidgetHook } from "../../packages/spacebiz-ui/src/WidgetHooks.ts";
 import { widgetRegistry } from "./WidgetRegistry.ts";
 import { createTestAPI } from "./TestAPI.ts";

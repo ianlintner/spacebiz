@@ -2,7 +2,9 @@
 
 ## Project
 
-Sci-fi trading/tycoon game built with Phaser 3 + TypeScript, bundled with Vite 8, tested with Vitest 4, Node 22.
+Sci-fi trading/tycoon game built with Phaser 4 + TypeScript, bundled with Vite 8, tested with Vitest 4, Node 22.
+
+Phaser 4 has named exports only (no default export). Always use `import * as Phaser from "phaser"`. For masks, use the v4 filter API — `gameObject.filters?.internal.addMask(maskShape)` — not `setMask()`/`createGeometryMask()`, which Phaser 4 logs as deprecated under WebGL.
 
 ## Quick Reference
 

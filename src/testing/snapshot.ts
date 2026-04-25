@@ -1,4 +1,4 @@
-import type Phaser from "phaser";
+import type * as Phaser from "phaser";
 import type { GameStateSnapshot, SceneInfo } from "./types.ts";
 import { gameStore } from "../data/GameStore.ts";
 

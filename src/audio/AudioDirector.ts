@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import {
   DEFAULT_AUDIO_SETTINGS,
   loadAudioSettings,

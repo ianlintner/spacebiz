@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { getTheme } from "./Theme.ts";
 
 export interface ScrollableListConfig {
@@ -38,15 +38,14 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     this.listConfig = config;
     this.keyboardNavigationEnabled = config.keyboardNavigation ?? false;
 
-    // Clipping mask
+    // Clipping mask (Phaser 4 Mask filter)
     this.maskGraphics = scene.make.graphics({});
     this.maskGraphics.fillStyle(0xffffff);
     this.maskGraphics.fillRect(0, 0, config.width, config.height);
     this.maskGraphics.setPosition(config.x, config.y);
-    const mask = this.maskGraphics.createGeometryMask();
 
     this.contentContainer = scene.add.container(0, 0);
-    this.contentContainer.setMask(mask);
+    this.contentContainer.filters?.internal.addMask(this.maskGraphics);
     this.add(this.contentContainer);
 
     // Wheel capture area (kept behind list content so it doesn't block row clicks)

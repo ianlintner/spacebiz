@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { SeededRNG } from "../utils/SeededRNG.ts";
 
 /**
@@ -192,9 +192,11 @@ export function generateEmpireFlags(
     gfx.clear();
     drawFlagPattern(gfx, pattern, primary, secondary, accent);
 
-    // Render to a texture
+    // Render to a texture. Phaser 4 buffers draw commands; render() must run
+    // before saveTexture() captures the result.
     const rt = scene.add.renderTexture(0, 0, FLAG_W, FLAG_H).setVisible(false);
     rt.draw(gfx);
+    rt.render();
     rt.saveTexture(texKey);
     rt.destroy();
   }
