@@ -1,4 +1,4 @@
-import type Phaser from "phaser";
+import type * as Phaser from "phaser";
 import type {
   WidgetRegistration,
   WidgetHookFn,

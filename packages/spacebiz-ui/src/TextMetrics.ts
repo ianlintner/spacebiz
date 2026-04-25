@@ -4,7 +4,7 @@
  * All functions create a temporary off-screen Phaser.Text, measure it,
  * then destroy it immediately so there is zero rendering cost.
  */
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 
 export interface TextSize {
   width: number;

@@ -21,7 +21,7 @@
  *   overlay.hide();
  */
 
-import type Phaser from "phaser";
+import type * as Phaser from "phaser";
 
 export interface LoadingOverlayOptions {
   /** Text shown below the bar. Defaults to "Loading…" */

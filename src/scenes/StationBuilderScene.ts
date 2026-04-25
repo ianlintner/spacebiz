@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
 import type { HubRoom, HubRoomType, StationHub } from "../data/types.ts";
 import {

@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 import { playUiSfx } from "./UiSound.ts";
 
@@ -94,8 +94,7 @@ export class DataTable extends Phaser.GameObjects.Container {
       config.height - this.headerHeight,
     );
     this.maskShape.setPosition(config.x, config.y);
-    const mask = this.maskShape.createGeometryMask();
-    this.bodyContainer.setMask(mask);
+    this.bodyContainer.filters?.internal.addMask(this.maskShape);
 
     // Scroll indicator (visual-only, not interactive)
     const trackHeight = config.height - this.headerHeight;

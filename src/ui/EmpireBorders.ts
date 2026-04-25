@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import type { StarSystem, Empire } from "../data/types.ts";
 import { addPulseTween, getTheme } from "@spacebiz/ui";
 

@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 import { autoButtonWidth } from "./TextMetrics.ts";
 import { registerWidget } from "./WidgetHooks.ts";

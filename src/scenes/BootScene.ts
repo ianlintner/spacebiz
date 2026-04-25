@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import type { ThemeConfig } from "../ui/index.ts";
 import {
   getTheme,

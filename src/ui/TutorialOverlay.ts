@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 import { Button } from "./Button.ts";
 import { drawRexPortrait } from "./AdviserPortrait.ts";

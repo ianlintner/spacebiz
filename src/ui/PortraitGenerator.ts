@@ -1,4 +1,4 @@
-import type Phaser from "phaser";
+import type * as Phaser from "phaser";
 import { SeededRNG } from "../utils/SeededRNG.ts";
 import type { EventCategory, PlanetType, ShipClass } from "../data/types.ts";
 import { getTheme, lerpColor } from "./Theme.ts";

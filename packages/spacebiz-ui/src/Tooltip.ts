@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 
 export interface TooltipConfig {

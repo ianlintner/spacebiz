@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
 import { simulateTurn } from "../game/simulation/TurnSimulator.ts";
 import { SeededRNG } from "../utils/SeededRNG.ts";

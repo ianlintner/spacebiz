@@ -17,7 +17,7 @@
  * for the lifetime of the game instance.
  */
 
-import type Phaser from "phaser";
+import type * as Phaser from "phaser";
 import {
   CEO_PORTRAITS,
   getPortraitTextureKey,

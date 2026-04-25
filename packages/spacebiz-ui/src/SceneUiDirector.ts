@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { DEPTH_MODAL } from "./DepthLayers.ts";
 
 export interface SceneUiLayerOptions {

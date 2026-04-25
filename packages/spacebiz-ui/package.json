@@ -2,13 +2,13 @@
   "name": "@spacebiz/ui",
   "version": "1.0.0",
   "private": true,
-  "description": "Reusable Phaser 3 UI component library for Space Freight Tycoon",
+  "description": "Reusable Phaser UI component library for Space Freight Tycoon",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "phaser": "^3.90.0"
+    "phaser": "^4.0.0"
   }
 }

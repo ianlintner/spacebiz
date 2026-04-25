@@ -11,7 +11,7 @@
  * Usage:
  *   MilestoneOverlay.show(scene, "profit_streak", "🔥 4-Turn Streak!", "Keep it up!");
  */
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 import { fitFontSize } from "./TextMetrics.ts";
 

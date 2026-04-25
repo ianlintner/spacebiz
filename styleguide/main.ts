@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { StyleguideBootScene } from "./scenes/StyleguideBootScene.ts";
 import { StyleguideScene } from "./scenes/StyleguideScene.ts";
 import { getLayout } from "@spacebiz/ui";

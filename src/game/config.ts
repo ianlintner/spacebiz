@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { BASE_HEIGHT, MIN_WIDTH, MAX_WIDTH, updateLayout } from "@spacebiz/ui";
 
 export { BASE_HEIGHT, MIN_WIDTH, MAX_WIDTH };
@@ -37,6 +37,7 @@ export function createGameConfig(
     height: size.height,
     parent: "game-container",
     backgroundColor: "#0a0a1a",
+    roundPixels: true,
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

@@ -1,5 +1,5 @@
 import "./site.css";
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { createGameConfig, calculateGameSize } from "./game/config.ts";
 import { updateLayout } from "./ui/Layout.ts";
 import { BootScene } from "./scenes/BootScene.ts";

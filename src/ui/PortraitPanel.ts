@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { Panel } from "./Panel.ts";
 import { Label } from "./Label.ts";
 import { getTheme } from "./Theme.ts";
@@ -44,6 +44,7 @@ export interface PortraitPanelConfig {
 export class PortraitPanel extends Phaser.GameObjects.Container {
   private panel: Panel;
   private portraitGraphics: Phaser.GameObjects.Graphics;
+  private portraitMaskShape!: Phaser.GameObjects.Graphics;
   private portraitImage: Phaser.GameObjects.Image | null = null;
   private nameLabel: Label;
   private statLabels: Label[];
@@ -86,17 +87,16 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     // Created on demand in updatePortrait when a loaded texture is available
     this.portraitImage = null;
 
-    // Geometry mask to clip portrait within panel bounds
-    const maskShape = scene.make.graphics({});
-    maskShape.fillStyle(0xffffff, 1);
-    maskShape.fillRect(
+    // Geometry mask to clip portrait within panel bounds (Phaser 4 Mask filter)
+    this.portraitMaskShape = scene.make.graphics({});
+    this.portraitMaskShape.fillStyle(0xffffff, 1);
+    this.portraitMaskShape.fillRect(
       config.x + theme.spacing.sm,
       config.y + theme.spacing.sm,
       this.portraitWidth,
       this.portraitHeight,
     );
-    const mask = new Phaser.Display.Masks.GeometryMask(scene, maskShape);
-    this.portraitGraphics.setMask(mask);
+    this.portraitGraphics.filters?.internal.addMask(this.portraitMaskShape);
 
     // Name label — below portrait area, centered, heading + accent
     const nameLabelY =
@@ -114,11 +114,11 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     scene.children.remove(this.nameLabel);
     this.add(this.nameLabel);
 
-    // Clip all content (stats, name, portrait) to panel bounds
+    // Clip all content (stats, name, portrait) to panel bounds (Phaser 4 Mask filter)
     const clipShape = scene.make.graphics({});
     clipShape.fillStyle(0xffffff, 1);
     clipShape.fillRect(config.x, config.y, this.panelWidth, panelHeight);
-    this.setMask(clipShape.createGeometryMask());
+    this.filters?.internal.addMask(clipShape);
 
     scene.add.existing(this);
   }
@@ -154,7 +154,7 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
           theme.spacing.sm + this.portraitHeight / 2,
           texKey,
         );
-        this.portraitImage.setMask(this.portraitGraphics.mask!);
+        this.portraitImage.filters?.internal.addMask(this.portraitMaskShape);
         this.add(this.portraitImage);
       } else {
         this.portraitImage.setTexture(texKey);

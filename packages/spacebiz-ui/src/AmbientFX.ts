@@ -4,7 +4,7 @@
  * All helpers return the created Tween so callers can stop it manually.
  * Use registerAmbientCleanup() to auto-stop a batch of tweens on scene shutdown.
  */
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 
 // ─── Config interfaces ─────────────────────────────────────────────────────
 
