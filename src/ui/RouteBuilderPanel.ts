@@ -33,8 +33,11 @@ import type { SceneUiDirector } from "./SceneUiDirector.ts";
 import type { SceneUiLayer } from "./SceneUiDirector.ts";
 import { getTheme } from "./Theme.ts";
 import { getCargoIconKey, getCargoColor } from "@spacebiz/ui";
-
-const CARGO_VALUES = Object.values(CargoType) as CargoTypeValue[];
+import {
+  CARGO_VALUES,
+  getCargoAtIndex,
+  getInitialCargoIndex as computeInitialCargoIndex,
+} from "./routeBuilderHelpers.ts";
 
 type FieldKey = "origin" | "destination" | "cargo" | "ship" | "autoBuy";
 
@@ -109,8 +112,8 @@ class RouteBuilderPanel {
   private readonly keyHandler: (event: KeyboardEvent) => void;
   private readonly panelX: number;
   private readonly panelY: number;
-  private readonly panelWidth = 620;
-  private readonly panelHeight = 760;
+  private readonly panelWidth: number;
+  private readonly panelHeight: number;
   private originIndex: number;
   private destinationIndex: number;
   private cargoIndex: number;
@@ -154,6 +157,10 @@ class RouteBuilderPanel {
     this.autoBuy = options.allowAutoBuy ?? true;
 
     const L = getLayout();
+    // Clamp panel size to viewport so it never overflows on smaller screens.
+    // Reserve margin for the side gutters and overlay framing.
+    this.panelWidth = Math.min(620, Math.max(420, L.gameWidth - 64));
+    this.panelHeight = Math.min(720, Math.max(500, L.gameHeight - 80));
     this.panelX = Math.floor((L.gameWidth - this.panelWidth) / 2);
     this.panelY = Math.floor((L.gameHeight - this.panelHeight) / 2);
 
@@ -452,11 +459,7 @@ class RouteBuilderPanel {
   }
 
   private getInitialCargoIndex(): number {
-    if (!this.options.initialCargoType) return 0;
-    const index = CARGO_VALUES.findIndex(
-      (cargoType) => cargoType === this.options.initialCargoType,
-    );
-    return index >= 0 ? index : 0;
+    return computeInitialCargoIndex(this.options.initialCargoType);
   }
 
   private getSelectedOrigin(): Planet | null {
@@ -468,7 +471,7 @@ class RouteBuilderPanel {
   }
 
   private getSelectedCargo(): CargoTypeValue {
-    return CARGO_VALUES[this.cargoIndex] ?? CargoType.Passengers;
+    return getCargoAtIndex(this.cargoIndex);
   }
 
   private getAvailableShips(): Ship[] {

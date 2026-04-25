@@ -680,6 +680,13 @@ export class DataTable extends Phaser.GameObjects.Container {
     return this.selectedRowIndex;
   }
 
+  getSelectedRow(): Record<string, unknown> | null {
+    if (this.selectedRowIndex < 0 || this.selectedRowIndex >= this.rows.length) {
+      return null;
+    }
+    return this.rows[this.selectedRowIndex] ?? null;
+  }
+
   /** Scroll by one visible page height in the given direction (-1 up, +1 down). */
   private scrollPage(direction: number): void {
     const pageSize = this.tableConfig.height - this.headerHeight;
