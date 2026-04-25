@@ -1,11 +1,12 @@
 name: Deploy to Azure Static Web Apps
 
+# Production deploys only. Quality gates for PRs live in ci.yml so this
+# workflow doesn't run on pull_request events at all — the Azure SWA Free
+# tier caps preview environments at 3, and PR previews here weren't being
+# used for review (ci.yml is the gate). Removing the pull_request trigger
+# avoids the recurring "max staging environments" failure on every PR.
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
     branches:
       - main
   workflow_dispatch:
@@ -18,8 +19,6 @@ jobs:
   build-and-deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
-    # Skip the deploy step on closed PRs (Azure SWA handles preview cleanup)
-    if: github.event_name != 'pull_request' || github.event.action != 'closed'
 
     steps:
       - name: Checkout
@@ -57,16 +56,3 @@ jobs:
           app_location: "dist"
           output_location: ""
           skip_app_build: true
-
-  # Close pull-request preview environments
-  close-pr-preview:
-    name: Close PR Preview
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-
-    steps:
-      - name: Close Azure SWA staging environment
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          action: close
