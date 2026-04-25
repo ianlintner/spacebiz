@@ -78,42 +78,45 @@ function labelFor(value: string): string {
 
 export const HERO_METRICS: HeroMetric[] = [
   {
-    label: "Opening Capital",
+    label: "Seed Capital",
     value: formatCurrency(STARTING_CASH),
-    detail: "Starting treasury available at campaign launch.",
+    detail:
+      "Your treasury at launch. Every credit gets spent or invested — the galaxy doesn't run on hope.",
   },
   {
-    label: "Campaign Length",
-    value: `${MAX_TURNS} turns`,
-    detail: "Fixed-length run where each quarter contributes to final score.",
+    label: "Mission Length",
+    value: `${MAX_TURNS} quarters`,
+    detail:
+      "A fixed-length run. Survive the clock and your ledger writes the ending.",
   },
   {
-    label: "Starter Fleet",
+    label: "Starting Hangar",
     value: STARTER_SHIPS.map((ship) => ship.name).join(" + "),
-    detail: "Initial ships provided to establish the first route network.",
+    detail:
+      "Two reliable hulls to launch the first lanes. You'll outgrow them — that's the point.",
   },
 ];
 
 export const FEATURE_CARDS: FeatureCard[] = [
   {
     eyebrow: "GALACTIC TRADE",
-    title: "Build and scale a multi-route transport company",
-    body: "Manage routes, allocate ships, and grow from a local operator into a sector-wide logistics business.",
+    title: "From local hauler to sector-wide hauler-of-haulers",
+    body: "Stitch together routes, assign hulls, and watch the network compound. Every lane is a tiny business; together they're an empire.",
   },
   {
     eyebrow: "DYNAMIC ECONOMY",
-    title: "Model supply, demand, and route saturation",
-    body: "Planet profiles drive production and demand. Profitable routes emerge from matching exporters to importers over time.",
+    title: "Supply, demand, and the cold math of saturation",
+    body: "Planet profiles produce what they have and crave what they lack. Find a mismatch, point a ship at it, and ride the spread until the market catches on.",
   },
   {
-    eyebrow: "TURN SIMULATION",
-    title: "Resolve each quarter with full operational accounting",
-    body: "Every turn processes revenue, fuel burn, maintenance, market movement, and events into a detailed report.",
+    eyebrow: "QUARTERLY SIMULATION",
+    title: "Set the orders, hit End Quarter, watch it play",
+    body: "Every turn cashes out trips, fuel, maintenance, contracts, and events into one tidy P&L. The report tells you exactly which lanes are heroes and which are loafing.",
   },
   {
-    eyebrow: "RETRO COMMAND DECK",
-    title: "Playable home screen with integrated documentation",
-    body: "The website combines the live build, manual, strategic reference, and production notes in a single operator-focused interface.",
+    eyebrow: "RIVAL EMPIRES",
+    title: "AI competitors with names, faces, and fleets of their own",
+    body: "Empires expand alongside you, claim systems, and sometimes drag you into a mid-quarter dilemma. Stay sharp — the galaxy is not just an economy puzzle.",
   },
 ];
 
@@ -121,163 +124,164 @@ export const MANUAL_SECTIONS: GuideSection[] = [
   {
     title: "1. Pick your first foothold",
     summary:
-      "A new run generates a procedural galaxy and gives you three possible starting systems to choose from.",
+      "Each new run rolls a procedural galaxy and offers a small slate of opening systems. Where you plant the flag shapes the next ten quarters.",
     bullets: [
-      `You begin with ${formatCurrency(STARTING_CASH)} in cash and ${STARTER_SHIPS.length} starter ships.`,
-      "Prioritize starts with multiple nearby planet types to keep routing options open.",
-      "Use early turns to validate local demand before specializing.",
+      `Day one: ${formatCurrency(STARTING_CASH)} in the bank and ${STARTER_SHIPS.length} hulls in the hangar — make them count.`,
+      "Look for systems with two or three different planet types within a short hop. Variety is leverage.",
+      "Spend the first quarter or two confirming demand. Don't fall in love with a route until the report agrees with you.",
     ],
   },
   {
-    title: "2. Match exporters with importers",
+    title: "2. Read the galaxy like a trader",
     summary:
-      "The most reliable profits come from moving goods toward worlds that demand them and away from worlds that produce them.",
+      "Profit is a sentence with two halves: where something is cheap, and where someone will pay for it. Your job is matching them.",
     bullets: [
-      "Mining worlds usually export raw materials and hazmat.",
-      "Agricultural worlds are dependable food producers.",
-      "Industrial, Terran, Hub Station, Research, and Resort worlds are often high-demand destinations.",
+      "Mining worlds spit out raw materials and the occasional drum of hazmat. Move it before the locals do.",
+      "Agricultural belts are food factories — predictable, low-drama, often the backbone of an early book.",
+      "Industrial, Terran, Hub, Research, and Resort worlds are the buyers. They'll take what you bring if the price is right.",
     ],
   },
   {
-    title: "3. Assign the right ship to the route",
+    title: "3. Right hull, right lane",
     summary:
-      "Passenger lanes, mixed cargo, and bulk freight all reward different ship classes and timing decisions.",
+      "Every ship class has a sweet spot. The art is matching tonnage and speed to what the route actually wants — not what looks coolest in the hangar.",
     bullets: [
-      "Cargo Shuttle provides low-cost early freight capacity.",
-      "Passenger Shuttle performs best on high-demand population corridors.",
-      "High-speed hulls increase route frequency; high-capacity hulls require careful market targeting.",
+      "Cargo Shuttles are the workhorses of the early book — cheap to operate, easy to replace.",
+      "Passenger Shuttles thrive on dense population corridors where speed beats volume.",
+      "Big haulers need big lanes. Don't park a freighter on a route that can't fill it.",
     ],
   },
   {
-    title: "4. End the turn and read the report",
+    title: "4. End the quarter, read the ledger",
     summary:
-      "Once routes are assigned, the simulation resolves revenue, fuel burn, maintenance, and event outcomes.",
+      "When the orders are in, hit End Quarter. Trips fly, fuel burns, events fire, and the report drops on your desk. Read it.",
     bullets: [
-      "Use turn reports to rank route performance and identify low-margin operations.",
-      "Monitor fuel price shifts and events that can rapidly change route viability.",
-      "Apply report insights immediately by reassigning ships or adjusting cargo focus.",
+      "The lane-by-lane breakdown is your scoreboard. Weak performers stand out fast.",
+      "Watch fuel and event modifiers — a quarter of cheap fuel can mask a route that's about to crater.",
+      "React the same turn. Reassign ships, swap cargo, kill a dead lane. Don't wait three quarters to admit something isn't working.",
     ],
   },
   {
-    title: "5. Manage wear, debt, and market saturation",
+    title: "5. Wear, debt, and the limits of a good market",
     summary:
-      "Profit is not just about top-line revenue; it is about surviving the ugly little costs between turns.",
+      "Top-line revenue is loud; the costs that bury you are quiet. Reliability, interest, and market saturation are the silent killers.",
     bullets: [
-      "Condition decays over time, and unreliable ships are more likely to break down.",
-      "Loans can accelerate expansion, but weak routes turn debt into a liability.",
-      "Repeatedly hammering the same market can saturate prices, so diversify before margins collapse.",
+      "Hulls wear down. Skip maintenance long enough and they break down on the worst possible quarter.",
+      "Loans buy speed — sometimes worth it, often not. A weak route plus debt is a story that ends in bankruptcy.",
+      "Hammer the same lane forever and prices fall. Diversify before margins do.",
     ],
   },
   {
-    title: "6. Finish strong before the campaign clock runs out",
-    summary: `A standard run lasts ${MAX_TURNS} turns, so your late-game score reflects both expansion and discipline.`,
+    title: "6. Stick the landing",
+    summary: `A campaign runs ${MAX_TURNS} quarters. Late-game scores reward operators who balance expansion with discipline.`,
     bullets: [
-      "Maintain a cash buffer to absorb adverse events without forced retrenchment.",
-      "Upgrade only when the new ship unlocks better throughput, better route coverage, or both.",
-      "Consistent late-game cash flow generally outperforms high-risk final-turn gambles.",
+      "Keep a cash cushion. The final stretch is when bad events love to show up.",
+      "Upgrade only when a new hull unlocks throughput or coverage you're already short on.",
+      "Boring, steady cash flow beats Hail-Mary speculation almost every time. Almost.",
     ],
   },
 ];
 
 export const HELP_TOPICS: GuideSection[] = [
   {
-    title: "Early-game checklist",
+    title: "Rookie checklist",
     summary:
-      "If you are starting fresh, this sequence gives you the least painful path to competence.",
+      "Brand new? Skip the existential questions and run this sequence. It gets you to competent in two or three quarters.",
     bullets: [
-      "Choose a start with at least one obvious producer world and one obvious buyer nearby.",
-      "Stabilize one profitable route before opening additional lanes.",
-      "Use the first report to compare freight and passenger contribution.",
+      "Pick an opening with at least one obvious producer and one obvious buyer within a hop.",
+      "Get one route printing money before you open a second. Confirmed beats theoretical.",
+      "Read the first report end-to-end. Freight and passengers play different games — find out which one your start prefers.",
     ],
   },
   {
-    title: "How to read a market quickly",
+    title: "Reading a market in 30 seconds",
     summary:
-      "Think in pairs: where is something abundant, and where will people pay to see it arrive?",
+      "Think in pairs. Where is the stuff cheap and plentiful, and where will somebody pay to see it arrive? That's the whole sport.",
     bullets: [
-      "Export from planets whose identity naturally aligns with the cargo type.",
-      "Import to planets whose profile shows demand for that cargo category.",
-      "When margins fall, rotate cargo mix or destination before losses compound.",
+      "Export from worlds whose profile screams 'we have too much of this.'",
+      "Import to worlds whose profile says 'we need this and we'll pay.'",
+      "When a margin starts shrinking, rotate cargo or destination before it bleeds out.",
     ],
   },
   {
-    title: "When to buy more ships",
+    title: "When to actually buy a ship",
     summary:
-      "Expansion works best once your current route book already proves there is demand for extra lift.",
+      "More hulls feel like progress. They're a liability until they have a job. Don't buy without a lane in mind.",
     bullets: [
-      "Expand when a newly purchased ship has an immediate profitable assignment.",
-      "Delay purchases if maintenance and fuel are already squeezing your margin.",
-      "Specialized hulls are strongest when their route purpose is obvious before you spend the money.",
+      "Buy when there's a profitable assignment ready on day one.",
+      "Hold off if fuel and maintenance are already chewing through margin.",
+      "Specialty hulls (high speed, high tonnage, passenger-focused) shine when the route's purpose is already obvious.",
     ],
   },
   {
-    title: "How to recover from a bad quarter",
-    summary: "The fix is usually operational clarity, not panic clicking.",
+    title: "Pulling out of a tailspin",
+    summary:
+      "Bad quarters happen. The fix is almost never panic-clicking — it's a quiet hour with the route report.",
     bullets: [
-      "Audit route-level performance first; weak lanes are often the primary cause.",
-      "Reduce exposure to event-hit routes and re-establish stable core margins.",
-      "Use debt only with a clear plan for earnings recovery.",
+      "Sort lanes by margin. The bottom three are usually the story.",
+      "Mothball or repath routes that just got hit by a bad event. Don't pretend it didn't happen.",
+      "Borrow only with a written plan for how earnings come back. 'I'll figure it out' is not a plan.",
     ],
   },
 ];
 
 export const FAQ_ITEMS: FaqItem[] = [
   {
-    question: "Is Star Freight Tycoon real-time?",
+    question: "Is this real-time?",
     answer:
-      "No. It is a turn-driven management sim. You set plans, then the quarter resolves and reports results.",
+      "No. It's a turn-driven management sim. You set the plan, hit End Quarter, and the simulation plays out. Plenty of time to think between moves — exactly like the classics.",
   },
   {
-    question: "What should I transport first?",
+    question: "What should I haul first?",
     answer:
-      "Start with the clearest producer-to-consumer route in your opening region. Food, raw materials, and passengers are usually reliable early signals.",
+      "Whatever the local map screams loudest about. Food, raw materials, and passengers are the most reliable early signals. The first quarter is for confirming the obvious — not chasing the exotic.",
   },
   {
-    question: "Why did a good route stop paying well?",
+    question: "My route used to print money. Why's it dying?",
     answer:
-      "Typically due to saturation, trend shifts, fuel changes, or events. Rebalancing routes usually restores performance faster than repetition.",
+      "Usually saturation, a trend shift, a fuel spike, or an event. The fix is almost always rebalancing — new cargo, new destination, or both. Repetition without diagnosis just digs the hole deeper.",
   },
   {
-    question: "Should I specialize or diversify?",
+    question: "Specialize or diversify?",
     answer:
-      "Start focused, then diversify once your core loop is stable. Controlled expansion is safer than broad early experimentation.",
+      "Specialize first. Get one or two routes humming. Diversify once your core loop is stable and you have cash to absorb a misfire. Spreading thin early just turns into a dozen unprofitable lanes.",
   },
   {
-    question: "Can I play without reading the full manual?",
+    question: "Do I need to read the manual?",
     answer:
-      "Yes. The homepage includes a quick-start path and the help section covers common strategic decisions.",
+      "Nope. The homepage has a quick-start, the in-game help is short, and the report after every quarter is honestly the best teacher in the game. The manual is here when you want it, not because you have to.",
   },
 ];
 
 export const DISCLOSURE_CARDS: DisclosureCard[] = [
   {
-    title: "AI-assisted music and visual materials",
+    title: "AI-assisted art, music, and concept work",
     summary:
-      "This project discloses where AI-assisted assets were used in music, concept work, or promotional visuals.",
+      "Some visuals, soundscapes, and concept frames started as AI output. We say so on the box because it's the right thing to do.",
     bullets: [
-      "AI output is used as draft material and reviewed before inclusion.",
-      "Assets may be revised or replaced as production quality improves.",
-      "Disclosure is presented directly on the site for transparency.",
+      "AI output is treated as draft material — reviewed, edited, often replaced.",
+      "Assets get upgraded as production quality improves; this isn't the final cover art.",
+      "Disclosure lives on the site itself so nothing's hiding behind a marketing page.",
     ],
   },
   {
-    title: "Human-authored game design and implementation",
+    title: "Game design and code: written by hand",
     summary:
-      "Core mechanics, systems code, balancing decisions, and final implementation remain developer-authored and curated.",
+      "Mechanics, simulation, balance, and the way scenes click together are developer-authored. AI helps; it doesn't drive.",
     bullets: [
-      "Procedural generation, economy logic, scene flow, and simulation behavior are implemented in the game codebase.",
-      "AI assistance does not replace testing, iteration, or creative direction.",
-      "Site documentation reflects implemented gameplay systems rather than concept-only messaging.",
+      "Procedural galaxies, economy math, scene flow, and turn resolution are implemented in the codebase — not summoned from a prompt.",
+      "Assistance accelerates work; it doesn't replace testing, iteration, or creative direction.",
+      "Documentation describes systems that actually exist — no vaporware bullet points.",
     ],
   },
   {
-    title: "Why disclose it this clearly?",
+    title: "Why the receipts?",
     summary:
-      "Clear production notes improve trust and make project provenance easier to understand.",
+      "Indie studios used to print credits on the back of the cartridge. This is the 2026 version of that — minus the cartridge.",
     bullets: [
-      "Players can distinguish authored systems from assisted presentation assets.",
-      "Version-to-version asset updates are easier to track.",
-      "Transparent attribution supports long-term project credibility.",
+      "Players deserve to know which parts are authored and which were assisted.",
+      "Version-over-version asset updates stay legible over time.",
+      "Transparency is a feature. So is being able to point at the source code.",
     ],
   },
 ];
@@ -302,7 +306,7 @@ export const PLANET_CHEAT_SHEET: CheatSheetCard[] = Object.entries(
   bullets: [
     `Produces: ${profile.produces.map(labelFor).join(", ") || "No primary exports"}`,
     `Demands: ${profile.demands.map(labelFor).join(", ") || "Low structured demand"}`,
-    "Use this as a routing heuristic, then verify live market prices before committing ships.",
+    "Use this as a starting heuristic — then trust the live market screen over the cheat sheet.",
   ],
 }));
 
@@ -312,10 +316,10 @@ export const CARGO_CHEAT_SHEET: CheatSheetCard[] = Object.entries(
   title: labelFor(cargoType),
   caption: `Base market price: ${formatCurrency(price)}`,
   bullets: [
-    "Actual returns change with supply, demand, saturation, and event modifiers.",
-    "Compare destination demand with origin abundance before assigning a route.",
+    "Real returns swing with supply, demand, saturation, and event modifiers — base price is just the starting line.",
+    "Always pair origin abundance with destination demand. One without the other is a hobby, not a business.",
     cargoType === CargoType.Passengers
-      ? "Passenger capacity matters more than freight volume here, so pick the right hull."
-      : "Freight routes improve when a ship can carry enough volume to justify its operating costs.",
+      ? "Passengers care about seats, not tonnage — match the hull to the lane."
+      : "Volume vs. operating cost is the whole equation. Don't haul air.",
   ],
 }));
