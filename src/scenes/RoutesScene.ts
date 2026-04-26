@@ -1,13 +1,7 @@
 import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
-import {
-  isInDistanceBand,
-  matchesScopeBand,
-} from "./routesFinderFilters.ts";
-import type {
-  DistanceBand,
-  RouteScopeBand,
-} from "./routesFinderFilters.ts";
+import { isInDistanceBand, matchesScopeBand } from "./routesFinderFilters.ts";
+import type { DistanceBand, RouteScopeBand } from "./routesFinderFilters.ts";
 import { CargoType } from "../data/types.ts";
 import type { CargoType as CargoTypeValue } from "../data/types.ts";
 import {
@@ -335,7 +329,12 @@ export class RoutesScene extends Phaser.Scene {
     // rows so the table never overlaps a wrapped row.
     tableTop = scopeRowBottom + 8;
     tableHeight =
-      panelH - 38 - tabBarHeight - (tableTop - tabContentY) - buttonAreaHeight - 8;
+      panelH -
+      38 -
+      tabBarHeight -
+      (tableTop - tabContentY) -
+      buttonAreaHeight -
+      8;
 
     this.finderTable = new DataTable(this, {
       x: contentInnerX,
@@ -738,7 +737,8 @@ export class RoutesScene extends Phaser.Scene {
       ? getCargoLabel(this.finderCargoFilter)
       : "all cargo";
     const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
-    const slotsTotal = getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
+    const slotsTotal =
+      getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
     this.finderSummary.setText(
       `${profitableCount} ${filterLabel} routes found \u2022 Slots ${slotsUsed}/${slotsTotal} \u2022 ${availableShips} idle ships \u2022 §${state.cash.toLocaleString("en-US")} cash \u2022 Enter to create`,
     );
@@ -876,12 +876,7 @@ export class RoutesScene extends Phaser.Scene {
   }
 
   private updateDistanceBandButtonStyles(): void {
-    const bands: Array<DistanceBand> = [
-      null,
-      "short",
-      "medium",
-      "long",
-    ];
+    const bands: Array<DistanceBand> = [null, "short", "medium", "long"];
     for (let i = 0; i < this.distanceBandButtons.length; i++) {
       const btn = this.distanceBandButtons[i];
       const isActive = bands[i] === this.finderDistanceBand;
@@ -1416,9 +1411,7 @@ export class RoutesScene extends Phaser.Scene {
   private toggleRoutePause(): void {
     if (!this.selectedRouteId) return;
     const state = gameStore.getState();
-    const route = state.activeRoutes.find(
-      (r) => r.id === this.selectedRouteId,
-    );
+    const route = state.activeRoutes.find((r) => r.id === this.selectedRouteId);
     if (!route) return;
     const updated = setRoutePaused(
       this.selectedRouteId,
@@ -1589,17 +1582,19 @@ export class RoutesScene extends Phaser.Scene {
       shipList.addItem(itemContainer);
     }
 
-    layer.track(
-      new Button(this, {
-        x: panelX + panelW - content.x - 100,
-        y: panelY + panelH - 50,
-        width: 100,
-        label: "Close",
-        onClick: () => {
-          layer.destroy();
-        },
-      }),
-    ).setDepth(1000);
+    layer
+      .track(
+        new Button(this, {
+          x: panelX + panelW - content.x - 100,
+          y: panelY + panelH - 50,
+          width: 100,
+          label: "Close",
+          onClick: () => {
+            layer.destroy();
+          },
+        }),
+      )
+      .setDepth(1000);
   }
 
   private showSetCargo(): void {
@@ -1686,16 +1681,18 @@ export class RoutesScene extends Phaser.Scene {
       cargoList.addItem(itemContainer);
     }
 
-    layer.track(
-      new Button(this, {
-        x: panelX + panelW - content.x - 100,
-        y: panelY + panelH - 50,
-        width: 100,
-        label: "Close",
-        onClick: () => {
-          layer.destroy();
-        },
-      }),
-    ).setDepth(1000);
+    layer
+      .track(
+        new Button(this, {
+          x: panelX + panelW - content.x - 100,
+          y: panelY + panelH - 50,
+          width: 100,
+          label: "Close",
+          onClick: () => {
+            layer.destroy();
+          },
+        }),
+      )
+      .setDepth(1000);
   }
 }

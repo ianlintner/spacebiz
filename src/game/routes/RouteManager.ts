@@ -117,7 +117,8 @@ export function calculateLicenseFee(
 ): number {
   const distMult = Math.max(1.0, distance / LICENSE_FEE_DISTANCE_DIVISOR);
   const routeMult = 1.0 + existingRouteCount * LICENSE_FEE_ROUTE_ESCALATION;
-  const repMult = reputation !== undefined ? getLicenseFeeMultiplier(reputation) : 1.0;
+  const repMult =
+    reputation !== undefined ? getLicenseFeeMultiplier(reputation) : 1.0;
   return Math.round(BASE_LICENSE_FEE * distMult * routeMult * repMult);
 }
 
@@ -129,7 +130,7 @@ export function calculateLicenseFee(
  */
 export function isLocalRoute(
   route: { originPlanetId: string; destinationPlanetId: string },
-  state: Pick<GameState, 'galaxy'>,
+  state: Pick<GameState, "galaxy">,
 ): boolean {
   const planets = state.galaxy.planets;
   const originPlanet = planets.find((p) => p.id === route.originPlanetId);
@@ -183,7 +184,10 @@ export function getFreeRouteSlots(state: GameState): number {
  * Number of free local route slots remaining.
  */
 export function getFreeLocalRouteSlots(state: GameState): number {
-  return Math.max(0, getAvailableLocalRouteSlots(state) - getUsedLocalRouteSlots(state));
+  return Math.max(
+    0,
+    getAvailableLocalRouteSlots(state) - getUsedLocalRouteSlots(state),
+  );
 }
 
 export interface RouteTrafficVisual {
@@ -275,7 +279,11 @@ export function buildSunAvoidingLocalRouteMotionPath(
   const sunToDestinationY = destination.y - sun.y;
   const originRadius = Math.hypot(sunToOriginX, sunToOriginY);
   const destinationRadius = Math.hypot(sunToDestinationX, sunToDestinationY);
-  const avoidanceRadius = Math.max(originRadius, destinationRadius, directDistance * 0.8);
+  const avoidanceRadius = Math.max(
+    originRadius,
+    destinationRadius,
+    directDistance * 0.8,
+  );
 
   const originAngle = Math.atan2(sunToOriginY, sunToOriginX);
   let angleDelta = Math.atan2(
@@ -293,7 +301,8 @@ export function buildSunAvoidingLocalRouteMotionPath(
     const t = index / (pointCount - 1);
     const angle = originAngle + angleDelta * t;
     const radius = originRadius + (destinationRadius - originRadius) * t;
-    const outwardBias = Math.sin(Math.PI * t) * Math.max(28, directDistance * 0.22);
+    const outwardBias =
+      Math.sin(Math.PI * t) * Math.max(28, directDistance * 0.22);
     const arcRadius = Math.max(radius, avoidanceRadius) + outwardBias;
     const arcX = sun.x + Math.cos(angle) * arcRadius;
     const arcY = sun.y + Math.sin(angle) * arcRadius;
@@ -356,7 +365,9 @@ function buildRouteTrafficVisualsFromSources(
       }
 
       const originSystemId = planetSystemById.get(route.originPlanetId);
-      const destinationSystemId = planetSystemById.get(route.destinationPlanetId);
+      const destinationSystemId = planetSystemById.get(
+        route.destinationPlanetId,
+      );
       if (!originSystemId || !destinationSystemId) {
         return [];
       }
@@ -396,7 +407,12 @@ function buildRouteTrafficVisualsFromSources(
 export function buildGalaxyRouteTrafficVisuals(
   state: Pick<
     GameState,
-    "activeRoutes" | "fleet" | "aiCompanies" | "galaxy" | "hyperlanes" | "borderPorts"
+    | "activeRoutes"
+    | "fleet"
+    | "aiCompanies"
+    | "galaxy"
+    | "hyperlanes"
+    | "borderPorts"
   >,
 ): RouteTrafficVisual[] {
   const sources: RouteTrafficSource[] = [
@@ -450,7 +466,12 @@ export function buildRouteTrafficStateKey(
 export function buildGalaxyRouteTrafficStateKey(
   state: Pick<
     GameState,
-    "activeRoutes" | "fleet" | "aiCompanies" | "galaxy" | "hyperlanes" | "borderPorts"
+    | "activeRoutes"
+    | "fleet"
+    | "aiCompanies"
+    | "galaxy"
+    | "hyperlanes"
+    | "borderPorts"
   >,
 ): string {
   const visuals = buildGalaxyRouteTrafficVisuals(state);
@@ -652,7 +673,8 @@ export function estimateRouteRevenue(
         destParts.length >= 4 &&
         originParts[0] === "planet" &&
         destParts[0] === "planet" &&
-        `${originParts[1]}-${originParts[2]}` === `${destParts[1]}-${destParts[2]}`;
+        `${originParts[1]}-${originParts[2]}` ===
+          `${destParts[1]}-${destParts[2]}`;
 
   const distancePremium = Math.min(
     DISTANCE_PREMIUM_CAP,
@@ -855,9 +877,7 @@ export function scanAllRouteOpportunities(
           shipClass: best.candidate.class,
           shipSource: best.candidate.source,
           shipCost:
-            best.candidate.source === "owned"
-              ? 0
-              : best.candidate.purchaseCost,
+            best.candidate.source === "owned" ? 0 : best.candidate.purchaseCost,
           licenseFee,
           alreadyActive,
         });

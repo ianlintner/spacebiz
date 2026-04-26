@@ -101,7 +101,12 @@ describe("WidgetRegistry", () => {
       isVisible: () => true,
     };
     reg.hook({ ...baseline, testId: "btn-buy", label: "Buy Ship", scene: s1 });
-    reg.hook({ ...baseline, testId: "btn-end-turn", label: "End Turn", scene: s2 });
+    reg.hook({
+      ...baseline,
+      testId: "btn-end-turn",
+      label: "End Turn",
+      scene: s2,
+    });
     expect(reg.list("buy").map((e) => e.testId)).toEqual(["btn-buy"]);
     expect(reg.list("Beta").map((e) => e.testId)).toEqual(["btn-end-turn"]);
     expect(reg.list("end")).toHaveLength(1);

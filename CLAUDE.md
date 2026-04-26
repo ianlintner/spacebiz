@@ -83,7 +83,10 @@ await portraitLoader.preloadCeoPortraits(scene, rivalIds);
 
 // With loading overlay:
 import { withLoadingOverlay } from "../ui/LoadingOverlay.ts";
-const key = await withLoadingOverlay(scene, portraitLoader.ensureCeoPortrait(scene, id));
+const key = await withLoadingOverlay(
+  scene,
+  portraitLoader.ensureCeoPortrait(scene, id),
+);
 ```
 
 Textures survive scene transitions (live in Phaser's global TextureManager). Always check

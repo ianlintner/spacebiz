@@ -19,9 +19,20 @@
     "build": "tsc && vite build",
     "lint": "eslint .",
     "test:lint-rules": "vitest run tools/eslint-rules",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build",
     "preview": "vite preview",
-    "optimize-assets": "node scripts/optimize-images.mjs"
+    "optimize-assets": "node scripts/optimize-images.mjs",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css,html}": [
+      "prettier --write"
+    ],
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix"
+    ]
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
@@ -30,7 +41,10 @@
     "@typescript-eslint/utils": "^8.59.0",
     "@vitest/coverage-v8": "^4.1.0",
     "eslint": "^9.39.4",
+    "husky": "^9.1.7",
     "jiti": "^2.6.1",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.3",
     "sharp": "^0.34.5",
     "typescript": "~5.9.3",
     "vite": "^8.0.0",

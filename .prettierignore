@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+public/
+assets-source/
+playwright-report/
+test-results/
+.claude/
+.hive/
+.playwright-mcp/
+package-lock.json
+*.min.js
+*.min.css

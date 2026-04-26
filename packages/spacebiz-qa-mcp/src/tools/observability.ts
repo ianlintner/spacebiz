@@ -26,13 +26,15 @@ export function registerObservabilityTools(server: McpServer): void {
     "sft_log_clear",
     {
       title: "Clear the log buffer",
-      description: "Invoke `__sft.log.clear()` — empties the in-page log ring buffer.",
+      description:
+        "Invoke `__sft.log.clear()` — empties the in-page log ring buffer.",
       inputSchema: {},
     },
-    async () => run(async () => {
-      await (await driver()).logClear();
-      return { cleared: true };
-    }),
+    async () =>
+      run(async () => {
+        await (await driver()).logClear();
+        return { cleared: true };
+      }),
   );
 
   server.registerTool(

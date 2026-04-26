@@ -18,7 +18,8 @@ export class SftDriver {
   /** Wait until the DEV-only fa\u00e7ade has attached to window. */
   async ready(timeoutMs = 15_000): Promise<void> {
     await this.page.waitForFunction(
-      () => typeof (window as unknown as { __sft?: unknown }).__sft === "object",
+      () =>
+        typeof (window as unknown as { __sft?: unknown }).__sft === "object",
       undefined,
       { timeout: timeoutMs },
     );
@@ -77,7 +78,9 @@ export class SftDriver {
   ): Promise<T> {
     return this.page.waitForFunction(
       (src) => {
-        const pred = new Function("s", `return (${src})(s);`) as (s: unknown) => boolean;
+        const pred = new Function("s", `return (${src})(s);`) as (
+          s: unknown,
+        ) => boolean;
         return pred(window.__sft!.state());
       },
       fn.toString(),

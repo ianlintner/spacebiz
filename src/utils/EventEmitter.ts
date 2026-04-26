@@ -1,4 +1,4 @@
-type Listener = (data: unknown) => void;
+type Listener = (...args: unknown[]) => void;
 
 export class GameEventEmitter {
   private listeners: Map<string, Set<Listener>> = new Map();
@@ -15,14 +15,14 @@ export class GameEventEmitter {
   }
 
   once(event: string, listener: Listener): void {
-    const wrapper: Listener = (data) => {
+    const wrapper: Listener = (...args) => {
       this.off(event, wrapper);
-      listener(data);
+      listener(...args);
     };
     this.on(event, wrapper);
   }
 
-  emit(event: string, data: unknown): void {
-    this.listeners.get(event)?.forEach((listener) => listener(data));
+  emit(event: string, ...args: unknown[]): void {
+    this.listeners.get(event)?.forEach((listener) => listener(...args));
   }
 }

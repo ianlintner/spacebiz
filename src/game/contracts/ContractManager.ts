@@ -209,7 +209,11 @@ export function acceptContractWithNegotiation(
   // 4. Auto-assign best idle ship
   const match = findBestShipForContract(negotiatedContract, updatedState);
   if (match.shipId !== null) {
-    updatedState = autoAssignShipToContract(contractId, match.shipId, updatedState);
+    updatedState = autoAssignShipToContract(
+      contractId,
+      match.shipId,
+      updatedState,
+    );
   }
 
   return updatedState;

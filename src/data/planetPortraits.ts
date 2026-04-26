@@ -28,7 +28,9 @@ export function getPlanetPortraitAssetPath(planetType: PlanetType): string {
  * Get [webp, png] URL pair for Phaser's load.image(key, urls) array form.
  * Phaser tries the first URL (WebP) and falls back to the second (PNG).
  */
-export function getPlanetPortraitAssetUrls(planetType: PlanetType): [string, string] {
+export function getPlanetPortraitAssetUrls(
+  planetType: PlanetType,
+): [string, string] {
   return [
     `portraits/planets/planet-${planetType}.webp`,
     `portraits/planets/planet-${planetType}.png`,

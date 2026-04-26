@@ -6,12 +6,14 @@ import type {
   MarketState,
   AITurnSummary,
 } from "../../data/types.ts";
-import { SHIP_TEMPLATES, AI_STARTING_CASH, AI_REPLACEMENT_DELAY, AI_REPLACEMENT_CASH_RATIO } from "../../data/constants.ts";
-import { calculateShipValue } from "../fleet/FleetManager.ts";
 import {
-  ageFleet,
-  calculateMaintenanceCosts,
-} from "../fleet/FleetManager.ts";
+  SHIP_TEMPLATES,
+  AI_STARTING_CASH,
+  AI_REPLACEMENT_DELAY,
+  AI_REPLACEMENT_CASH_RATIO,
+} from "../../data/constants.ts";
+import { calculateShipValue } from "../fleet/FleetManager.ts";
+import { ageFleet, calculateMaintenanceCosts } from "../fleet/FleetManager.ts";
 import {
   AI_COMPANY_NAME_PREFIXES,
   AI_COMPANY_NAME_SUFFIXES,
@@ -25,10 +27,7 @@ import {
 } from "../hub/HubBonusCalculator.ts";
 
 // ── Step imports ─────────────────────────────────────────────
-import {
-  simulateAIRoutes,
-  applyAISaturation,
-} from "./steps/aiRouteStep.ts";
+import { simulateAIRoutes, applyAISaturation } from "./steps/aiRouteStep.ts";
 import { makeAIDecisions } from "./steps/aiDecisionStep.ts";
 import { processAITech } from "./steps/aiTechStep.ts";
 import {
@@ -135,7 +134,12 @@ export function simulateAITurns(
 
     // 7. AI tech research (Wave 3)
     let updatedCompanyWithTech = processAITech(
-      { ...company, fleet: updatedFleet, activeRoutes: updatedRoutes, cash: newCash },
+      {
+        ...company,
+        fleet: updatedFleet,
+        activeRoutes: updatedRoutes,
+        cash: newCash,
+      },
       state,
       rng,
     );
@@ -158,7 +162,11 @@ export function simulateAITurns(
 
     // Remove contracts that the AI just completed so their rewards aren't applied again next turn
     currentContracts = currentContracts.filter(
-      (c) => !(c.aiCompanyId === updatedCompanyWithTech.id && c.status === "completed"),
+      (c) =>
+        !(
+          c.aiCompanyId === updatedCompanyWithTech.id &&
+          c.status === "completed"
+        ),
     );
 
     // 9. AI hub upgrades (Wave 3)
@@ -175,7 +183,10 @@ export function simulateAITurns(
     newCash += narrative.cashAdjustment;
     const updatedReputation = Math.max(
       0,
-      Math.min(100, updatedCompanyWithTech.reputation + narrative.reputationAdjustment),
+      Math.min(
+        100,
+        updatedCompanyWithTech.reputation + narrative.reputationAdjustment,
+      ),
     );
     updatedCompanyWithTech = {
       ...updatedCompanyWithTech,

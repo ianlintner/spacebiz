@@ -432,7 +432,9 @@ export class ContractsScene extends Phaser.Scene {
     const selectionStillValid =
       this.selectedAvailableId !== null &&
       available.some((c) => c.id === this.selectedAvailableId);
-    this.acceptButton.setDisabled(available.length === 0 || !selectionStillValid);
+    this.acceptButton.setDisabled(
+      available.length === 0 || !selectionStillValid,
+    );
   }
 
   private confirmAcceptContract(): void {

@@ -29,14 +29,7 @@ export class Label extends Phaser.GameObjects.Text {
     this.setShadow(0, 1, "#000000", 4, true, true);
 
     if (config.glow) {
-      this.setShadow(
-        2,
-        2,
-        colorToString(theme.colors.accent),
-        8,
-        true,
-        true,
-      );
+      this.setShadow(2, 2, colorToString(theme.colors.accent), 8, true, true);
     }
 
     scene.add.existing(this);
@@ -50,14 +43,7 @@ export class Label extends Phaser.GameObjects.Text {
   setGlow(enabled: boolean): this {
     const theme = getTheme();
     if (enabled) {
-      this.setShadow(
-        2,
-        2,
-        colorToString(theme.colors.accent),
-        8,
-        true,
-        true,
-      );
+      this.setShadow(2, 2, colorToString(theme.colors.accent), 8, true, true);
     } else {
       this.setShadow(0, 0, "transparent", 0, false, false);
     }

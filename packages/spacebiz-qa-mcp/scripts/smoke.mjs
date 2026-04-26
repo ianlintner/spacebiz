@@ -52,7 +52,9 @@ function readMessage(id, timeoutMs = 5000) {
         }
       }
       if (Date.now() > deadline) {
-        return reject(new Error(`timeout waiting for id=${id}. stderr=${stderr}`));
+        return reject(
+          new Error(`timeout waiting for id=${id}. stderr=${stderr}`),
+        );
       }
       setTimeout(tick, 50);
     };
@@ -83,7 +85,9 @@ try {
   const missing = REQUIRED_TOOLS.filter((n) => !names.includes(n));
   if (tools.length === 0) throw new Error("tools/list returned empty array");
   if (missing.length > 0) {
-    throw new Error(`missing required tools: ${missing.join(", ")}; got=${names.join(", ")}`);
+    throw new Error(
+      `missing required tools: ${missing.join(", ")}; got=${names.join(", ")}`,
+    );
   }
 
   console.log(`OK: ${tools.length} tools registered.`);

@@ -1,9 +1,5 @@
 import { AIPersonality, TechBranch } from "../../../data/types.ts";
-import type {
-  AICompany,
-  GameState,
-  TechState,
-} from "../../../data/types.ts";
+import type { AICompany, GameState, TechState } from "../../../data/types.ts";
 import { TECH_TREE } from "../../../data/constants.ts";
 import type { SeededRNG } from "../../../utils/SeededRNG.ts";
 
@@ -49,14 +45,12 @@ function getNextTechInBranch(
   branch: (typeof TechBranch)[keyof typeof TechBranch],
   techState: TechState,
 ): string | null {
-  const branchTechs = TECH_TREE
-    .filter(
-      (t) =>
-        t.branch === branch &&
-        t.tier <= AI_MAX_TECH_TIER &&
-        !techState.completedTechIds.includes(t.id),
-    )
-    .sort((a, b) => a.tier - b.tier);
+  const branchTechs = TECH_TREE.filter(
+    (t) =>
+      t.branch === branch &&
+      t.tier <= AI_MAX_TECH_TIER &&
+      !techState.completedTechIds.includes(t.id),
+  ).sort((a, b) => a.tier - b.tier);
 
   if (branchTechs.length === 0) return null;
 
@@ -121,10 +115,7 @@ export function processAITech(
       const excess = techState.researchProgress - currentTech.rpCost;
       techState = {
         ...techState,
-        completedTechIds: [
-          ...techState.completedTechIds,
-          currentTech.id,
-        ],
+        completedTechIds: [...techState.completedTechIds, currentTech.id],
         currentResearchId: null,
         researchProgress: excess,
       };

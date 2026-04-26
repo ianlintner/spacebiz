@@ -88,5 +88,9 @@ export interface SftTestErrorShape {
 export function isSftTestErrorShape(err: unknown): err is SftTestErrorShape {
   if (err === null || typeof err !== "object") return false;
   const e = err as { name?: unknown; code?: unknown; message?: unknown };
-  return e.name === "SftTestError" && typeof e.code === "string" && typeof e.message === "string";
+  return (
+    e.name === "SftTestError" &&
+    typeof e.code === "string" &&
+    typeof e.message === "string"
+  );
 }

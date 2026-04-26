@@ -1,5 +1,15 @@
-import type { GameState, RouteMarketEntry, RouteRiskTag, CargoType, Planet, StarSystem } from "../../data/types.ts";
-import { CargoType as CargoTypeEnum, DiplomaticStatus } from "../../data/types.ts";
+import type {
+  GameState,
+  RouteMarketEntry,
+  RouteRiskTag,
+  CargoType,
+  Planet,
+  StarSystem,
+} from "../../data/types.ts";
+import {
+  CargoType as CargoTypeEnum,
+  DiplomaticStatus,
+} from "../../data/types.ts";
 import {
   ROUTE_MARKET_SIZE,
   ROUTE_MARKET_ENTRY_DURATION,
@@ -20,7 +30,9 @@ import {
 // ---------------------------------------------------------------------------
 
 /** All cargo types as a plain array for RNG picking. */
-const ALL_CARGO_TYPES: CargoType[] = Object.values(CargoTypeEnum) as CargoType[];
+const ALL_CARGO_TYPES: CargoType[] = Object.values(
+  CargoTypeEnum,
+) as CargoType[];
 
 /**
  * Get market size for the current game (keyed by gameSize, which matches the preset keys).
@@ -33,11 +45,7 @@ function getMarketSize(state: GameState): number {
  * Compute the distance between two planets using state hyperlanes (if available).
  * Returns -1 when no path exists.
  */
-function routeDistance(
-  origin: Planet,
-  dest: Planet,
-  state: GameState,
-): number {
+function routeDistance(origin: Planet, dest: Planet, state: GameState): number {
   return calculateDistance(
     origin,
     dest,
@@ -117,7 +125,10 @@ function computeRiskTags(
   // pirate_activity: check if origin empire disposition is hostile
   if (originEmpireId) {
     const originEmpire = empires.find((e) => e.id === originEmpireId);
-    if (originEmpire?.disposition === "hostile" && !tags.includes("pirate_activity")) {
+    if (
+      originEmpire?.disposition === "hostile" &&
+      !tags.includes("pirate_activity")
+    ) {
       tags.push("pirate_activity");
     }
   }
@@ -312,8 +323,7 @@ export function tickRouteMarket(
 
   // Keep only non-expired, unclaimed entries
   const surviving = state.routeMarket.filter(
-    (entry) =>
-      entry.expiresOnTurn > state.turn && entry.claimedByAiId === null,
+    (entry) => entry.expiresOnTurn > state.turn && entry.claimedByAiId === null,
   );
 
   const deficit = marketSize - surviving.length;

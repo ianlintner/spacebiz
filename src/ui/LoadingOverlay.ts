@@ -131,7 +131,10 @@ export class LoadingOverlay {
    * Show a loading overlay on the scene. Returns an instance with a `.hide()`
    * method you call when done.
    */
-  static show(scene: Phaser.Scene, opts: LoadingOverlayOptions = {}): LoadingOverlay {
+  static show(
+    scene: Phaser.Scene,
+    opts: LoadingOverlayOptions = {},
+  ): LoadingOverlay {
     return new LoadingOverlay(scene, opts);
   }
 }

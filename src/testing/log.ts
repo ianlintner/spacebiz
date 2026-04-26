@@ -69,7 +69,10 @@ class LogStore {
 
   private mirror(entry: LogEntry): void {
     const tag = `[${entry.channel}]`;
-    const args = entry.data === undefined ? [tag, entry.message] : [tag, entry.message, entry.data];
+    const args =
+      entry.data === undefined
+        ? [tag, entry.message]
+        : [tag, entry.message, entry.data];
     switch (entry.level) {
       case "debug":
         console.debug(...args);
@@ -97,8 +100,10 @@ export interface LogChannel {
 }
 
 export function channel(name: string): LogChannel {
-  const make = (level: LogLevel): ((msg: string, data?: unknown) => void) =>
-    (msg, data) => store.write({ ts: Date.now(), channel: name, level, message: msg, data });
+  const make =
+    (level: LogLevel): ((msg: string, data?: unknown) => void) =>
+    (msg, data) =>
+      store.write({ ts: Date.now(), channel: name, level, message: msg, data });
   return {
     debug: make("debug"),
     info: make("info"),

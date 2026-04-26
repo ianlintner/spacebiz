@@ -112,17 +112,14 @@ export class RoutePickerMap {
     this.hitZone.setDepth(this.depth + 2);
     this.hitZone.setInteractive();
 
-    this.hitZone.on(
-      "pointermove",
-      (pointer: Phaser.Input.Pointer) => {
-        const planetId = this.findPlanetAt(pointer.worldX, pointer.worldY);
-        if (planetId !== this.currentHover) {
-          this.currentHover = planetId;
-          this.updateHoverLabel(planetId);
-          this.onPlanetHover?.(planetId);
-        }
-      },
-    );
+    this.hitZone.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      const planetId = this.findPlanetAt(pointer.worldX, pointer.worldY);
+      if (planetId !== this.currentHover) {
+        this.currentHover = planetId;
+        this.updateHoverLabel(planetId);
+        this.onPlanetHover?.(planetId);
+      }
+    });
     this.hitZone.on("pointerout", () => {
       if (this.currentHover !== null) {
         this.currentHover = null;

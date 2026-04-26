@@ -405,7 +405,9 @@ describe("scoutRoute (RouteScout)", () => {
   it("throws 'Entry not found' for unknown entryId", () => {
     const state = makeGameState({ routeMarket: [] });
 
-    expect(() => scoutRoute(state, "nonexistent-id")).toThrow("Entry not found");
+    expect(() => scoutRoute(state, "nonexistent-id")).toThrow(
+      "Entry not found",
+    );
   });
 
   it("throws 'Already scouted' when scouting a previously scouted entry", () => {
@@ -420,7 +422,9 @@ describe("scoutRoute (RouteScout)", () => {
       actionPoints: { current: 2, max: 2 },
     });
 
-    expect(() => scoutRoute(state, alreadyScouted.id)).toThrow("Already scouted");
+    expect(() => scoutRoute(state, alreadyScouted.id)).toThrow(
+      "Already scouted",
+    );
   });
 
   it("on success: deducts AP and cash, sets scouted=true, reveals exactProfitPerTurn", () => {
@@ -452,7 +456,10 @@ describe("scoutRoute (RouteScout)", () => {
 
 describe("aiClaimRouteEntry", () => {
   it("removes the entry from the market after AI claims it", () => {
-    const entry = makeRouteMarketEntry({ id: "rm-ai-target", expiresOnTurn: 99 });
+    const entry = makeRouteMarketEntry({
+      id: "rm-ai-target",
+      expiresOnTurn: 99,
+    });
     const otherEntry = makeRouteMarketEntry({
       id: "rm-other",
       expiresOnTurn: 99,
@@ -463,14 +470,19 @@ describe("aiClaimRouteEntry", () => {
     const newState = aiClaimRouteEntry(state, "rm-ai-target", "ai-corp-1");
 
     // Claimed entry should be removed
-    expect(newState.routeMarket.find((e) => e.id === "rm-ai-target")).toBeUndefined();
+    expect(
+      newState.routeMarket.find((e) => e.id === "rm-ai-target"),
+    ).toBeUndefined();
 
     // Other entry should remain
     expect(newState.routeMarket.find((e) => e.id === "rm-other")).toBeDefined();
   });
 
   it("does not mutate the original state", () => {
-    const entry = makeRouteMarketEntry({ id: "rm-immutable", expiresOnTurn: 99 });
+    const entry = makeRouteMarketEntry({
+      id: "rm-immutable",
+      expiresOnTurn: 99,
+    });
     const state = makeGameState({ routeMarket: [entry] });
 
     aiClaimRouteEntry(state, "rm-immutable", "ai-corp-1");

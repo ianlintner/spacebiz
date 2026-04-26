@@ -154,17 +154,19 @@ export class EmpireScene extends Phaser.Scene {
 
   private applyRowFilter(): void {
     const playerId = gameStore.getState().playerEmpireId;
-    const visible = this.filterToPlayer && playerId
-      ? this.cachedRows.filter(
-          (r) =>
-            r["empireAId"] === playerId || r["empireBId"] === playerId,
-        )
-      : this.cachedRows;
+    const visible =
+      this.filterToPlayer && playerId
+        ? this.cachedRows.filter(
+            (r) => r["empireAId"] === playerId || r["empireBId"] === playerId,
+          )
+        : this.cachedRows;
     this.table.setRows(visible);
     const total = this.cachedRows.length;
     const shown = visible.length;
     this.filterSummaryLabel.setText(
-      this.filterToPlayer ? `${shown} of ${total} relations` : `${total} relations`,
+      this.filterToPlayer
+        ? `${shown} of ${total} relations`
+        : `${total} relations`,
     );
   }
 

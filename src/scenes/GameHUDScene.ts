@@ -14,7 +14,11 @@ import {
 import { gameStore } from "../data/GameStore.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { checkTutorialAdvancement } from "../game/adviser/AdviserEngine.ts";
-import type { TutorialTrigger, AdviserMessage, NavTabId } from "../data/types.ts";
+import type {
+  TutorialTrigger,
+  AdviserMessage,
+  NavTabId,
+} from "../data/types.ts";
 import { TUTORIAL_STEPS } from "../game/adviser/TutorialDefinitions.ts";
 import {
   getAvailableRouteSlots,
@@ -23,7 +27,10 @@ import {
   getUsedLocalRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import { getPortraitTextureKey } from "../data/portraits.ts";
-import { portraitLoader, PORTRAIT_PLACEHOLDER_KEY } from "../game/PortraitLoader.ts";
+import {
+  portraitLoader,
+  PORTRAIT_PLACEHOLDER_KEY,
+} from "../game/PortraitLoader.ts";
 import { getNewlyUnlockedTabs } from "../game/nav/NavUnlocks.ts";
 
 /** Mapping from NavTabId to the Phaser scene key used for that nav item. */
@@ -200,7 +207,9 @@ export class GameHUDScene extends Phaser.Scene {
             fitImageCover(portraitImg, portraitSize, portraitSize);
           }
         })
-        .catch(() => {/* leave placeholder */});
+        .catch(() => {
+          /* leave placeholder */
+        });
     }
 
     // Company name (left-aligned, shifted right for portrait)
@@ -549,7 +558,8 @@ export class GameHUDScene extends Phaser.Scene {
 
     // Route slot indicator (bottom bar, to the left of the end turn area)
     const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
-    const slotsTotal = getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
+    const slotsTotal =
+      getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
     this.routeSlotLabel = new Label(this, {
       x: L.gameWidth - 200,
       y: L.gameHeight - L.hudBottomBarHeight / 2 - 8,
@@ -771,7 +781,8 @@ export class GameHUDScene extends Phaser.Scene {
 
     // Route slot indicator (main + local combined)
     const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
-    const slotsTotal = getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
+    const slotsTotal =
+      getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
     this.routeSlotLabel.setText(`Routes ${slotsUsed}/${slotsTotal}`);
     this.routeSlotLabel.setLabelColor(
       slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
@@ -1473,7 +1484,9 @@ export class GameHUDScene extends Phaser.Scene {
     );
 
     // Update visibility for every nav item
-    for (const [tabId, sceneKey] of Object.entries(NAV_TAB_TO_SCENE) as Array<[NavTabId, string]>) {
+    for (const [tabId, sceneKey] of Object.entries(NAV_TAB_TO_SCENE) as Array<
+      [NavTabId, string]
+    >) {
       const icon = this.navIcons.get(sceneKey);
       const hitArea = this.navHitAreas.get(sceneKey);
       const bg = this.navBackgrounds.get(sceneKey);
@@ -1488,7 +1501,8 @@ export class GameHUDScene extends Phaser.Scene {
         // Make visible
         icon.setAlpha(1);
         if (bg) bg.setAlpha(sceneKey === this.activeContentScene ? 0.32 : 0.0);
-        if (indicator) indicator.setVisible(sceneKey === this.activeContentScene);
+        if (indicator)
+          indicator.setVisible(sceneKey === this.activeContentScene);
         if (badge) badge.setAlpha(1);
 
         // Re-enable interaction if it was previously disabled due to locking

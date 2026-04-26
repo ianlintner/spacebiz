@@ -6,28 +6,28 @@ Average wall time: 33ms per run
 
 ## Personality Win Rates
 
-| Personality | Wins | Rate | Avg Score | Bankruptcy Rate |
-|---|---|---|---|---|
-| aggressiveExpander | 25/65 | 38.5% | 20169234 | 31.9% |
-| steadyHauler | 30/65 | 46.2% | 16416129 | 41.7% |
-| cherryPicker | 10/65 | 15.4% | 12727785 | 24.4% |
+| Personality        | Wins  | Rate  | Avg Score | Bankruptcy Rate |
+| ------------------ | ----- | ----- | --------- | --------------- |
+| aggressiveExpander | 25/65 | 38.5% | 20169234  | 31.9%           |
+| steadyHauler       | 30/65 | 46.2% | 16416129  | 41.7%           |
+| cherryPicker       | 10/65 | 15.4% | 12727785  | 24.4%           |
 
 ## Stats by Game Size
 
-| Size | Runs | Avg Bankruptcies | Avg Score Spread | Avg Gini | Avg Winner Score | Avg Fuel | Avg Cargo Price |
-|---|---|---|---|---|---|---|---|
-| small | 30 | 1.3 | 55588238 | 0.468 | 57878966 | 8.2 | 67.4 |
-| medium | 25 | 1.8 | 49205673 | 0.474 | 53852290 | 7.4 | 68.0 |
-| large | 10 | 4.8 | 34031300 | 0.495 | 36589188 | 7.3 | 67.9 |
+| Size   | Runs | Avg Bankruptcies | Avg Score Spread | Avg Gini | Avg Winner Score | Avg Fuel | Avg Cargo Price |
+| ------ | ---- | ---------------- | ---------------- | -------- | ---------------- | -------- | --------------- |
+| small  | 30   | 1.3              | 55588238         | 0.468    | 57878966         | 8.2      | 67.4            |
+| medium | 25   | 1.8              | 49205673         | 0.474    | 53852290         | 7.4      | 68.0            |
+| large  | 10   | 4.8              | 34031300         | 0.495    | 36589188         | 7.3      | 67.9            |
 
 ## Stats by Galaxy Shape
 
-| Shape | Runs | Avg Bankruptcies | Avg Gini |
-|---|---|---|---|
-| spiral | 50 | 2.2 | 0.471 |
-| elliptical | 5 | 1.0 | 0.476 |
-| ring | 5 | 1.6 | 0.503 |
-| irregular | 5 | 1.6 | 0.475 |
+| Shape      | Runs | Avg Bankruptcies | Avg Gini |
+| ---------- | ---- | ---------------- | -------- |
+| spiral     | 50   | 2.2              | 0.471    |
+| elliptical | 5    | 1.0              | 0.476    |
+| ring       | 5    | 1.6              | 0.503    |
+| irregular  | 5    | 1.6              | 0.475    |
 
 ## Economy Health
 
@@ -38,31 +38,31 @@ Average wall time: 33ms per run
 
 ## Event Frequency (top 15)
 
-| Event | Total Occurrences |
-|---|---|
-| Empire Trade Pact | 1183 |
-| Famine Crisis | 1043 |
-| Import Crackdown | 906 |
-| Tariff War | 864 |
-| Ore Boom | 859 |
-| New Colony | 851 |
-| Trade Agreement | 825 |
-| Government Subsidy | 777 |
-| Quarantine | 763 |
-| Economic Recession | 760 |
-| Tech Glut | 731 |
-| Asteroid Storm | 690 |
-| Border Dispute | 669 |
-| Pirate Activity | 658 |
-| Fuel Shortage | 614 |
+| Event              | Total Occurrences |
+| ------------------ | ----------------- |
+| Empire Trade Pact  | 1183              |
+| Famine Crisis      | 1043              |
+| Import Crackdown   | 906               |
+| Tariff War         | 864               |
+| Ore Boom           | 859               |
+| New Colony         | 851               |
+| Trade Agreement    | 825               |
+| Government Subsidy | 777               |
+| Quarantine         | 763               |
+| Economic Recession | 760               |
+| Tech Glut          | 731               |
+| Asteroid Storm     | 690               |
+| Border Dispute     | 669               |
+| Pirate Activity    | 658               |
+| Fuel Shortage      | 614               |
 
 ## Warning Frequency
 
-| Warning | Total Count |
-|---|---|
-| BALANCE_OUTLIER | 1145 |
-| FUEL_CRISIS | 532 |
-| MASS_BANKRUPTCY | 360 |
+| Warning         | Total Count |
+| --------------- | ----------- |
+| BALANCE_OUTLIER | 1145        |
+| FUEL_CRISIS     | 532         |
+| MASS_BANKRUPTCY | 360         |
 
 ## Detected Balance Issues
 
@@ -72,6 +72,7 @@ Average wall time: 33ms per run
 ## Sample Run Details
 
 ### Seed 42, small, spiral, 0 companies
+
 - Winner: Nebula Express (score: 78005054)
 - Bankruptcies: 1
 - Final fuel: 10.77, cargo: 69.99
@@ -84,6 +85,7 @@ Average wall time: 33ms per run
   - Deep Fleet Services: score=4847, nw=-793, fleet=1, routes=0
 
 ### Seed 42, medium, spiral, 0 companies
+
 - Winner: Nova Shipping Corp (score: 30539170)
 - Bankruptcies: 2
 - Final fuel: 14.98, cargo: 68.35
@@ -98,6 +100,7 @@ Average wall time: 33ms per run
   - AI Sandbox Corp: score=-140, nw=-5740, fleet=1, routes=0
 
 ### Seed 42, large, spiral, 0 companies
+
 - Winner: Apex Freight Lines (score: 22186849)
 - Bankruptcies: 5
 - Final fuel: 2.50, cargo: 65.72

@@ -140,8 +140,14 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     captains: [],
     routeMarket: [],
     researchEvents: [],
-    unlockedNavTabs: ["map", "routes", "fleet", "finance"] as import("../../../data/types.ts").NavTabId[],
-    reputationTier: "unknown" as import("../../../data/types.ts").ReputationTier,
+    unlockedNavTabs: [
+      "map",
+      "routes",
+      "fleet",
+      "finance",
+    ] as import("../../../data/types.ts").NavTabId[],
+    reputationTier:
+      "unknown" as import("../../../data/types.ts").ReputationTier,
     localRouteSlots: 2,
     ...overrides,
   };
@@ -374,7 +380,12 @@ describe("Empire Access", () => {
         unlockedEmpireIds: ["empire-1", "empire-2"],
       });
 
-      const result = validateRouteCreation("planet-1", "planet-1", "food", state);
+      const result = validateRouteCreation(
+        "planet-1",
+        "planet-1",
+        "food",
+        state,
+      );
 
       expect(result).toContain("different planets");
     });
@@ -383,12 +394,22 @@ describe("Empire Access", () => {
       const state = createTestState({
         unlockedEmpireIds: ["empire-1", "empire-2"],
         hyperlanes: [
-          { id: "hyperlane-23", systemA: "system-2", systemB: "system-3", distance: 8 },
+          {
+            id: "hyperlane-23",
+            systemA: "system-2",
+            systemB: "system-3",
+            distance: 8,
+          },
         ],
         borderPorts: [],
       });
 
-      const result = validateRouteCreation("planet-1", "planet-2", "food", state);
+      const result = validateRouteCreation(
+        "planet-1",
+        "planet-2",
+        "food",
+        state,
+      );
 
       expect(result).toContain("No hyperlane path exists");
     });

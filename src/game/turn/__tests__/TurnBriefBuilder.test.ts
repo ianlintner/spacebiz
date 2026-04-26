@@ -9,7 +9,12 @@ import type {
   NavTabId,
   ReputationTier,
 } from "../../../data/types.ts";
-import { ShipClass, CargoType, ContractStatus, ContractType } from "../../../data/types.ts";
+import {
+  ShipClass,
+  CargoType,
+  ContractStatus,
+  ContractType,
+} from "../../../data/types.ts";
 import { initAdviserState } from "../../adviser/AdviserEngine.ts";
 import { MAX_TURNS } from "../../../data/constants.ts";
 
@@ -68,7 +73,9 @@ function makeContract(overrides: Partial<Contract> = {}): Contract {
   };
 }
 
-function makeRouteMarketEntry(overrides: Partial<RouteMarketEntry> = {}): RouteMarketEntry {
+function makeRouteMarketEntry(
+  overrides: Partial<RouteMarketEntry> = {},
+): RouteMarketEntry {
   return {
     id: "rme-1",
     originPlanetId: "planet-a",
@@ -187,9 +194,24 @@ describe("buildTurnBrief", () => {
   it("caps results at 4 cards even when many issues exist", () => {
     // Create multiple issues that would generate many cards
     const ships = [
-      makeShip({ id: "s1", condition: 10, name: "Ship 1", assignedRouteId: null }),
-      makeShip({ id: "s2", condition: 5, name: "Ship 2", assignedRouteId: null }),
-      makeShip({ id: "s3", condition: 15, name: "Ship 3", assignedRouteId: null }),
+      makeShip({
+        id: "s1",
+        condition: 10,
+        name: "Ship 1",
+        assignedRouteId: null,
+      }),
+      makeShip({
+        id: "s2",
+        condition: 5,
+        name: "Ship 2",
+        assignedRouteId: null,
+      }),
+      makeShip({
+        id: "s3",
+        condition: 15,
+        name: "Ship 3",
+        assignedRouteId: null,
+      }),
     ];
     const contracts = [
       makeContract({ id: "c1", turnsRemaining: 1 }),
@@ -199,7 +221,12 @@ describe("buildTurnBrief", () => {
       fleet: ships,
       activeRoutes: [],
       contracts,
-      tech: { researchPoints: 0, completedTechIds: [], currentResearchId: null, researchProgress: 0 },
+      tech: {
+        researchPoints: 0,
+        completedTechIds: [],
+        currentResearchId: null,
+        researchProgress: 0,
+      },
     });
     const cards = buildTurnBrief(state);
     expect(cards.length).toBeLessThanOrEqual(4);
@@ -210,7 +237,12 @@ describe("buildTurnBrief", () => {
     // medium (idle ship), and low (no research).
     const state = makeGameState({
       fleet: [
-        makeShip({ id: "s1", condition: 20, name: "Dying Ship", assignedRouteId: null }),
+        makeShip({
+          id: "s1",
+          condition: 20,
+          name: "Dying Ship",
+          assignedRouteId: null,
+        }),
       ],
       activeRoutes: [makeRoute()],
       contracts: [makeContract({ id: "c1", turnsRemaining: 2 })],

@@ -330,7 +330,9 @@ function openAIRoute(
     existingRoutes.map((r) => `${r.originPlanetId}→${r.destinationPlanetId}`),
   );
 
-  const cargoTypes = Object.values(CargoType) as (typeof CargoType)[keyof typeof CargoType][];
+  const cargoTypes = Object.values(
+    CargoType,
+  ) as (typeof CargoType)[keyof typeof CargoType][];
   let bestProfit = -Infinity;
   let bestRoute: {
     origin: Planet;

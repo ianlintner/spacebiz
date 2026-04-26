@@ -92,9 +92,8 @@ export function buildRivalView(
     const branchTechs = TECH_TREE.filter(
       (t) => t.branch === branch && completedIds.includes(t.id),
     );
-    view.techTier = branchTechs.length > 0
-      ? Math.max(...branchTechs.map((t) => t.tier))
-      : 0;
+    view.techTier =
+      branchTechs.length > 0 ? Math.max(...branchTechs.map((t) => t.tier)) : 0;
   }
 
   // Tier 2: hub tier + contracts completed

@@ -681,7 +681,10 @@ export class DataTable extends Phaser.GameObjects.Container {
   }
 
   getSelectedRow(): Record<string, unknown> | null {
-    if (this.selectedRowIndex < 0 || this.selectedRowIndex >= this.rows.length) {
+    if (
+      this.selectedRowIndex < 0 ||
+      this.selectedRowIndex >= this.rows.length
+    ) {
       return null;
     }
     return this.rows[this.selectedRowIndex] ?? null;

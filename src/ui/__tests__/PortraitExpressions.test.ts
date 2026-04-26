@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { getExpressionFromGameState } from '../PortraitExpression.ts';
-import type { GameState } from '../../data/types.ts';
-import { initAdviserState } from '../../game/adviser/AdviserEngine.ts';
+import { describe, it, expect } from "vitest";
+import { getExpressionFromGameState } from "../PortraitExpression.ts";
+import type { GameState } from "../../data/types.ts";
+import { initAdviserState } from "../../game/adviser/AdviserEngine.ts";
 
 // ── Test helpers ─────────────────────────────────────────────────────────────
 
@@ -10,20 +10,20 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     seed: 42,
     turn: 5,
     maxTurns: 25,
-    phase: 'planning',
+    phase: "planning",
     cash: 200000,
     loans: [],
     reputation: 50,
-    companyName: 'Test Corp',
-    ceoName: 'Commander',
-    ceoPortrait: { portraitId: 'ceo-01', category: 'human' },
-    gameSize: 'standard',
-    galaxyShape: 'spiral',
-    playerEmpireId: 'empire-1',
+    companyName: "Test Corp",
+    ceoName: "Commander",
+    ceoPortrait: { portraitId: "ceo-01", category: "human" },
+    gameSize: "standard",
+    galaxyShape: "spiral",
+    playerEmpireId: "empire-1",
     galaxy: { sectors: [], empires: [], systems: [], planets: [] },
     fleet: [],
     activeRoutes: [],
-    market: { fuelPrice: 10, fuelTrend: 'stable', planetMarkets: {} },
+    market: { fuelPrice: 10, fuelTrend: "stable", planetMarkets: {} },
     aiCompanies: [],
     activeEvents: [],
     history: [],
@@ -40,7 +40,7 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     adviser: initAdviserState(),
     routeSlots: 4,
     localRouteSlots: 2,
-    unlockedEmpireIds: ['empire-1'],
+    unlockedEmpireIds: ["empire-1"],
     contracts: [],
     tech: {
       researchPoints: 0,
@@ -59,8 +59,13 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     captains: [],
     routeMarket: [],
     researchEvents: [],
-    unlockedNavTabs: ['map', 'routes', 'fleet', 'finance'] as import('../../data/types.ts').NavTabId[],
-    reputationTier: 'unknown' as import('../../data/types.ts').ReputationTier,
+    unlockedNavTabs: [
+      "map",
+      "routes",
+      "fleet",
+      "finance",
+    ] as import("../../data/types.ts").NavTabId[],
+    reputationTier: "unknown" as import("../../data/types.ts").ReputationTier,
     ...overrides,
   };
 }
@@ -78,8 +83,14 @@ function makeTurnResult(netProfit: number) {
     netProfit,
     cashAtEnd: 200000 + netProfit,
     cargoDelivered: {
-      passengers: 0, rawMaterials: 0, food: 0, technology: 0, luxury: 0, hazmat: 0, medical: 0,
-    } as import('../../data/types.ts').TurnResult['cargoDelivered'],
+      passengers: 0,
+      rawMaterials: 0,
+      food: 0,
+      technology: 0,
+      luxury: 0,
+      hazmat: 0,
+      medical: 0,
+    } as import("../../data/types.ts").TurnResult["cargoDelivered"],
     passengersTransported: 0,
     eventsOccurred: [],
     routePerformance: [],
@@ -89,7 +100,7 @@ function makeTurnResult(netProfit: number) {
 
 // ── getExpressionFromGameState ───────────────────────────────────────────────
 
-describe('getExpressionFromGameState', () => {
+describe("getExpressionFromGameState", () => {
   it('returns "worried" when playerHealthScore is low (< 30)', () => {
     const state = createTestState({
       reputation: 60,
@@ -101,7 +112,7 @@ describe('getExpressionFromGameState', () => {
         turnsSinceLastDecision: 0,
       },
     });
-    expect(getExpressionFromGameState(state)).toBe('worried');
+    expect(getExpressionFromGameState(state)).toBe("worried");
   });
 
   it('returns "happy" when last turn grade is A (profit >= 20000)', () => {
@@ -116,7 +127,7 @@ describe('getExpressionFromGameState', () => {
       },
       history: [makeTurnResult(25000)],
     });
-    expect(getExpressionFromGameState(state)).toBe('happy');
+    expect(getExpressionFromGameState(state)).toBe("happy");
   });
 
   it('returns "happy" when last turn grade is S (profit >= 50000)', () => {
@@ -124,7 +135,7 @@ describe('getExpressionFromGameState', () => {
       reputation: 60,
       history: [makeTurnResult(60000)],
     });
-    expect(getExpressionFromGameState(state)).toBe('happy');
+    expect(getExpressionFromGameState(state)).toBe("happy");
   });
 
   it('returns "worried" when last turn grade is D (loss between 0 and -10000)', () => {
@@ -132,7 +143,7 @@ describe('getExpressionFromGameState', () => {
       reputation: 60,
       history: [makeTurnResult(-5000)],
     });
-    expect(getExpressionFromGameState(state)).toBe('worried');
+    expect(getExpressionFromGameState(state)).toBe("worried");
   });
 
   it('returns "worried" when last turn grade is F (loss < -10000)', () => {
@@ -140,7 +151,7 @@ describe('getExpressionFromGameState', () => {
       reputation: 60,
       history: [makeTurnResult(-15000)],
     });
-    expect(getExpressionFromGameState(state)).toBe('worried');
+    expect(getExpressionFromGameState(state)).toBe("worried");
   });
 
   it('returns "angry" when reputation is below 25', () => {
@@ -155,12 +166,12 @@ describe('getExpressionFromGameState', () => {
       },
       history: [makeTurnResult(30000)], // good profit but bad reputation
     });
-    expect(getExpressionFromGameState(state)).toBe('angry');
+    expect(getExpressionFromGameState(state)).toBe("angry");
   });
 
   it('returns "neutral" when everything is average (no history)', () => {
     const state = createTestState({ reputation: 50 });
-    expect(getExpressionFromGameState(state)).toBe('neutral');
+    expect(getExpressionFromGameState(state)).toBe("neutral");
   });
 
   it('returns "neutral" when last turn profit is moderate (grade C)', () => {
@@ -168,10 +179,10 @@ describe('getExpressionFromGameState', () => {
       reputation: 50,
       history: [makeTurnResult(2000)], // C grade: 0..4999
     });
-    expect(getExpressionFromGameState(state)).toBe('neutral');
+    expect(getExpressionFromGameState(state)).toBe("neutral");
   });
 
-  it('boundary: reputation exactly 25 is NOT angry (returns based on other criteria)', () => {
+  it("boundary: reputation exactly 25 is NOT angry (returns based on other criteria)", () => {
     const state = createTestState({
       reputation: 25,
       storyteller: {
@@ -183,18 +194,18 @@ describe('getExpressionFromGameState', () => {
       },
     });
     // reputation >= 25 → not angry; no history → neutral
-    expect(getExpressionFromGameState(state)).toBe('neutral');
+    expect(getExpressionFromGameState(state)).toBe("neutral");
   });
 
-  it('boundary: reputation 24 IS angry', () => {
+  it("boundary: reputation 24 IS angry", () => {
     const state = createTestState({
       reputation: 24,
       history: [makeTurnResult(60000)], // great profit but notorious
     });
-    expect(getExpressionFromGameState(state)).toBe('angry');
+    expect(getExpressionFromGameState(state)).toBe("angry");
   });
 
-  it('health score priority: health < 30 wins over good grade', () => {
+  it("health score priority: health < 30 wins over good grade", () => {
     const state = createTestState({
       reputation: 60,
       storyteller: {
@@ -207,6 +218,6 @@ describe('getExpressionFromGameState', () => {
       history: [makeTurnResult(60000)], // S grade
     });
     // Health check comes after reputation but before grade check
-    expect(getExpressionFromGameState(state)).toBe('worried');
+    expect(getExpressionFromGameState(state)).toBe("worried");
   });
 });

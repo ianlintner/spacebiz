@@ -30,8 +30,7 @@ export const DILEMMA_TEMPLATES: DilemmaTemplate[] = [
       {
         id: "pay_demands",
         label: "Pay the hazard premium",
-        outcomeDescription:
-          "Crews stay on the line. Costs hurt, morale holds.",
+        outcomeDescription: "Crews stay on the line. Costs hurt, morale holds.",
         baseSuccess: 60,
         scalingTags: ["cash"],
         effects: [
@@ -94,7 +93,8 @@ export const DILEMMA_TEMPLATES: DilemmaTemplate[] = [
       {
         id: "covert_payments",
         label: "Quiet payments to key officials",
-        outcomeDescription: "Money talks loudest. So does the audit if it leaks.",
+        outcomeDescription:
+          "Money talks loudest. So does the audit if it leaks.",
         baseSuccess: 50,
         scalingTags: ["cash"],
         effects: [
@@ -181,8 +181,7 @@ export const DILEMMA_TEMPLATES: DilemmaTemplate[] = [
       {
         id: "promote_within",
         label: "Promote from within and grant equity",
-        outcomeDescription:
-          "Your reputation as a fair boss is the moat here.",
+        outcomeDescription: "Your reputation as a fair boss is the moat here.",
         baseSuccess: 50,
         scalingTags: ["rep", "fleetSize"],
         effects: [{ type: "modifyReputation", value: 6 }],
@@ -329,8 +328,7 @@ export const DILEMMA_TEMPLATES: DilemmaTemplate[] = [
       {
         id: "report_defector",
         label: "Report the defector to {rival}",
-        outcomeDescription:
-          "The high road. Goodwill banked across the sector.",
+        outcomeDescription: "The high road. Goodwill banked across the sector.",
         baseSuccess: 65,
         scalingTags: ["rep"],
         effects: [{ type: "modifyReputation", value: 8 }],
@@ -430,8 +428,7 @@ export const DILEMMA_TEMPLATES: DilemmaTemplate[] = [
       {
         id: "preempt_disclosure",
         label: "Pre-empt with a public disclosure",
-        outcomeDescription:
-          "Own the narrative. Investors respect the spine.",
+        outcomeDescription: "Own the narrative. Investors respect the spine.",
         baseSuccess: 55,
         scalingTags: ["rep", "tech"],
         effects: [
@@ -495,8 +492,7 @@ export const DILEMMA_TEMPLATES: DilemmaTemplate[] = [
       {
         id: "sell_to_rival",
         label: "Resell to {rival}",
-        outcomeDescription:
-          "Cash today, a competitor's strength tomorrow.",
+        outcomeDescription: "Cash today, a competitor's strength tomorrow.",
         baseSuccess: 65,
         scalingTags: ["cash"],
         effects: [

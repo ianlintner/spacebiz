@@ -1,4 +1,8 @@
-import type { EventChainId, ChoiceOption, GameState } from "../../data/types.ts";
+import type {
+  EventChainId,
+  ChoiceOption,
+  GameState,
+} from "../../data/types.ts";
 
 // ---------------------------------------------------------------------------
 // EventChainStep — one step in a multi-step chain event
@@ -41,10 +45,7 @@ const pirateCampaign: EventChainDefinition = {
   description:
     "A coordinated pirate offensive is threatening your shipping lanes. How you respond will shape the outcome.",
   triggerCondition: (state: GameState): boolean => {
-    return (
-      state.turn >= 5 &&
-      state.activeEventChains.length === 0
-    );
+    return state.turn >= 5 && state.activeEventChains.length === 0;
   },
   steps: [
     {
@@ -80,9 +81,7 @@ const pirateCampaign: EventChainDefinition = {
           label: "Alert the authorities and continue",
           outcomeDescription:
             "You report the scouts and keep running. Authorities may or may not respond in time.",
-          effects: [
-            { type: "modifyReputation", value: 2 },
-          ],
+          effects: [{ type: "modifyReputation", value: 2 }],
           requiresAp: 1,
         },
       ],
@@ -149,9 +148,7 @@ const pirateCampaign: EventChainDefinition = {
           label: "Report the base to the nearest empire",
           outcomeDescription:
             "You hand over the intelligence. The empire acts (eventually). Reputation up, no cost.",
-          effects: [
-            { type: "modifyReputation", value: 6 },
-          ],
+          effects: [{ type: "modifyReputation", value: 6 }],
           requiresAp: 1,
         },
         {
@@ -159,9 +156,7 @@ const pirateCampaign: EventChainDefinition = {
           label: "Ignore it and hope the pirates move on",
           outcomeDescription:
             "You do nothing. The base stays active — expect more trouble next turn.",
-          effects: [
-            { type: "modifyReputation", value: -2 },
-          ],
+          effects: [{ type: "modifyReputation", value: -2 }],
         },
       ],
     },
@@ -186,9 +181,7 @@ const pirateCampaign: EventChainDefinition = {
           label: "Quietly rebuild and move on",
           outcomeDescription:
             "You keep a low profile and focus on recovery. Steady income resumes.",
-          effects: [
-            { type: "modifyDemand", value: 0.1 },
-          ],
+          effects: [{ type: "modifyDemand", value: 0.1 }],
         },
       ],
     },
@@ -246,9 +239,7 @@ const diplomaticCrisis: EventChainDefinition = {
           label: "Stay out of it entirely",
           outcomeDescription:
             "You avoid taking sides. Both empires are mildly annoyed but you face no immediate penalty.",
-          effects: [
-            { type: "modifyReputation", value: -1 },
-          ],
+          effects: [{ type: "modifyReputation", value: -1 }],
         },
       ],
     },
@@ -284,9 +275,7 @@ const diplomaticCrisis: EventChainDefinition = {
           label: "Wait it out and protect existing routes",
           outcomeDescription:
             "You hunker down and protect what you have. Safe choice.",
-          effects: [
-            { type: "modifyDemand", value: -0.15 },
-          ],
+          effects: [{ type: "modifyDemand", value: -0.15 }],
         },
       ],
     },
@@ -312,9 +301,7 @@ const diplomaticCrisis: EventChainDefinition = {
           label: "Accept the new political order and adapt",
           outcomeDescription:
             "You adjust your routes to the new reality. Modest but steady recovery.",
-          effects: [
-            { type: "modifyDemand", value: 0.1 },
-          ],
+          effects: [{ type: "modifyDemand", value: 0.1 }],
         },
       ],
     },
@@ -332,10 +319,7 @@ const plague: EventChainDefinition = {
   description:
     "A dangerous contagion is spreading through the sector. Your decisions about quarantine and aid could save lives — or your business.",
   triggerCondition: (state: GameState): boolean => {
-    return (
-      state.turn >= 6 &&
-      state.activeEventChains.length === 0
-    );
+    return state.turn >= 6 && state.activeEventChains.length === 0;
   },
   steps: [
     {
@@ -409,9 +393,7 @@ const plague: EventChainDefinition = {
           label: "Maintain current routes and wait",
           outcomeDescription:
             "You hold steady. Some revenue loss as quarantines bite.",
-          effects: [
-            { type: "modifyDemand", value: -0.2 },
-          ],
+          effects: [{ type: "modifyDemand", value: -0.2 }],
         },
       ],
     },
@@ -436,11 +418,8 @@ const plague: EventChainDefinition = {
         {
           id: "gradual_recovery",
           label: "Gradually resume normal operations",
-          outcomeDescription:
-            "Slow and steady. Routes reopen at normal pace.",
-          effects: [
-            { type: "modifyDemand", value: 0.2 },
-          ],
+          outcomeDescription: "Slow and steady. Routes reopen at normal pace.",
+          effects: [{ type: "modifyDemand", value: 0.2 }],
         },
       ],
     },
@@ -535,9 +514,7 @@ const fuelCrisis: EventChainDefinition = {
           label: "Ground most routes and minimize exposure",
           outcomeDescription:
             "You park ships until prices normalize. Very safe but very little revenue.",
-          effects: [
-            { type: "modifyDemand", value: -0.5 },
-          ],
+          effects: [{ type: "modifyDemand", value: -0.5 }],
         },
       ],
     },
@@ -565,9 +542,7 @@ const fuelCrisis: EventChainDefinition = {
           label: "Resume normal operations gradually",
           outcomeDescription:
             "Safe, measured recovery. Routes reopen at your own pace.",
-          effects: [
-            { type: "modifyDemand", value: 0.15 },
-          ],
+          effects: [{ type: "modifyDemand", value: 0.15 }],
         },
       ],
     },
@@ -603,9 +578,7 @@ const blackMarketScandal: EventChainDefinition = {
           label: "Immediately report it to the authorities",
           outcomeDescription:
             "You cooperate fully. Clean record maintained and reputation improves.",
-          effects: [
-            { type: "modifyReputation", value: 8 },
-          ],
+          effects: [{ type: "modifyReputation", value: 8 }],
           requiresAp: 1,
         },
         {
@@ -642,9 +615,7 @@ const blackMarketScandal: EventChainDefinition = {
           label: "Cooperate fully with the investigation",
           outcomeDescription:
             "Full transparency. If you're clean, you walk away with reputation intact.",
-          effects: [
-            { type: "modifyReputation", value: 5 },
-          ],
+          effects: [{ type: "modifyReputation", value: 5 }],
         },
         {
           id: "lawyer_up",
@@ -792,9 +763,7 @@ const empireSuccession: EventChainDefinition = {
           label: "Play both sides subtly",
           outcomeDescription:
             "You make small gestures to both factions. Neither fully trusts you but you're not burned.",
-          effects: [
-            { type: "modifyCash", value: -3000 },
-          ],
+          effects: [{ type: "modifyCash", value: -3000 }],
           requiresCash: 3000,
         },
       ],
@@ -833,9 +802,7 @@ const empireSuccession: EventChainDefinition = {
           label: "Refuse the loyalty test — assert your independence",
           outcomeDescription:
             "You stand your ground. The new regime is annoyed but respects the boldness — if your reputation is strong enough.",
-          effects: [
-            { type: "modifyReputation", value: -5 },
-          ],
+          effects: [{ type: "modifyReputation", value: -5 }],
         },
       ],
     },
@@ -862,9 +829,7 @@ const empireSuccession: EventChainDefinition = {
           label: "Return to normal operations",
           outcomeDescription:
             "You focus on running your business. Steady and reliable.",
-          effects: [
-            { type: "modifyDemand", value: 0.1 },
-          ],
+          effects: [{ type: "modifyDemand", value: 0.1 }],
         },
       ],
     },

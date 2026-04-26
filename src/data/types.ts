@@ -231,11 +231,11 @@ export type NavTabId =
 
 // ── Reputation Tier ────────────────────────────────────────────
 export type ReputationTier =
-  | "notorious"   // < 25
-  | "unknown"     // 25–49
-  | "respected"   // 50–74
-  | "renowned"    // 75–89
-  | "legendary";  // 90+
+  | "notorious" // < 25
+  | "unknown" // 25–49
+  | "respected" // 50–74
+  | "renowned" // 75–89
+  | "legendary"; // 90+
 export type Trend = "rising" | "stable" | "falling";
 
 export const CargoType = {

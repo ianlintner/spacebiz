@@ -1,4 +1,9 @@
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type Page,
+} from "playwright";
 
 const DEFAULT_URL = "http://localhost:5173";
 const READY_TIMEOUT_MS = Number(process.env.SFT_READY_TIMEOUT_MS ?? 30_000);
@@ -19,7 +24,9 @@ function targetUrl(): string {
 async function launch(): Promise<BrowserState> {
   const headless = process.env.SFT_HEADLESS !== "false";
   const browser = await chromium.launch({ headless });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+  });
   const page = await context.newPage();
   await page.goto(targetUrl(), { waitUntil: "domcontentloaded" });
   await page.waitForFunction(

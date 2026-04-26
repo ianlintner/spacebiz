@@ -126,7 +126,14 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     const tabH = 72;
 
     this.tabBg = scene.add.graphics();
-    this.drawTabBg(this.tabBg, tabH, theme.colors.headerBg, 0.92, theme.colors.panelBorder, 0.6);
+    this.drawTabBg(
+      this.tabBg,
+      tabH,
+      theme.colors.headerBg,
+      0.92,
+      theme.colors.panelBorder,
+      0.6,
+    );
     this.add(this.tabBg);
 
     this.tabAccent = scene.add
@@ -171,13 +178,27 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     this.add(tabHit);
 
     tabHit.on("pointerover", () => {
-      this.drawTabBg(this.tabBg, tabH, theme.colors.buttonHover, 0.95, theme.colors.accent, 0.8);
+      this.drawTabBg(
+        this.tabBg,
+        tabH,
+        theme.colors.buttonHover,
+        0.95,
+        theme.colors.accent,
+        0.8,
+      );
       this.tabIcon.setTint(theme.colors.accent);
       this.tabLabel.setColor(colorToString(theme.colors.accent));
       this.tabAccent.setAlpha(1);
     });
     tabHit.on("pointerout", () => {
-      this.drawTabBg(this.tabBg, tabH, theme.colors.headerBg, 0.92, theme.colors.panelBorder, 0.6);
+      this.drawTabBg(
+        this.tabBg,
+        tabH,
+        theme.colors.headerBg,
+        0.92,
+        theme.colors.panelBorder,
+        0.6,
+      );
       this.tabIcon.setTint(theme.colors.textDim);
       this.tabLabel.setColor(colorToString(theme.colors.textDim));
       this.tabAccent.setAlpha(0.7);
@@ -192,7 +213,13 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
 
     // Drop shadow
     this.shadow = scene.add
-      .rectangle(bx + 4, 4, config.width, this.panelHeight, theme.colors.modalOverlay)
+      .rectangle(
+        bx + 4,
+        4,
+        config.width,
+        this.panelHeight,
+        theme.colors.modalOverlay,
+      )
       .setOrigin(0, 0)
       .setAlpha(0.5);
     this.add(this.shadow);
@@ -206,7 +233,18 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
 
     // Nine-slice panel background
     this.bg = scene.add
-      .nineslice(bx, 0, "panel-bg", undefined, config.width, this.panelHeight, 10, 10, 10, 10)
+      .nineslice(
+        bx,
+        0,
+        "panel-bg",
+        undefined,
+        config.width,
+        this.panelHeight,
+        10,
+        10,
+        10,
+        10,
+      )
       .setOrigin(0, 0)
       .setAlpha(0.88);
     this.add(this.bg);
@@ -229,13 +267,25 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     const portraitY = MSG_PADDING;
 
     this.portraitBorder = scene.add
-      .rectangle(portraitX - 3, portraitY - 3, this.portraitSize + 6, this.portraitSize + 6, theme.colors.panelBorder)
+      .rectangle(
+        portraitX - 3,
+        portraitY - 3,
+        this.portraitSize + 6,
+        this.portraitSize + 6,
+        theme.colors.panelBorder,
+      )
       .setOrigin(0, 0)
       .setAlpha(0.6);
     this.add(this.portraitBorder);
 
     this.portraitGlowBar = scene.add
-      .rectangle(portraitX, portraitY + this.portraitSize + 1, this.portraitSize, 2, theme.colors.accent)
+      .rectangle(
+        portraitX,
+        portraitY + this.portraitSize + 1,
+        this.portraitSize,
+        2,
+        theme.colors.accent,
+      )
       .setOrigin(0, 0)
       .setAlpha(0.6);
     this.add(this.portraitGlowBar);
@@ -251,14 +301,23 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
 
     if (this.usesPngPortraits) {
       this.portraitImage = scene.add
-        .image(portraitX + this.portraitSize / 2, portraitY + this.portraitSize / 2, REX_PORTRAIT_KEYS.standby)
+        .image(
+          portraitX + this.portraitSize / 2,
+          portraitY + this.portraitSize / 2,
+          REX_PORTRAIT_KEYS.standby,
+        )
         .setOrigin(0.5, 0.5)
         .setDisplaySize(this.portraitSize, this.portraitSize);
       this.add(this.portraitImage);
     } else if (this.usesSpritesheet) {
       const frameName = getAdviserFrameName("standby", 0);
       this.portraitImage = scene.add
-        .image(portraitX + this.portraitSize / 2, portraitY + this.portraitSize / 2, ADVISER_SHEET_KEY, frameName)
+        .image(
+          portraitX + this.portraitSize / 2,
+          portraitY + this.portraitSize / 2,
+          ADVISER_SHEET_KEY,
+          frameName,
+        )
         .setOrigin(0.5, 0.5)
         .setDisplaySize(this.portraitSize, this.portraitSize);
       this.add(this.portraitImage);
@@ -266,7 +325,12 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
       this.portraitGfx = scene.add.graphics();
       this.portraitGfx.setPosition(portraitX, portraitY);
       this.add(this.portraitGfx);
-      drawRexPortrait(this.portraitGfx, this.portraitSize, this.portraitSize, "standby");
+      drawRexPortrait(
+        this.portraitGfx,
+        this.portraitSize,
+        this.portraitSize,
+        "standby",
+      );
     }
 
     // ── Text area below portrait ──
@@ -306,11 +370,16 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     // Navigation label
     if (!this.isCompact) {
       this.navLabel = scene.add
-        .text(bx + config.width - MSG_PADDING, this.panelHeight - MSG_PADDING - 4, "", {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.textDim),
-        })
+        .text(
+          bx + config.width - MSG_PADDING,
+          this.panelHeight - MSG_PADDING - 4,
+          "",
+          {
+            fontSize: `${theme.fonts.caption.size}px`,
+            fontFamily: theme.fonts.caption.family,
+            color: colorToString(theme.colors.textDim),
+          },
+        )
         .setOrigin(1, 1)
         .setInteractive({ useHandCursor: true })
         .on("pointerdown", () => this.nextMessage());
@@ -387,7 +456,10 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     rightEdgeX: number,
     theme: ReturnType<typeof getTheme>,
   ): Phaser.GameObjects.Container {
-    const btn = this.scene.add.container(rightEdgeX - DISMISS_SIZE / 2 - 6, DISMISS_SIZE / 2 + 6);
+    const btn = this.scene.add.container(
+      rightEdgeX - DISMISS_SIZE / 2 - 6,
+      DISMISS_SIZE / 2 + 6,
+    );
 
     const bg = this.scene.add
       .circle(0, 0, DISMISS_SIZE / 2, theme.colors.buttonBg, 0.6)
@@ -432,7 +504,10 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   private updatePortraitFrame(): void {
     if (this.usesPngPortraits && this.portraitImage) return;
     if (this.usesSpritesheet && this.portraitImage) {
-      const frameName = getAdviserFrameName(this.currentMood, this.animFrameIndex);
+      const frameName = getAdviserFrameName(
+        this.currentMood,
+        this.animFrameIndex,
+      );
       this.portraitImage.setFrame(frameName);
     }
   }
@@ -453,7 +528,12 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
       const frameName = getAdviserFrameName(mood, this.animFrameIndex);
       this.portraitImage.setFrame(frameName);
     } else if (this.portraitGfx) {
-      drawRexPortrait(this.portraitGfx, this.portraitSize, this.portraitSize, mood);
+      drawRexPortrait(
+        this.portraitGfx,
+        this.portraitSize,
+        this.portraitSize,
+        mood,
+      );
     }
   }
 
@@ -652,7 +732,10 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     const textAreaTop = MSG_PADDING + this.portraitSize + MSG_PADDING;
     const msgY = textAreaTop + NAME_HEIGHT + 2;
     const bottomPad = this.isCompact ? MSG_PADDING : MSG_PADDING + 24;
-    const neededHeight = Math.max(this.minPanelHeight, msgY + textHeight + bottomPad);
+    const neededHeight = Math.max(
+      this.minPanelHeight,
+      msgY + textHeight + bottomPad,
+    );
     this.resizePanel(neededHeight);
 
     this.typewriterTimer = this.scene.time.addEvent({

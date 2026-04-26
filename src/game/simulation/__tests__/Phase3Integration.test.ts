@@ -194,8 +194,14 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
     captains: [],
     routeMarket: [],
     researchEvents: [],
-    unlockedNavTabs: ["map", "routes", "fleet", "finance"] as import("../../../data/types.ts").NavTabId[],
-    reputationTier: "unknown" as import("../../../data/types.ts").ReputationTier,
+    unlockedNavTabs: [
+      "map",
+      "routes",
+      "fleet",
+      "finance",
+    ] as import("../../../data/types.ts").NavTabId[],
+    reputationTier:
+      "unknown" as import("../../../data/types.ts").ReputationTier,
     localRouteSlots: 2,
     ...overrides,
   };

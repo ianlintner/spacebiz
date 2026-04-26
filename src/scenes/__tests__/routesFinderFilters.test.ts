@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  isInDistanceBand,
-  matchesScopeBand,
-} from "../routesFinderFilters.ts";
+import { isInDistanceBand, matchesScopeBand } from "../routesFinderFilters.ts";
 
 describe("isInDistanceBand", () => {
   it("returns true for any distance when band is null", () => {
@@ -35,9 +32,9 @@ describe("isInDistanceBand", () => {
 
   it("partitions every distance into exactly one of short/medium/long", () => {
     for (const d of [0, 25, 49.9, 50, 75, 150, 150.01, 200, 1000]) {
-      const bands = (
-        ["short", "medium", "long"] as const
-      ).filter((b) => isInDistanceBand(d, b));
+      const bands = (["short", "medium", "long"] as const).filter((b) =>
+        isInDistanceBand(d, b),
+      );
       expect(bands.length).toBe(1);
     }
   });

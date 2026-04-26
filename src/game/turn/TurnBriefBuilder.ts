@@ -12,11 +12,6 @@ function urgencyRank(u: TurnBriefUrgency): number {
   return URGENCY_ORDER.indexOf(u);
 }
 
-let _idCounter = 0;
-function nextId(): string {
-  return `brief-${++_idCounter}`;
-}
-
 // ── Builder ─────────────────────────────────────────────────────
 
 /**
@@ -25,6 +20,8 @@ function nextId(): string {
  */
 export function buildTurnBrief(state: GameState): TurnBriefCard[] {
   const cards: TurnBriefCard[] = [];
+  let idCounter = 0;
+  const nextId = (): string => `brief-${++idCounter}`;
 
   // 1. Ships with critical condition (< 30)
   for (const ship of state.fleet) {
@@ -80,7 +77,9 @@ export function buildTurnBrief(state: GameState): TurnBriefCard[] {
   }
 
   // 4. Ships with no assigned route (idle)
-  const idleCount = state.fleet.filter((s) => s.assignedRouteId === null).length;
+  const idleCount = state.fleet.filter(
+    (s) => s.assignedRouteId === null,
+  ).length;
   if (idleCount > 0) {
     cards.push({
       id: nextId(),
@@ -108,7 +107,10 @@ export function buildTurnBrief(state: GameState): TurnBriefCard[] {
   }
 
   // 6. AP exhausted with pending choice events
-  if (state.actionPoints.current === 0 && state.pendingChoiceEvents.length > 0) {
+  if (
+    state.actionPoints.current === 0 &&
+    state.pendingChoiceEvents.length > 0
+  ) {
     cards.push({
       id: nextId(),
       category: "choice_event",

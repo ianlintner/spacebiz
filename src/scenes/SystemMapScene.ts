@@ -1,6 +1,12 @@
 import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
-import type { ActiveRoute, GameState, Planet, PlanetType, Ship } from "../data/types.ts";
+import type {
+  ActiveRoute,
+  GameState,
+  Planet,
+  PlanetType,
+  Ship,
+} from "../data/types.ts";
 import {
   getTheme,
   colorToString,
@@ -543,7 +549,9 @@ function getLocalRouteAssignments(
   state: GameState,
   systemId: string,
 ): Array<{ route: ActiveRoute; assignedShips: Ship[]; visibleUnits: number }> {
-  const planetById = new Map(state.galaxy.planets.map((planet) => [planet.id, planet]));
+  const planetById = new Map(
+    state.galaxy.planets.map((planet) => [planet.id, planet]),
+  );
   const sources = [
     { routes: state.activeRoutes, fleet: state.fleet },
     ...state.aiCompanies.map((company) => ({
@@ -559,7 +567,8 @@ function getLocalRouteAssignments(
       const origin = planetById.get(route.originPlanetId);
       const destination = planetById.get(route.destinationPlanetId);
       if (!origin || !destination) return [];
-      if (origin.systemId !== systemId || destination.systemId !== systemId) return [];
+      if (origin.systemId !== systemId || destination.systemId !== systemId)
+        return [];
 
       const assignedShips = route.assignedShipIds.flatMap((shipId) => {
         const ship = fleetById.get(shipId);
@@ -676,8 +685,14 @@ function createLocalRouteTrafficLayer(
     if (path.length < 2) continue;
 
     for (let unitIndex = 0; unitIndex < visual.visibleUnits; unitIndex++) {
-      const ship = visual.assignedShips[unitIndex % visual.assignedShips.length];
-      const sprite = createTrafficSprite(ship, path[0], unitIndex, visual.visibleUnits);
+      const ship =
+        visual.assignedShips[unitIndex % visual.assignedShips.length];
+      const sprite = createTrafficSprite(
+        ship,
+        path[0],
+        unitIndex,
+        visual.visibleUnits,
+      );
       sprites.push(sprite);
       animatePath(
         sprite,

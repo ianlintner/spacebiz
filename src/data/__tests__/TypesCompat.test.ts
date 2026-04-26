@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { SAVE_VERSION, ACTION_POINTS_PER_TURN, GAME_LENGTH_PRESETS, NAV_UNLOCK_RULES, NAV_ALWAYS_VISIBLE } from "../constants";
+import {
+  SAVE_VERSION,
+  ACTION_POINTS_PER_TURN,
+  GAME_LENGTH_PRESETS,
+  NAV_UNLOCK_RULES,
+  NAV_ALWAYS_VISIBLE,
+} from "../constants";
 import { GameStore, SaveVersionError } from "../GameStore";
 
 describe("Phase 6 data model compatibility", () => {
@@ -11,7 +17,10 @@ describe("Phase 6 data model compatibility", () => {
     const store = new GameStore();
     const state = store.getState();
     expect(state.saveVersion).toBe(SAVE_VERSION);
-    expect(state.actionPoints).toEqual({ current: ACTION_POINTS_PER_TURN, max: ACTION_POINTS_PER_TURN });
+    expect(state.actionPoints).toEqual({
+      current: ACTION_POINTS_PER_TURN,
+      max: ACTION_POINTS_PER_TURN,
+    });
     expect(state.turnBrief).toEqual([]);
     expect(state.pendingChoiceEvents).toEqual([]);
     expect(state.activeEventChains).toEqual([]);
@@ -29,7 +38,9 @@ describe("Phase 6 data model compatibility", () => {
     const store = new GameStore();
     const oldSave = JSON.stringify({ turn: 1, cash: 100 }); // no saveVersion
     expect(() => store.deserialize(oldSave)).toThrow(SaveVersionError);
-    expect(() => store.deserialize(oldSave)).toThrow("Major update – new game required");
+    expect(() => store.deserialize(oldSave)).toThrow(
+      "Major update – new game required",
+    );
   });
 
   it("deserialize throws SaveVersionError for wrong version", () => {
@@ -37,7 +48,11 @@ describe("Phase 6 data model compatibility", () => {
     const wrongVersion = JSON.stringify({ saveVersion: 3, turn: 1, cash: 100 });
     expect(() => store.deserialize(wrongVersion)).toThrow(SaveVersionError);
     const err = (() => {
-      try { store.deserialize(wrongVersion); } catch (e) { return e as SaveVersionError; }
+      try {
+        store.deserialize(wrongVersion);
+      } catch (e) {
+        return e as SaveVersionError;
+      }
     })();
     expect(err?.savedVersion).toBe(3);
     expect(err?.currentVersion).toBe(SAVE_VERSION);
@@ -71,7 +86,7 @@ describe("Phase 6 data model compatibility", () => {
   });
 
   it("NAV_UNLOCK_RULES covers all progressive tabs", () => {
-    const ruleTabIds = NAV_UNLOCK_RULES.map(r => r.tabId);
+    const ruleTabIds = NAV_UNLOCK_RULES.map((r) => r.tabId);
     expect(ruleTabIds).toContain("research");
     expect(ruleTabIds).toContain("contracts");
     expect(ruleTabIds).toContain("empires");

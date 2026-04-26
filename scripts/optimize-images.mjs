@@ -171,7 +171,12 @@ async function run() {
     console.log(`📁 ${task.src}  (${files.length} files → ${task.out})`);
 
     for (const srcPath of files) {
-      const result = await processFile(srcPath, task.src, task.out, task.pixelArt ?? false);
+      const result = await processFile(
+        srcPath,
+        task.src,
+        task.out,
+        task.pixelArt ?? false,
+      );
 
       if (result.skipped) {
         skippedFiles++;
@@ -207,7 +212,9 @@ async function run() {
     console.log(`  Skipped   : ${skippedFiles} (already up-to-date)`);
   }
   console.log("──────────────────────────────────────────────");
-  console.log("\nDone. Commit public/portraits/**/*.webp and public/portraits/**/*.png");
+  console.log(
+    "\nDone. Commit public/portraits/**/*.webp and public/portraits/**/*.png",
+  );
 }
 
 run().catch((err) => {

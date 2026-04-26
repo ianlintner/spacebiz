@@ -1,6 +1,12 @@
 import type { GameState } from "./types";
 import { GameEventEmitter } from "../utils/EventEmitter";
-import { STARTING_CASH, MAX_TURNS, SAVE_VERSION, ACTION_POINTS_PER_TURN, LOCAL_ROUTE_SLOTS } from "./constants";
+import {
+  STARTING_CASH,
+  MAX_TURNS,
+  SAVE_VERSION,
+  ACTION_POINTS_PER_TURN,
+  LOCAL_ROUTE_SLOTS,
+} from "./constants";
 import { initAdviserState } from "../game/adviser/AdviserEngine.ts";
 
 function createDefaultState(): GameState {
@@ -55,7 +61,10 @@ function createDefaultState(): GameState {
     stationHub: null,
     // Phase 6: Interaction Overhaul
     saveVersion: SAVE_VERSION,
-    actionPoints: { current: ACTION_POINTS_PER_TURN, max: ACTION_POINTS_PER_TURN },
+    actionPoints: {
+      current: ACTION_POINTS_PER_TURN,
+      max: ACTION_POINTS_PER_TURN,
+    },
     turnBrief: [],
     pendingChoiceEvents: [],
     activeEventChains: [],
@@ -67,32 +76,49 @@ function createDefaultState(): GameState {
   };
 }
 
+/**
+ * Dev-only top-level freeze. Catches accidental `gameStore.getState().cash = 0`
+ * mutations in tests and during development. Shallow only — nested objects
+ * (`fleet`, `galaxy`, etc.) are not frozen, so `state.fleet.push(...)` still
+ * silently bypasses the update pipeline. Stripped from production builds via
+ * `import.meta.env.DEV`.
+ */
+function freezeInDev(state: GameState): GameState {
+  if (import.meta.env?.DEV) Object.freeze(state);
+  return state;
+}
+
 export class GameStore extends GameEventEmitter {
   private state: GameState;
 
   constructor() {
     super();
-    this.state = createDefaultState();
+    this.state = freezeInDev(createDefaultState());
   }
 
   getState(): Readonly<GameState> {
     return this.state;
   }
 
+  /**
+   * Apply a partial update. Emits a single `stateChanged` event with
+   * `(state, changedKeys)` so subscribers can short-circuit when the keys
+   * they care about didn't change.
+   */
   update(partial: Partial<GameState>): void {
-    const oldState = { ...this.state };
-    Object.assign(this.state, partial);
-    this.emit("stateChanged", this.state);
+    const changedKeys = new Set<keyof GameState>();
+    const next = { ...this.state, ...partial } as GameState;
     for (const key of Object.keys(partial) as (keyof GameState)[]) {
-      if (oldState[key] !== this.state[key]) {
-        this.emit(`${key}Changed`, this.state[key]);
-      }
+      if (this.state[key] !== next[key]) changedKeys.add(key);
     }
+    if (changedKeys.size === 0) return;
+    this.state = freezeInDev(next);
+    this.emit("stateChanged", this.state, changedKeys);
   }
 
   setState(state: GameState): void {
-    this.state = state;
-    this.emit("stateChanged", this.state);
+    this.state = freezeInDev(state);
+    this.emit("stateChanged", this.state, allKeys(this.state));
   }
 
   serialize(): string {
@@ -113,15 +139,20 @@ export class GameStore extends GameEventEmitter {
         SAVE_VERSION,
       );
     }
-    this.state = parsed as GameState;
-    this.emit("stateChanged", this.state);
+    this.state = freezeInDev(parsed as GameState);
+    this.emit("stateChanged", this.state, allKeys(this.state));
   }
 
   reset(seed?: number): void {
-    this.state = createDefaultState();
-    if (seed !== undefined) this.state.seed = seed;
-    this.emit("stateChanged", this.state);
+    const next = createDefaultState();
+    if (seed !== undefined) next.seed = seed;
+    this.state = freezeInDev(next);
+    this.emit("stateChanged", this.state, allKeys(this.state));
   }
+}
+
+function allKeys(state: GameState): Set<keyof GameState> {
+  return new Set(Object.keys(state) as (keyof GameState)[]);
 }
 
 /** Thrown when a saved game cannot be loaded due to incompatible version */

@@ -24,19 +24,34 @@ export function click(testId: string): ClickResult {
   const hit = widgetRegistry.find(testId);
   if (!hit) {
     const available = widgetRegistry.list().map((e) => e.testId);
-    throw new SftTestError("unknown-test-id", `No widget with testId "${testId}"`, {
-      testId,
-      hint: `Try __sft.list(). Current scene widgets: ${available.slice(0, 12).join(", ")}${available.length > 12 ? ", ..." : ""}`,
-    });
+    throw new SftTestError(
+      "unknown-test-id",
+      `No widget with testId "${testId}"`,
+      {
+        testId,
+        hint: `Try __sft.list(). Current scene widgets: ${available.slice(0, 12).join(", ")}${available.length > 12 ? ", ..." : ""}`,
+      },
+    );
   }
   const reg = hit.registration;
   if (!reg.isVisible()) {
-    throw new SftTestError("widget-not-visible", `Widget "${testId}" is not visible`, { testId });
+    throw new SftTestError(
+      "widget-not-visible",
+      `Widget "${testId}" is not visible`,
+      { testId },
+    );
   }
   if (!reg.isEnabled()) {
-    throw new SftTestError("widget-disabled", `Widget "${testId}" is disabled`, { testId });
+    throw new SftTestError(
+      "widget-disabled",
+      `Widget "${testId}" is disabled`,
+      { testId },
+    );
   }
-  logs.sft.debug(`click ${testId}`, { label: reg.label, scene: hit.scene.scene.key });
+  logs.sft.debug(`click ${testId}`, {
+    label: reg.label,
+    scene: hit.scene.scene.key,
+  });
   reg.invoke();
   return {
     ok: true,
@@ -81,7 +96,9 @@ export function waitFor(
         return reject(err);
       }
       if (Date.now() - start >= timeoutMs) {
-        return reject(new SftTestError("timeout", "waitFor predicate never became true"));
+        return reject(
+          new SftTestError("timeout", "waitFor predicate never became true"),
+        );
       }
       setTimeout(tick, pollMs);
     };
@@ -110,14 +127,21 @@ export function makeSemanticActions(): SemanticActions {
       await waitFor(() => {
         return widgetRegistry
           .list()
-          .some((e) => e.testId === "btn-new-campaign" || e.testId === "btn-new-game");
+          .some(
+            (e) =>
+              e.testId === "btn-new-campaign" || e.testId === "btn-new-game",
+          );
       }, 3000);
       const newCampaign =
         clickIfPresent("btn-new-campaign") ?? clickIfPresent("btn-new-game");
       if (!newCampaign) {
-        throw new SftTestError("unknown-test-id", "Could not find New Campaign button", {
-          hint: "__sft.list() to inspect MainMenuScene buttons",
-        });
+        throw new SftTestError(
+          "unknown-test-id",
+          "Could not find New Campaign button",
+          {
+            hint: "__sft.list() to inspect MainMenuScene buttons",
+          },
+        );
       }
     },
     endTurn: () => clickIfPresent("btn-end-turn"),
@@ -127,7 +151,10 @@ export function makeSemanticActions(): SemanticActions {
       // For MVP, press Escape through the global keyboard.
       const game = getGame();
       const scenes = game.scene.getScenes(true);
-      const evt = new KeyboardEvent("keydown", { code: "Escape", key: "Escape" });
+      const evt = new KeyboardEvent("keydown", {
+        code: "Escape",
+        key: "Escape",
+      });
       for (const s of scenes) {
         s.input?.keyboard?.emit("keydown", evt);
       }

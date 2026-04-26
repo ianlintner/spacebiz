@@ -32,11 +32,11 @@ npx sft-qa-mcp
 
 Environment variables:
 
-| Var                     | Default                 | Purpose                                               |
-| ----------------------- | ----------------------- | ----------------------------------------------------- |
-| `SFT_URL`               | `http://localhost:5173` | Dev-server URL the browser navigates to.              |
-| `SFT_HEADLESS`          | `true`                  | Set to `false` to watch the browser drive the game.   |
-| `SFT_READY_TIMEOUT_MS`  | `30000`                 | Max wait for `window.__sft` to attach.                |
+| Var                    | Default                 | Purpose                                             |
+| ---------------------- | ----------------------- | --------------------------------------------------- |
+| `SFT_URL`              | `http://localhost:5173` | Dev-server URL the browser navigates to.            |
+| `SFT_HEADLESS`         | `true`                  | Set to `false` to watch the browser drive the game. |
+| `SFT_READY_TIMEOUT_MS` | `30000`                 | Max wait for `window.__sft` to attach.              |
 
 ## Wire into Claude Code
 
@@ -69,25 +69,25 @@ Or run the built binary directly:
 
 ## Tool surface
 
-| Tool                       | Purpose                                                           |
-| -------------------------- | ----------------------------------------------------------------- |
-| `sft_version`              | Return the `__sft` contract semver.                               |
-| `sft_list`                 | List widgets in active scenes (optional substring filter).        |
-| `sft_currentScene`         | Active scene keys + modal stack.                                  |
-| `sft_snapshot`             | Full JSON snapshot (scene, seed, turn, state).                    |
-| `sft_state`                | Just the `GameState` portion.                                     |
-| `sft_help`                 | Invoke `__sft.help()`.                                            |
-| `sft_click`                | Fire a widget's `onClick` by testId.                              |
-| `sft_clickIfPresent`       | Same, but returns `null` instead of throwing on unknown testId.   |
-| `sft_actions_newGame`      | `__sft.actions.newGame(seed?)`.                                   |
-| `sft_actions_endTurn`      | `__sft.actions.endTurn()`.                                        |
-| `sft_actions_openScene`    | `__sft.actions.openScene(key, data?)`.                            |
-| `sft_actions_closeModal`   | `__sft.actions.closeModal()`.                                     |
-| `sft_seed`                 | Reseed the RNG (`__sft.seed(n)`).                                 |
-| `sft_getSeed`              | Read the RNG seed.                                                |
-| `sft_log_tail`             | Tail the last N log entries.                                      |
-| `sft_log_clear`            | Clear the log ring buffer.                                        |
-| `sft_invariantViolations`  | Recent invariant violations (last 200).                           |
+| Tool                      | Purpose                                                         |
+| ------------------------- | --------------------------------------------------------------- |
+| `sft_version`             | Return the `__sft` contract semver.                             |
+| `sft_list`                | List widgets in active scenes (optional substring filter).      |
+| `sft_currentScene`        | Active scene keys + modal stack.                                |
+| `sft_snapshot`            | Full JSON snapshot (scene, seed, turn, state).                  |
+| `sft_state`               | Just the `GameState` portion.                                   |
+| `sft_help`                | Invoke `__sft.help()`.                                          |
+| `sft_click`               | Fire a widget's `onClick` by testId.                            |
+| `sft_clickIfPresent`      | Same, but returns `null` instead of throwing on unknown testId. |
+| `sft_actions_newGame`     | `__sft.actions.newGame(seed?)`.                                 |
+| `sft_actions_endTurn`     | `__sft.actions.endTurn()`.                                      |
+| `sft_actions_openScene`   | `__sft.actions.openScene(key, data?)`.                          |
+| `sft_actions_closeModal`  | `__sft.actions.closeModal()`.                                   |
+| `sft_seed`                | Reseed the RNG (`__sft.seed(n)`).                               |
+| `sft_getSeed`             | Read the RNG seed.                                              |
+| `sft_log_tail`            | Tail the last N log entries.                                    |
+| `sft_log_clear`           | Clear the log ring buffer.                                      |
+| `sft_invariantViolations` | Recent invariant violations (last 200).                         |
 
 ## Error handling
 

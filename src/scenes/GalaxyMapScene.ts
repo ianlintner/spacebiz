@@ -98,7 +98,14 @@ export class GalaxyMapScene extends Phaser.Scene {
     const galCy = (wMinY + wMaxY) / 2 + L.contentTop;
 
     // Create the fixed HUD camera early so hudCamId is set for all dynamic object creation
-    const uiCam = this.cameras.add(0, 0, L.gameWidth, L.gameHeight, false, "hud-cam");
+    const uiCam = this.cameras.add(
+      0,
+      0,
+      L.gameWidth,
+      L.gameHeight,
+      false,
+      "hud-cam",
+    );
     uiCam.setZoom(1);
     this.hudCamId = uiCam.id;
 
@@ -400,7 +407,8 @@ export class GalaxyMapScene extends Phaser.Scene {
 
         const startWp = forwardWaypoints[0];
         for (let unitIndex = 0; unitIndex < visual.visibleUnits; unitIndex++) {
-          const ship = visual.assignedShips[unitIndex % visual.assignedShips.length];
+          const ship =
+            visual.assignedShips[unitIndex % visual.assignedShips.length];
           const sprite = createTrafficSprite(
             ship,
             startWp,
@@ -410,7 +418,9 @@ export class GalaxyMapScene extends Phaser.Scene {
           sprite.cameraFilter = this.hudCamId;
           sprites.push(sprite);
 
-          const phaseDelay = Math.floor((unitIndex / visual.visibleUnits) * 2200);
+          const phaseDelay = Math.floor(
+            (unitIndex / visual.visibleUnits) * 2200,
+          );
           makePatrol(
             sprite,
             forwardWaypoints,
@@ -650,7 +660,8 @@ export class GalaxyMapScene extends Phaser.Scene {
     const hudObjects: Phaser.GameObjects.GameObject[] = [];
 
     const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
-    const slotsTotal = getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
+    const slotsTotal =
+      getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
     const slotBlocks =
       "\u25A0".repeat(slotsUsed) +
       "\u25A1".repeat(Math.max(0, slotsTotal - slotsUsed));
@@ -681,7 +692,8 @@ export class GalaxyMapScene extends Phaser.Scene {
         y: hudLabelTop + 18,
         text: `Routes: ${slotsUsed}/${slotsTotal} ${slotBlocks}`,
         style: "caption",
-        color: slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
+        color:
+          slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
       })
         .setScrollFactor(0)
         .setDepth(901),

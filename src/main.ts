@@ -665,6 +665,7 @@ function updateFooterYear(): void {
 // refresh leaves residual top/bottom letterboxing.
 let lastSourceWidth = 0;
 let lastSourceHeight = 0;
+const disposers: Array<() => void> = [];
 
 function resizeGameToViewport(): void {
   if (!activeGame) {
@@ -728,9 +729,10 @@ function setupFullscreenControl(): void {
   };
 
   toggle.addEventListener("click", () => {
-    const request = document.fullscreenElement === frame
-      ? document.exitFullscreen()
-      : frame.requestFullscreen({ navigationUI: "hide" });
+    const request =
+      document.fullscreenElement === frame
+        ? document.exitFullscreen()
+        : frame.requestFullscreen({ navigationUI: "hide" });
 
     request.catch((error: unknown) => {
       console.warn("Fullscreen request failed", error);
@@ -738,6 +740,9 @@ function setupFullscreenControl(): void {
   });
 
   document.addEventListener("fullscreenchange", syncButton);
+  disposers.push(() =>
+    document.removeEventListener("fullscreenchange", syncButton),
+  );
   syncButton();
 }
 
@@ -822,10 +827,12 @@ function mountGame(): void {
   if (parent && typeof ResizeObserver !== "undefined") {
     const observer = new ResizeObserver(scheduleResize);
     observer.observe(parent);
+    disposers.push(() => observer.disconnect());
   }
   // Keep a window.resize fallback for orientation flips and browsers that
   // don't fire the ResizeObserver on viewport-driven CSS changes.
   window.addEventListener("resize", scheduleResize);
+  disposers.push(() => window.removeEventListener("resize", scheduleResize));
 }
 
 renderSite();
@@ -842,5 +849,12 @@ if (import.meta.hot) {
     activeGame = null;
     lastSourceWidth = 0;
     lastSourceHeight = 0;
+    while (disposers.length) {
+      try {
+        disposers.pop()?.();
+      } catch (err) {
+        console.warn("HMR disposer threw", err);
+      }
+    }
   });
 }

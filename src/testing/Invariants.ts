@@ -31,8 +31,14 @@ class InvariantRunner {
       try {
         const result = pred(state);
         if (result === true) continue;
-        const msg = typeof result === "string" ? result : `invariant failed: ${name}`;
-        const v: InvariantViolation = { name, message: msg, ts: Date.now(), turn: state.turn };
+        const msg =
+          typeof result === "string" ? result : `invariant failed: ${name}`;
+        const v: InvariantViolation = {
+          name,
+          message: msg,
+          ts: Date.now(),
+          turn: state.turn,
+        };
         violations.push(v);
         logs.invariants.error(msg, { name, turn: state.turn });
       } catch (err) {
@@ -48,9 +54,12 @@ class InvariantRunner {
     }
     if (violations.length > 0) {
       this.recent.push(...violations);
-      if (this.recent.length > 200) this.recent.splice(0, this.recent.length - 200);
+      if (this.recent.length > 200)
+        this.recent.splice(0, this.recent.length - 200);
       if (this.strictMode) {
-        throw new Error(`Invariant violations: ${violations.map((v) => v.name).join(", ")}`);
+        throw new Error(
+          `Invariant violations: ${violations.map((v) => v.name).join(", ")}`,
+        );
       }
     }
     return violations;
@@ -83,7 +92,10 @@ const runner = new InvariantRunner();
 // Baseline invariants. Additional ones can be registered via __sft.invariants.register.
 runner.register("cash-not-nan", (s) => Number.isFinite(s.cash));
 runner.register("turn-positive", (s) => s.turn >= 1);
-runner.register("reputation-range", (s) => s.reputation >= 0 && s.reputation <= 100);
+runner.register(
+  "reputation-range",
+  (s) => s.reputation >= 0 && s.reputation <= 100,
+);
 runner.register("action-points-nonneg", (s) => {
   if (!s.actionPoints) return true;
   return s.actionPoints.current >= 0 && s.actionPoints.max > 0;

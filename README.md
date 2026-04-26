@@ -17,7 +17,7 @@ galaxies. It's the spiritual lovechild of **Aerobiz Supersonic**,
 
 - **Procedural galaxies** with seeded RNG — same seed, same map, every time.
 - **Hybrid turn loop** — Plan → Simulate → Review. Set your routes, hit
-  *End Quarter*, watch the simulation play out, then read the report.
+  _End Quarter_, watch the simulation play out, then read the report.
 - **Living economy** — planet types produce and demand; saturate a market
   and prices crater; events shake everything up.
 - **Rival AI empires** with named CEOs, portraits, and competing fleets.
@@ -33,14 +33,14 @@ galaxies. It's the spiritual lovechild of **Aerobiz Supersonic**,
 
 ## Tech stack
 
-| Layer        | Choice                                                              |
-| ------------ | ------------------------------------------------------------------- |
-| Engine       | **Phaser 4** (WebGL renderer, RenderNode arch, unified Filter API)  |
-| Language     | TypeScript (strict, `verbatimModuleSyntax`, `erasableSyntaxOnly`)   |
-| Bundler      | Vite 8                                                              |
-| Tests        | Vitest 4 — **723 tests across 50 files**, all pure-function         |
-| Runtime      | Node 22+, npm 10+                                                   |
-| Optional MCP | `@spacebiz/qa-mcp` — drive the running game from an LLM agent       |
+| Layer        | Choice                                                             |
+| ------------ | ------------------------------------------------------------------ |
+| Engine       | **Phaser 4** (WebGL renderer, RenderNode arch, unified Filter API) |
+| Language     | TypeScript (strict, `verbatimModuleSyntax`, `erasableSyntaxOnly`)  |
+| Bundler      | Vite 8                                                             |
+| Tests        | Vitest 4 — **723 tests across 50 files**, all pure-function        |
+| Runtime      | Node 22+, npm 10+                                                  |
+| Optional MCP | `@spacebiz/qa-mcp` — drive the running game from an LLM agent      |
 
 ## Getting started
 
@@ -133,6 +133,6 @@ reasonable default for indie game projects.
 
 ---
 
-> *"Profit is just gravity in disguise. Find a producer, find a buyer,
-> point the ship between them, and let the universe do the rest."*
+> _"Profit is just gravity in disguise. Find a producer, find a buyer,
+> point the ship between them, and let the universe do the rest."_
 > — Apocryphal, attributed to every freight captain who ever lived.

@@ -305,15 +305,21 @@ function subsampleAndSmooth(
   // Calculate total perimeter to ensure we don't undersample small territories
   let perimeter = 0;
   for (let i = 1; i < points.length; i++) {
-    perimeter += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+    perimeter += Math.hypot(
+      points[i].x - points[i - 1].x,
+      points[i].y - points[i - 1].y,
+    );
   }
-  perimeter += Math.hypot(points[0].x - points[points.length - 1].x, points[0].y - points[points.length - 1].y);
+  perimeter += Math.hypot(
+    points[0].x - points[points.length - 1].x,
+    points[0].y - points[points.length - 1].y,
+  );
 
   // Distance-based sampling to remove grid artifacts and create a simpler polygon
   // A larger step distance creates rounder, less detailed "bubbles".
   // Ensure we get at least 8 points even for small territories to maintain a shape.
-  const stepDistance = Math.min(45, perimeter / 8); 
-  
+  const stepDistance = Math.min(45, perimeter / 8);
+
   const sampled: Array<{ x: number; y: number }> = [];
   sampled.push(points[0]);
   let currentDist = 0;
@@ -327,7 +333,10 @@ function subsampleAndSmooth(
 
     if (currentDist >= stepDistance) {
       // Don't add a point that perfectly overlaps points[0] to avoid breaking the Chaikin smooth wrap
-      if (i === points.length && Math.hypot(curr.x - sampled[0].x, curr.y - sampled[0].y) < 1) {
+      if (
+        i === points.length &&
+        Math.hypot(curr.x - sampled[0].x, curr.y - sampled[0].y) < 1
+      ) {
         // Skip
       } else {
         sampled.push(curr);

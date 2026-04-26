@@ -128,7 +128,10 @@ function effectChip(
     default:
       // Categorical diplomacy effects (declareWar, etc.) — show the type name
       return {
-        label: effect.type.replace(/([A-Z])/g, " $1").trim().toLowerCase(),
+        label: effect.type
+          .replace(/([A-Z])/g, " $1")
+          .trim()
+          .toLowerCase(),
         color: theme.colors.textDim,
       };
   }
@@ -170,7 +173,14 @@ export class DilemmaScene extends Phaser.Scene {
     const L = getLayout();
 
     this.overlay = this.add
-      .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.modalOverlay, 0.78)
+      .rectangle(
+        0,
+        0,
+        L.gameWidth,
+        L.gameHeight,
+        theme.colors.modalOverlay,
+        0.78,
+      )
       .setOrigin(0, 0)
       .setInteractive();
     this.overlay.setDepth(0);
@@ -228,13 +238,7 @@ export class DilemmaScene extends Phaser.Scene {
 
     // Category accent line just below the header bar
     const accentLine = this.add
-      .rectangle(
-        x,
-        y + HEADER_HEIGHT - 2,
-        PANEL_WIDTH,
-        2,
-        accent,
-      )
+      .rectangle(x, y + HEADER_HEIGHT - 2, PANEL_WIDTH, 2, accent)
       .setOrigin(0, 0)
       .setDepth(11);
     this.widgets.push(accentLine);
@@ -334,16 +338,11 @@ export class DilemmaScene extends Phaser.Scene {
     const colX = optionWidth - colWidth - 12;
     const colY = 8;
 
-    const successPct = this.add.text(
-      colX + colWidth / 2,
-      colY,
-      `${success}%`,
-      {
-        fontSize: `${theme.fonts.heading.size}px`,
-        fontFamily: theme.fonts.heading.family,
-        color: colorToString(successColor(success, theme)),
-      },
-    );
+    const successPct = this.add.text(colX + colWidth / 2, colY, `${success}%`, {
+      fontSize: `${theme.fonts.heading.size}px`,
+      fontFamily: theme.fonts.heading.family,
+      color: colorToString(successColor(success, theme)),
+    });
     successPct.setOrigin(0.5, 0);
     card.add(successPct);
 
