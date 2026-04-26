@@ -811,35 +811,32 @@ export function scanAllRouteOpportunities(
 
         const destEntry = destMarket[cargoType];
         const price = calculatePrice(destEntry, cargoType);
-        const isPassenger = cargoType === "passengers";
-
-        // Try owned ships first
-        const ship = pickBestShipForCargo(availableShips, cargoType);
-        // Fall back to cheapest purchasable
-        const buyOption = getCheapestBuyOption(cargoType, cash);
-
-        const candidate = ship ?? buyOption;
-        if (!candidate) continue;
-
-        const capacity = isPassenger
-          ? candidate.passengerCapacity
-          : candidate.cargoCapacity;
-        if (capacity <= 0) continue;
-
-        const trips = calculateTripsPerTurn(distance, candidate.speed);
         const isIntraSystem = origin.systemId === dest.systemId;
-        const distancePremium = Math.min(DISTANCE_PREMIUM_CAP, distance * DISTANCE_PREMIUM_RATE);
-        const revenueMultiplier = isIntraSystem ? INTRA_SYSTEM_REVENUE_MULTIPLIER : 1 + distancePremium;
-        const revenue = Math.round(trips * capacity * price * revenueMultiplier * 100) / 100;
-        const totalDist = trips * distance * 2;
-        const fuelCost =
-          Math.round(
-            totalDist * candidate.fuelEfficiency * market.fuelPrice * 100,
-          ) / 100;
-        const profit = revenue - fuelCost;
+        const distancePremium = Math.min(
+          DISTANCE_PREMIUM_CAP,
+          distance * DISTANCE_PREMIUM_RATE,
+        );
+        const revenueMultiplier = isIntraSystem
+          ? INTRA_SYSTEM_REVENUE_MULTIPLIER
+          : 1 + distancePremium;
 
-        // Only include profitable or near-break-even options
-        if (profit <= 0) continue;
+        // Pick the *most profitable* ship the player can field on this
+        // specific route (owned, or affordable to buy). Trying only the
+        // cheapest template made low-priced cargo (food/rawMat/hazmat)
+        // permanently unprofitable, since a $15k Tug with 20 capacity
+        // can't beat fuel costs at those prices — even when a
+        // RefrigeratedHauler is well within the player's budget.
+        const best = pickBestShipForRoute(
+          availableShips,
+          cargoType,
+          cash,
+          distance,
+          price,
+          market.fuelPrice,
+          revenueMultiplier,
+        );
+        if (!best) continue;
+        if (best.profit <= 0) continue;
 
         opportunities.push({
           originPlanetId: origin.id,
@@ -850,14 +847,17 @@ export function scanAllRouteOpportunities(
           bestCargoType: cargoType,
           destPrice: price,
           destTrend: destEntry.trend,
-          estRevenue: revenue,
-          estFuelCost: fuelCost,
-          estProfit: profit,
-          tripsPerTurn: trips,
-          shipName: candidate.name,
-          shipClass: candidate.class,
-          shipSource: ship ? "owned" : "autoBuy",
-          shipCost: ship ? 0 : (candidate.purchaseCost ?? 0),
+          estRevenue: best.revenue,
+          estFuelCost: best.fuelCost,
+          estProfit: best.profit,
+          tripsPerTurn: best.trips,
+          shipName: best.candidate.name,
+          shipClass: best.candidate.class,
+          shipSource: best.candidate.source,
+          shipCost:
+            best.candidate.source === "owned"
+              ? 0
+              : best.candidate.purchaseCost,
           licenseFee,
           alreadyActive,
         });
@@ -873,57 +873,101 @@ export function scanAllRouteOpportunities(
   return opportunities;
 }
 
-function pickBestShipForCargo(
-  ships: Ship[],
-  cargoType: CargoType,
-): Ship | null {
-  const isPassenger = cargoType === "passengers";
-  const compatible = ships.filter((s) =>
-    isPassenger ? s.passengerCapacity > 0 : s.cargoCapacity > 0,
-  );
-  if (compatible.length === 0) return null;
-
-  compatible.sort((a, b) =>
-    isPassenger
-      ? b.passengerCapacity - a.passengerCapacity
-      : b.cargoCapacity - a.cargoCapacity,
-  );
-  return compatible[0];
-}
-
-interface BuyCandidate {
+interface ShipCandidate {
   name: string;
   class: string;
   cargoCapacity: number;
   passengerCapacity: number;
   speed: number;
   fuelEfficiency: number;
+  source: "owned" | "autoBuy";
   purchaseCost: number;
 }
 
-function getCheapestBuyOption(
+interface RouteShipPick {
+  candidate: ShipCandidate;
+  trips: number;
+  revenue: number;
+  fuelCost: number;
+  profit: number;
+}
+
+/**
+ * For one (origin → destination, cargo type) pair, choose the ship that
+ * yields the highest profit per turn — drawn from idle owned ships plus
+ * any ship template the player can currently afford. Owned ships break
+ * ties since they require no capital outlay.
+ *
+ * Returns null when neither owned nor affordable templates can carry the
+ * cargo. The caller still needs to check `profit > 0` to decide whether
+ * to surface the route.
+ */
+function pickBestShipForRoute(
+  availableShips: Ship[],
   cargoType: CargoType,
   cash: number,
-): BuyCandidate | null {
+  distance: number,
+  price: number,
+  fuelPrice: number,
+  revenueMultiplier: number,
+): RouteShipPick | null {
   const isPassenger = cargoType === "passengers";
-  const shipClasses = Object.keys(SHIP_TEMPLATES) as ShipClass[];
-  const candidates = shipClasses
-    .map((sc) => SHIP_TEMPLATES[sc])
-    .filter((t) =>
-      isPassenger ? t.passengerCapacity > 0 : t.cargoCapacity > 0,
-    )
-    .filter((t) => t.purchaseCost <= cash)
-    .sort((a, b) => a.purchaseCost - b.purchaseCost);
+  const candidates: ShipCandidate[] = [];
 
-  if (candidates.length === 0) return null;
-  const t = candidates[0];
-  return {
-    name: t.name,
-    class: t.class,
-    cargoCapacity: t.cargoCapacity,
-    passengerCapacity: t.passengerCapacity,
-    speed: t.speed,
-    fuelEfficiency: t.fuelEfficiency,
-    purchaseCost: t.purchaseCost,
-  };
+  for (const ship of availableShips) {
+    const cap = isPassenger ? ship.passengerCapacity : ship.cargoCapacity;
+    if (cap <= 0) continue;
+    candidates.push({
+      name: ship.name,
+      class: ship.class,
+      cargoCapacity: ship.cargoCapacity,
+      passengerCapacity: ship.passengerCapacity,
+      speed: ship.speed,
+      fuelEfficiency: ship.fuelEfficiency,
+      source: "owned",
+      purchaseCost: 0,
+    });
+  }
+
+  const shipClasses = Object.keys(SHIP_TEMPLATES) as ShipClass[];
+  for (const sc of shipClasses) {
+    const t = SHIP_TEMPLATES[sc];
+    const cap = isPassenger ? t.passengerCapacity : t.cargoCapacity;
+    if (cap <= 0) continue;
+    if (t.purchaseCost > cash) continue;
+    candidates.push({
+      name: t.name,
+      class: t.class,
+      cargoCapacity: t.cargoCapacity,
+      passengerCapacity: t.passengerCapacity,
+      speed: t.speed,
+      fuelEfficiency: t.fuelEfficiency,
+      source: "autoBuy",
+      purchaseCost: t.purchaseCost,
+    });
+  }
+
+  let best: RouteShipPick | null = null;
+  for (const c of candidates) {
+    const cap = isPassenger ? c.passengerCapacity : c.cargoCapacity;
+    const trips = calculateTripsPerTurn(distance, c.speed);
+    const revenue =
+      Math.round(trips * cap * price * revenueMultiplier * 100) / 100;
+    const totalDist = trips * distance * 2;
+    const fuelCost =
+      Math.round(totalDist * c.fuelEfficiency * fuelPrice * 100) / 100;
+    const profit = revenue - fuelCost;
+
+    const beats =
+      best === null ||
+      profit > best.profit ||
+      (profit === best.profit &&
+        c.source === "owned" &&
+        best.candidate.source === "autoBuy");
+    if (beats) {
+      best = { candidate: c, trips, revenue, fuelCost, profit };
+    }
+  }
+
+  return best;
 }

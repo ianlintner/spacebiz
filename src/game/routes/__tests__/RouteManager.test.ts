@@ -15,7 +15,9 @@ import {
   getVisibleRouteTrafficUnits,
   buildTrafficPatrolWaypoints,
   buildSunAvoidingLocalRouteMotionPath,
+  scanAllRouteOpportunities,
 } from "../RouteManager.ts";
+import { createNewGame } from "../../NewGameSetup.ts";
 import { CargoType, PlanetType } from "../../../data/types.ts";
 import type {
   Planet,
@@ -702,5 +704,44 @@ describe("RouteManager", () => {
 
       expect(inefficientCost).toBeGreaterThan(efficientCost);
     });
+  });
+
+  describe("scanAllRouteOpportunities (fresh new-game state)", () => {
+    // Regression guard: at Q1 Y1 with 0 ships and starting cash, the Route
+    // Finder must surface profitable opportunities — otherwise the player
+    // sees an empty list and can't engage with the core loop.
+    it.each([1, 2, 3, 7, 42])(
+      "produces opportunities for a fresh game (seed %i)",
+      (seed) => {
+        const { state } = createNewGame(seed);
+        const opps = scanAllRouteOpportunities(
+          state.galaxy.planets,
+          state.galaxy.systems,
+          state.fleet,
+          state.market,
+          state.activeRoutes,
+          state.cash,
+          state,
+        );
+        expect(opps.length).toBeGreaterThan(0);
+      },
+    );
+
+    it("surfaces at least one opportunity for every cargo type at game start (seed 1)", () => {
+      const { state } = createNewGame(1);
+      const opps = scanAllRouteOpportunities(
+        state.galaxy.planets,
+        state.galaxy.systems,
+        state.fleet,
+        state.market,
+        state.activeRoutes,
+        state.cash,
+        state,
+      );
+      const seenCargoTypes = new Set(opps.map((o) => o.bestCargoType));
+      const missing = ALL_CARGO_TYPES.filter((c) => !seenCargoTypes.has(c));
+      expect(missing).toEqual([]);
+    });
+
   });
 });
