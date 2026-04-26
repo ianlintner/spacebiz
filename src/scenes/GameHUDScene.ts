@@ -50,6 +50,10 @@ function formatCash(amount: number): string {
   return "\u00A7" + Math.round(amount).toLocaleString("en-US");
 }
 
+/** Delay before surfacing the new-game adviser welcome, so the HUD has
+ * fully rendered before the drawer slides in. */
+const ADVISER_ONBOARD_DELAY_MS = 700;
+
 function fitImageCover(
   image: Phaser.GameObjects.Image,
   width: number,
@@ -639,7 +643,7 @@ export class GameHUDScene extends Phaser.Scene {
 
     // Fire initial tutorial trigger — surfaces the welcome step via the
     // adviser drawer (route-building onboarding).
-    this.time.delayedCall(700, () => {
+    this.time.delayedCall(ADVISER_ONBOARD_DELAY_MS, () => {
       this.fireTutorialTrigger("newGame");
     });
 
@@ -1341,6 +1345,8 @@ export class GameHUDScene extends Phaser.Scene {
     const step = TUTORIAL_STEPS[stepIndex];
     if (!step) return;
 
+    // Dedup is by message id (via shownMessageIds in AdviserEngine), and
+    // each tutorial step has a unique id, so firing across turns is safe.
     const msg: AdviserMessage = {
       id: step.id,
       text: step.text,
