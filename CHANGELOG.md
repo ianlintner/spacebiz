@@ -1,0 +1,31 @@
+# Changelog
+
+## [2026-W17] — 2026-04-26
+
+- rename dispatch mode upgrade-only → upgrade (#14)
+- phase 6 — interaction overhaul (#15)
+- upgrade caretaker-github to 0.19.2, switch to PyPI install (#18)
+- window.__sft console API, Playwright e2e, MCP server, prod opt-in, lint rule (#21)
+- prevent silent BGM play failure on prod (iOS Safari autoplay compat) (#22)
+- add checks:write and security_events:read to Caretaker workflow (#23)
+- add Claude Code workflow to handle @claude review handoffs (#24)
+- AI pixel-art sprites for all 13 ships + 5 new classes (#25)
+- locale formatting, route counter, Set Cargo depth (#27)
+- anchor HUD to viewport + "End of Quarter" label (#29)
+- fall back to ANTHROPIC_API_KEY when OAuth token missing (#30)
+- dilemma system with success% scaling and AI narrative beats (#32)
+- double the slate + Paradox-style banner illustrations (#33)
+- drop PR trigger from Azure SWA deploy workflow (#34)
+- add build info and fullscreen play mode (#35)
+- upgrade Phaser 3 → Phaser 4 (#36)
+- refresh README + homepage with manual-style voice (#37)
+- preserve cargo type from finder filter into Custom Route modal (#38)
+- map-first endpoint picker in Route Builder (#39)
+- pause/resume active routes without delete-and-recreate (#40)
+- distance-band filter chips on Route Finder (#41)
+- break resize feedback loop on the homepage (#42)
+- high-DPI rendering and 2400-wide canvas for MacBook panels (#43)
+- trim Route Finder column widths + context-aware empty state (#44)
+- kill residual letterbox on Mac fullscreen (#45)
+- surface routes for every cargo type at game start (#46)
+
