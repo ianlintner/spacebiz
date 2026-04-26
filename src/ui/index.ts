@@ -28,10 +28,6 @@ export {
   type RouteBuilderResult,
   type RouteBuilderOptions,
 } from "./RouteBuilderPanel.ts";
-export {
-  TutorialOverlay,
-  type TutorialOverlayConfig,
-} from "./TutorialOverlay.ts";
 export { MiniMap, type MiniMapConfig } from "./MiniMap.ts";
 export {
   getShipMapKey,

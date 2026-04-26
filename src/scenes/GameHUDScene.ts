@@ -9,7 +9,6 @@ import {
   Tooltip,
   FloatingText,
   AdviserPanel,
-  TutorialOverlay,
 } from "../ui/index.ts";
 import { gameStore } from "../data/GameStore.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
@@ -89,7 +88,6 @@ export class GameHUDScene extends Phaser.Scene {
   private musicTrackValueLabel: Label | null = null;
   private muteValueLabel: Label | null = null;
   private adviserPanel!: AdviserPanel;
-  private tutorialOverlay: TutorialOverlay | null = null;
   private actionPromptLabel!: Label;
   private routeSlotLabel!: Label;
   private researchLabel!: Label;
@@ -637,25 +635,13 @@ export class GameHUDScene extends Phaser.Scene {
     if (pendingMsgs.length > 0) {
       this.adviserPanel.showMessages(pendingMsgs);
       this.updateAdviserBadge(pendingMsgs.length);
-    } else if (state.turn === 1 && state.activeRoutes.length === 0) {
-      // ── First-time onboarding: auto-open Rex with route-building prompt ──
-      // Only fires on a brand new game (turn 1, no routes yet).
-      const onboardMsg: AdviserMessage = {
-        id: "rex-onboard-first-route",
-        text: "Welcome aboard, Commander! I'm Rex, your K9 corporate adviser.\n\nTo launch your galactic freight empire, you'll need trade routes. Click the Routes icon (↔) in the left navigation bar to build your first corridor and start hauling cargo across the stars!",
-        mood: "analyzing",
-        priority: 3,
-        context: "tip",
-        turnGenerated: 1,
-      };
-      // Short delay so the HUD fully renders before the drawer slides in
-      this.time.delayedCall(700, () => {
-        this.adviserPanel.showMessages([onboardMsg]);
-      });
     }
 
-    // Fire initial tutorial trigger
-    this.fireTutorialTrigger("newGame");
+    // Fire initial tutorial trigger — surfaces the welcome step via the
+    // adviser drawer (route-building onboarding).
+    this.time.delayedCall(700, () => {
+      this.fireTutorialTrigger("newGame");
+    });
 
     // ── State Subscription ───────────────────────────────────
     gameStore.on("stateChanged", this.stateListener);
@@ -1352,22 +1338,18 @@ export class GameHUDScene extends Phaser.Scene {
   }
 
   private showTutorialStep(stepIndex: number): void {
-    if (this.tutorialOverlay) {
-      this.tutorialOverlay.close();
-      this.tutorialOverlay = null;
-    }
-
     const step = TUTORIAL_STEPS[stepIndex];
     if (!step) return;
 
-    this.tutorialOverlay = new TutorialOverlay(this, {
+    const msg: AdviserMessage = {
+      id: step.id,
       text: step.text,
       mood: step.mood,
-      highlightHint: step.highlightHint,
-      onDismiss: () => {
-        this.tutorialOverlay = null;
-      },
-    });
+      priority: 3,
+      context: "tutorial",
+      turnGenerated: gameStore.getState().turn,
+    };
+    this.adviserPanel.appendMessages([msg]);
   }
 
   /** Skip the entire tutorial. */
