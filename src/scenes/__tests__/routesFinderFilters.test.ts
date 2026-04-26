@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { isInDistanceBand } from "../routesFinderFilters.ts";
+import {
+  isInDistanceBand,
+  matchesScopeBand,
+} from "../routesFinderFilters.ts";
 
 describe("isInDistanceBand", () => {
   it("returns true for any distance when band is null", () => {
@@ -36,6 +39,59 @@ describe("isInDistanceBand", () => {
         ["short", "medium", "long"] as const
       ).filter((b) => isInDistanceBand(d, b));
       expect(bands.length).toBe(1);
+    }
+  });
+});
+
+describe("matchesScopeBand", () => {
+  it("matches every route when band is null", () => {
+    expect(matchesScopeBand("s1", "s1", "e1", "e1", null)).toBe(true);
+    expect(matchesScopeBand("s1", "s2", "e1", "e2", null)).toBe(true);
+    expect(matchesScopeBand("s1", "s2", null, null, null)).toBe(true);
+  });
+
+  it("local: same system regardless of empire resolution", () => {
+    expect(matchesScopeBand("s1", "s1", "e1", "e1", "local")).toBe(true);
+    expect(matchesScopeBand("s1", "s1", null, null, "local")).toBe(true);
+    expect(matchesScopeBand("s1", "s2", "e1", "e1", "local")).toBe(false);
+  });
+
+  it("interstellar: cross-system, same empire OR unresolved empire", () => {
+    expect(matchesScopeBand("s1", "s2", "e1", "e1", "interstellar")).toBe(true);
+    // unresolved empire → defaults to interstellar bucket, not interEmpire
+    expect(matchesScopeBand("s1", "s2", "e1", null, "interstellar")).toBe(true);
+    expect(matchesScopeBand("s1", "s2", null, "e1", "interstellar")).toBe(true);
+    expect(matchesScopeBand("s1", "s2", null, null, "interstellar")).toBe(true);
+    // strictly cross-empire belongs to interEmpire, not interstellar
+    expect(matchesScopeBand("s1", "s2", "e1", "e2", "interstellar")).toBe(
+      false,
+    );
+    // local routes never match interstellar
+    expect(matchesScopeBand("s1", "s1", "e1", "e1", "interstellar")).toBe(
+      false,
+    );
+  });
+
+  it("interEmpire: cross-system AND both empires resolved AND distinct", () => {
+    expect(matchesScopeBand("s1", "s2", "e1", "e2", "interEmpire")).toBe(true);
+    expect(matchesScopeBand("s1", "s2", "e1", "e1", "interEmpire")).toBe(false);
+    expect(matchesScopeBand("s1", "s2", "e1", null, "interEmpire")).toBe(false);
+    expect(matchesScopeBand("s1", "s2", null, "e2", "interEmpire")).toBe(false);
+    expect(matchesScopeBand("s1", "s1", "e1", "e2", "interEmpire")).toBe(false);
+  });
+
+  it("partitions every cross-system route into interstellar XOR interEmpire", () => {
+    const cases: Array<[string | null, string | null]> = [
+      ["e1", "e1"],
+      ["e1", "e2"],
+      ["e1", null],
+      [null, "e2"],
+      [null, null],
+    ];
+    for (const [oe, de] of cases) {
+      const inter = matchesScopeBand("s1", "s2", oe, de, "interstellar");
+      const cross = matchesScopeBand("s1", "s2", oe, de, "interEmpire");
+      expect(inter !== cross).toBe(true);
     }
   });
 });
