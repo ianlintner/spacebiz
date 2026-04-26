@@ -1,7 +1,13 @@
 import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
-import { isInDistanceBand } from "./routesFinderFilters.ts";
-import type { DistanceBand } from "./routesFinderFilters.ts";
+import {
+  isInDistanceBand,
+  matchesScopeBand,
+} from "./routesFinderFilters.ts";
+import type {
+  DistanceBand,
+  RouteScopeBand,
+} from "./routesFinderFilters.ts";
 import { CargoType } from "../data/types.ts";
 import type { CargoType as CargoTypeValue } from "../data/types.ts";
 import {
@@ -97,8 +103,10 @@ export class RoutesScene extends Phaser.Scene {
   private opportunities: RouteOpportunity[] = [];
   private finderCargoFilter: CargoTypeValue | null = null;
   private finderDistanceBand: DistanceBand = null;
+  private finderScopeBand: RouteScopeBand = null;
   private filterButtons: Button[] = [];
   private distanceBandButtons: Button[] = [];
+  private scopeBandButtons: Button[] = [];
 
   // ── Sidebar mini-map ──
   private miniMap!: MiniMap;
@@ -177,17 +185,14 @@ export class RoutesScene extends Phaser.Scene {
     const contentInnerW = panelW - 24;
     const tabBarHeight = 40; // theme.button.height
     const summaryHeight = 50;
-    const filterRowHeight = 64; // cargo filter row + distance-band row
     const buttonAreaHeight = 52; // 8px gap + 40px button + 4px pad
-    const tableTop = tabContentY + summaryHeight + filterRowHeight;
-    const tableHeight =
-      panelH -
-      38 -
-      tabBarHeight -
-      summaryHeight -
-      filterRowHeight -
-      buttonAreaHeight -
-      8; // 8px bottom pad
+
+    // Two layout slots are computed below from the actual flowed bottom of the
+    // filter rows (which can wrap to extra lines at narrow widths). Initialize
+    // here as `let` so the assignments inside the filter-rows block below feed
+    // back into table sizing.
+    let tableTop = tabContentY + summaryHeight; // updated after rows flow
+    let tableHeight = panelH - 38 - tabBarHeight - buttonAreaHeight - 8;
 
     // ════════════════════════════════════════════════════════════════
     // TAB 0 — ROUTE FINDER
@@ -206,8 +211,13 @@ export class RoutesScene extends Phaser.Scene {
     );
     finderContent.add(this.finderSummary);
 
-    // ── Cargo type filter buttons ──
+    // ── Filter rows (cargo / distance / scope) ──
+    // Each row is laid out via flowButtonRow so a long label or narrow panel
+    // wraps gracefully instead of running off the right edge.
     const filterY = tabContentY + summaryHeight - 4;
+    const filterMaxX = contentInnerX + contentInnerW;
+    const filterBtnPadX = 8;
+
     const allCargoFilters: Array<{
       label: string;
       value: CargoTypeValue | null;
@@ -218,62 +228,114 @@ export class RoutesScene extends Phaser.Scene {
         value: ct as CargoTypeValue,
       })),
     ];
-    const filterBtnPadX = 8;
-    this.filterButtons = [];
-    let filterX = contentInnerX;
-    for (let i = 0; i < allCargoFilters.length; i++) {
-      const f = allCargoFilters[i];
-      const btn = new Button(this, {
-        x: filterX,
-        y: filterY,
-        autoWidth: true,
-        paddingX: filterBtnPadX,
-        height: 26,
-        label: f.label,
-        fontSize: 11,
-        onClick: () => {
-          this.finderCargoFilter = f.value;
-          this.updateFilterButtonStyles();
-          this.refreshFinderTable();
-        },
-      });
-      this.filterButtons.push(btn);
-      finderContent.add(btn);
-      filterX += btn.width + 4;
-    }
+    this.filterButtons = allCargoFilters.map(
+      (f) =>
+        new Button(this, {
+          x: 0,
+          y: 0,
+          autoWidth: true,
+          paddingX: filterBtnPadX,
+          height: 26,
+          label: f.label,
+          fontSize: 11,
+          onClick: () => {
+            this.finderCargoFilter = f.value;
+            this.updateFilterButtonStyles();
+            this.refreshFinderTable();
+          },
+        }),
+    );
+    const cargoRowBottom = this.flowButtonRow(
+      finderContent,
+      contentInnerX,
+      filterY,
+      filterMaxX,
+      this.filterButtons,
+    );
     this.updateFilterButtonStyles();
 
-    // ── Distance-band filter buttons (second row) ──
-    const distanceBandY = filterY + 30;
     const distanceBands: Array<{ label: string; value: DistanceBand }> = [
       { label: "Any dist.", value: null },
       { label: "Short (<50)", value: "short" },
       { label: "Med (50-150)", value: "medium" },
       { label: "Long (>150)", value: "long" },
     ];
-    this.distanceBandButtons = [];
-    let distanceX = contentInnerX;
-    for (let i = 0; i < distanceBands.length; i++) {
-      const band = distanceBands[i];
-      const btn = new Button(this, {
-        x: distanceX,
-        y: distanceBandY,
-        autoWidth: true,
-        paddingX: filterBtnPadX,
-        height: 26,
-        label: band.label,
-        fontSize: 11,
-        onClick: () => {
-          this.finderDistanceBand = band.value;
-          this.updateDistanceBandButtonStyles();
-          this.refreshFinderTable();
-        },
-      });
-      this.distanceBandButtons.push(btn);
-      finderContent.add(btn);
-      distanceX += btn.width + 4;
-    }
+    this.distanceBandButtons = distanceBands.map(
+      (band) =>
+        new Button(this, {
+          x: 0,
+          y: 0,
+          autoWidth: true,
+          paddingX: filterBtnPadX,
+          height: 26,
+          label: band.label,
+          fontSize: 11,
+          onClick: () => {
+            this.finderDistanceBand = band.value;
+            this.updateDistanceBandButtonStyles();
+            this.refreshFinderTable();
+          },
+        }),
+    );
+    const distanceRowBottom = this.flowButtonRow(
+      finderContent,
+      contentInnerX,
+      cargoRowBottom + 4,
+      filterMaxX,
+      this.distanceBandButtons,
+    );
     this.updateDistanceBandButtonStyles();
+
+    const scopeBands: Array<{
+      label: string;
+      value: RouteScopeBand;
+      testId: string;
+    }> = [
+      { label: "Any scope", value: null, testId: "btn-finder-scope-any" },
+      { label: "Local", value: "local", testId: "btn-finder-scope-local" },
+      {
+        label: "Interstellar",
+        value: "interstellar",
+        testId: "btn-finder-scope-interstellar",
+      },
+      {
+        label: "Inter-empire",
+        value: "interEmpire",
+        testId: "btn-finder-scope-inter-empire",
+      },
+    ];
+    this.scopeBandButtons = scopeBands.map(
+      (scope) =>
+        new Button(this, {
+          x: 0,
+          y: 0,
+          autoWidth: true,
+          paddingX: filterBtnPadX,
+          height: 26,
+          label: scope.label,
+          fontSize: 11,
+          testId: scope.testId,
+          onClick: () => {
+            this.finderScopeBand = scope.value;
+            this.updateScopeBandButtonStyles();
+            this.refreshFinderTable();
+          },
+        }),
+    );
+    const scopeRowBottom = this.flowButtonRow(
+      finderContent,
+      contentInnerX,
+      distanceRowBottom + 4,
+      filterMaxX,
+      this.scopeBandButtons,
+    );
+    this.updateScopeBandButtonStyles();
+
+    // Lock the table position from the actual flowed bottom of the filter
+    // rows so the table never overlaps a wrapped row.
+    tableTop = scopeRowBottom + 8;
+    tableHeight =
+      panelH - 38 - tabBarHeight - (tableTop - tabContentY) - buttonAreaHeight - 8;
 
     this.finderTable = new DataTable(this, {
       x: contentInnerX,
@@ -281,21 +343,21 @@ export class RoutesScene extends Phaser.Scene {
       width: contentInnerW,
       height: tableHeight,
       columns: [
-        // Column widths sum to 695 — fits inside contentInnerW (~696) at the
-        // smallest supported game width (1152). Trimmed from a 776-px set
-        // that overflowed the panel right edge.
-        { key: "origin", label: "From", width: 92, sortable: true },
-        { key: "destination", label: "To", width: 92, sortable: true },
+        // Column widths sum to 632 — fits inside contentInnerW at the
+        // non-compact boundary (game width 1100 → contentInnerW ≈ 644).
+        // Trimmed from a 695-px set that clipped at narrow widths.
+        { key: "origin", label: "From", width: 84, sortable: true },
+        { key: "destination", label: "To", width: 84, sortable: true },
         {
           key: "empire",
           label: "Empire",
-          width: 70,
+          width: 60,
           sortable: true,
         },
         {
           key: "cargo",
           label: "Cargo",
-          width: 80,
+          width: 74,
           sortable: true,
           format: (v) => getCargoShortLabel(v as string),
           iconFn: (v) => getCargoIconKey(v as string),
@@ -311,7 +373,7 @@ export class RoutesScene extends Phaser.Scene {
         {
           key: "tariff",
           label: "Tariff",
-          width: 55,
+          width: 50,
           align: "right",
           sortable: true,
           format: (v) =>
@@ -345,7 +407,7 @@ export class RoutesScene extends Phaser.Scene {
         {
           key: "dist",
           label: "Dist",
-          width: 40,
+          width: 36,
           align: "right",
           sortable: true,
         },
@@ -364,7 +426,7 @@ export class RoutesScene extends Phaser.Scene {
         {
           key: "ship",
           label: "Ship",
-          width: 80,
+          width: 72,
           sortable: true,
           iconFn: (_v, row) => {
             const sc = row?.["shipClass"] as string | undefined;
@@ -391,11 +453,12 @@ export class RoutesScene extends Phaser.Scene {
     });
     finderContent.add(this.finderTable);
 
-    // Finder buttons
+    // Finder action buttons (laid out via flowButtonRow so they wrap if the
+    // panel ever shrinks below the combined button width)
     const finderButtonY = tableTop + tableHeight + 8;
     const createSelectedBtn = new Button(this, {
-      x: contentInnerX,
-      y: finderButtonY,
+      x: 0,
+      y: 0,
       autoWidth: true,
       label: "Create Route [Enter]",
       onClick: () => {
@@ -405,16 +468,22 @@ export class RoutesScene extends Phaser.Scene {
         }
       },
     });
-    finderContent.add(createSelectedBtn);
-
     const customRouteBtn = new Button(this, {
-      x: contentInnerX + createSelectedBtn.width + 12,
-      y: finderButtonY,
+      x: 0,
+      y: 0,
       autoWidth: true,
       label: "Custom Route...",
       onClick: () => this.startCreateRoute(),
     });
-    finderContent.add(customRouteBtn);
+    this.flowButtonRow(
+      finderContent,
+      contentInnerX,
+      finderButtonY,
+      contentInnerX + contentInnerW,
+      [createSelectedBtn, customRouteBtn],
+      12,
+      6,
+    );
 
     // ════════════════════════════════════════════════════════════════
     // TAB 1 — ACTIVE ROUTES
@@ -629,11 +698,35 @@ export class RoutesScene extends Phaser.Scene {
       state,
     );
 
-    // Apply cargo type + distance band filters
+    // Pre-build planet → systemId / empireId lookup maps once per refresh.
+    // Without these, the row mapper below calls getEmpireForPlanet 4× per row
+    // (each doing a linear find over systems and planets), and the new scope
+    // filter would do the same lookups again.
+    const planetSystemMap = new Map<string, string>();
+    const planetEmpireMap = new Map<string, string | null>();
+    for (const planet of state.galaxy.planets) {
+      planetSystemMap.set(planet.id, planet.systemId);
+      planetEmpireMap.set(
+        planet.id,
+        getEmpireForPlanet(
+          planet.id,
+          state.galaxy.systems,
+          state.galaxy.planets,
+        ),
+      );
+    }
+
+    // Apply cargo type + distance band + scope filters
     const filtered = this.opportunities.filter((o) => {
       if (this.finderCargoFilter && o.bestCargoType !== this.finderCargoFilter)
         return false;
       if (!isInDistanceBand(o.distance, this.finderDistanceBand)) return false;
+      const oSys = planetSystemMap.get(o.originPlanetId) ?? "";
+      const dSys = planetSystemMap.get(o.destinationPlanetId) ?? "";
+      const oEmp = planetEmpireMap.get(o.originPlanetId) ?? null;
+      const dEmp = planetEmpireMap.get(o.destinationPlanetId) ?? null;
+      if (!matchesScopeBand(oSys, dSys, oEmp, dEmp, this.finderScopeBand))
+        return false;
       return true;
     });
 
@@ -650,25 +743,24 @@ export class RoutesScene extends Phaser.Scene {
       `${profitableCount} ${filterLabel} routes found \u2022 Slots ${slotsUsed}/${slotsTotal} \u2022 ${availableShips} idle ships \u2022 §${state.cash.toLocaleString("en-US")} cash \u2022 Enter to create`,
     );
 
-    // Show top 50 for performance — full list still in this.opportunities
-    const displayLimit = 50;
+    // When the user has narrowed the set with any filter, raise the cap so
+    // the long tail of (e.g.) interstellar routes actually surfaces. The
+    // default 50 is plenty when sorted purely by profit DESC across all
+    // routes; once filtered, 50 can hide most of what they asked for.
+    const hasActiveFilter =
+      this.finderCargoFilter !== null ||
+      this.finderDistanceBand !== null ||
+      this.finderScopeBand !== null;
+    const displayLimit = hasActiveFilter ? 200 : 50;
     const displayed = filtered.slice(0, displayLimit);
 
     const rows = displayed.map((opp) => {
       // Map back to the original opportunities index for portrait/create
       const origIdx = this.opportunities.indexOf(opp);
 
-      // Empire & tariff info
-      const originEmpireId = getEmpireForPlanet(
-        opp.originPlanetId,
-        state.galaxy.systems,
-        state.galaxy.planets,
-      );
-      const destEmpireId = getEmpireForPlanet(
-        opp.destinationPlanetId,
-        state.galaxy.systems,
-        state.galaxy.planets,
-      );
+      // Empire & tariff info (use prebuilt map to avoid linear scans)
+      const originEmpireId = planetEmpireMap.get(opp.originPlanetId) ?? null;
+      const destEmpireId = planetEmpireMap.get(opp.destinationPlanetId) ?? null;
       const originEmpire = (state.galaxy.empires ?? []).find(
         (e) => e.id === originEmpireId,
       );
@@ -740,15 +832,26 @@ export class RoutesScene extends Phaser.Scene {
     // table is almost always a too-narrow filter or no compatible ship.
     if (rows.length === 0) {
       const noGalaxy = state.galaxy.planets.length === 0;
-      const hasFilter =
-        this.finderCargoFilter !== null || this.finderDistanceBand !== null;
+      const hasFilter = hasActiveFilter;
       let emptyText = "No route opportunities found";
       let emptyHint: string;
       if (noGalaxy) {
         emptyHint = "Generate a galaxy first.";
       } else if (hasFilter) {
-        emptyText = `No ${filterLabel} routes match your filter`;
-        emptyHint = "Widen the cargo or distance filter — or try All.";
+        const scopeLabel =
+          this.finderScopeBand === "local"
+            ? "local"
+            : this.finderScopeBand === "interstellar"
+              ? "interstellar"
+              : this.finderScopeBand === "interEmpire"
+                ? "inter-empire"
+                : "";
+        const subject = scopeLabel
+          ? `${scopeLabel} ${filterLabel}`.trim()
+          : filterLabel;
+        emptyText = `No ${subject} routes match your filter`;
+        emptyHint =
+          "Widen the cargo, distance, or scope filter — or try Any/All.";
       } else if (availableShips === 0 && state.fleet.length === 0) {
         emptyHint = "Buy a ship from the Fleet screen to unlock routes.";
       } else {
@@ -784,6 +887,53 @@ export class RoutesScene extends Phaser.Scene {
       const isActive = bands[i] === this.finderDistanceBand;
       btn.setAlpha(isActive ? 1.0 : 0.5);
     }
+  }
+
+  private updateScopeBandButtonStyles(): void {
+    const scopes: Array<RouteScopeBand> = [
+      null,
+      "local",
+      "interstellar",
+      "interEmpire",
+    ];
+    for (let i = 0; i < this.scopeBandButtons.length; i++) {
+      const btn = this.scopeBandButtons[i];
+      const isActive = scopes[i] === this.finderScopeBand;
+      btn.setAlpha(isActive ? 1.0 : 0.5);
+    }
+  }
+
+  /**
+   * Lay out a row of buttons left-to-right, wrapping to a new line when the
+   * next button would exceed `maxX`. Adds each button to `container` and
+   * returns the y-coordinate of the bottom of the last placed button — so
+   * callers can stack rows without hardcoding heights.
+   */
+  private flowButtonRow(
+    container: Phaser.GameObjects.Container,
+    startX: number,
+    startY: number,
+    maxX: number,
+    buttons: Button[],
+    gap = 4,
+    rowGap = 4,
+  ): number {
+    let x = startX;
+    let y = startY;
+    let rowHeight = 0;
+    for (const btn of buttons) {
+      if (x !== startX && x + btn.width > maxX) {
+        // wrap
+        y += rowHeight + rowGap;
+        x = startX;
+        rowHeight = 0;
+      }
+      btn.setPosition(x, y);
+      container.add(btn);
+      x += btn.width + gap;
+      if (btn.height > rowHeight) rowHeight = btn.height;
+    }
+    return y + rowHeight;
   }
 
   private updateFinderPortraitByIndex(idx: number): void {
