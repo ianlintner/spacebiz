@@ -12,11 +12,6 @@ function urgencyRank(u: TurnBriefUrgency): number {
   return URGENCY_ORDER.indexOf(u);
 }
 
-let _idCounter = 0;
-function nextId(): string {
-  return `brief-${++_idCounter}`;
-}
-
 // ── Builder ─────────────────────────────────────────────────────
 
 /**
@@ -25,6 +20,8 @@ function nextId(): string {
  */
 export function buildTurnBrief(state: GameState): TurnBriefCard[] {
   const cards: TurnBriefCard[] = [];
+  let idCounter = 0;
+  const nextId = (): string => `brief-${++idCounter}`;
 
   // 1. Ships with critical condition (< 30)
   for (const ship of state.fleet) {
