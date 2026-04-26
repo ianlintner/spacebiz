@@ -142,8 +142,8 @@ jobs:
           # Azure OpenAI (classic):
           # AZURE_API_KEY: ${{ secrets.AZURE_API_KEY }}
           # AZURE_API_BASE: ${{ secrets.AZURE_API_BASE }}
-          # Direct Anthropic (if not using Azure AI Foundry):
-          # ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Direct Anthropic (used by caretaker doctor / claude-enabled features):
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # Fleet registry OAuth2 client_credentials wiring (only consumed
           # when fleet_registry.enabled=true in config.yml). Safe to leave
           # unset otherwise — caretaker just skips the heartbeat.
@@ -172,7 +172,7 @@ jobs:
           AZURE_AI_API_BASE: ${{ secrets.AZURE_AI_API_BASE }}
           # AZURE_API_KEY: ${{ secrets.AZURE_API_KEY }}
           # AZURE_API_BASE: ${{ secrets.AZURE_API_BASE }}
-          # ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CARETAKER_EVENT_PAYLOAD: ${{ toJSON(github.event) }}
           CARETAKER_RUN_MODE: ${{ github.event.inputs.mode || 'full' }}
           CARETAKER_EVENT_TYPE: ${{ github.event_name }}
@@ -240,7 +240,7 @@ jobs:
           COPILOT_PAT: ${{ secrets.COPILOT_PAT }}
           AZURE_AI_API_KEY: ${{ secrets.AZURE_AI_API_KEY }}
           AZURE_AI_API_BASE: ${{ secrets.AZURE_AI_API_BASE }}
-          # ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CARETAKER_FAILED_RUN_ID: ${{ github.run_id }}
           CARETAKER_EVENT_PAYLOAD: >-
             {
