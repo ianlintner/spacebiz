@@ -294,7 +294,9 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
             { textureKey: key },
           );
         })
-        .catch(() => {/* keep procedural fallback */});
+        .catch(() => {
+          /* keep procedural fallback */
+        });
     }
   }
 
@@ -324,7 +326,9 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
             { textureKey: key },
           );
         })
-        .catch(() => {/* keep procedural fallback */});
+        .catch(() => {
+          /* keep procedural fallback */
+        });
     }
   }
 

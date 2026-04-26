@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { generateGalaxy } from "../GalaxyGenerator.ts";
-import {
-  PlanetType,
-  GalaxyShape,
-  HyperlaneDensity,
-} from "../../data/types.ts";
+import { PlanetType, GalaxyShape, HyperlaneDensity } from "../../data/types.ts";
 
 const ALL_PLANET_TYPES = Object.values(PlanetType);
 

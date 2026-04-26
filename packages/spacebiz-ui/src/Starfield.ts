@@ -115,7 +115,11 @@ function getEdgeFade(
   const edge = Math.max(nx, ny);
   const featherStart = Math.max(0.1, 1 - feather);
   if (edge <= featherStart) return 1;
-  return Phaser.Math.Clamp((1 - edge) / Math.max(0.001, 1 - featherStart), 0, 1);
+  return Phaser.Math.Clamp(
+    (1 - edge) / Math.max(0.001, 1 - featherStart),
+    0,
+    1,
+  );
 }
 
 export function createStarfield(
@@ -156,18 +160,25 @@ export function createStarfield(
     const spreadW = bounds.width + layerOverscanX * 2;
     const spreadH = bounds.height + layerOverscanY * 2;
 
-    if (haze && layer.hazeAlpha && layer.hazeScale && scene.textures.exists("glow-dot")) {
+    if (
+      haze &&
+      layer.hazeAlpha &&
+      layer.hazeScale &&
+      scene.textures.exists("glow-dot")
+    ) {
       const hazeCount = layer.scrollFactor < 0.2 ? 3 : 2;
       for (let i = 0; i < hazeCount; i++) {
         const hazeTint = layer.tints[i % layer.tints.length] ?? 0xffffff;
-        const hazeX = bounds.centerX + (Math.random() - 0.5) * bounds.width * 0.65;
-        const hazeY = bounds.centerY + (Math.random() - 0.5) * bounds.height * 0.65;
+        const hazeX =
+          bounds.centerX + (Math.random() - 0.5) * bounds.width * 0.65;
+        const hazeY =
+          bounds.centerY + (Math.random() - 0.5) * bounds.height * 0.65;
         const hazeSprite = scene.add
           .image(hazeX, hazeY, "glow-dot")
           .setTint(hazeTint)
           .setAlpha(layer.hazeAlpha * (0.7 + Math.random() * 0.5))
           .setScale(
-            Math.max(bounds.width, bounds.height) / 64 * layer.hazeScale,
+            (Math.max(bounds.width, bounds.height) / 64) * layer.hazeScale,
           )
           .setBlendMode(Phaser.BlendModes.ADD);
         layerContainer.add(hazeSprite);
@@ -189,14 +200,16 @@ export function createStarfield(
       const alphaRange = layer.maxAlpha - layer.minAlpha;
       const baseAlpha =
         (layer.minAlpha + Math.random() * alphaRange) * (0.3 + edgeFade * 0.7);
-      const scale = layer.minScale + Math.random() * (layer.maxScale - layer.minScale);
+      const scale =
+        layer.minScale + Math.random() * (layer.maxScale - layer.minScale);
 
       const star = scene.add
         .image(x, y, "glow-dot")
         .setAlpha(baseAlpha)
         .setScale(scale);
 
-      const tint = layer.tints[Math.floor(Math.random() * layer.tints.length)] ?? 0xffffff;
+      const tint =
+        layer.tints[Math.floor(Math.random() * layer.tints.length)] ?? 0xffffff;
       const isWhiteStar = tint === 0xffffff;
       if (tint !== 0xffffff) {
         star.setTint(tint);
@@ -205,8 +218,10 @@ export function createStarfield(
       layerContainer.add(star);
 
       if (drift) {
-        const driftX = (-2 + Math.random() * 4) * (0.8 + layer.scrollFactor * 0.6);
-        const driftY = (-2 + Math.random() * 4) * (0.8 + layer.scrollFactor * 0.6);
+        const driftX =
+          (-2 + Math.random() * 4) * (0.8 + layer.scrollFactor * 0.6);
+        const driftY =
+          (-2 + Math.random() * 4) * (0.8 + layer.scrollFactor * 0.6);
         const duration = 7000 + Math.random() * 9000;
         const tween = scene.tweens.add({
           targets: star,

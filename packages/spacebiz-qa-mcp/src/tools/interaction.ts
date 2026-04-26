@@ -26,6 +26,7 @@ export function registerInteractionTools(server: McpServer): void {
         testId: z.string().describe("The widget's testId (see `sft_list`)."),
       },
     },
-    async ({ testId }) => run(async () => (await driver()).clickIfPresent(testId)),
+    async ({ testId }) =>
+      run(async () => (await driver()).clickIfPresent(testId)),
   );
 }

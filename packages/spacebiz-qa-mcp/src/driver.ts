@@ -18,7 +18,8 @@ export class SftDriver {
 
   async ready(timeoutMs = 15_000): Promise<void> {
     await this.page.waitForFunction(
-      () => typeof (window as unknown as { __sft?: unknown }).__sft === "object",
+      () =>
+        typeof (window as unknown as { __sft?: unknown }).__sft === "object",
       undefined,
       { timeout: timeoutMs },
     );
@@ -36,7 +37,9 @@ export class SftDriver {
   }
 
   currentScene(): Promise<SceneInfo> {
-    return this.page.evaluate(() => (window as any).__sft.currentScene() as SceneInfo);
+    return this.page.evaluate(
+      () => (window as any).__sft.currentScene() as SceneInfo,
+    );
   }
 
   click(testId: string): Promise<ClickResult> {
@@ -54,11 +57,15 @@ export class SftDriver {
   }
 
   snapshot(): Promise<GameStateSnapshot> {
-    return this.page.evaluate(() => (window as any).__sft.snapshot() as GameStateSnapshot);
+    return this.page.evaluate(
+      () => (window as any).__sft.snapshot() as GameStateSnapshot,
+    );
   }
 
   state<T = unknown>(): Promise<T> {
-    return this.page.evaluate(() => (window as any).__sft.state()) as Promise<T>;
+    return this.page.evaluate(() =>
+      (window as any).__sft.state(),
+    ) as Promise<T>;
   }
 
   help(): Promise<unknown> {
@@ -98,8 +105,11 @@ export class SftDriver {
   action(name: string, ...args: unknown[]): Promise<unknown> {
     return this.page.evaluate(
       ([n, a]) => {
-        const actions = ((window as any).__sft as { actions: Record<string, (...x: unknown[]) => unknown> })
-          .actions;
+        const actions = (
+          (window as any).__sft as {
+            actions: Record<string, (...x: unknown[]) => unknown>;
+          }
+        ).actions;
         const fn = actions[n as string];
         if (typeof fn !== "function") {
           throw new Error(`__sft.actions.${n} is not a function`);

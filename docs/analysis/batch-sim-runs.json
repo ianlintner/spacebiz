@@ -54,9 +54,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      23
-    ],
+    "bankruptcyTurns": [23],
     "finalFuelPrice": 10.77,
     "avgFuelPrice": 7.121813333333333,
     "peakFuelPrice": 19.599999999999998,
@@ -328,10 +326,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      14,
-      17
-    ],
+    "bankruptcyTurns": [14, 17],
     "finalFuelPrice": 14.98,
     "avgFuelPrice": 10.754074999999997,
     "peakFuelPrice": 30.016,
@@ -667,13 +662,7 @@
       }
     ],
     "bankruptcyCount": 5,
-    "bankruptcyTurns": [
-      16,
-      19,
-      20,
-      20,
-      100
-    ],
+    "bankruptcyTurns": [16, 19, 20, 20, 100],
     "finalFuelPrice": 2.5,
     "avgFuelPrice": 5.934820000000002,
     "peakFuelPrice": 10.54,
@@ -1032,9 +1021,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      26
-    ],
+    "bankruptcyTurns": [26],
     "finalFuelPrice": 14.86,
     "avgFuelPrice": 8.871606666666667,
     "peakFuelPrice": 18,
@@ -1306,10 +1293,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      17,
-      22
-    ],
+    "bankruptcyTurns": [17, 22],
     "finalFuelPrice": 13.33,
     "avgFuelPrice": 8.043587499999997,
     "peakFuelPrice": 24,
@@ -1645,10 +1629,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      12,
-      18
-    ],
+    "bankruptcyTurns": [12, 18],
     "finalFuelPrice": 10.05,
     "avgFuelPrice": 7.456210000000001,
     "peakFuelPrice": 20.26,
@@ -2007,10 +1988,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      13,
-      33
-    ],
+    "bankruptcyTurns": [13, 33],
     "finalFuelPrice": 3.75,
     "avgFuelPrice": 8.924325,
     "peakFuelPrice": 29.6,
@@ -2283,11 +2261,7 @@
       }
     ],
     "bankruptcyCount": 3,
-    "bankruptcyTurns": [
-      15,
-      21,
-      25
-    ],
+    "bankruptcyTurns": [15, 21, 25],
     "finalFuelPrice": 21,
     "avgFuelPrice": 5.976549999999998,
     "peakFuelPrice": 21,
@@ -2624,14 +2598,7 @@
       }
     ],
     "bankruptcyCount": 6,
-    "bankruptcyTurns": [
-      7,
-      17,
-      25,
-      34,
-      35,
-      67
-    ],
+    "bankruptcyTurns": [7, 17, 25, 34, 35, 67],
     "finalFuelPrice": 12.86,
     "avgFuelPrice": 7.757303000000002,
     "peakFuelPrice": 29.26,
@@ -2991,9 +2958,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      18
-    ],
+    "bankruptcyTurns": [18],
     "finalFuelPrice": 11.09,
     "avgFuelPrice": 6.754583333333334,
     "peakFuelPrice": 14,
@@ -3265,10 +3230,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      22,
-      45
-    ],
+    "bankruptcyTurns": [22, 45],
     "finalFuelPrice": 7.9239999999999995,
     "avgFuelPrice": 5.7643249999999995,
     "peakFuelPrice": 10.48,
@@ -3603,12 +3565,7 @@
       }
     ],
     "bankruptcyCount": 4,
-    "bankruptcyTurns": [
-      17,
-      17,
-      25,
-      30
-    ],
+    "bankruptcyTurns": [17, 17, 25, 30],
     "finalFuelPrice": 4.2,
     "avgFuelPrice": 7.27308,
     "peakFuelPrice": 27.72,
@@ -4236,9 +4193,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      14
-    ],
+    "bankruptcyTurns": [14],
     "finalFuelPrice": 5.65,
     "avgFuelPrice": 5.5676125,
     "peakFuelPrice": 21.42,
@@ -4575,13 +4530,7 @@
       }
     ],
     "bankruptcyCount": 5,
-    "bankruptcyTurns": [
-      19,
-      20,
-      26,
-      36,
-      40
-    ],
+    "bankruptcyTurns": [19, 20, 26, 36, 40],
     "finalFuelPrice": 5.35,
     "avgFuelPrice": 6.36186,
     "peakFuelPrice": 23.34,
@@ -5212,11 +5161,7 @@
       }
     ],
     "bankruptcyCount": 3,
-    "bankruptcyTurns": [
-      16,
-      23,
-      39
-    ],
+    "bankruptcyTurns": [16, 23, 39],
     "finalFuelPrice": 10.94,
     "avgFuelPrice": 6.649875,
     "peakFuelPrice": 15.735999999999999,
@@ -5553,13 +5498,7 @@
       }
     ],
     "bankruptcyCount": 5,
-    "bankruptcyTurns": [
-      16,
-      18,
-      21,
-      21,
-      24
-    ],
+    "bankruptcyTurns": [16, 18, 21, 21, 24],
     "finalFuelPrice": 5.07,
     "avgFuelPrice": 5.488060000000003,
     "peakFuelPrice": 15.62,
@@ -5919,11 +5858,7 @@
       }
     ],
     "bankruptcyCount": 3,
-    "bankruptcyTurns": [
-      17,
-      18,
-      30
-    ],
+    "bankruptcyTurns": [17, 18, 30],
     "finalFuelPrice": 19.72,
     "avgFuelPrice": 8.315426666666665,
     "peakFuelPrice": 19.72,
@@ -6196,11 +6131,7 @@
       }
     ],
     "bankruptcyCount": 3,
-    "bankruptcyTurns": [
-      25,
-      32,
-      42
-    ],
+    "bankruptcyTurns": [25, 32, 42],
     "finalFuelPrice": 3.865,
     "avgFuelPrice": 5.652406249999999,
     "peakFuelPrice": 10.42,
@@ -6534,12 +6465,7 @@
       }
     ],
     "bankruptcyCount": 4,
-    "bankruptcyTurns": [
-      11,
-      24,
-      37,
-      79
-    ],
+    "bankruptcyTurns": [11, 24, 37, 79],
     "finalFuelPrice": 8.75,
     "avgFuelPrice": 6.930864000000002,
     "peakFuelPrice": 30,
@@ -6897,9 +6823,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      15
-    ],
+    "bankruptcyTurns": [15],
     "finalFuelPrice": 6.55,
     "avgFuelPrice": 8.754449999999997,
     "peakFuelPrice": 30,
@@ -7169,11 +7093,7 @@
       }
     ],
     "bankruptcyCount": 3,
-    "bankruptcyTurns": [
-      15,
-      21,
-      27
-    ],
+    "bankruptcyTurns": [15, 21, 27],
     "finalFuelPrice": 5.22,
     "avgFuelPrice": 8.9019,
     "peakFuelPrice": 18.465999999999998,
@@ -7510,12 +7430,7 @@
       }
     ],
     "bankruptcyCount": 4,
-    "bankruptcyTurns": [
-      17,
-      31,
-      34,
-      60
-    ],
+    "bankruptcyTurns": [17, 31, 34, 60],
     "finalFuelPrice": 5,
     "avgFuelPrice": 9.27084,
     "peakFuelPrice": 30,
@@ -7872,9 +7787,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      36
-    ],
+    "bankruptcyTurns": [36],
     "finalFuelPrice": 15,
     "avgFuelPrice": 10.305900000000001,
     "peakFuelPrice": 30,
@@ -8146,10 +8059,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      13,
-      16
-    ],
+    "bankruptcyTurns": [13, 16],
     "finalFuelPrice": 7.67,
     "avgFuelPrice": 8.803962500000003,
     "peakFuelPrice": 30,
@@ -8486,14 +8396,7 @@
       }
     ],
     "bankruptcyCount": 6,
-    "bankruptcyTurns": [
-      21,
-      30,
-      36,
-      68,
-      86,
-      90
-    ],
+    "bankruptcyTurns": [21, 30, 36, 68, 86, 90],
     "finalFuelPrice": 21.56,
     "avgFuelPrice": 7.709069999999997,
     "peakFuelPrice": 28.04,
@@ -8853,11 +8756,7 @@
       }
     ],
     "bankruptcyCount": 3,
-    "bankruptcyTurns": [
-      26,
-      28,
-      29
-    ],
+    "bankruptcyTurns": [26, 28, 29],
     "finalFuelPrice": 8.5,
     "avgFuelPrice": 7.83864,
     "peakFuelPrice": 22.28,
@@ -9130,9 +9029,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      18
-    ],
+    "bankruptcyTurns": [18],
     "finalFuelPrice": 15,
     "avgFuelPrice": 6.789349999999999,
     "peakFuelPrice": 30,
@@ -9468,15 +9365,7 @@
       }
     ],
     "bankruptcyCount": 7,
-    "bankruptcyTurns": [
-      9,
-      17,
-      18,
-      21,
-      28,
-      60,
-      87
-    ],
+    "bankruptcyTurns": [9, 17, 18, 21, 28, 60, 87],
     "finalFuelPrice": 4.199999999999999,
     "avgFuelPrice": 8.812970000000002,
     "peakFuelPrice": 21,
@@ -9836,9 +9725,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      23
-    ],
+    "bankruptcyTurns": [23],
     "finalFuelPrice": 10.77,
     "avgFuelPrice": 7.121813333333333,
     "peakFuelPrice": 19.599999999999998,
@@ -10096,9 +9983,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      26
-    ],
+    "bankruptcyTurns": [26],
     "finalFuelPrice": 14.86,
     "avgFuelPrice": 8.871606666666667,
     "peakFuelPrice": 18,
@@ -10356,10 +10241,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      13,
-      33
-    ],
+    "bankruptcyTurns": [13, 33],
     "finalFuelPrice": 3.75,
     "avgFuelPrice": 8.924325,
     "peakFuelPrice": 29.6,
@@ -10618,9 +10500,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      18
-    ],
+    "bankruptcyTurns": [18],
     "finalFuelPrice": 11.09,
     "avgFuelPrice": 6.754583333333334,
     "peakFuelPrice": 14,
@@ -11135,9 +11015,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      13
-    ],
+    "bankruptcyTurns": [13],
     "finalFuelPrice": 6.37,
     "avgFuelPrice": 7.6206,
     "peakFuelPrice": 20.958,
@@ -11654,9 +11532,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      35
-    ],
+    "bankruptcyTurns": [35],
     "finalFuelPrice": 5.57,
     "avgFuelPrice": 7.955575000000001,
     "peakFuelPrice": 27.88,
@@ -11915,9 +11791,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      40
-    ],
+    "bankruptcyTurns": [40],
     "finalFuelPrice": 5.95,
     "avgFuelPrice": 9.365833333333333,
     "peakFuelPrice": 20.7,
@@ -12176,10 +12050,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      32,
-      35
-    ],
+    "bankruptcyTurns": [32, 35],
     "finalFuelPrice": 5.3,
     "avgFuelPrice": 6.629083333333333,
     "peakFuelPrice": 16.352,
@@ -12437,10 +12308,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      25,
-      30
-    ],
+    "bankruptcyTurns": [25, 30],
     "finalFuelPrice": 7.433999999999999,
     "avgFuelPrice": 6.967366666666664,
     "peakFuelPrice": 19.054,
@@ -12697,9 +12565,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      41
-    ],
+    "bankruptcyTurns": [41],
     "finalFuelPrice": 5,
     "avgFuelPrice": 6.062449999999999,
     "peakFuelPrice": 15,
@@ -12958,10 +12824,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      19,
-      22
-    ],
+    "bankruptcyTurns": [19, 22],
     "finalFuelPrice": 3.875,
     "avgFuelPrice": 7.522733333333333,
     "peakFuelPrice": 20.18,
@@ -13220,10 +13083,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      12,
-      19
-    ],
+    "bankruptcyTurns": [12, 19],
     "finalFuelPrice": 5,
     "avgFuelPrice": 6.757683333333334,
     "peakFuelPrice": 21.08,
@@ -13482,9 +13342,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      59
-    ],
+    "bankruptcyTurns": [59],
     "finalFuelPrice": 5.1,
     "avgFuelPrice": 9.512066666666668,
     "peakFuelPrice": 29.96,
@@ -14001,9 +13859,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      24
-    ],
+    "bankruptcyTurns": [24],
     "finalFuelPrice": 11.05,
     "avgFuelPrice": 5.915858333333334,
     "peakFuelPrice": 19.4,
@@ -14261,11 +14117,7 @@
       }
     ],
     "bankruptcyCount": 3,
-    "bankruptcyTurns": [
-      13,
-      38,
-      57
-    ],
+    "bankruptcyTurns": [13, 38, 57],
     "finalFuelPrice": 5.36,
     "avgFuelPrice": 8.009833333333333,
     "peakFuelPrice": 29.82,
@@ -14525,10 +14377,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      23,
-      39
-    ],
+    "bankruptcyTurns": [23, 39],
     "finalFuelPrice": 26.292,
     "avgFuelPrice": 8.869933333333334,
     "peakFuelPrice": 41.803999999999995,
@@ -14786,10 +14635,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      19,
-      41
-    ],
+    "bankruptcyTurns": [19, 41],
     "finalFuelPrice": 5.37,
     "avgFuelPrice": 9.446375,
     "peakFuelPrice": 30,
@@ -15040,9 +14886,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      16
-    ],
+    "bankruptcyTurns": [16],
     "finalFuelPrice": 5.64,
     "avgFuelPrice": 7.483362500000001,
     "peakFuelPrice": 29.78,
@@ -15305,9 +15149,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      18
-    ],
+    "bankruptcyTurns": [18],
     "finalFuelPrice": 7.5,
     "avgFuelPrice": 8.773587500000001,
     "peakFuelPrice": 24.5,
@@ -15570,10 +15412,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      11,
-      14
-    ],
+    "bankruptcyTurns": [11, 14],
     "finalFuelPrice": 3.5,
     "avgFuelPrice": 9.054599999999999,
     "peakFuelPrice": 24.58,
@@ -15836,9 +15675,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      23
-    ],
+    "bankruptcyTurns": [23],
     "finalFuelPrice": 6.33,
     "avgFuelPrice": 6.813377500000001,
     "peakFuelPrice": 19.62,
@@ -16100,9 +15937,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      23
-    ],
+    "bankruptcyTurns": [23],
     "finalFuelPrice": 5.49,
     "avgFuelPrice": 7.143749999999999,
     "peakFuelPrice": 30,
@@ -16379,10 +16214,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      19,
-      21
-    ],
+    "bankruptcyTurns": [19, 21],
     "finalFuelPrice": 2.605,
     "avgFuelPrice": 6.625662500000002,
     "peakFuelPrice": 28.76,
@@ -16684,9 +16516,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      16
-    ],
+    "bankruptcyTurns": [16],
     "finalFuelPrice": 5,
     "avgFuelPrice": 6.396125,
     "peakFuelPrice": 20.4,
@@ -16989,10 +16819,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      10,
-      12
-    ],
+    "bankruptcyTurns": [10, 12],
     "finalFuelPrice": 7.727999999999999,
     "avgFuelPrice": 9.329122499999995,
     "peakFuelPrice": 29.9,
@@ -17295,9 +17122,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      24
-    ],
+    "bankruptcyTurns": [24],
     "finalFuelPrice": 14.22,
     "avgFuelPrice": 7.6382875000000015,
     "peakFuelPrice": 14.66,
@@ -17600,9 +17425,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      16
-    ],
+    "bankruptcyTurns": [16],
     "finalFuelPrice": 5,
     "avgFuelPrice": 6.330162500000003,
     "peakFuelPrice": 24.14,
@@ -17912,10 +17735,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      14,
-      17
-    ],
+    "bankruptcyTurns": [14, 17],
     "finalFuelPrice": 14.98,
     "avgFuelPrice": 10.754074999999997,
     "peakFuelPrice": 30.016,
@@ -18237,10 +18057,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      17,
-      22
-    ],
+    "bankruptcyTurns": [17, 22],
     "finalFuelPrice": 13.33,
     "avgFuelPrice": 8.043587499999997,
     "peakFuelPrice": 24,
@@ -18562,11 +18379,7 @@
       }
     ],
     "bankruptcyCount": 3,
-    "bankruptcyTurns": [
-      15,
-      21,
-      25
-    ],
+    "bankruptcyTurns": [15, 21, 25],
     "finalFuelPrice": 21,
     "avgFuelPrice": 5.976549999999998,
     "peakFuelPrice": 21,
@@ -18889,10 +18702,7 @@
       }
     ],
     "bankruptcyCount": 2,
-    "bankruptcyTurns": [
-      22,
-      45
-    ],
+    "bankruptcyTurns": [22, 45],
     "finalFuelPrice": 7.9239999999999995,
     "avgFuelPrice": 5.7643249999999995,
     "peakFuelPrice": 10.48,
@@ -19213,9 +19023,7 @@
       }
     ],
     "bankruptcyCount": 1,
-    "bankruptcyTurns": [
-      14
-    ],
+    "bankruptcyTurns": [14],
     "finalFuelPrice": 5.65,
     "avgFuelPrice": 5.5676125,
     "peakFuelPrice": 21.42,

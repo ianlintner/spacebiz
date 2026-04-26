@@ -77,10 +77,7 @@ describe("SuccessFormula.computeOptionSuccess", () => {
       makeState({ fleet: goodFleet }),
       option,
     );
-    const badPct = computeOptionSuccess(
-      makeState({ fleet: badFleet }),
-      option,
-    );
+    const badPct = computeOptionSuccess(makeState({ fleet: badFleet }), option);
     expect(goodPct).toBeGreaterThan(badPct);
   });
 

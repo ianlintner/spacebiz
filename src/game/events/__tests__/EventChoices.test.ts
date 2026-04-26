@@ -31,30 +31,62 @@ import { initAdviserState } from "../../adviser/AdviserEngine.ts";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makePlanetMarkets(planets: Planet[]): GameState["market"]["planetMarkets"] {
+function makePlanetMarkets(
+  planets: Planet[],
+): GameState["market"]["planetMarkets"] {
   const planetMarkets: GameState["market"]["planetMarkets"] = {};
   for (const planet of planets) {
-    const market: Record<string, {
-      baseSupply: number; baseDemand: number; currentPrice: number;
-      saturation: number; trend: "stable"; trendMomentum: number; eventModifier: number;
-    }> = {};
+    const market: Record<
+      string,
+      {
+        baseSupply: number;
+        baseDemand: number;
+        currentPrice: number;
+        saturation: number;
+        trend: "stable";
+        trendMomentum: number;
+        eventModifier: number;
+      }
+    > = {};
     for (const ct of Object.values(CargoType)) {
       market[ct] = {
-        baseSupply: 100, baseDemand: 100, currentPrice: 20,
-        saturation: 0, trend: "stable", trendMomentum: 0, eventModifier: 0,
+        baseSupply: 100,
+        baseDemand: 100,
+        currentPrice: 20,
+        saturation: 0,
+        trend: "stable",
+        trendMomentum: 0,
+        eventModifier: 0,
       };
     }
-    planetMarkets[planet.id] = market as GameState["market"]["planetMarkets"][string];
+    planetMarkets[planet.id] =
+      market as GameState["market"]["planetMarkets"][string];
   }
   return planetMarkets;
 }
 
 function makeMinimalState(overrides: Partial<GameState> = {}): GameState {
   const systems: StarSystem[] = [
-    { id: "sys-1", name: "Sol", sectorId: "sec-1", empireId: "emp-1", x: 0, y: 0, starColor: 0xffcc00 },
+    {
+      id: "sys-1",
+      name: "Sol",
+      sectorId: "sec-1",
+      empireId: "emp-1",
+      x: 0,
+      y: 0,
+      starColor: 0xffcc00,
+    },
   ];
   const planets: Planet[] = [
-    { id: "planet-1-1-0", name: "Earth", systemId: "sys-1", type: PlanetType.Terran, x: 0, y: 0, population: 1_000_000 },
+    {
+      id: "planet-1-1-0",
+      name: "Earth",
+      systemId: "sys-1",
+      type: PlanetType.Terran,
+      x: 0,
+      y: 0,
+      population: 1_000_000,
+    },
   ];
 
   return {
@@ -134,14 +166,22 @@ function makeMinimalState(overrides: Partial<GameState> = {}): GameState {
     captains: [],
     routeMarket: [],
     researchEvents: [],
-    unlockedNavTabs: ["map", "routes", "fleet", "finance"] as import("../../../data/types.ts").NavTabId[],
-    reputationTier: "unknown" as import("../../../data/types.ts").ReputationTier,
+    unlockedNavTabs: [
+      "map",
+      "routes",
+      "fleet",
+      "finance",
+    ] as import("../../../data/types.ts").NavTabId[],
+    reputationTier:
+      "unknown" as import("../../../data/types.ts").ReputationTier,
     localRouteSlots: 2,
     ...overrides,
   };
 }
 
-function makePendingChoiceEvent(overrides: Partial<ChoiceEvent> = {}): ChoiceEvent {
+function makePendingChoiceEvent(
+  overrides: Partial<ChoiceEvent> = {},
+): ChoiceEvent {
   return {
     id: "test-choice-001",
     eventId: "pirate_activity",
@@ -200,7 +240,9 @@ describe("EventDefinitions — choices spot-check", () => {
   });
 
   it("smugglingOpportunity has both legacy choices and new choiceOptions", () => {
-    const template = EVENT_TEMPLATES.find((t) => t.id === "smuggling_opportunity");
+    const template = EVENT_TEMPLATES.find(
+      (t) => t.id === "smuggling_opportunity",
+    );
     expect(template).toBeDefined();
     expect(template!.choices).toBeDefined();
     expect(template!.choiceOptions).toBeDefined();
@@ -219,21 +261,32 @@ describe("EventDefinitions — choices spot-check", () => {
       if (!template.choiceOptions) continue;
       for (const option of template.choiceOptions) {
         expect(option.id, `${template.id}: option missing id`).toBeTruthy();
-        expect(option.label, `${template.id}: option missing label`).toBeTruthy();
-        expect(option.outcomeDescription, `${template.id}: option missing outcomeDescription`).toBeTruthy();
+        expect(
+          option.label,
+          `${template.id}: option missing label`,
+        ).toBeTruthy();
+        expect(
+          option.outcomeDescription,
+          `${template.id}: option missing outcomeDescription`,
+        ).toBeTruthy();
         expect(Array.isArray(option.effects)).toBe(true);
       }
     }
   });
 
   it("events with requiresChoice:true have at least choiceOptions or choices", () => {
-    const requiresChoiceTemplates = EVENT_TEMPLATES.filter((t) => t.requiresChoice);
+    const requiresChoiceTemplates = EVENT_TEMPLATES.filter(
+      (t) => t.requiresChoice,
+    );
     expect(requiresChoiceTemplates.length).toBeGreaterThan(0);
     for (const template of requiresChoiceTemplates) {
       const hasChoices =
         (template.choices && template.choices.length > 0) ||
         (template.choiceOptions && template.choiceOptions.length > 0);
-      expect(hasChoices, `${template.id} requiresChoice=true but no choices defined`).toBe(true);
+      expect(
+        hasChoices,
+        `${template.id} requiresChoice=true but no choices defined`,
+      ).toBe(true);
     }
   });
 });
@@ -272,7 +325,10 @@ describe("resolveChoiceEvent", () => {
 
   it("deducts AP when requiresAp is set", () => {
     const event = makePendingChoiceEvent();
-    const state = makeMinimalState({ pendingChoiceEvents: [event], actionPoints: { current: 3, max: 3 } });
+    const state = makeMinimalState({
+      pendingChoiceEvents: [event],
+      actionPoints: { current: 3, max: 3 },
+    });
 
     const result = resolveChoiceEvent(state, event.id, "fight_back");
 
@@ -281,18 +337,18 @@ describe("resolveChoiceEvent", () => {
 
   it("throws if choiceEventId is not found", () => {
     const state = makeMinimalState();
-    expect(() => resolveChoiceEvent(state, "nonexistent-event", "some-option")).toThrow(
-      "ChoiceEvent not found",
-    );
+    expect(() =>
+      resolveChoiceEvent(state, "nonexistent-event", "some-option"),
+    ).toThrow("ChoiceEvent not found");
   });
 
   it("throws if choiceOptionId is not found", () => {
     const event = makePendingChoiceEvent();
     const state = makeMinimalState({ pendingChoiceEvents: [event] });
 
-    expect(() => resolveChoiceEvent(state, event.id, "nonexistent-option")).toThrow(
-      "ChoiceOption not found",
-    );
+    expect(() =>
+      resolveChoiceEvent(state, event.id, "nonexistent-option"),
+    ).toThrow("ChoiceOption not found");
   });
 
   it("throws if requiresCash is not met", () => {
@@ -399,7 +455,9 @@ describe("resolveChoiceEvent — chain advancement", () => {
 
     const result = resolveChoiceEvent(state, event.id, "ignore_pirates");
 
-    expect(result.activeEventChains[0].data["step0_choice"]).toBe("ignore_pirates");
+    expect(result.activeEventChains[0].data["step0_choice"]).toBe(
+      "ignore_pirates",
+    );
   });
 
   it("removes chain when all steps completed", () => {
@@ -624,25 +682,39 @@ describe("EventChainDefinitions", () => {
       expect(def.name, "missing name").toBeTruthy();
       expect(def.description, "missing description").toBeTruthy();
       expect(Array.isArray(def.steps), "steps should be array").toBe(true);
-      expect(def.steps.length, `${def.chainId} has no steps`).toBeGreaterThan(0);
-      expect(typeof def.triggerCondition, "triggerCondition should be function").toBe("function");
+      expect(def.steps.length, `${def.chainId} has no steps`).toBeGreaterThan(
+        0,
+      );
+      expect(
+        typeof def.triggerCondition,
+        "triggerCondition should be function",
+      ).toBe("function");
     }
   });
 
   it("pirate_campaign has 4 steps", () => {
-    const def = EVENT_CHAIN_DEFINITIONS.find((d) => d.chainId === "pirate_campaign");
+    const def = EVENT_CHAIN_DEFINITIONS.find(
+      (d) => d.chainId === "pirate_campaign",
+    );
     expect(def).toBeDefined();
     expect(def!.steps).toHaveLength(4);
   });
 
   it("empire_succession has 4 steps", () => {
-    const def = EVENT_CHAIN_DEFINITIONS.find((d) => d.chainId === "empire_succession");
+    const def = EVENT_CHAIN_DEFINITIONS.find(
+      (d) => d.chainId === "empire_succession",
+    );
     expect(def).toBeDefined();
     expect(def!.steps).toHaveLength(4);
   });
 
   it("diplomatic_crisis, plague, fuel_crisis, black_market_scandal each have 3 steps", () => {
-    const threeStepChains = ["diplomatic_crisis", "plague", "fuel_crisis", "black_market_scandal"];
+    const threeStepChains = [
+      "diplomatic_crisis",
+      "plague",
+      "fuel_crisis",
+      "black_market_scandal",
+    ];
     for (const chainId of threeStepChains) {
       const def = EVENT_CHAIN_DEFINITIONS.find((d) => d.chainId === chainId);
       expect(def, `${chainId} not found`).toBeDefined();
@@ -653,10 +725,19 @@ describe("EventChainDefinitions", () => {
   it("all chain steps have options with at least 1 entry", () => {
     for (const def of EVENT_CHAIN_DEFINITIONS) {
       for (const step of def.steps) {
-        expect(step.options.length, `${def.chainId} step ${step.stepIndex} has no options`).toBeGreaterThan(0);
+        expect(
+          step.options.length,
+          `${def.chainId} step ${step.stepIndex} has no options`,
+        ).toBeGreaterThan(0);
         for (const option of step.options) {
-          expect(option.id, `${def.chainId} step ${step.stepIndex} option missing id`).toBeTruthy();
-          expect(option.label, `${def.chainId} step ${step.stepIndex} option missing label`).toBeTruthy();
+          expect(
+            option.id,
+            `${def.chainId} step ${step.stepIndex} option missing id`,
+          ).toBeTruthy();
+          expect(
+            option.label,
+            `${def.chainId} step ${step.stepIndex} option missing label`,
+          ).toBeTruthy();
         }
       }
     }
@@ -671,7 +752,9 @@ describe("EventChainDefinitions", () => {
   });
 
   it("EventCategory is referenced correctly in templates with choices", () => {
-    const templates = EVENT_TEMPLATES.filter((t) => t.choiceOptions && t.choiceOptions.length > 0);
+    const templates = EVENT_TEMPLATES.filter(
+      (t) => t.choiceOptions && t.choiceOptions.length > 0,
+    );
     for (const t of templates) {
       expect(Object.values(EventCategory)).toContain(t.category);
     }

@@ -134,8 +134,7 @@ export function applyNegotiation(
       rewardMult = 1.0;
       depositMult = 1.0;
       deadlineMult = 1.0;
-      message =
-        "Your reputation is too low to haggle. Standard terms applied.";
+      message = "Your reputation is too low to haggle. Standard terms applied.";
     } else {
       const roll = rng.next();
       success = roll < option.successChance;
@@ -170,8 +169,14 @@ export function applyNegotiation(
   }
 
   // Compute new values — minimum 1 turn remaining, minimum 0 for cash values
-  const newRewardCash = Math.max(0, Math.round(contract.rewardCash * rewardMult));
-  const newDepositPaid = Math.max(0, Math.round(contract.depositPaid * depositMult));
+  const newRewardCash = Math.max(
+    0,
+    Math.round(contract.rewardCash * rewardMult),
+  );
+  const newDepositPaid = Math.max(
+    0,
+    Math.round(contract.depositPaid * depositMult),
+  );
   const newTurnsRemaining = Math.max(
     1,
     Math.round(contract.turnsRemaining * deadlineMult),

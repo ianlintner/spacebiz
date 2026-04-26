@@ -6,9 +6,7 @@ import type {
   CargoType as CargoTypeT,
 } from "../../../data/types.ts";
 import { BREAKDOWN_THRESHOLD } from "../../../data/constants.ts";
-import {
-  calculateTripsPerTurn,
-} from "../../routes/RouteManager.ts";
+import { calculateTripsPerTurn } from "../../routes/RouteManager.ts";
 import { calculatePrice } from "../../economy/PriceCalculator.ts";
 import { calculateTariff } from "../../routes/TariffCalculator.ts";
 import type { SeededRNG } from "../../../utils/SeededRNG.ts";
@@ -84,12 +82,7 @@ export function simulateAIRoutes(
         route.distance * 2 * ship.fuelEfficiency * market.fuelPrice * trips;
 
       // Apply AI hub bonuses to route economics
-      const hubBonuses = applyAIHubBonuses(
-        revenue,
-        fuelCost,
-        0,
-        company.aiHub,
-      );
+      const hubBonuses = applyAIHubBonuses(revenue, fuelCost, 0, company.aiHub);
       revenue = hubBonuses.revenue;
       fuelCost = hubBonuses.fuel;
 

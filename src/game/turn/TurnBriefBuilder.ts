@@ -77,7 +77,9 @@ export function buildTurnBrief(state: GameState): TurnBriefCard[] {
   }
 
   // 4. Ships with no assigned route (idle)
-  const idleCount = state.fleet.filter((s) => s.assignedRouteId === null).length;
+  const idleCount = state.fleet.filter(
+    (s) => s.assignedRouteId === null,
+  ).length;
   if (idleCount > 0) {
     cards.push({
       id: nextId(),
@@ -105,7 +107,10 @@ export function buildTurnBrief(state: GameState): TurnBriefCard[] {
   }
 
   // 6. AP exhausted with pending choice events
-  if (state.actionPoints.current === 0 && state.pendingChoiceEvents.length > 0) {
+  if (
+    state.actionPoints.current === 0 &&
+    state.pendingChoiceEvents.length > 0
+  ) {
     cards.push({
       id: nextId(),
       category: "choice_event",

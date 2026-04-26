@@ -60,7 +60,11 @@ export class SftTestError extends Error {
   readonly code: SftErrorCode;
   readonly testId?: string;
   readonly hint?: string;
-  constructor(code: SftErrorCode, message: string, opts?: { testId?: string; hint?: string }) {
+  constructor(
+    code: SftErrorCode,
+    message: string,
+    opts?: { testId?: string; hint?: string },
+  ) {
     super(message);
     this.name = "SftTestError";
     this.code = code;

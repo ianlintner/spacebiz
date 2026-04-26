@@ -23,11 +23,7 @@ export function isInDistanceBand(
   }
 }
 
-export type RouteScopeBand =
-  | "local"
-  | "interstellar"
-  | "interEmpire"
-  | null;
+export type RouteScopeBand = "local" | "interstellar" | "interEmpire" | null;
 
 /**
  * Scope-band predicate for the Route Finder.
@@ -53,10 +49,8 @@ export function matchesScopeBand(
   const isLocal = originSystemId === destSystemId;
   if (scope === "local") return isLocal;
   if (isLocal) return false;
-  const bothEmpiresResolved =
-    originEmpireId !== null && destEmpireId !== null;
-  const isInterEmpire =
-    bothEmpiresResolved && originEmpireId !== destEmpireId;
+  const bothEmpiresResolved = originEmpireId !== null && destEmpireId !== null;
+  const isInterEmpire = bothEmpiresResolved && originEmpireId !== destEmpireId;
   if (scope === "interEmpire") return isInterEmpire;
   // "interstellar" → cross-system but not cross-empire
   return !isInterEmpire;

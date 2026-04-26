@@ -129,12 +129,12 @@ export class SimPlaybackScene extends Phaser.Scene {
       rMaxX = -Infinity,
       rMinY = Infinity,
       rMaxY = -Infinity;
-      
+
     const allActiveRoutes = [
       ...this.newState.activeRoutes,
       ...this.newState.aiCompanies.flatMap((c) => c.activeRoutes),
     ];
-    
+
     for (const route of allActiveRoutes) {
       for (const pid of [route.originPlanetId, route.destinationPlanetId]) {
         const sysId = planetSystemMap.get(pid);
@@ -502,7 +502,9 @@ export class SimPlaybackScene extends Phaser.Scene {
           visual.assignedShips[unitIndex % visual.assignedShips.length];
         const shipIconKey = getShipIconKey(ship.class);
         const shipTint = getShipColor(ship.class);
-        const delay = Math.floor((unitIndex / visual.visibleUnits) * halfDur * 0.5);
+        const delay = Math.floor(
+          (unitIndex / visual.visibleUnits) * halfDur * 0.5,
+        );
         const mapSprKey = getShipMapKey(ship.class);
         const mapAnimKey = getShipMapAnimKey(ship.class);
         const unitAlpha = Math.max(0.72, 0.95 - unitIndex * 0.06);
@@ -516,7 +518,13 @@ export class SimPlaybackScene extends Phaser.Scene {
             .setDepth(12 + unitIndex * 0.01);
           sp.play(mapAnimKey);
           const sg = this.add
-            .circle(ox, oy, 16, shipTint, Math.max(0.08, 0.15 - unitIndex * 0.02))
+            .circle(
+              ox,
+              oy,
+              16,
+              shipTint,
+              Math.max(0.08, 0.15 - unitIndex * 0.02),
+            )
             .setDepth(11 + unitIndex * 0.01);
           runAlongPathYoyo(
             [sp as unknown as Movable, sg as unknown as Movable],
@@ -545,7 +553,13 @@ export class SimPlaybackScene extends Phaser.Scene {
             .setAlpha(unitAlpha)
             .setDepth(12 + unitIndex * 0.01);
           const sg = this.add
-            .circle(ox, oy, 13, shipTint, Math.max(0.08, 0.18 - unitIndex * 0.02))
+            .circle(
+              ox,
+              oy,
+              13,
+              shipTint,
+              Math.max(0.08, 0.18 - unitIndex * 0.02),
+            )
             .setDepth(11 + unitIndex * 0.01);
           runAlongPathYoyo(
             [sp as unknown as Movable, sg as unknown as Movable],
@@ -571,7 +585,13 @@ export class SimPlaybackScene extends Phaser.Scene {
             .circle(ox, oy, 5, shipTint, unitAlpha)
             .setDepth(12 + unitIndex * 0.01);
           const glow = this.add
-            .circle(ox, oy, 11, shipTint, Math.max(0.08, 0.2 - unitIndex * 0.03))
+            .circle(
+              ox,
+              oy,
+              11,
+              shipTint,
+              Math.max(0.08, 0.2 - unitIndex * 0.03),
+            )
             .setDepth(11 + unitIndex * 0.01);
           runAlongPathYoyo(
             [pip as unknown as Movable, glow as unknown as Movable],
@@ -1145,7 +1165,10 @@ export class SimPlaybackScene extends Phaser.Scene {
         this,
         "sim_complete",
         `END OF QUARTER Q${q} Y${y}`,
-        sign + "\u00A7" + Math.abs(Math.round(net)).toLocaleString("en-US") + " Net",
+        sign +
+          "\u00A7" +
+          Math.abs(Math.round(net)).toLocaleString("en-US") +
+          " Net",
       );
     }
     this.time.timeScale = 1;

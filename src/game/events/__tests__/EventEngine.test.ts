@@ -101,7 +101,7 @@ function makeStorytellerNeutral(): StorytellerState {
     headwindBias: 0,
     turnsInDebt: 0,
     consecutiveProfitTurns: 0,
-      turnsSinceLastDecision: 0,
+    turnsSinceLastDecision: 0,
   };
 }
 
@@ -208,8 +208,14 @@ function makeMinimalGameState(): GameState {
     captains: [],
     routeMarket: [],
     researchEvents: [],
-    unlockedNavTabs: ["map", "routes", "fleet", "finance"] as import("../../../data/types.ts").NavTabId[],
-    reputationTier: "unknown" as import("../../../data/types.ts").ReputationTier,
+    unlockedNavTabs: [
+      "map",
+      "routes",
+      "fleet",
+      "finance",
+    ] as import("../../../data/types.ts").NavTabId[],
+    reputationTier:
+      "unknown" as import("../../../data/types.ts").ReputationTier,
     localRouteSlots: 2,
   };
 }

@@ -180,7 +180,10 @@ export function selectDilemma(
   return materializeDilemma(template, state, rng);
 }
 
-function isDilemmaEligible(template: DilemmaTemplate, state: GameState): boolean {
+function isDilemmaEligible(
+  template: DilemmaTemplate,
+  state: GameState,
+): boolean {
   switch (template.eligibility) {
     case "midGame":
       return state.turn >= Math.floor(state.maxTurns * 0.25);

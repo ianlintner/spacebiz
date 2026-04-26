@@ -222,8 +222,14 @@ function makeTrafficState(overrides: Partial<GameState> = {}): GameState {
     captains: [],
     routeMarket: [],
     researchEvents: [],
-    unlockedNavTabs: ["map", "routes", "fleet", "finance"] as import("../../../data/types.ts").NavTabId[],
-    reputationTier: "unknown" as import("../../../data/types.ts").ReputationTier,
+    unlockedNavTabs: [
+      "map",
+      "routes",
+      "fleet",
+      "finance",
+    ] as import("../../../data/types.ts").NavTabId[],
+    reputationTier:
+      "unknown" as import("../../../data/types.ts").ReputationTier,
     localRouteSlots: 2,
     ...overrides,
   };
@@ -410,7 +416,13 @@ describe("RouteManager", () => {
     it("returns no visuals for routes without assigned ships", () => {
       const routes = [makeRoute({ assignedShipIds: [] })];
 
-      const visuals = buildRouteTrafficVisuals(routes, [], [makePlanet()], [], []);
+      const visuals = buildRouteTrafficVisuals(
+        routes,
+        [],
+        [makePlanet()],
+        [],
+        [],
+      );
 
       expect(visuals).toEqual([]);
     });
@@ -429,7 +441,9 @@ describe("RouteManager", () => {
 
       expect(visuals).toHaveLength(1);
       expect(visuals[0].ownerId).toBe("player");
-      expect(visuals[0].assignedShips.map((ship) => ship.id)).toEqual(["ship-2"]);
+      expect(visuals[0].assignedShips.map((ship) => ship.id)).toEqual([
+        "ship-2",
+      ]);
       expect(visuals[0].visibleUnits).toBe(1);
       expect(visuals[0].visualClassMix).toEqual(["fastCourier"]);
       expect(visuals[0].pathSystemIds).toEqual(["system-1", "system-2"]);
@@ -451,8 +465,12 @@ describe("RouteManager", () => {
       ]);
 
       expect(expanded).toHaveLength(4);
-      expect(new Set(expanded.map((waypoint) => `${waypoint.x},${waypoint.y}`)).size).toBe(4);
-      expect(expanded.every((waypoint) => waypoint.x === 100 && waypoint.y === 200)).toBe(false);
+      expect(
+        new Set(expanded.map((waypoint) => `${waypoint.x},${waypoint.y}`)).size,
+      ).toBe(4);
+      expect(
+        expanded.every((waypoint) => waypoint.x === 100 && waypoint.y === 200),
+      ).toBe(false);
     });
 
     it("builds sun-avoiding local motion paths", () => {
@@ -465,7 +483,9 @@ describe("RouteManager", () => {
 
       expect(path[0]).toEqual({ x: 120, y: 0, t: 0 });
       expect(path[path.length - 1]).toEqual({ x: -120, y: 0, t: 1 });
-      expect(path.slice(1, -1).some((point) => Math.abs(point.y) > 20)).toBe(true);
+      expect(path.slice(1, -1).some((point) => Math.abs(point.y) > 20)).toBe(
+        true,
+      );
     });
 
     it("preserves stable ship ordering for class sampling", () => {
@@ -511,10 +531,19 @@ describe("RouteManager", () => {
         makePlanet({ id: "planet-2", systemId: "system-2" }),
       ];
 
-      const before = buildRouteTrafficStateKey(route ? [route] : [], fleet, planets, [], []);
+      const before = buildRouteTrafficStateKey(
+        route ? [route] : [],
+        fleet,
+        planets,
+        [],
+        [],
+      );
       const after = buildRouteTrafficStateKey(
         [route],
-        fleet.map((ship) => ({ ...ship, maintenanceCost: ship.maintenanceCost + 500 })),
+        fleet.map((ship) => ({
+          ...ship,
+          maintenanceCost: ship.maintenanceCost + 500,
+        })),
         planets,
         [],
         [],
@@ -551,8 +580,14 @@ describe("RouteManager", () => {
     });
 
     it("includes assigned AI company ships in galaxy traffic visuals", () => {
-      const playerRoute = makeRoute({ id: "route-player", assignedShipIds: ["ship-player"] });
-      const aiRoute = makeRoute({ id: "route-ai", assignedShipIds: ["ship-ai"] });
+      const playerRoute = makeRoute({
+        id: "route-player",
+        assignedShipIds: ["ship-player"],
+      });
+      const aiRoute = makeRoute({
+        id: "route-ai",
+        assignedShipIds: ["ship-ai"],
+      });
       const state = makeTrafficState({
         fleet: [makeShip({ id: "ship-player", class: "cargoShuttle" })],
         activeRoutes: [playerRoute],
@@ -568,8 +603,13 @@ describe("RouteManager", () => {
       const visuals = buildGalaxyRouteTrafficVisuals(state);
 
       expect(visuals).toHaveLength(2);
-      expect(visuals.map((visual) => visual.ownerId)).toEqual(["player", "ai-empire"]);
-      expect(visuals[1].assignedShips.map((ship) => ship.id)).toEqual(["ship-ai"]);
+      expect(visuals.map((visual) => visual.ownerId)).toEqual([
+        "player",
+        "ai-empire",
+      ]);
+      expect(visuals[1].assignedShips.map((ship) => ship.id)).toEqual([
+        "ship-ai",
+      ]);
       expect(visuals[1].visualClassMix).toEqual(["fastCourier"]);
     });
 
@@ -597,7 +637,10 @@ describe("RouteManager", () => {
     });
 
     it("keeps assignment-only rule for AI galaxy traffic", () => {
-      const aiRoute = makeRoute({ id: "route-ai", assignedShipIds: ["missing-ai-ship"] });
+      const aiRoute = makeRoute({
+        id: "route-ai",
+        assignedShipIds: ["missing-ai-ship"],
+      });
       const state = makeTrafficState({
         aiCompanies: [
           makeAICompany({
@@ -742,6 +785,5 @@ describe("RouteManager", () => {
       const missing = ALL_CARGO_TYPES.filter((c) => !seenCargoTypes.has(c));
       expect(missing).toEqual([]);
     });
-
   });
 });

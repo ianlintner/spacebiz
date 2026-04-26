@@ -263,4 +263,3 @@ jobs:
             --mode self-heal \
             --event-type workflow_run \
             --event-payload "$CARETAKER_EVENT_PAYLOAD"
-

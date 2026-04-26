@@ -11,14 +11,14 @@ select against — this API is the app-side replacement.
 ## Quick tour
 
 ```js
-await __sft.help();              // prints categorized command list
-__sft.list();                    // widgets in currently active scenes
-__sft.currentScene();            // { active: ["MainMenuScene"], modalStack: [] }
+await __sft.help(); // prints categorized command list
+__sft.list(); // widgets in currently active scenes
+__sft.currentScene(); // { active: ["MainMenuScene"], modalStack: [] }
 __sft.click("btn-new-campaign"); // fires the onClick that a real pointer would
-__sft.snapshot();                // JSON-safe GameState + scene info + seed + turn
-__sft.actions.newGame(42);       // seeded new game via the real UI path
-__sft.actions.endTurn();         // clicks btn-end-turn if present
-__sft.seed(1337);                // reseed RNG for determinism
+__sft.snapshot(); // JSON-safe GameState + scene info + seed + turn
+__sft.actions.newGame(42); // seeded new game via the real UI path
+__sft.actions.endTurn(); // clicks btn-end-turn if present
+__sft.seed(1337); // reseed RNG for determinism
 ```
 
 ## TestId conventions
@@ -40,9 +40,9 @@ Channel-based logging with runtime filtering:
 
 ```js
 __sft.log.setLevel("economy", "debug");
-__sft.log.only("routes", "contracts");   // mute everything else
-__sft.log.tail(50);                       // last 50 entries as JSON
-__sft.log.all();                          // remove the only() filter
+__sft.log.only("routes", "contracts"); // mute everything else
+__sft.log.tail(50); // last 50 entries as JSON
+__sft.log.all(); // remove the only() filter
 ```
 
 Channels pre-declared: `economy`, `contracts`, `routes`, `fleet`, `sim`, `ai`,
@@ -55,9 +55,9 @@ on-demand. Violations log to the `invariants` channel; in strict mode they throw
 
 ```js
 __sft.invariants.list();
-__sft.invariants.run();            // returns this-tick's violations
-__sft.invariants.recent();         // last 200 violations
-__sft.invariants.strict(true);     // throw on future violations
+__sft.invariants.run(); // returns this-tick's violations
+__sft.invariants.recent(); // last 200 violations
+__sft.invariants.strict(true); // throw on future violations
 
 __sft.invariants.register(
   "cash-above-zero",

@@ -35,9 +35,15 @@ test.describe("QA console fa\u00e7ade", () => {
     expect(await sft.getSeed()).toBe(1337);
   });
 
-  test("invariant violations are surfaced through recent()", async ({ sft, page }) => {
+  test("invariant violations are surfaced through recent()", async ({
+    sft,
+    page,
+  }) => {
     await page.evaluate(() => {
-      window.__sft!.invariants.register("always-fails", () => "forced violation");
+      window.__sft!.invariants.register(
+        "always-fails",
+        () => "forced violation",
+      );
       window.__sft!.invariants.run();
     });
     const recent = await sft.invariantViolations();
@@ -47,14 +53,23 @@ test.describe("QA console fa\u00e7ade", () => {
   test("log.tail surfaces emitted log entries", async ({ sft, page }) => {
     await sft.logClear();
     await page.evaluate(() => {
-      const win = window as unknown as { __sft: { log: { channel: (n: string) => { info: (m: string) => void } } } };
+      const win = window as unknown as {
+        __sft: {
+          log: { channel: (n: string) => { info: (m: string) => void } };
+        };
+      };
       win.__sft.log.channel("e2e-smoke").info("hello");
     });
     const tail = await sft.logTail();
-    expect(tail.some((e) => e.channel === "e2e-smoke" && e.message === "hello")).toBe(true);
+    expect(
+      tail.some((e) => e.channel === "e2e-smoke" && e.message === "hello"),
+    ).toBe(true);
   });
 
-  test("click on unknown testId throws a structured error", async ({ sft, page }) => {
+  test("click on unknown testId throws a structured error", async ({
+    sft,
+    page,
+  }) => {
     await sft.readyWithWidgets();
     const thrown = await page.evaluate(() => {
       try {

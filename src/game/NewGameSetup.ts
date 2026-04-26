@@ -1,11 +1,7 @@
 import { SeededRNG } from "../utils/SeededRNG.ts";
 import { generateGalaxy } from "../generation/GalaxyGenerator.ts";
 import { initializeMarkets } from "../generation/MarketInitializer.ts";
-import {
-  ShipClass,
-  AIPersonality,
-  GalaxyShape,
-} from "../data/types.ts";
+import { ShipClass, AIPersonality, GalaxyShape } from "../data/types.ts";
 import type {
   GameState,
   Ship,
@@ -414,7 +410,10 @@ export function createNewGame(
     stationHub,
     // Phase 6: Interaction Overhaul
     saveVersion: SAVE_VERSION,
-    actionPoints: { current: ACTION_POINTS_PER_TURN, max: ACTION_POINTS_PER_TURN },
+    actionPoints: {
+      current: ACTION_POINTS_PER_TURN,
+      max: ACTION_POINTS_PER_TURN,
+    },
     turnBrief: [],
     pendingChoiceEvents: [],
     activeEventChains: [],

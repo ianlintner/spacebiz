@@ -4,8 +4,10 @@ import { execSync } from "node:child_process";
 
 function readGitValue(command: string): string | undefined {
   try {
-    return execSync(command, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
-      .trim();
+    return execSync(command, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
   } catch {
     return undefined;
   }
@@ -28,16 +30,19 @@ function normalizeGitHubRemote(remote: string | undefined): string | undefined {
   return undefined;
 }
 
-const commitSha = process.env.GITHUB_SHA ?? readGitValue("git rev-parse HEAD") ?? "unknown";
+const commitSha =
+  process.env.GITHUB_SHA ?? readGitValue("git rev-parse HEAD") ?? "unknown";
 const shortCommit = commitSha === "unknown" ? "unknown" : commitSha.slice(0, 7);
-const buildNumber = process.env.GITHUB_RUN_NUMBER ?? process.env.BUILD_NUMBER ?? "local";
+const buildNumber =
+  process.env.GITHUB_RUN_NUMBER ?? process.env.BUILD_NUMBER ?? "local";
 const repository = process.env.GITHUB_REPOSITORY;
 const githubBaseUrl = repository
   ? `${process.env.GITHUB_SERVER_URL ?? "https://github.com"}/${repository}`
   : normalizeGitHubRemote(readGitValue("git config --get remote.origin.url"));
-const commitUrl = githubBaseUrl && commitSha !== "unknown"
-  ? `${githubBaseUrl}/commit/${commitSha}`
-  : githubBaseUrl;
+const commitUrl =
+  githubBaseUrl && commitSha !== "unknown"
+    ? `${githubBaseUrl}/commit/${commitSha}`
+    : githubBaseUrl;
 
 export default defineConfig({
   // "/" = absolute paths; required for Azure Static Web Apps custom domain.

@@ -1,5 +1,5 @@
-import type { GameState, ReputationTier, Contract } from '../../data/types.ts';
-import { ContractStatus } from '../../data/types.ts';
+import type { GameState, ReputationTier, Contract } from "../../data/types.ts";
+import { ContractStatus } from "../../data/types.ts";
 
 // ---------------------------------------------------------------------------
 // Reputation Tier Computation
@@ -14,11 +14,11 @@ import { ContractStatus } from '../../data/types.ts';
  * legendary  : 90+
  */
 export function computeReputationTier(reputation: number): ReputationTier {
-  if (reputation >= 90) return 'legendary';
-  if (reputation >= 75) return 'renowned';
-  if (reputation >= 50) return 'respected';
-  if (reputation >= 25) return 'unknown';
-  return 'notorious';
+  if (reputation >= 90) return "legendary";
+  if (reputation >= 75) return "renowned";
+  if (reputation >= 50) return "respected";
+  if (reputation >= 25) return "unknown";
+  return "notorious";
 }
 
 // ---------------------------------------------------------------------------
@@ -32,9 +32,9 @@ export function computeReputationTier(reputation: number): ReputationTier {
  *   else      → 1.00 (neutral)
  */
 export function getLicenseFeeMultiplier(reputation: number): number {
-  if (reputation >= 50) return 0.90;
-  if (reputation < 25) return 1.20;
-  return 1.00;
+  if (reputation >= 50) return 0.9;
+  if (reputation < 25) return 1.2;
+  return 1.0;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,9 +56,9 @@ export function getReputationTariffMultiplier(
   diplomaticStatus: string,
 ): number {
   // Alliance means no tariff at all — multiplier is moot
-  if (diplomaticStatus === 'alliance') return 1.00;
-  if (reputation < 25) return 1.20;
-  return 1.00;
+  if (diplomaticStatus === "alliance") return 1.0;
+  if (reputation < 25) return 1.2;
+  return 1.0;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,12 +114,12 @@ export function makePremiumContract(baseContract: Contract): Contract {
  */
 export function getLastTurnGrade(state: GameState): string {
   const last = state.history[state.history.length - 1];
-  if (!last) return 'neutral';
+  if (!last) return "neutral";
   const profit = last.netProfit;
-  if (profit >= 50000) return 'S';
-  if (profit >= 20000) return 'A';
-  if (profit >= 5000) return 'B';
-  if (profit >= 0) return 'C';
-  if (profit >= -10000) return 'D';
-  return 'F';
+  if (profit >= 50000) return "S";
+  if (profit >= 20000) return "A";
+  if (profit >= 5000) return "B";
+  if (profit >= 0) return "C";
+  if (profit >= -10000) return "D";
+  return "F";
 }

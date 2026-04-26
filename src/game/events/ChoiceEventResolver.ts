@@ -20,7 +20,10 @@ import { BASE_FUEL_PRICE } from "../../data/constants.ts";
 function applyEffect(state: GameState, effect: EventEffect): GameState {
   switch (effect.type) {
     case "modifyCash": {
-      return { ...state, cash: Math.round((state.cash + effect.value) * 100) / 100 };
+      return {
+        ...state,
+        cash: Math.round((state.cash + effect.value) * 100) / 100,
+      };
     }
 
     case "modifyReputation": {
@@ -51,7 +54,8 @@ function applyEffect(state: GameState, effect: EventEffect): GameState {
         if (!updatedMarkets[pid]) continue;
         const planetMarket = { ...updatedMarkets[pid] };
         const cargoEntry = { ...planetMarket[effect.cargoType] };
-        cargoEntry.eventModifier = (cargoEntry.eventModifier || 0) + effect.value;
+        cargoEntry.eventModifier =
+          (cargoEntry.eventModifier || 0) + effect.value;
         planetMarket[effect.cargoType] = cargoEntry;
         updatedMarkets[pid] = planetMarket;
       }
@@ -74,7 +78,9 @@ function applyEffect(state: GameState, effect: EventEffect): GameState {
           entry.eventModifier = (entry.eventModifier || 0) + effect.value;
           planetMarket[effect.cargoType] = entry;
         } else {
-          for (const key of Object.keys(planetMarket) as Array<keyof typeof planetMarket>) {
+          for (const key of Object.keys(planetMarket) as Array<
+            keyof typeof planetMarket
+          >) {
             const entry = { ...planetMarket[key] };
             entry.eventModifier = (entry.eventModifier || 0) + effect.value;
             planetMarket[key] = entry;
@@ -241,7 +247,10 @@ export function resolveChoiceEvent(
       );
     }
   }
-  if (option.requiresReputation !== undefined && option.requiresReputation > 0) {
+  if (
+    option.requiresReputation !== undefined &&
+    option.requiresReputation > 0
+  ) {
     if (state.reputation < option.requiresReputation) {
       throw new Error(
         `Insufficient reputation: need ${option.requiresReputation}, have ${state.reputation}`,
@@ -291,7 +300,8 @@ export function resolveChoiceEvent(
     nextState = {
       ...nextState,
       activeEventChains: nextState.activeEventChains.filter(
-        (chain) => chain.chainId !== chainId || chain.currentStep < chain.totalSteps,
+        (chain) =>
+          chain.chainId !== chainId || chain.currentStep < chain.totalSteps,
       ),
     };
   }
@@ -333,7 +343,7 @@ export function tickEventChains(state: GameState, _rng: SeededRNG): GameState {
     const lastStepTurn =
       chain.currentStep === 0
         ? chain.startTurn
-        : (chain.data.lastStepTurn as number | undefined) ?? chain.startTurn;
+        : ((chain.data.lastStepTurn as number | undefined) ?? chain.startTurn);
 
     const turnsElapsed = nextState.turn - lastStepTurn;
 
@@ -370,7 +380,10 @@ export function tickEventChains(state: GameState, _rng: SeededRNG): GameState {
  * - The chain isn't already active
  * - There are no other active chains (one chain at a time)
  */
-export function checkChainTriggers(state: GameState, _rng: SeededRNG): GameState {
+export function checkChainTriggers(
+  state: GameState,
+  _rng: SeededRNG,
+): GameState {
   // Don't start a new chain if one is already active
   if (state.activeEventChains.length > 0) return state;
 
@@ -378,7 +391,9 @@ export function checkChainTriggers(state: GameState, _rng: SeededRNG): GameState
 
   for (const definition of EVENT_CHAIN_DEFINITIONS) {
     // Don't start a chain that's already active (shouldn't happen but be safe)
-    if (nextState.activeEventChains.some((c) => c.chainId === definition.chainId)) {
+    if (
+      nextState.activeEventChains.some((c) => c.chainId === definition.chainId)
+    ) {
       continue;
     }
 

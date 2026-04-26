@@ -8,7 +8,12 @@ import {
   autoAssignShipToContract,
 } from "../ContractShipMatcher.ts";
 import { acceptContractWithNegotiation } from "../ContractManager.ts";
-import type { GameState, Contract, Ship, ActiveRoute } from "../../../data/types.ts";
+import type {
+  GameState,
+  Contract,
+  Ship,
+  ActiveRoute,
+} from "../../../data/types.ts";
 import {
   ContractType,
   ContractStatus,
@@ -118,8 +123,14 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     captains: [],
     routeMarket: [],
     researchEvents: [],
-    unlockedNavTabs: ["map", "routes", "fleet", "finance"] as import("../../../data/types.ts").NavTabId[],
-    reputationTier: "unknown" as import("../../../data/types.ts").ReputationTier,
+    unlockedNavTabs: [
+      "map",
+      "routes",
+      "fleet",
+      "finance",
+    ] as import("../../../data/types.ts").NavTabId[],
+    reputationTier:
+      "unknown" as import("../../../data/types.ts").ReputationTier,
     localRouteSlots: 2,
     ...overrides,
   };
@@ -238,7 +249,11 @@ describe("applyNegotiation — standard", () => {
 
 describe("applyNegotiation — haggle", () => {
   it("success path gives ~1.3× reward and ~0.9× deadline", () => {
-    const contract = makeContract({ rewardCash: 10_000, turnsRemaining: 10, durationTurns: 10 });
+    const contract = makeContract({
+      rewardCash: 10_000,
+      turnsRemaining: 10,
+      durationTurns: 10,
+    });
     const state = createTestState({ reputation: 30 });
 
     // For robustness: try multiple seeds and find one that produces success
@@ -261,7 +276,11 @@ describe("applyNegotiation — haggle", () => {
   });
 
   it("failure path gives ~0.9× reward (empire annoyed)", () => {
-    const contract = makeContract({ rewardCash: 10_000, turnsRemaining: 10, durationTurns: 10 });
+    const contract = makeContract({
+      rewardCash: 10_000,
+      turnsRemaining: 10,
+      durationTurns: 10,
+    });
     const state = createTestState({ reputation: 30 });
 
     // Find a seed that produces a failed haggle
@@ -283,7 +302,11 @@ describe("applyNegotiation — haggle", () => {
   });
 
   it("falls back to standard when reputation < 25 (gate check)", () => {
-    const contract = makeContract({ rewardCash: 10_000, turnsRemaining: 5, durationTurns: 5 });
+    const contract = makeContract({
+      rewardCash: 10_000,
+      turnsRemaining: 5,
+      durationTurns: 5,
+    });
     const state = createTestState({ reputation: 10 }); // below gate
     const rng = new SeededRNG(42);
     const { negotiatedContract, result } = applyNegotiation(
@@ -327,7 +350,11 @@ describe("applyNegotiation — early_completion", () => {
   });
 
   it("falls back to standard when reputation < 50", () => {
-    const contract = makeContract({ rewardCash: 20_000, turnsRemaining: 5, durationTurns: 5 });
+    const contract = makeContract({
+      rewardCash: 20_000,
+      turnsRemaining: 5,
+      durationTurns: 5,
+    });
     const state = createTestState({ reputation: 30 }); // below 50 gate
     const rng = new SeededRNG(42);
     const { negotiatedContract } = applyNegotiation(
@@ -376,8 +403,18 @@ describe("findBestShipForContract", () => {
 
   it("penalises ships with condition < 50", () => {
     const contract = makeContract();
-    const riskyShip = makeShip({ id: "risky", condition: 40, speed: 5, cargoCapacity: 100 });
-    const safeShip = makeShip({ id: "safe", condition: 70, speed: 2, cargoCapacity: 50 });
+    const riskyShip = makeShip({
+      id: "risky",
+      condition: 40,
+      speed: 5,
+      cargoCapacity: 100,
+    });
+    const safeShip = makeShip({
+      id: "safe",
+      condition: 70,
+      speed: 2,
+      cargoCapacity: 50,
+    });
     const state = createTestState({
       fleet: [riskyShip, safeShip],
       contracts: [contract],
@@ -388,18 +425,48 @@ describe("findBestShipForContract", () => {
 
   it("prefers ships with cargo capacity for non-passenger contracts", () => {
     const contract = makeContract({ cargoType: CargoType.Food });
-    const cargoShip = makeShip({ id: "cargo", cargoCapacity: 80, passengerCapacity: 0, condition: 80, speed: 3 });
-    const emptyShip = makeShip({ id: "empty", cargoCapacity: 0, passengerCapacity: 50, condition: 80, speed: 3 });
-    const state = createTestState({ fleet: [emptyShip, cargoShip], contracts: [contract] });
+    const cargoShip = makeShip({
+      id: "cargo",
+      cargoCapacity: 80,
+      passengerCapacity: 0,
+      condition: 80,
+      speed: 3,
+    });
+    const emptyShip = makeShip({
+      id: "empty",
+      cargoCapacity: 0,
+      passengerCapacity: 50,
+      condition: 80,
+      speed: 3,
+    });
+    const state = createTestState({
+      fleet: [emptyShip, cargoShip],
+      contracts: [contract],
+    });
     const result = findBestShipForContract(contract, state);
     expect(result.shipId).toBe("cargo");
   });
 
   it("prefers ships with passenger capacity for ferry contracts", () => {
     const contract = makeContract({ cargoType: CargoType.Passengers });
-    const ferryShip = makeShip({ id: "ferry", cargoCapacity: 0, passengerCapacity: 80, condition: 80, speed: 3 });
-    const cargoShip = makeShip({ id: "cargo", cargoCapacity: 80, passengerCapacity: 0, condition: 80, speed: 3 });
-    const state = createTestState({ fleet: [cargoShip, ferryShip], contracts: [contract] });
+    const ferryShip = makeShip({
+      id: "ferry",
+      cargoCapacity: 0,
+      passengerCapacity: 80,
+      condition: 80,
+      speed: 3,
+    });
+    const cargoShip = makeShip({
+      id: "cargo",
+      cargoCapacity: 80,
+      passengerCapacity: 0,
+      condition: 80,
+      speed: 3,
+    });
+    const state = createTestState({
+      fleet: [cargoShip, ferryShip],
+      contracts: [contract],
+    });
     const result = findBestShipForContract(contract, state);
     expect(result.shipId).toBe("ferry");
   });
@@ -463,8 +530,15 @@ describe("autoAssignShipToContract", () => {
       cargoType: CargoType.Food,
       assignedShipIds: [],
     };
-    const state = createTestState({ contracts: [contract], activeRoutes: [route] });
-    const updated = autoAssignShipToContract(contract.id, "nonexistent-ship", state);
+    const state = createTestState({
+      contracts: [contract],
+      activeRoutes: [route],
+    });
+    const updated = autoAssignShipToContract(
+      contract.id,
+      "nonexistent-ship",
+      state,
+    );
     expect(updated.activeRoutes[0].assignedShipIds).toHaveLength(0);
   });
 });
@@ -482,7 +556,12 @@ describe("acceptContractWithNegotiation", () => {
     });
     const rng = new SeededRNG(42);
 
-    const updated = acceptContractWithNegotiation(contract.id, "standard", state, rng);
+    const updated = acceptContractWithNegotiation(
+      contract.id,
+      "standard",
+      state,
+      rng,
+    );
     expect(updated.cash).toBe(100_000 - 2_000);
     const updatedContract = updated.contracts.find((c) => c.id === contract.id);
     expect(updatedContract?.status).toBe(ContractStatus.Active);
@@ -499,7 +578,12 @@ describe("acceptContractWithNegotiation", () => {
     });
     const rng = new SeededRNG(42);
 
-    const updated = acceptContractWithNegotiation(contract.id, "standard", state, rng);
+    const updated = acceptContractWithNegotiation(
+      contract.id,
+      "standard",
+      state,
+      rng,
+    );
     const updatedShip = updated.fleet.find((s) => s.id === ship.id);
     // Ship should be assigned to the contract's linked route
     expect(updatedShip?.assignedRouteId).not.toBeNull();
@@ -515,7 +599,12 @@ describe("acceptContractWithNegotiation", () => {
     });
     const rng = new SeededRNG(42);
 
-    const updated = acceptContractWithNegotiation(contract.id, "standard", state, rng);
+    const updated = acceptContractWithNegotiation(
+      contract.id,
+      "standard",
+      state,
+      rng,
+    );
     // Contract still accepted, ship stays on its route
     const updatedShip = updated.fleet.find((s) => s.id === busyShip.id);
     expect(updatedShip?.assignedRouteId).toBe("other-route");
@@ -524,7 +613,12 @@ describe("acceptContractWithNegotiation", () => {
   it("returns original state when contract not found", () => {
     const state = createTestState({ contracts: [] });
     const rng = new SeededRNG(42);
-    const updated = acceptContractWithNegotiation("nonexistent", "standard", state, rng);
+    const updated = acceptContractWithNegotiation(
+      "nonexistent",
+      "standard",
+      state,
+      rng,
+    );
     expect(updated).toBe(state);
   });
 
@@ -537,7 +631,12 @@ describe("acceptContractWithNegotiation", () => {
     });
     const rng = new SeededRNG(42);
 
-    const updated = acceptContractWithNegotiation(contract.id, "early_completion", state, rng);
+    const updated = acceptContractWithNegotiation(
+      contract.id,
+      "early_completion",
+      state,
+      rng,
+    );
     const updatedContract = updated.contracts.find((c) => c.id === contract.id);
     // Reward should be 1.5×
     expect(updatedContract?.rewardCash).toBe(Math.round(20_000 * 1.5));

@@ -19,7 +19,9 @@ export function registerActionTools(server: McpServer): void {
           .number()
           .int()
           .optional()
-          .describe("Optional integer seed for deterministic world generation."),
+          .describe(
+            "Optional integer seed for deterministic world generation.",
+          ),
       },
     },
     async ({ seed }) =>

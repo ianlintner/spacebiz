@@ -1,9 +1,5 @@
 import { AIPersonality } from "../../../data/types.ts";
-import type {
-  AICompany,
-  AIHubState,
-  GameState,
-} from "../../../data/types.ts";
+import type { AICompany, AIHubState, GameState } from "../../../data/types.ts";
 
 // ---------------------------------------------------------------------------
 // AI Hub Logic (Wave 3 — Track 3.3)
@@ -42,7 +38,9 @@ function buildHubMultipliers(
   personality: (typeof AIPersonality)[keyof typeof AIPersonality],
 ): Pick<
   AIHubState,
-  "bonusRevenueMultiplier" | "bonusFuelMultiplier" | "bonusMaintenanceMultiplier"
+  | "bonusRevenueMultiplier"
+  | "bonusFuelMultiplier"
+  | "bonusMaintenanceMultiplier"
 > {
   // Base increments per tier
   let revBonus = tier * AI_HUB_REVENUE_BONUS_PER_TIER;
@@ -78,10 +76,7 @@ function buildHubMultipliers(
  * Upgrades occur at turns 10, 20, and 30.
  * Each tier adds compound bonuses to revenue, fuel, and maintenance.
  */
-export function processAIHub(
-  company: AICompany,
-  state: GameState,
-): AICompany {
+export function processAIHub(company: AICompany, state: GameState): AICompany {
   const currentHub: AIHubState = company.aiHub ?? buildDefaultAIHub();
 
   // Already at max tier

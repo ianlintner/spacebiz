@@ -10,7 +10,8 @@ export function registerDiscoveryTools(server: McpServer): void {
       description: "Return the semver version of the `window.__sft` contract.",
       inputSchema: {},
     },
-    async () => run(async () => ({ version: await (await driver()).version() })),
+    async () =>
+      run(async () => ({ version: await (await driver()).version() })),
   );
 
   server.registerTool(
@@ -23,7 +24,9 @@ export function registerDiscoveryTools(server: McpServer): void {
         filter: z
           .string()
           .optional()
-          .describe("Case-insensitive substring to match against testId or label."),
+          .describe(
+            "Case-insensitive substring to match against testId or label.",
+          ),
       },
     },
     async ({ filter }) => run(async () => (await driver()).list(filter)),

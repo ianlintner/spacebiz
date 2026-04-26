@@ -54,7 +54,7 @@ describe("HubBonusCalculator — revenue bonus", () => {
       makeRoom(HubRoomType.SimpleTerminal, "r1"),
       makeRoom(HubRoomType.LuxuryTerminal, "r2"),
     ]);
-    expect(getRevenueMultiplier(hub)).toBeCloseTo(1.10);
+    expect(getRevenueMultiplier(hub)).toBeCloseTo(1.1);
   });
 });
 
@@ -66,14 +66,17 @@ describe("HubBonusCalculator — upkeep", () => {
 
   it("returns upkeep matching the room definition", () => {
     // SimpleTerminal is rent-free (upkeepCost = 0)
-    const expected = HUB_ROOM_DEFINITIONS[HubRoomType.SimpleTerminal].upkeepCost;
+    const expected =
+      HUB_ROOM_DEFINITIONS[HubRoomType.SimpleTerminal].upkeepCost;
     const hub = makeHub([makeRoom(HubRoomType.SimpleTerminal)]);
     expect(getHubUpkeep(hub)).toBe(expected);
   });
 
   it("sums upkeep across all installed rooms", () => {
-    const terminal = HUB_ROOM_DEFINITIONS[HubRoomType.SimpleTerminal].upkeepCost;
-    const tradeOffice = HUB_ROOM_DEFINITIONS[HubRoomType.TradeOffice].upkeepCost;
+    const terminal =
+      HUB_ROOM_DEFINITIONS[HubRoomType.SimpleTerminal].upkeepCost;
+    const tradeOffice =
+      HUB_ROOM_DEFINITIONS[HubRoomType.TradeOffice].upkeepCost;
     const hub = makeHub([
       makeRoom(HubRoomType.SimpleTerminal, "r1"),
       makeRoom(HubRoomType.TradeOffice, "r2"),
@@ -165,7 +168,9 @@ describe("High saturation route tag detection", () => {
   });
 
   it("initializeHubWithTerminal adds exactly one SimpleTerminal room", () => {
-    const empty = createEmptyHub("sys-1", "emp-1", [HubRoomType.SimpleTerminal]);
+    const empty = createEmptyHub("sys-1", "emp-1", [
+      HubRoomType.SimpleTerminal,
+    ]);
     const hub = initializeHubWithTerminal(empty);
     expect(hub.rooms).toHaveLength(1);
     expect(hub.rooms[0]?.type).toBe(HubRoomType.SimpleTerminal);

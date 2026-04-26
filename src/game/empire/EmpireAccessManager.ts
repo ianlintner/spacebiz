@@ -10,7 +10,10 @@ import {
   BASE_CARGO_TYPES_PER_PAIR,
   STARTING_ADJACENT_EMPIRES,
 } from "../../data/constants.ts";
-import { getTechEffectTotal, getTechRouteSlotBonus } from "../tech/TechEffects.ts";
+import {
+  getTechEffectTotal,
+  getTechRouteSlotBonus,
+} from "../tech/TechEffects.ts";
 import { getRouteSlotBonus } from "../hub/HubBonusCalculator.ts";
 import { findPath } from "../routes/HyperlaneRouter.ts";
 
@@ -162,7 +165,9 @@ export function validateRouteCreation(
 
   if (!originEmpireId || !destEmpireId) return "Invalid planet";
   const originPlanet = planets.find((planet) => planet.id === originPlanetId);
-  const destinationPlanet = planets.find((planet) => planet.id === destPlanetId);
+  const destinationPlanet = planets.find(
+    (planet) => planet.id === destPlanetId,
+  );
   if (!originPlanet || !destinationPlanet) return "Invalid planet";
   if (originPlanet.id === destinationPlanet.id) {
     return "Origin and destination must be different planets";

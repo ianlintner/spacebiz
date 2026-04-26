@@ -148,12 +148,22 @@ function drawBackgroundCanvas(
   else if (mood === "analyzing") glowColor = PALETTE.analyzingAmber;
 
   // Animated glow pulse based on frame
-  const glowIntensity = 0.06 + 0.04 * Math.sin((frame / ADVISER_FRAME_COUNT) * Math.PI * 2);
+  const glowIntensity =
+    0.06 + 0.04 * Math.sin((frame / ADVISER_FRAME_COUNT) * Math.PI * 2);
   for (let dy = 0; dy < 6; dy++) {
     for (let dx = 0; dx < 6; dx++) {
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < 5) {
-        px(ctx, grid, 26 + dx, 2 + dy, glowColor, 1, 1, glowIntensity * (1 - dist / 5));
+        px(
+          ctx,
+          grid,
+          26 + dx,
+          2 + dy,
+          glowColor,
+          1,
+          1,
+          glowIntensity * (1 - dist / 5),
+        );
       }
     }
   }
@@ -316,7 +326,8 @@ function drawEyesCanvas(
     px(ctx, grid, 11, 11, PALETTE.pupil, 1, 1);
     px(ctx, grid, 20, 11, PALETTE.pupil, 1, 1);
     // Red glow (pulses with frame)
-    const alertAlpha = 0.2 + 0.15 * Math.sin((frame / ADVISER_FRAME_COUNT) * Math.PI * 2);
+    const alertAlpha =
+      0.2 + 0.15 * Math.sin((frame / ADVISER_FRAME_COUNT) * Math.PI * 2);
     px(ctx, grid, 9, 9, PALETTE.alertGlow, 5, 1, alertAlpha + 0.1);
     px(ctx, grid, 18, 9, PALETTE.alertGlow, 5, 1, alertAlpha + 0.1);
     px(ctx, grid, 9, 12, PALETTE.alertGlow, 5, 1, alertAlpha);
@@ -389,7 +400,8 @@ function drawHeadsetCanvas(
   else if (mood === "success") glow = PALETTE.successGold;
   else if (mood === "analyzing") glow = PALETTE.analyzingAmber;
 
-  const glowAlpha = 0.5 + 0.3 * Math.sin((frame / ADVISER_FRAME_COUNT) * Math.PI * 2);
+  const glowAlpha =
+    0.5 + 0.3 * Math.sin((frame / ADVISER_FRAME_COUNT) * Math.PI * 2);
   px(ctx, grid, 24, 15, glow, 1, 1, glowAlpha + 0.2);
   px(ctx, grid, 22, 17, glow, 1, 1, glowAlpha);
 
@@ -429,7 +441,8 @@ function drawMoodAccentsCanvas(
     for (let i = 0; i < sparkles.length; i++) {
       const s = sparkles[i];
       const phase = ((frame + i) % ADVISER_FRAME_COUNT) / ADVISER_FRAME_COUNT;
-      const alpha = s.baseAlpha * (0.4 + 0.6 * Math.abs(Math.sin(phase * Math.PI)));
+      const alpha =
+        s.baseAlpha * (0.4 + 0.6 * Math.abs(Math.sin(phase * Math.PI)));
       px(ctx, grid, s.x, s.y, PALETTE.successGold, 1, 1, alpha);
     }
     // Badge highlight
@@ -530,14 +543,7 @@ export function generateAdviserSpritesheet(
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const frameName = `${ADVISER_MOODS[row]}_${col}`;
-      tex.add(
-        frameName as unknown as number,
-        0,
-        col * fs,
-        row * fs,
-        fs,
-        fs,
-      );
+      tex.add(frameName as unknown as number, 0, col * fs, row * fs, fs, fs);
     }
   }
 }
@@ -812,37 +818,38 @@ export function getMoodAccentColor(mood: AdviserMood): number {
  */
 export function setExpression(
   scene: Phaser.Scene,
-  gameObject: Phaser.GameObjects.Components.Tint & Phaser.GameObjects.Components.Transform & { scene: Phaser.Scene },
+  gameObject: Phaser.GameObjects.Components.Tint &
+    Phaser.GameObjects.Components.Transform & { scene: Phaser.Scene },
   expression: PortraitExpression,
 ): void {
   // Clear any existing tint first
   (gameObject as unknown as Phaser.GameObjects.Image).clearTint();
 
   switch (expression) {
-    case 'happy':
+    case "happy":
       (gameObject as unknown as Phaser.GameObjects.Image).setTint(0xffdd88);
       scene.tweens.add({
         targets: gameObject,
         scaleY: { from: gameObject.scaleY, to: gameObject.scaleY * 1.03 },
         duration: 200,
         yoyo: true,
-        ease: 'Sine.easeInOut',
+        ease: "Sine.easeInOut",
       });
       break;
-    case 'worried':
+    case "worried":
       (gameObject as unknown as Phaser.GameObjects.Image).setTint(0x88aaff);
       scene.tweens.add({
         targets: gameObject,
         scaleY: { from: gameObject.scaleY, to: gameObject.scaleY * 0.97 },
         duration: 200,
         yoyo: true,
-        ease: 'Sine.easeInOut',
+        ease: "Sine.easeInOut",
       });
       break;
-    case 'angry':
+    case "angry":
       (gameObject as unknown as Phaser.GameObjects.Image).setTint(0xff8888);
       break;
-    case 'neutral':
+    case "neutral":
     default:
       // No tint applied — already cleared above
       break;

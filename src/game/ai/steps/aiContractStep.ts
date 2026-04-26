@@ -1,9 +1,9 @@
-import { AIPersonality, ContractStatus, ContractType } from "../../../data/types.ts";
-import type {
-  AICompany,
-  Contract,
-  GameState,
+import {
+  AIPersonality,
+  ContractStatus,
+  ContractType,
 } from "../../../data/types.ts";
+import type { AICompany, Contract, GameState } from "../../../data/types.ts";
 import type { SeededRNG } from "../../../utils/SeededRNG.ts";
 
 // ---------------------------------------------------------------------------
@@ -61,9 +61,7 @@ export function processAIContracts(
 
   // How many active contracts does this AI currently hold?
   const aiActiveCount = updatedContracts.filter(
-    (c) =>
-      c.aiCompanyId === company.id &&
-      c.status === ContractStatus.Active,
+    (c) => c.aiCompanyId === company.id && c.status === ContractStatus.Active,
   ).length;
 
   // AI only accepts 1 new contract at a time, 1 per turn
@@ -73,9 +71,7 @@ export function processAIContracts(
 
   // Find available contracts (not yet claimed by any AI or player)
   const available = updatedContracts.filter(
-    (c) =>
-      c.status === ContractStatus.Available &&
-      !c.aiCompanyId,
+    (c) => c.status === ContractStatus.Available && !c.aiCompanyId,
   );
   if (available.length === 0) {
     return { company, updatedContracts };

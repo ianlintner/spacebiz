@@ -1,6 +1,11 @@
 import * as Phaser from "phaser";
 import { updateLayout } from "@spacebiz/ui";
-import { calculateGameSize, BASE_HEIGHT, MIN_WIDTH, MAX_WIDTH } from "./calculateGameSize.ts";
+import {
+  calculateGameSize,
+  BASE_HEIGHT,
+  MIN_WIDTH,
+  MAX_WIDTH,
+} from "./calculateGameSize.ts";
 
 export { calculateGameSize, BASE_HEIGHT, MIN_WIDTH, MAX_WIDTH };
 

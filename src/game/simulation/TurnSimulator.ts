@@ -181,7 +181,11 @@ function simulateShipOnRoute(
   // Block passenger routes affected by quarantine or similar events
   if (isPassengers && isPassengerRouteBlocked(activeEvents, route)) {
     const fuelCost =
-      route.distance * 2 * ship.fuelEfficiency * state.market.fuelPrice * effectiveTrips;
+      route.distance *
+      2 *
+      ship.fuelEfficiency *
+      state.market.fuelPrice *
+      effectiveTrips;
     return {
       revenue: 0,
       fuelCost: Math.round(fuelCost * 100) / 100,
@@ -198,7 +202,10 @@ function simulateShipOnRoute(
   const originSysId = planetToSystemId(route.originPlanetId);
   const destSysId = planetToSystemId(route.destinationPlanetId);
   const isIntraSystem = originSysId !== null && originSysId === destSysId;
-  const distancePremium = Math.min(DISTANCE_PREMIUM_CAP, route.distance * DISTANCE_PREMIUM_RATE);
+  const distancePremium = Math.min(
+    DISTANCE_PREMIUM_CAP,
+    route.distance * DISTANCE_PREMIUM_RATE,
+  );
   const revenueMultiplier = isIntraSystem
     ? INTRA_SYSTEM_REVENUE_MULTIPLIER
     : 1 + distancePremium;
@@ -206,7 +213,11 @@ function simulateShipOnRoute(
 
   // Fuel cost = distance * 2 * fuelEfficiency * fuelPrice * effectiveTrips
   const fuelCost =
-    route.distance * 2 * ship.fuelEfficiency * state.market.fuelPrice * effectiveTrips;
+    route.distance *
+    2 *
+    ship.fuelEfficiency *
+    state.market.fuelPrice *
+    effectiveTrips;
 
   return {
     revenue: Math.round(revenue * 100) / 100,
@@ -397,7 +408,13 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       const ship = nextState.fleet.find((s) => s.id === shipId);
       if (!ship) continue;
 
-      const result = simulateShipOnRoute(ship, route, nextState, rng, nextState.activeEvents);
+      const result = simulateShipOnRoute(
+        ship,
+        route,
+        nextState,
+        rng,
+        nextState.activeEvents,
+      );
       routeRevenue += result.revenue;
       routeFuelCost += result.fuelCost;
       routeCargoMoved += result.cargoMoved;

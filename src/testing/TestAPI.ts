@@ -6,7 +6,14 @@ import type {
   ClickResult,
 } from "./types.ts";
 import { widgetRegistry } from "./WidgetRegistry.ts";
-import { click, clickIfPresent, goToScene, waitFor, setGame, makeSemanticActions } from "./actions.ts";
+import {
+  click,
+  clickIfPresent,
+  goToScene,
+  waitFor,
+  setGame,
+  makeSemanticActions,
+} from "./actions.ts";
 import type { SemanticActions } from "./actions.ts";
 import { logController } from "./log.ts";
 import type { LogController } from "./log.ts";

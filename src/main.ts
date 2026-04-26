@@ -729,9 +729,10 @@ function setupFullscreenControl(): void {
   };
 
   toggle.addEventListener("click", () => {
-    const request = document.fullscreenElement === frame
-      ? document.exitFullscreen()
-      : frame.requestFullscreen({ navigationUI: "hide" });
+    const request =
+      document.fullscreenElement === frame
+        ? document.exitFullscreen()
+        : frame.requestFullscreen({ navigationUI: "hide" });
 
     request.catch((error: unknown) => {
       console.warn("Fullscreen request failed", error);

@@ -24,7 +24,10 @@ import { getHubUpkeep } from "../game/hub/HubManager.ts";
 import { getRevenueMultiplier } from "../game/hub/HubBonusCalculator.ts";
 
 import { getPortraitTextureKey } from "../data/portraits.ts";
-import { portraitLoader, PORTRAIT_PLACEHOLDER_KEY } from "../game/PortraitLoader.ts";
+import {
+  portraitLoader,
+  PORTRAIT_PLACEHOLDER_KEY,
+} from "../game/PortraitLoader.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -126,7 +129,9 @@ export class FinanceScene extends Phaser.Scene {
             fitImageCover(ceoImg, pSize, pSize);
           }
         })
-        .catch(() => {/* leave placeholder */});
+        .catch(() => {
+          /* leave placeholder */
+        });
     }
 
     // --- Main content panel with title ---

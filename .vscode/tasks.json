@@ -1,65 +1,47 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "copilot-verify-check",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"check"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "copilot-verify-check-2",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"check"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "copilot-verify-check-3",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"check"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "copilot-verify-check-4",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"check"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "copilot-verify-check-5",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"check"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "copilot-verify-check-6",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"check"
-			],
-			"isBackground": false
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "copilot-verify-check",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "check"],
+      "isBackground": false
+    },
+    {
+      "label": "copilot-verify-check-2",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "check"],
+      "isBackground": false
+    },
+    {
+      "label": "copilot-verify-check-3",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "check"],
+      "isBackground": false
+    },
+    {
+      "label": "copilot-verify-check-4",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "check"],
+      "isBackground": false
+    },
+    {
+      "label": "copilot-verify-check-5",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "check"],
+      "isBackground": false
+    },
+    {
+      "label": "copilot-verify-check-6",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "check"],
+      "isBackground": false
+    }
+  ]
 }

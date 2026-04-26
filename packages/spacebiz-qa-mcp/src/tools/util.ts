@@ -100,14 +100,21 @@ function extractSftError(err: unknown): {
   }
   if (err instanceof Error && typeof err.message === "string") {
     // Playwright serializes the thrown object's JSON into `err.message`.
-    const match = err.message.match(/\{[\s\S]*"name"\s*:\s*"SftTestError"[\s\S]*\}/);
+    const match = err.message.match(
+      /\{[\s\S]*"name"\s*:\s*"SftTestError"[\s\S]*\}/,
+    );
     if (match) {
       try {
         const obj = JSON.parse(match[0]) as Record<string, unknown>;
-        if (obj && obj.name === "SftTestError" && typeof obj.code === "string") {
+        if (
+          obj &&
+          obj.name === "SftTestError" &&
+          typeof obj.code === "string"
+        ) {
           return {
             code: obj.code,
-            message: typeof obj.message === "string" ? obj.message : err.message,
+            message:
+              typeof obj.message === "string" ? obj.message : err.message,
             testId: typeof obj.testId === "string" ? obj.testId : undefined,
             hint: typeof obj.hint === "string" ? obj.hint : undefined,
           };

@@ -32,7 +32,11 @@ function pickFlavor(
   return rng.chance(rank) ? "bane" : "boon";
 }
 
-function substitute(text: string, company: AICompany, state: GameState): string {
+function substitute(
+  text: string,
+  company: AICompany,
+  state: GameState,
+): string {
   let out = text.replace(/\{company\}/g, company.name);
   if (out.includes("{empire}")) {
     const empire = state.galaxy.empires.find((e) => e.id === company.empireId);
@@ -111,7 +115,8 @@ export function applyAINarrativeEvents(
   const headwindBias = state.storyteller.headwindBias;
   // Rivals do BETTER when player is doing well (negative headwindBias means player struggling, so AI should flounder).
   // Use the opposite of the player's bias to skew AI fortunes — when player struggles, AI gets banes; when player dominates, AI gets boons (catch-up for trailing AI is handled by pickFlavor).
-  let chance = NARRATIVE_BASE_CHANCE + Math.abs(headwindBias) * PER_AI_INTENSITY_BONUS;
+  let chance =
+    NARRATIVE_BASE_CHANCE + Math.abs(headwindBias) * PER_AI_INTENSITY_BONUS;
   if (existingActive.length >= 2) chance = 0;
 
   if (rng.nextFloat(0, 1) < chance) {

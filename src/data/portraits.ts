@@ -1310,7 +1310,9 @@ export function getPortraitAssetPath(def: PortraitDefinition): string {
  * Get [webp, png] URL pair for Phaser's load.image(key, urls) array form.
  * Phaser tries the first URL (WebP) and falls back to the second (PNG).
  */
-export function getPortraitAssetUrls(def: PortraitDefinition): [string, string] {
+export function getPortraitAssetUrls(
+  def: PortraitDefinition,
+): [string, string] {
   const stem = def.filename.replace(/\.png$/i, "");
   return [`portraits/ceo/${stem}.webp`, `portraits/ceo/${stem}.png`];
 }

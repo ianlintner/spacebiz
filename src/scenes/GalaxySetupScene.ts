@@ -10,14 +10,13 @@ import {
 } from "../ui/index.ts";
 import { gameStore } from "../data/GameStore.ts";
 import { createNewGame } from "../game/NewGameSetup.ts";
-import type {
-  GameState,
-  StarSystem,
-  GalaxyShape,
-} from "../data/types.ts";
+import type { GameState, StarSystem, GalaxyShape } from "../data/types.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { CEO_PORTRAITS, getPortraitTextureKey } from "../data/portraits.ts";
-import { portraitLoader, PORTRAIT_PLACEHOLDER_KEY } from "../game/PortraitLoader.ts";
+import {
+  portraitLoader,
+  PORTRAIT_PLACEHOLDER_KEY,
+} from "../game/PortraitLoader.ts";
 import { withLoadingOverlay } from "../ui/LoadingOverlay.ts";
 import type { GamePreset } from "../data/constants.ts";
 
@@ -154,7 +153,9 @@ export class GalaxySetupScene extends Phaser.Scene {
           this.fitPortraitInCircle(this.portraitImage, this.portraitDiameter);
         }
       })
-      .catch(() => {/* leave placeholder */});
+      .catch(() => {
+        /* leave placeholder */
+      });
 
     this.portraitMask = this.add.graphics();
     this.portraitMask.fillStyle(0xffffff);
@@ -378,7 +379,9 @@ export class GalaxySetupScene extends Phaser.Scene {
           portraitLoader.ensureCeoPortrait(this, chosenPortrait.id),
           { label: "Preparing…" },
         )
-          .catch(() => {/* portrait missing — HUD will show placeholder */})
+          .catch(() => {
+            /* portrait missing — HUD will show placeholder */
+          })
           .finally(() => {
             this.scene.start("GameHUDScene");
           });
@@ -465,7 +468,9 @@ export class GalaxySetupScene extends Phaser.Scene {
               }
             }
           })
-          .catch(() => {/* leave placeholder */});
+          .catch(() => {
+            /* leave placeholder */
+          });
       }
     }
   }

@@ -243,14 +243,23 @@ function audioUrl(filename: string): string {
 }
 
 const EXTERNAL_BGM_PLAYLIST: ExternalBgmTrack[] = [
-  { url: audioUrl("Beyond_the_Gateway.mp3"),        label: "Beyond the Gateway" },
-  { url: audioUrl("Coffee_in_the_Airlock.mp3"),      label: "Coffee in the Airlock" },
-  { url: audioUrl("Porchlight_in_the_Nebula.mp3"),   label: "Porchlight in the Nebula" },
-  { url: audioUrl("approachingparsecseven.mp3"),     label: "Approaching Parsec Seven" },
-  { url: audioUrl("Terminal_Sunrise.mp3"),           label: "Terminal Sunrise" },
-  { url: audioUrl("highscore.mp3"),                  label: "High Score" },
-  { url: audioUrl("holdingorbit.mp3"),               label: "Holding Orbit" },
-  { url: audioUrl("lastport.mp3"),                   label: "Last Port" },
+  { url: audioUrl("Beyond_the_Gateway.mp3"), label: "Beyond the Gateway" },
+  {
+    url: audioUrl("Coffee_in_the_Airlock.mp3"),
+    label: "Coffee in the Airlock",
+  },
+  {
+    url: audioUrl("Porchlight_in_the_Nebula.mp3"),
+    label: "Porchlight in the Nebula",
+  },
+  {
+    url: audioUrl("approachingparsecseven.mp3"),
+    label: "Approaching Parsec Seven",
+  },
+  { url: audioUrl("Terminal_Sunrise.mp3"), label: "Terminal Sunrise" },
+  { url: audioUrl("highscore.mp3"), label: "High Score" },
+  { url: audioUrl("holdingorbit.mp3"), label: "Holding Orbit" },
+  { url: audioUrl("lastport.mp3"), label: "Last Port" },
 ];
 
 /** Fisher-Yates shuffle (in-place). */

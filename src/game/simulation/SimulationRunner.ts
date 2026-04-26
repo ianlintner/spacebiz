@@ -4,7 +4,10 @@ import { createNewGame } from "../NewGameSetup.ts";
 import { simulateTurn } from "./TurnSimulator.ts";
 import { convertToFullAIState } from "./AIPlayerAdapter.ts";
 import { GalaxyShape } from "../../data/types.ts";
-import type { GameState, GalaxyShape as GalaxyShapeT } from "../../data/types.ts";
+import type {
+  GameState,
+  GalaxyShape as GalaxyShapeT,
+} from "../../data/types.ts";
 import { GAME_LENGTH_PRESETS } from "../../data/constants.ts";
 import type { GamePreset } from "../../data/constants.ts";
 import { rankCompanies } from "../scoring/ScoreCalculator.ts";
@@ -66,9 +69,10 @@ export class SimulationRunner extends GameEventEmitter {
     this.aborted = false;
 
     // Resolve game preset & shape
-    const gamePreset = (config.gameSize as GamePreset) in GAME_LENGTH_PRESETS
-      ? (config.gameSize as GamePreset)
-      : "standard";
+    const gamePreset =
+      (config.gameSize as GamePreset) in GAME_LENGTH_PRESETS
+        ? (config.gameSize as GamePreset)
+        : "standard";
     const galaxyShape =
       GALAXY_SHAPE_MAP[config.galaxyShape] ?? GalaxyShape.Spiral;
 
@@ -168,9 +172,10 @@ export class SimulationRunner extends GameEventEmitter {
     const startTime = performance.now();
     this.aborted = false;
 
-    const gamePreset = (config.gameSize as GamePreset) in GAME_LENGTH_PRESETS
-      ? (config.gameSize as GamePreset)
-      : "standard";
+    const gamePreset =
+      (config.gameSize as GamePreset) in GAME_LENGTH_PRESETS
+        ? (config.gameSize as GamePreset)
+        : "standard";
     const galaxyShape =
       GALAXY_SHAPE_MAP[config.galaxyShape] ?? GalaxyShape.Spiral;
     const presetConfig = GAME_LENGTH_PRESETS[gamePreset];

@@ -238,7 +238,9 @@ export class GameOverScene extends Phaser.Scene {
       delay: 400,
       ease: "Cubic.easeOut",
       onUpdate: () => {
-        totalValue.setText(Math.round(scoreCounter.value).toLocaleString("en-US"));
+        totalValue.setText(
+          Math.round(scoreCounter.value).toLocaleString("en-US"),
+        );
       },
       onComplete: () => {
         totalValue.setText(finalScore.toLocaleString("en-US"));

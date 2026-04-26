@@ -52,7 +52,8 @@ class PortraitLoader {
     const key = getPortraitTextureKey(ceoId);
     return this.ensureKey(scene, key, () => {
       const def = CEO_PORTRAITS.find((p) => p.id === ceoId);
-      if (!def) return Promise.reject(new Error(`Unknown CEO portrait: ${ceoId}`));
+      if (!def)
+        return Promise.reject(new Error(`Unknown CEO portrait: ${ceoId}`));
       return Promise.resolve(getPortraitAssetUrls(def));
     });
   }
@@ -62,7 +63,10 @@ class PortraitLoader {
    * Fires and forgets — errors per-portrait are suppressed so one bad image
    * doesn't block the rest.
    */
-  preloadCeoPortraits(scene: Phaser.Scene, ids: readonly string[]): Promise<void> {
+  preloadCeoPortraits(
+    scene: Phaser.Scene,
+    ids: readonly string[],
+  ): Promise<void> {
     return Promise.all(
       ids.map((id) =>
         this.ensureCeoPortrait(scene, id).catch(() => {
@@ -83,7 +87,9 @@ class PortraitLoader {
     return this.ensureKey(scene, key, () => {
       const def = EMPIRE_LEADER_PORTRAITS.find((p) => p.id === leaderId);
       if (!def)
-        return Promise.reject(new Error(`Unknown leader portrait: ${leaderId}`));
+        return Promise.reject(
+          new Error(`Unknown leader portrait: ${leaderId}`),
+        );
       return Promise.resolve(getLeaderAssetUrls(def));
     });
   }

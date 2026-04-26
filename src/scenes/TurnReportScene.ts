@@ -338,7 +338,9 @@ export class TurnReportScene extends Phaser.Scene {
             this,
             "big_profit",
             "PROFITABLE!",
-            "+" + "\u00A7" + Math.round(lastTurn.netProfit).toLocaleString("en-US"),
+            "+" +
+              "\u00A7" +
+              Math.round(lastTurn.netProfit).toLocaleString("en-US"),
           );
         } else if (streakTurns >= 3) {
           MilestoneOverlay.show(

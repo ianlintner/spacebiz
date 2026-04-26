@@ -1,6 +1,12 @@
 import type { GameState } from "./types";
 import { GameEventEmitter } from "../utils/EventEmitter";
-import { STARTING_CASH, MAX_TURNS, SAVE_VERSION, ACTION_POINTS_PER_TURN, LOCAL_ROUTE_SLOTS } from "./constants";
+import {
+  STARTING_CASH,
+  MAX_TURNS,
+  SAVE_VERSION,
+  ACTION_POINTS_PER_TURN,
+  LOCAL_ROUTE_SLOTS,
+} from "./constants";
 import { initAdviserState } from "../game/adviser/AdviserEngine.ts";
 
 function createDefaultState(): GameState {
@@ -55,7 +61,10 @@ function createDefaultState(): GameState {
     stationHub: null,
     // Phase 6: Interaction Overhaul
     saveVersion: SAVE_VERSION,
-    actionPoints: { current: ACTION_POINTS_PER_TURN, max: ACTION_POINTS_PER_TURN },
+    actionPoints: {
+      current: ACTION_POINTS_PER_TURN,
+      max: ACTION_POINTS_PER_TURN,
+    },
     turnBrief: [],
     pendingChoiceEvents: [],
     activeEventChains: [],

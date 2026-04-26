@@ -219,8 +219,14 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
     captains: [],
     routeMarket: [],
     researchEvents: [],
-    unlockedNavTabs: ["map", "routes", "fleet", "finance"] as import("../../../data/types.ts").NavTabId[],
-    reputationTier: "unknown" as import("../../../data/types.ts").ReputationTier,
+    unlockedNavTabs: [
+      "map",
+      "routes",
+      "fleet",
+      "finance",
+    ] as import("../../../data/types.ts").NavTabId[],
+    reputationTier:
+      "unknown" as import("../../../data/types.ts").ReputationTier,
     localRouteSlots: 2,
     ...overrides,
   };
@@ -244,8 +250,18 @@ describe("TurnSimulator", () => {
       // trips = floor(100 / (50*2/4)) = floor(100/25) = 4
       expect(trips).toBe(4);
 
-      const distancePremium = Math.min(DISTANCE_PREMIUM_CAP, 50 * DISTANCE_PREMIUM_RATE);
-      const expectedRevenue = Math.round(BASE_CARGO_PRICES[CargoType.Food] * 80 * trips * (1 + distancePremium) * 100) / 100;
+      const distancePremium = Math.min(
+        DISTANCE_PREMIUM_CAP,
+        50 * DISTANCE_PREMIUM_RATE,
+      );
+      const expectedRevenue =
+        Math.round(
+          BASE_CARGO_PRICES[CargoType.Food] *
+            80 *
+            trips *
+            (1 + distancePremium) *
+            100,
+        ) / 100;
       const result = simulateTurn(state, rng);
 
       const turnResult = result.history[result.history.length - 1];
@@ -317,7 +333,7 @@ describe("TurnSimulator", () => {
           headwindBias: -0.5,
           turnsInDebt: 1, // Already 1 turn in debt
           consecutiveProfitTurns: 0,
-      turnsSinceLastDecision: 0,
+          turnsSinceLastDecision: 0,
         },
       });
 

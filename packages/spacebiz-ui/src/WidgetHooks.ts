@@ -29,7 +29,10 @@ export function registerWidget(reg: WidgetRegistration): (() => void) | null {
   return hook ? hook(reg) : null;
 }
 
-export function slugifyLabel(label: string, kind: WidgetKind = "button"): string {
+export function slugifyLabel(
+  label: string,
+  kind: WidgetKind = "button",
+): string {
   const prefix = kind === "button" ? "btn" : kind;
   const slug = label
     .toLowerCase()

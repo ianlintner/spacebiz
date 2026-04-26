@@ -242,7 +242,12 @@ export const GAME_LENGTH_PRESETS: Record<GamePreset, GamePresetConfig> = {
 // ── Nav Unlock Rules ───────────────────────────────────────────
 
 /** Tabs visible from turn 1 with no prerequisites */
-export const NAV_ALWAYS_VISIBLE: NavTabId[] = ["map", "routes", "fleet", "finance"];
+export const NAV_ALWAYS_VISIBLE: NavTabId[] = [
+  "map",
+  "routes",
+  "fleet",
+  "finance",
+];
 
 /** Rules that unlock nav tabs progressively */
 export const NAV_UNLOCK_RULES: Array<{
@@ -253,12 +258,20 @@ export const NAV_UNLOCK_RULES: Array<{
   /** State trigger key — checked in NavUnlocks.ts */
   trigger?: "first_contract_offer" | "second_empire_unlock" | "hub_available";
 }> = [
-  { tabId: "research",  description: "Unlocks on turn 3", minTurn: 3 },
-  { tabId: "contracts", description: "Unlocks when first contract is offered", trigger: "first_contract_offer" },
-  { tabId: "empires",   description: "Unlocks after 2nd empire unlock", trigger: "second_empire_unlock" },
-  { tabId: "rivals",    description: "Unlocks on turn 5", minTurn: 5 },
-  { tabId: "hub",       description: "Unlocks on turn 5", minTurn: 5 },
-  { tabId: "market",    description: "Unlocks on turn 5", minTurn: 5 },
+  { tabId: "research", description: "Unlocks on turn 3", minTurn: 3 },
+  {
+    tabId: "contracts",
+    description: "Unlocks when first contract is offered",
+    trigger: "first_contract_offer",
+  },
+  {
+    tabId: "empires",
+    description: "Unlocks after 2nd empire unlock",
+    trigger: "second_empire_unlock",
+  },
+  { tabId: "rivals", description: "Unlocks on turn 5", minTurn: 5 },
+  { tabId: "hub", description: "Unlocks on turn 5", minTurn: 5 },
+  { tabId: "market", description: "Unlocks on turn 5", minTurn: 5 },
 ];
 
 // ── Game Size Configs (legacy alias — backed by GAME_LENGTH_PRESETS) ─────────

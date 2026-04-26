@@ -1,4 +1,9 @@
-import type { ActiveRoute, StarSystem, Empire, DiplomaticRelation } from "../../data/types.ts";
+import type {
+  ActiveRoute,
+  StarSystem,
+  Empire,
+  DiplomaticRelation,
+} from "../../data/types.ts";
 import { getReputationTariffMultiplier } from "../reputation/ReputationEffects.ts";
 
 /**
@@ -51,7 +56,7 @@ export function calculateTariff(
   let repMult = 1.0;
   if (reputation !== undefined) {
     // Find the diplomatic status between owner's empire and the crossing empire
-    let diplomaticStatus = 'peace';
+    let diplomaticStatus = "peace";
     if (diplomaticRelations) {
       const relation = diplomaticRelations.find(
         (r) =>
