@@ -6,12 +6,13 @@ import {
   Panel,
   Button,
   DataTable,
-  ScrollableList,
   PortraitPanel,
   createStarfield,
   MilestoneOverlay,
   getLayout,
 } from "../ui/index.ts";
+import { GalacticNewsPanel } from "../ui/GalacticNewsPanel.ts";
+import { generateTickerFeed } from "../generation/news/tickerFeed.ts";
 import { autoSave } from "../game/SaveManager.ts";
 import type { TurnResult } from "../data/types.ts";
 import type { GameHUDScene } from "./GameHUDScene.ts";
@@ -492,84 +493,21 @@ export class TurnReportScene extends Phaser.Scene {
     }
 
     // -----------------------------------------------------------------------
-    // Bottom row: News Digest (left) + Market Changes (right)
+    // Bottom row: Galactic News Network (left) + Market Changes (right)
     // -----------------------------------------------------------------------
     const bottomY =
       aiSummaries.length > 0 ? TR_AI_Y + TR_AI_H + TR_GAP : TR_AI_Y;
     const halfWidth = L.mainContentWidth / 2 - 5;
 
-    // News Digest (bottom-left)
-    new Panel(this, {
+    // Galactic News Network ticker (bottom-left)
+    const tickerItems = generateTickerFeed(state, lastTurn);
+    new GalacticNewsPanel(this, {
       x: L.mainContentLeft,
       y: bottomY,
       width: halfWidth,
       height: TR_BOTTOM_H,
-      title: "News Digest",
+      items: tickerItems,
     });
-
-    const newsList = new ScrollableList(this, {
-      x: L.mainContentLeft + 10,
-      y: bottomY + 40,
-      width: halfWidth - 20,
-      height: TR_BOTTOM_H - 44,
-      itemHeight: 52,
-    });
-
-    const eventNames = lastTurn.eventsOccurred;
-    const activeEvents = state.activeEvents;
-
-    if (eventNames.length === 0) {
-      const emptyItem = this.add.container(0, 0);
-      const emptyText = this.add.text(
-        10,
-        12,
-        "Quiet quarter. No major events.",
-        {
-          fontSize: `${theme.fonts.body.size}px`,
-          fontFamily: theme.fonts.body.family,
-          color: colorToString(theme.colors.textDim),
-        },
-      );
-      emptyItem.add(emptyText);
-      newsList.addItem(emptyItem);
-    } else {
-      const visibleEvents = eventNames.slice(0, 2);
-      for (const eventName of visibleEvents) {
-        const detail = activeEvents.find((e) => e.name === eventName);
-        const desc = detail ? detail.description : "";
-
-        const item = this.add.container(0, 0);
-        const nameText = this.add.text(10, 4, eventName, {
-          fontSize: `${theme.fonts.body.size}px`,
-          fontFamily: theme.fonts.body.family,
-          color: colorToString(theme.colors.accent),
-          wordWrap: { width: halfWidth - 40 },
-        });
-        const descText = this.add.text(10, 24, desc, {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.textDim),
-          wordWrap: { width: halfWidth - 40 },
-        });
-        item.add([nameText, descText]);
-        newsList.addItem(item);
-      }
-      if (eventNames.length > visibleEvents.length) {
-        const more = this.add.container(0, 0);
-        const moreText = this.add.text(
-          10,
-          12,
-          `+${eventNames.length - visibleEvents.length} more events (see Empire / Market views)`,
-          {
-            fontSize: `${theme.fonts.caption.size}px`,
-            fontFamily: theme.fonts.caption.family,
-            color: colorToString(theme.colors.textDim),
-          },
-        );
-        more.add(moreText);
-        newsList.addItem(more);
-      }
-    }
 
     // Market Changes (bottom-right)
     const marketPanel = new Panel(this, {
