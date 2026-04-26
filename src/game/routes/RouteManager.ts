@@ -1033,12 +1033,35 @@ export function scanAllRouteOpportunities(
     }
   }
 
-  // Sort by profit descending and limit to top 200 for performance
+  // Sort by profit descending. The Route Finder caps the displayed list at
+  // 200, but a flat profit-DESC truncation lets a single high-margin cargo
+  // (typically galactic luxury, often 100+ entries on a fresh standard
+  // galaxy) crowd every other cargo out of the top 200 — the player then
+  // sees zero raw-materials or hazmat options even though the underlying
+  // opportunities exist. We reserve a per-cargo quota first (top-K by
+  // profit per cargo type), then fill the remaining slots from the global
+  // profit-sorted tail.
   opportunities.sort((a, b) => b.estProfit - a.estProfit);
-  if (opportunities.length > 200) {
-    opportunities.length = 200;
+  const HARD_CAP = 200;
+  if (opportunities.length <= HARD_CAP) return opportunities;
+
+  const PER_CARGO_QUOTA = 12;
+  const reserved: RouteOpportunity[] = [];
+  const overflow: RouteOpportunity[] = [];
+  const quotaUsed = new Map<CargoType, number>();
+  for (const opp of opportunities) {
+    const used = quotaUsed.get(opp.bestCargoType) ?? 0;
+    if (used < PER_CARGO_QUOTA) {
+      reserved.push(opp);
+      quotaUsed.set(opp.bestCargoType, used + 1);
+    } else {
+      overflow.push(opp);
+    }
   }
-  return opportunities;
+  const remaining = HARD_CAP - reserved.length;
+  return remaining > 0
+    ? [...reserved, ...overflow.slice(0, remaining)]
+    : reserved.slice(0, HARD_CAP);
 }
 
 interface ShipCandidate {

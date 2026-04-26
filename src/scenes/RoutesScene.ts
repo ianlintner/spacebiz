@@ -288,16 +288,16 @@ export class RoutesScene extends Phaser.Scene {
       testId: string;
     }> = [
       { label: "Any scope", value: null, testId: "btn-finder-scope-any" },
-      { label: "Local", value: "local", testId: "btn-finder-scope-local" },
+      { label: "System", value: "system", testId: "btn-finder-scope-system" },
       {
-        label: "Interstellar",
-        value: "interstellar",
-        testId: "btn-finder-scope-interstellar",
+        label: "Empire",
+        value: "empire",
+        testId: "btn-finder-scope-empire",
       },
       {
-        label: "Inter-empire",
-        value: "interEmpire",
-        testId: "btn-finder-scope-inter-empire",
+        label: "Galactic",
+        value: "galactic",
+        testId: "btn-finder-scope-galactic",
       },
     ];
     this.scopeBandButtons = scopeBands.map(
@@ -844,12 +844,12 @@ export class RoutesScene extends Phaser.Scene {
         emptyHint = "Generate a galaxy first.";
       } else if (hasFilter) {
         const scopeLabel =
-          this.finderScopeBand === "local"
-            ? "local"
-            : this.finderScopeBand === "interstellar"
-              ? "interstellar"
-              : this.finderScopeBand === "interEmpire"
-                ? "inter-empire"
+          this.finderScopeBand === "system"
+            ? "system"
+            : this.finderScopeBand === "empire"
+              ? "empire"
+              : this.finderScopeBand === "galactic"
+                ? "galactic"
                 : "";
         const subject = scopeLabel
           ? `${scopeLabel} ${filterLabel}`.trim()
@@ -892,9 +892,9 @@ export class RoutesScene extends Phaser.Scene {
   private updateScopeBandButtonStyles(): void {
     const scopes: Array<RouteScopeBand> = [
       null,
-      "local",
-      "interstellar",
-      "interEmpire",
+      "system",
+      "empire",
+      "galactic",
     ];
     for (let i = 0; i < this.scopeBandButtons.length; i++) {
       const btn = this.scopeBandButtons[i];

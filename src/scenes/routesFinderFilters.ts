@@ -23,20 +23,27 @@ export function isInDistanceBand(
   }
 }
 
-export type RouteScopeBand = "local" | "interstellar" | "interEmpire" | null;
+/**
+ * Scope-band filter value for the Route Finder. Aligns with the canonical
+ * `RouteScope` from data/types — "system" / "empire" / "galactic" — plus
+ * `null` for "all scopes". Renamed from the legacy local/interstellar/
+ * interEmpire trio so HUD ("Sys/Emp/Gal") and filter buttons share one
+ * vocabulary.
+ */
+export type RouteScopeBand = "system" | "empire" | "galactic" | null;
 
 /**
  * Scope-band predicate for the Route Finder.
  *
- * - `null`        → matches all routes
- * - `local`       → both planets share a star system
- * - `interstellar`→ different systems but the same (resolved) empire owns both
- * - `interEmpire` → different systems AND both empires resolved AND distinct
+ * - `null`     → matches all routes
+ * - `system`   → both planets share a star system
+ * - `empire`   → different systems, same empire (intra-empire interstellar)
+ * - `galactic` → different systems AND both empires resolved AND distinct
  *
- * "interEmpire" requires both empire ids to be present so a route to or from
+ * "galactic" requires both empire ids to be present so a route to or from
  * an unaligned/unresolved planet is not mis-counted as cross-empire trade
  * (which would inflate the bucket and confuse the empty-state copy). Such
- * routes still match `interstellar` if the systems differ.
+ * routes still match `empire` if the systems differ.
  */
 export function matchesScopeBand(
   originSystemId: string,
@@ -46,12 +53,12 @@ export function matchesScopeBand(
   scope: RouteScopeBand,
 ): boolean {
   if (scope === null) return true;
-  const isLocal = originSystemId === destSystemId;
-  if (scope === "local") return isLocal;
-  if (isLocal) return false;
+  const isSystem = originSystemId === destSystemId;
+  if (scope === "system") return isSystem;
+  if (isSystem) return false;
   const bothEmpiresResolved = originEmpireId !== null && destEmpireId !== null;
-  const isInterEmpire = bothEmpiresResolved && originEmpireId !== destEmpireId;
-  if (scope === "interEmpire") return isInterEmpire;
-  // "interstellar" → cross-system but not cross-empire
-  return !isInterEmpire;
+  const isGalactic = bothEmpiresResolved && originEmpireId !== destEmpireId;
+  if (scope === "galactic") return isGalactic;
+  // "empire" → cross-system but not cross-empire
+  return !isGalactic;
 }

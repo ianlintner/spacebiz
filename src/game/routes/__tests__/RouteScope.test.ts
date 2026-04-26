@@ -328,4 +328,45 @@ describe("Scope demand multipliers", () => {
       }
     }
   });
+
+  // ── Balance regression guards ──────────────────────────────────────
+  //
+  // These thresholds were derived from the post-rebalance simulation that
+  // accompanied PR #69's balance audit. They protect against accidentally
+  // re-buffing local routes (the original "local routes too profitable"
+  // complaint) when tuning future cargo curves.
+
+  it("average system multiplier stays well below the old 0.5 flat cap", () => {
+    const all = Object.values(CargoType);
+    const sum = all.reduce(
+      (acc, c) => acc + SCOPE_DEMAND_MULTIPLIERS[c][RouteScope.System],
+      0,
+    );
+    const avg = sum / all.length;
+    // Old model used a flat 0.5 across all cargo at intra-system.
+    // The new curve must be a meaningful nerf, not a buff or wash.
+    expect(avg).toBeLessThan(0.45);
+  });
+
+  it("luxury and technology favor galactic over system by a wide margin", () => {
+    for (const c of [CargoType.Luxury, CargoType.Technology] as const) {
+      const sys = SCOPE_DEMAND_MULTIPLIERS[c][RouteScope.System];
+      const gal = SCOPE_DEMAND_MULTIPLIERS[c][RouteScope.Galactic];
+      // Galactic should be at least 5× system for "scarcity-priced" cargo —
+      // the headline mechanic that distinguishes the new model.
+      expect(gal / sys).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it("heavy goods (raw, food, hazmat) all peak at empire scope", () => {
+    for (const c of [
+      CargoType.RawMaterials,
+      CargoType.Food,
+      CargoType.Hazmat,
+    ] as const) {
+      const m = SCOPE_DEMAND_MULTIPLIERS[c];
+      expect(m[RouteScope.Empire]).toBeGreaterThan(m[RouteScope.System]);
+      expect(m[RouteScope.Empire]).toBeGreaterThan(m[RouteScope.Galactic]);
+    }
+  });
 });

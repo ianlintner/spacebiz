@@ -113,15 +113,27 @@ export const BASE_GALACTIC_ROUTE_SLOTS = 3;
 
 // ── Per-Cargo Scope Demand Multipliers ─────────────────────────
 //
-// Replaces the old flat `INTRA_SYSTEM_REVENUE_MULTIPLIER` (0.5 across all cargo)
-// with a per-cargo curve that encodes "what people pay extra for, by distance":
+// Replaces the old flat `INTRA_SYSTEM_REVENUE_MULTIPLIER` (0.5 across all
+// cargo) with a per-cargo curve that encodes "what people pay extra for, by
+// distance":
 //
-//   • Heavy / bulk cargo (rawMaterials, food, hazmat) is more valuable LOCAL
-//     and within an empire — nobody hauls iron ore across the galaxy.
-//   • Luxury and technology become MORE valuable the further they travel —
-//     scarcity pricing for exotic goods.
-//   • Passengers favor inter-empire travel slightly (immigration / tourism)
-//     but punish intra-system "shuttle to the next moon" routes.
+//   • Heavy / bulk cargo (rawMaterials, food, hazmat) keeps its old ~0.5
+//     value at system scope (heavy goods *are* the local meta) and rises
+//     above 1 within an empire — nobody hauls iron ore across the galaxy.
+//   • Luxury and technology are heavily punished locally (down to 0.20×) and
+//     strongly rewarded galactically (up to 1.7×) — scarcity pricing for
+//     exotic goods.
+//   • Passengers favor inter-empire travel (1.3×) but punish intra-system
+//     "shuttle to the next moon" routes (0.30×).
+//
+// CALIBRATION NOTES (post-PR#69 simulation): the trips-per-turn cap (10) plus
+// short system distances meant any system multiplier above ~0.5 made local
+// routes net more profitable than the old flat cap. System values are tuned
+// down across the board — heavy goods stay near 0.5 (parity with old), while
+// luxury/tech drop to 0.20–0.25 so the meta pulls toward longer hauls. Slot
+// pool sizing (system 2 / empire 4 / galactic 3) provides the secondary
+// dampener — even when per-slot revenue is similar, total network capacity
+// is heavily weighted toward empire+galactic.
 //
 // The number is a multiplier on revenue for that cargo on that scope, applied
 // after price × capacity × trips and the distance premium.
@@ -129,13 +141,13 @@ export const SCOPE_DEMAND_MULTIPLIERS: Record<
   CargoType,
   Record<RouteScope, number>
 > = {
-  [CargoType.Passengers]: { system: 0.5, empire: 1.0, galactic: 1.3 },
-  [CargoType.RawMaterials]: { system: 0.7, empire: 1.1, galactic: 0.5 },
-  [CargoType.Food]: { system: 0.7, empire: 1.1, galactic: 0.6 },
-  [CargoType.Technology]: { system: 0.4, empire: 1.0, galactic: 1.5 },
-  [CargoType.Luxury]: { system: 0.3, empire: 0.9, galactic: 1.7 },
-  [CargoType.Hazmat]: { system: 0.6, empire: 1.1, galactic: 0.6 },
-  [CargoType.Medical]: { system: 0.6, empire: 1.0, galactic: 1.2 },
+  [CargoType.Passengers]: { system: 0.3, empire: 1.0, galactic: 1.3 },
+  [CargoType.RawMaterials]: { system: 0.5, empire: 1.1, galactic: 0.4 },
+  [CargoType.Food]: { system: 0.5, empire: 1.1, galactic: 0.4 },
+  [CargoType.Technology]: { system: 0.25, empire: 1.0, galactic: 1.5 },
+  [CargoType.Luxury]: { system: 0.2, empire: 0.9, galactic: 1.7 },
+  [CargoType.Hazmat]: { system: 0.5, empire: 1.1, galactic: 0.4 },
+  [CargoType.Medical]: { system: 0.3, empire: 1.0, galactic: 1.2 },
 };
 
 /** Target distribution of route market entries across scopes per generation. */

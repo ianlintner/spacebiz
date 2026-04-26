@@ -1,12 +1,20 @@
-import { CargoType } from "../../../data/types.ts";
+import { CargoType, RouteScope } from "../../../data/types.ts";
 import type {
   AICompany,
   GameState,
   MarketState,
   CargoType as CargoTypeT,
 } from "../../../data/types.ts";
-import { BREAKDOWN_THRESHOLD } from "../../../data/constants.ts";
-import { calculateTripsPerTurn } from "../../routes/RouteManager.ts";
+import {
+  BREAKDOWN_THRESHOLD,
+  DISTANCE_PREMIUM_RATE,
+  DISTANCE_PREMIUM_CAP,
+} from "../../../data/constants.ts";
+import {
+  calculateTripsPerTurn,
+  getRouteScope,
+  getScopeDemandMultiplier,
+} from "../../routes/RouteManager.ts";
 import { calculatePrice } from "../../economy/PriceCalculator.ts";
 import { calculateTariff } from "../../routes/TariffCalculator.ts";
 import type { SeededRNG } from "../../../utils/SeededRNG.ts";
@@ -77,7 +85,24 @@ export function simulateAIRoutes(
         : ship.cargoCapacity;
 
       const moved = capacity * trips;
-      let revenue = price * moved;
+
+      // Apply the same scope-based revenue curve the player uses, so AI and
+      // player operate on a single economy. Without this, AI silently kept
+      // earning `price × moved` while the player ate the scope multiplier —
+      // making AI ~2× stronger on system food and ~40% weaker on galactic
+      // luxury vs the player.
+      const scope = getRouteScope(route, state);
+      const scopeMult = getScopeDemandMultiplier(route.cargoType, scope);
+      const distancePremium =
+        scope === RouteScope.System
+          ? 0
+          : Math.min(
+              DISTANCE_PREMIUM_CAP,
+              route.distance * DISTANCE_PREMIUM_RATE,
+            );
+      const revenueMultiplier = scopeMult * (1 + distancePremium);
+
+      let revenue = price * moved * revenueMultiplier;
       let fuelCost =
         route.distance * 2 * ship.fuelEfficiency * market.fuelPrice * trips;
 

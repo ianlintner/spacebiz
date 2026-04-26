@@ -28,6 +28,7 @@ import {
   calculateTripsPerTurn,
   getScopeDemandMultiplier,
 } from "./RouteManager.ts";
+import { calculateTariff } from "./TariffCalculator.ts";
 import {
   getEmpireForPlanet,
   isEmpireAccessible,
@@ -122,7 +123,31 @@ function estimateExactProfit(
   const revenue = trips * representativeCapacity * price * revenueMultiplier;
   const fuelCost = trips * fuelPerTrip;
 
-  return Math.max(0, Math.round((revenue - fuelCost) * 100) / 100);
+  // Galactic-scope routes pay tariff to the destination empire — apply it
+  // here so the scouted "exact profit" actually matches what the player
+  // earns. Without this, scouted galactic profits over-state by 10–20%.
+  let tariff = 0;
+  if (scope === RouteScopeEnum.Galactic) {
+    const synthRoute = {
+      id: "estimator",
+      originPlanetId: origin.id,
+      destinationPlanetId: dest.id,
+      distance,
+      assignedShipIds: [],
+      cargoType,
+    };
+    tariff = calculateTariff(
+      synthRoute,
+      revenue,
+      "", // no owner empire — estimator treats the player as a generic carrier
+      state.galaxy.systems,
+      state.galaxy.empires,
+      state.reputation,
+      state.diplomaticRelations,
+    );
+  }
+
+  return Math.max(0, Math.round((revenue - fuelCost - tariff) * 100) / 100);
 }
 
 /**
