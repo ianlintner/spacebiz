@@ -29,6 +29,8 @@ import {
   getUsedRouteSlots,
   getAvailableLocalRouteSlots,
   getUsedLocalRouteSlots,
+  getAvailableGalacticRouteSlots,
+  getUsedGalacticRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import type { RouteTrafficVisual } from "../game/routes/RouteManager.ts";
 
@@ -659,12 +661,14 @@ export class GalaxyMapScene extends Phaser.Scene {
     // ── HUD overlay elements (rendered by fixed uiCam only, immune to zoom) ──
     const hudObjects: Phaser.GameObjects.GameObject[] = [];
 
-    const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
-    const slotsTotal =
-      getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
-    const slotBlocks =
-      "\u25A0".repeat(slotsUsed) +
-      "\u25A1".repeat(Math.max(0, slotsTotal - slotsUsed));
+    const sysUsed = getUsedLocalRouteSlots(state);
+    const sysTot = getAvailableLocalRouteSlots(state);
+    const empUsed = getUsedRouteSlots(state);
+    const empTot = getAvailableRouteSlots(state);
+    const galUsed = getUsedGalacticRouteSlots(state);
+    const galTot = getAvailableGalacticRouteSlots(state);
+    const slotsUsed = sysUsed + empUsed + galUsed;
+    const slotsTotal = sysTot + empTot + galTot;
 
     // Offset HUD labels further below the top bar so they clear the
     // company name / cash readout (which can extend slightly past the
@@ -690,7 +694,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       new Label(this, {
         x: 20,
         y: hudLabelTop + 18,
-        text: `Routes: ${slotsUsed}/${slotsTotal} ${slotBlocks}`,
+        text: `Sys ${sysUsed}/${sysTot} · Emp ${empUsed}/${empTot} · Gal ${galUsed}/${galTot}`,
         style: "caption",
         color:
           slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,

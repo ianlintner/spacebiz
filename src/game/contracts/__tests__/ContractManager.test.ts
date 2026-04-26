@@ -310,13 +310,15 @@ describe("Contract Lifecycle", () => {
       expect(result.contracts![0].status).toBe(ContractStatus.Failed);
     });
 
-    it("empire unlock contract adds empire and route slot on completion", () => {
+    it("empire unlock contract adds empire and a galactic slot on completion", () => {
       const contract = makeContract({
         type: ContractType.EmpireUnlock,
         targetEmpireId: "empire-2",
         status: ContractStatus.Active,
         linkedRouteId: "route-1",
         turnsRemaining: 1,
+        // Mirror what the generator now attaches to empire-unlock contracts.
+        rewardSlotBonus: { scope: "galactic", amount: 1 },
       });
       const route: ActiveRoute = {
         id: "route-1",
@@ -335,7 +337,95 @@ describe("Contract Lifecycle", () => {
 
       const result = processContracts(state);
       expect(result.unlockedEmpireIds).toContain("empire-2");
-      expect(result.routeSlots).toBe(5); // +1 for empire unlock
+      // Empire-unlock contracts now grow the galactic pool (was empire pool).
+      // Empire (routeSlots) should be unchanged; galactic should bump by 1.
+      expect(result.routeSlots).toBe(4);
+      expect(result.galacticRouteSlots).toBe(
+        (state.galacticRouteSlots ?? 3) + 1,
+      );
+    });
+
+    it("trade-alliance contract grants a galactic slot on completion", () => {
+      const contract = makeContract({
+        type: ContractType.TradeAlliance,
+        status: ContractStatus.Active,
+        linkedRouteId: "route-1",
+        turnsRemaining: 1,
+        rewardSlotBonus: { scope: "galactic", amount: 1 },
+      });
+      const route: ActiveRoute = {
+        id: "route-1",
+        originPlanetId: "planet-1",
+        destinationPlanetId: "planet-2",
+        distance: 10,
+        cargoType: CargoType.Food,
+        assignedShipIds: ["ship-1"],
+      };
+      const state = createTestState({
+        contracts: [contract],
+        activeRoutes: [route],
+        routeSlots: 4,
+      });
+
+      const result = processContracts(state);
+      expect(result.routeSlots).toBe(4);
+      expect(result.galacticRouteSlots).toBe(
+        (state.galacticRouteSlots ?? 3) + 1,
+      );
+    });
+
+    it("passenger-ferry contract grants an empire slot on completion", () => {
+      const contract = makeContract({
+        type: ContractType.PassengerFerry,
+        status: ContractStatus.Active,
+        linkedRouteId: "route-1",
+        turnsRemaining: 1,
+        rewardSlotBonus: { scope: "empire", amount: 1 },
+      });
+      const route: ActiveRoute = {
+        id: "route-1",
+        originPlanetId: "planet-1",
+        destinationPlanetId: "planet-2",
+        distance: 10,
+        cargoType: CargoType.Passengers,
+        assignedShipIds: ["ship-1"],
+      };
+      const state = createTestState({
+        contracts: [contract],
+        activeRoutes: [route],
+        routeSlots: 4,
+      });
+
+      const result = processContracts(state);
+      expect(result.routeSlots).toBe(5);
+    });
+
+    it("contracts without rewardSlotBonus leave all pools unchanged", () => {
+      const contract = makeContract({
+        type: ContractType.EmergencySupply,
+        status: ContractStatus.Active,
+        linkedRouteId: "route-1",
+        turnsRemaining: 1,
+        // No rewardSlotBonus set — emergency supply is one-shot.
+      });
+      const route: ActiveRoute = {
+        id: "route-1",
+        originPlanetId: "planet-1",
+        destinationPlanetId: "planet-2",
+        distance: 10,
+        cargoType: CargoType.Food,
+        assignedShipIds: ["ship-1"],
+      };
+      const state = createTestState({
+        contracts: [contract],
+        activeRoutes: [route],
+        routeSlots: 4,
+      });
+
+      const result = processContracts(state);
+      expect(result.routeSlots).toBe(4);
+      expect(result.galacticRouteSlots).toBe(state.galacticRouteSlots ?? 3);
+      expect(result.localRouteSlots).toBe(state.localRouteSlots ?? 2);
     });
   });
 });

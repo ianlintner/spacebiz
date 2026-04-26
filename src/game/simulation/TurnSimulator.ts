@@ -12,10 +12,14 @@ import { buildTurnBrief } from "../turn/TurnBriefBuilder.ts";
 import { evaluateNavUnlocks } from "../nav/NavUnlocks.ts";
 import {
   BREAKDOWN_THRESHOLD,
-  INTRA_SYSTEM_REVENUE_MULTIPLIER,
   DISTANCE_PREMIUM_RATE,
   DISTANCE_PREMIUM_CAP,
 } from "../../data/constants.ts";
+import { RouteScope } from "../../data/types.ts";
+import {
+  getRouteScope,
+  getScopeDemandMultiplier,
+} from "../routes/RouteManager.ts";
 import { calculatePrice } from "../economy/PriceCalculator.ts";
 import { updateMarket } from "../economy/MarketUpdater.ts";
 import {
@@ -199,16 +203,13 @@ function simulateShipOnRoute(
   const capacity = isPassengers ? ship.passengerCapacity : ship.cargoCapacity;
 
   const totalCargoMoved = capacity * effectiveTrips;
-  const originSysId = planetToSystemId(route.originPlanetId);
-  const destSysId = planetToSystemId(route.destinationPlanetId);
-  const isIntraSystem = originSysId !== null && originSysId === destSysId;
-  const distancePremium = Math.min(
-    DISTANCE_PREMIUM_CAP,
-    route.distance * DISTANCE_PREMIUM_RATE,
-  );
-  const revenueMultiplier = isIntraSystem
-    ? INTRA_SYSTEM_REVENUE_MULTIPLIER
-    : 1 + distancePremium;
+  const scope = getRouteScope(route, state);
+  const scopeMult = getScopeDemandMultiplier(route.cargoType, scope);
+  const distancePremium =
+    scope === RouteScope.System
+      ? 0
+      : Math.min(DISTANCE_PREMIUM_CAP, route.distance * DISTANCE_PREMIUM_RATE);
+  const revenueMultiplier = scopeMult * (1 + distancePremium);
   const revenue = price * totalCargoMoved * revenueMultiplier;
 
   // Fuel cost = distance * 2 * fuelEfficiency * fuelPrice * effectiveTrips

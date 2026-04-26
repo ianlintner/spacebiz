@@ -24,7 +24,33 @@ import {
   getUsedRouteSlots,
   getAvailableLocalRouteSlots,
   getUsedLocalRouteSlots,
+  getAvailableGalacticRouteSlots,
+  getUsedGalacticRouteSlots,
 } from "../game/routes/RouteManager.ts";
+import type { GameState } from "../data/types.ts";
+
+/**
+ * Compact "Sys 1/2 · Emp 2/4 · Gal 0/2" string for the HUD route-slot
+ * indicator. Three pools displayed inline so the player sees at-a-glance
+ * which tier is saturated.
+ */
+function formatSlotSummary(state: GameState): {
+  text: string;
+  anySaturated: boolean;
+} {
+  const sysUsed = getUsedLocalRouteSlots(state);
+  const sysTot = getAvailableLocalRouteSlots(state);
+  const empUsed = getUsedRouteSlots(state);
+  const empTot = getAvailableRouteSlots(state);
+  const galUsed = getUsedGalacticRouteSlots(state);
+  const galTot = getAvailableGalacticRouteSlots(state);
+  const anySaturated =
+    sysUsed >= sysTot || empUsed >= empTot || galUsed >= galTot;
+  return {
+    text: `Sys ${sysUsed}/${sysTot} · Emp ${empUsed}/${empTot} · Gal ${galUsed}/${galTot}`,
+    anySaturated,
+  };
+}
 import { getPortraitTextureKey } from "../data/portraits.ts";
 import {
   portraitLoader,
@@ -558,16 +584,17 @@ export class GameHUDScene extends Phaser.Scene {
     });
     this.actionPromptLabel.setOrigin(0, 0.5);
 
-    // Route slot indicator (bottom bar, to the left of the end turn area)
-    const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
-    const slotsTotal =
-      getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
+    // Route slot indicator (bottom bar, to the left of the end turn area).
+    // Shows all three pools inline so a saturated tier is immediately visible.
+    const slotSummary = formatSlotSummary(state);
     this.routeSlotLabel = new Label(this, {
       x: L.gameWidth - 200,
       y: L.gameHeight - L.hudBottomBarHeight / 2 - 8,
-      text: `Routes ${slotsUsed}/${slotsTotal}`,
+      text: slotSummary.text,
       style: "caption",
-      color: slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
+      color: slotSummary.anySaturated
+        ? theme.colors.loss
+        : theme.colors.textDim,
     });
     this.routeSlotLabel.setOrigin(1, 0.5);
 
@@ -769,13 +796,11 @@ export class GameHUDScene extends Phaser.Scene {
     this.updateNavBadges();
     this.updateNavVisibility();
 
-    // Route slot indicator (main + local combined)
-    const slotsUsed = getUsedRouteSlots(state) + getUsedLocalRouteSlots(state);
-    const slotsTotal =
-      getAvailableRouteSlots(state) + getAvailableLocalRouteSlots(state);
-    this.routeSlotLabel.setText(`Routes ${slotsUsed}/${slotsTotal}`);
+    // Route slot indicator (system / empire / galactic pools).
+    const slotSummary = formatSlotSummary(state);
+    this.routeSlotLabel.setText(slotSummary.text);
     this.routeSlotLabel.setLabelColor(
-      slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
+      slotSummary.anySaturated ? theme.colors.loss : theme.colors.textDim,
     );
 
     // Research indicator

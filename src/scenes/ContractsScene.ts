@@ -85,6 +85,15 @@ function rewardSummary(c: Contract): string {
     parts.push(
       `-${(c.rewardTariffReduction.reduction * 100).toFixed(0)}% tariff`,
     );
+  if (c.rewardSlotBonus && c.rewardSlotBonus.amount > 0) {
+    const scopeLabel =
+      c.rewardSlotBonus.scope === "system"
+        ? "Sys"
+        : c.rewardSlotBonus.scope === "empire"
+          ? "Emp"
+          : "Gal";
+    parts.push(`+${c.rewardSlotBonus.amount} ${scopeLabel} slot`);
+  }
   return parts.join(" \u2022 ") || "\u2014";
 }
 

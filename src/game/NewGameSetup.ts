@@ -22,6 +22,7 @@ import {
   SAVE_VERSION,
   ACTION_POINTS_PER_TURN,
   LOCAL_ROUTE_SLOTS,
+  BASE_GALACTIC_ROUTE_SLOTS,
 } from "../data/constants.ts";
 import type { GamePreset } from "../data/constants.ts";
 import { findAdjacentEmpires } from "./empire/EmpireAccessManager.ts";
@@ -402,6 +403,7 @@ export function createNewGame(
     adviser: initAdviserState(),
     routeSlots: BASE_ROUTE_SLOTS + HOME_EMPIRE_BONUS_SLOTS,
     localRouteSlots: LOCAL_ROUTE_SLOTS,
+    galacticRouteSlots: BASE_GALACTIC_ROUTE_SLOTS,
     unlockedEmpireIds,
     contracts: [],
     tech,

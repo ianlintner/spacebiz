@@ -250,19 +250,19 @@ describe("Local route slot management", () => {
   });
 });
 
-// ── LOCAL_ROUTE_REVENUE_CAP constant ─────────────────────────────────────────
+// ── Legacy revenue-cap constants (deprecated, kept for back-compat) ──────────
+//
+// The flat 50% intra-system cap has been replaced by per-cargo
+// SCOPE_DEMAND_MULTIPLIERS — see data/constants.ts. The constants below are
+// only re-exported so older fixtures still compile; they're no longer read by
+// revenue calculations.
 
-describe("LOCAL_ROUTE_REVENUE_CAP", () => {
-  it("is set to 0.5 (50% cap)", () => {
+describe("legacy LOCAL_ROUTE_REVENUE_CAP shim", () => {
+  it("still exports 0.5 for back-compat", () => {
     expect(LOCAL_ROUTE_REVENUE_CAP).toBe(0.5);
   });
 
-  it("matches INTRA_SYSTEM_REVENUE_MULTIPLIER", () => {
-    // After the fix, INTRA_SYSTEM_REVENUE_MULTIPLIER should equal the cap (0.5, not 0.25)
+  it("INTRA_SYSTEM_REVENUE_MULTIPLIER matches the legacy cap", () => {
     expect(INTRA_SYSTEM_REVENUE_MULTIPLIER).toBe(LOCAL_ROUTE_REVENUE_CAP);
-  });
-
-  it("INTRA_SYSTEM_REVENUE_MULTIPLIER is 0.5 (not the old 0.25)", () => {
-    expect(INTRA_SYSTEM_REVENUE_MULTIPLIER).toBe(0.5);
   });
 });

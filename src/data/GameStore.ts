@@ -6,6 +6,7 @@ import {
   SAVE_VERSION,
   ACTION_POINTS_PER_TURN,
   LOCAL_ROUTE_SLOTS,
+  BASE_GALACTIC_ROUTE_SLOTS,
 } from "./constants";
 import { initAdviserState } from "../game/adviser/AdviserEngine.ts";
 
@@ -44,6 +45,7 @@ function createDefaultState(): GameState {
     adviser: initAdviserState(),
     routeSlots: 4,
     localRouteSlots: LOCAL_ROUTE_SLOTS,
+    galacticRouteSlots: BASE_GALACTIC_ROUTE_SLOTS,
     unlockedEmpireIds: [],
     contracts: [],
     tech: {

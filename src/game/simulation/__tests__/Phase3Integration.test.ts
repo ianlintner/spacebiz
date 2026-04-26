@@ -40,6 +40,7 @@ function makeContract(overrides: Partial<Contract> = {}): Contract {
     rewardReputation: 5,
     rewardResearchPoints: 10,
     rewardTariffReduction: null,
+    rewardSlotBonus: { scope: "galactic", amount: 1 },
     depositPaid: 2000,
     status: ContractStatus.Active,
     linkedRouteId: "route-1",
@@ -229,8 +230,11 @@ describe("Phase 3 Integration", () => {
     // Empire unlocked
     expect(nextState.unlockedEmpireIds).toContain("emp-2");
 
-    // Route slot gained (+1 from empire unlock)
-    expect(nextState.routeSlots).toBe(state.routeSlots + 1);
+    // Empire-unlock contracts now grow the galactic pool, not the empire pool.
+    expect(nextState.routeSlots).toBe(state.routeSlots);
+    expect(nextState.galacticRouteSlots).toBe(
+      (state.galacticRouteSlots ?? 3) + 1,
+    );
 
     // Completed contract
     const completedContract = nextState.contracts.find(

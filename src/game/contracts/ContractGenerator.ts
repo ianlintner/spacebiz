@@ -180,6 +180,9 @@ function tryGenerateEmpireUnlock(
     rewardReputation: 5,
     rewardResearchPoints: 3,
     rewardTariffReduction: null,
+    // Empire-unlock contracts open a brand-new cross-empire trade lane —
+    // the slot bonus lands in the galactic pool, not the empire pool.
+    rewardSlotBonus: { scope: "galactic", amount: 1 },
     depositPaid: 0,
     status: ContractStatus.Available,
     linkedRouteId: null,
@@ -279,6 +282,8 @@ function makePassengerFerry(
     rewardReputation: 0,
     rewardResearchPoints: 2,
     rewardTariffReduction: null,
+    // Standing passenger lanes expand the empire-tier network capacity.
+    rewardSlotBonus: { scope: "empire", amount: 1 },
     depositPaid: Math.round(rewardCash * 0.15),
     status: ContractStatus.Available,
     linkedRouteId: null,
@@ -348,6 +353,9 @@ function makeTradeAlliance(
       empireB: destEmpireId,
       reduction: 0.5,
     },
+    // Trade-alliance contracts formalize a cross-empire lane; reward a
+    // permanent galactic slot on top of the tariff reduction.
+    rewardSlotBonus: { scope: "galactic", amount: 1 },
     depositPaid: 5000,
     status: ContractStatus.Available,
     linkedRouteId: null,

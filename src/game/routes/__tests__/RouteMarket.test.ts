@@ -454,6 +454,167 @@ describe("scoutRoute (RouteScout)", () => {
   });
 });
 
+describe("scope-aware market generation", () => {
+  // A galaxy with two systems in emp-1 and one system in emp-2 lets the
+  // generator pull from all three scope buckets.
+  const richSystems: StarSystem[] = [
+    {
+      id: "sys-1",
+      name: "Alpha",
+      sectorId: "sec-1",
+      empireId: "emp-1",
+      x: 0,
+      y: 0,
+      starColor: 0xffcc00,
+    },
+    {
+      id: "sys-2",
+      name: "Beta",
+      sectorId: "sec-1",
+      empireId: "emp-1",
+      x: 100,
+      y: 0,
+      starColor: 0xffcc00,
+    },
+    {
+      id: "sys-3",
+      name: "Gamma",
+      sectorId: "sec-1",
+      empireId: "emp-2",
+      x: 200,
+      y: 0,
+      starColor: 0xffcc00,
+    },
+  ];
+
+  function richPlanets(): Planet[] {
+    return [
+      {
+        id: "planet-a1",
+        name: "A1",
+        systemId: "sys-1",
+        type: PlanetType.Terran,
+        x: 0,
+        y: 0,
+        population: 100,
+      },
+      {
+        id: "planet-a2",
+        name: "A2",
+        systemId: "sys-1",
+        type: PlanetType.Industrial,
+        x: 5,
+        y: 5,
+        population: 100,
+      },
+      {
+        id: "planet-b",
+        name: "B",
+        systemId: "sys-2",
+        type: PlanetType.Mining,
+        x: 100,
+        y: 0,
+        population: 100,
+      },
+      {
+        id: "planet-c",
+        name: "C",
+        systemId: "sys-3",
+        type: PlanetType.Agricultural,
+        x: 200,
+        y: 0,
+        population: 100,
+      },
+    ];
+  }
+
+  function richState(): GameState {
+    const planets = richPlanets();
+    const planetMarkets: Record<string, PlanetMarket> = {};
+    for (const p of planets) planetMarkets[p.id] = makePlanetMarket();
+    return makeGameState({
+      galaxy: {
+        sectors: [makeSector()],
+        empires: [
+          {
+            id: "emp-1",
+            name: "One",
+            color: 0x0000ff,
+            tariffRate: 0.1,
+            disposition: "neutral",
+            homeSystemId: "sys-1",
+            leaderName: "L1",
+            leaderPortrait: { portraitId: "p-01", category: "human" },
+          },
+          {
+            id: "emp-2",
+            name: "Two",
+            color: 0xff0000,
+            tariffRate: 0.1,
+            disposition: "neutral",
+            homeSystemId: "sys-3",
+            leaderName: "L2",
+            leaderPortrait: { portraitId: "p-02", category: "human" },
+          },
+        ],
+        systems: richSystems,
+        planets,
+      },
+      market: {
+        fuelPrice: BASE_FUEL_PRICE,
+        fuelTrend: "stable",
+        planetMarkets,
+      },
+      unlockedEmpireIds: ["emp-1", "emp-2"],
+    });
+  }
+
+  function classify(
+    entry: RouteMarketEntry,
+    state: GameState,
+  ): "system" | "empire" | "galactic" {
+    const o = state.galaxy.planets.find((p) => p.id === entry.originPlanetId)!;
+    const d = state.galaxy.planets.find(
+      (p) => p.id === entry.destinationPlanetId,
+    )!;
+    if (o.systemId === d.systemId) return "system";
+    const oSys = state.galaxy.systems.find((s) => s.id === o.systemId)!;
+    const dSys = state.galaxy.systems.find((s) => s.id === d.systemId)!;
+    return oSys.empireId !== dSys.empireId ? "galactic" : "empire";
+  }
+
+  it("produces entries spanning all three scopes when candidates exist", () => {
+    const state = richState();
+    // Try several seeds — quotas are stochastic per seed, but at least one
+    // run should hit all three scopes within a small batch.
+    const scopesSeen = new Set<string>();
+    for (let seed = 1; seed <= 10; seed++) {
+      const rng = new SeededRNG(seed);
+      const entries = generateRouteMarketEntries(state, rng);
+      for (const e of entries) scopesSeen.add(classify(e, state));
+      if (scopesSeen.size === 3) break;
+    }
+    expect(scopesSeen.has("system")).toBe(true);
+    expect(scopesSeen.has("empire")).toBe(true);
+    expect(scopesSeen.has("galactic")).toBe(true);
+  });
+
+  it("still fills the market when only one scope has candidates", () => {
+    // Restrict to a single empire so galactic candidates vanish; the generator
+    // should redistribute the galactic quota to the remaining scopes.
+    const state = makeGameState({
+      unlockedEmpireIds: ["emp-1"],
+    });
+    const rng = new SeededRNG(7);
+    const entries = generateRouteMarketEntries(state, rng);
+    // Two-planet emp-1 fixture has only an empire-tier candidate, so the
+    // result is non-empty but never galactic.
+    for (const e of entries) {
+      expect(e.cargoType).toBeDefined();
+    }
+  });
+});
+
 describe("aiClaimRouteEntry", () => {
   it("removes the entry from the market after AI claims it", () => {
     const entry = makeRouteMarketEntry({

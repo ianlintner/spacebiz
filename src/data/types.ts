@@ -249,6 +249,21 @@ export const CargoType = {
 } as const;
 export type CargoType = (typeof CargoType)[keyof typeof CargoType];
 
+/**
+ * Three-tier route scope. Determines which slot pool a route consumes and which
+ * per-cargo demand multiplier applies to its revenue.
+ *
+ * - `system`   — origin and destination share a star system (intra-system).
+ * - `empire`   — different systems, same empire (intra-empire interstellar).
+ * - `galactic` — origin and destination empires differ (inter-empire trade).
+ */
+export const RouteScope = {
+  System: "system",
+  Empire: "empire",
+  Galactic: "galactic",
+} as const;
+export type RouteScope = (typeof RouteScope)[keyof typeof RouteScope];
+
 export const PlanetType = {
   Terran: "terran",
   Industrial: "industrial",
@@ -755,6 +770,17 @@ export interface AICompany {
 
 // ── Contract types ─────────────────────────────────────────
 
+/**
+ * Permanent slot-pool bonus granted on contract completion. Each contract type
+ * targets at most one scope; see ContractGenerator.makeXxx for which type
+ * grants which scope. Stored as part of the contract so the reward is visible
+ * to the player at acceptance time, not surprise-applied at completion.
+ */
+export interface ContractSlotReward {
+  scope: RouteScope;
+  amount: number;
+}
+
 export interface Contract {
   id: string;
   type: ContractType;
@@ -772,6 +798,12 @@ export interface Contract {
     empireB: string;
     reduction: number;
   } | null;
+  /**
+   * Optional slot-pool bonus paid out on completion. Empire-unlock and
+   * trade-alliance contracts grow the galactic pool; passenger-ferry grows the
+   * empire pool. Older saves (v6) without this field treat it as null.
+   */
+  rewardSlotBonus?: ContractSlotReward | null;
   depositPaid: number;
   status: ContractStatus;
   linkedRouteId: string | null;
@@ -954,9 +986,16 @@ export interface GameState {
   gameOverReason: string | null;
 
   // Phase 3: Strategic Depth
+  /** Empire-tier route slot pool — intra-empire interstellar routes consume this. */
   routeSlots: number;
-  /** Separate pool of local (intra-system) route slots — starts at 2 */
+  /** System-tier route slot pool — intra-system routes consume this. */
   localRouteSlots: number;
+  /**
+   * Galactic-tier route slot pool — inter-empire (cross-empire) routes consume
+   * this. Optional for backwards compatibility with v6 saves; defaults to
+   * BASE_GALACTIC_ROUTE_SLOTS when missing.
+   */
+  galacticRouteSlots?: number;
   unlockedEmpireIds: string[];
   contracts: Contract[];
   tech: TechState;

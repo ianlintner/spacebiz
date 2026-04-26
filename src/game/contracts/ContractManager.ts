@@ -1,9 +1,10 @@
 import type { GameState, Contract } from "../../data/types.ts";
-import { ContractType, ContractStatus } from "../../data/types.ts";
+import { ContractType, ContractStatus, RouteScope } from "../../data/types.ts";
 import {
   CONTRACT_FAILURE_REP_PENALTY,
   CONTRACT_UNASSIGNED_SHIP_LIMIT,
-  SLOT_PER_EMPIRE_UNLOCK,
+  BASE_GALACTIC_ROUTE_SLOTS,
+  BASE_SYSTEM_ROUTE_SLOTS,
 } from "../../data/constants.ts";
 import { createRoute } from "../routes/RouteManager.ts";
 import { calculateDistance } from "../routes/RouteManager.ts";
@@ -85,7 +86,13 @@ export function processContracts(state: GameState): Partial<GameState> {
   let cash = state.cash;
   let reputation = state.reputation;
   let researchPoints = state.tech.researchPoints;
+  // Each scope has its own pool — contract rewards land in whichever scope
+  // the rewardSlotBonus declares. Backfill defaults so older saves still
+  // accumulate correctly on completion.
+  let systemRouteSlots = state.localRouteSlots ?? BASE_SYSTEM_ROUTE_SLOTS;
   let routeSlots = state.routeSlots;
+  let galacticRouteSlots =
+    state.galacticRouteSlots ?? BASE_GALACTIC_ROUTE_SLOTS;
   let unlockedEmpireIds = [...state.unlockedEmpireIds];
   let activeRoutes = [...state.activeRoutes];
 
@@ -137,7 +144,20 @@ export function processContracts(state: GameState): Partial<GameState> {
         !unlockedEmpireIds.includes(c.targetEmpireId)
       ) {
         unlockedEmpireIds = [...unlockedEmpireIds, c.targetEmpireId];
-        routeSlots += SLOT_PER_EMPIRE_UNLOCK;
+      }
+
+      if (c.rewardSlotBonus) {
+        switch (c.rewardSlotBonus.scope) {
+          case RouteScope.System:
+            systemRouteSlots += c.rewardSlotBonus.amount;
+            break;
+          case RouteScope.Empire:
+            routeSlots += c.rewardSlotBonus.amount;
+            break;
+          case RouteScope.Galactic:
+            galacticRouteSlots += c.rewardSlotBonus.amount;
+            break;
+        }
       }
 
       updatedContracts[i] = {
@@ -156,6 +176,8 @@ export function processContracts(state: GameState): Partial<GameState> {
     cash,
     reputation,
     routeSlots,
+    localRouteSlots: systemRouteSlots,
+    galacticRouteSlots,
     unlockedEmpireIds,
     activeRoutes,
     tech: { ...state.tech, researchPoints },

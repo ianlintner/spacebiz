@@ -26,6 +26,7 @@ import {
   BASE_CARGO_PRICES,
   DISTANCE_PREMIUM_RATE,
   DISTANCE_PREMIUM_CAP,
+  SCOPE_DEMAND_MULTIPLIERS,
 } from "../../../data/constants.ts";
 import { calculateTripsPerTurn } from "../../routes/RouteManager.ts";
 import { initAdviserState } from "../../adviser/AdviserEngine.ts";
@@ -254,11 +255,15 @@ describe("TurnSimulator", () => {
         DISTANCE_PREMIUM_CAP,
         50 * DISTANCE_PREMIUM_RATE,
       );
+      // Both planets sit in emp-1, so the route falls in the empire scope.
+      // Food carries a 1.1× scope demand multiplier on empire-tier routes.
+      const scopeMult = SCOPE_DEMAND_MULTIPLIERS[CargoType.Food].empire;
       const expectedRevenue =
         Math.round(
           BASE_CARGO_PRICES[CargoType.Food] *
             80 *
             trips *
+            scopeMult *
             (1 + distancePremium) *
             100,
         ) / 100;

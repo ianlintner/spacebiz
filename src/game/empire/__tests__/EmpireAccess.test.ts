@@ -362,8 +362,11 @@ describe("Empire Access", () => {
     });
 
     it("blocks route when no slots available", () => {
+      // planet-1 → planet-2 is cross-empire (empire-1 → empire-2), so the
+      // galactic-tier slot pool is the one that needs to be exhausted.
       const state = createTestState({
         routeSlots: 0,
+        galacticRouteSlots: 0,
         unlockedEmpireIds: ["empire-1", "empire-2"],
       });
       const result = validateRouteCreation(
@@ -372,7 +375,7 @@ describe("Empire Access", () => {
         "food",
         state,
       );
-      expect(result).toContain("No available route slots");
+      expect(result).toMatch(/No available .*route slots/);
     });
 
     it("requires different planets even for same-system routes", () => {

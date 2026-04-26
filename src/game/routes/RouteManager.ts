@@ -10,8 +10,12 @@ import type {
   InterEmpireCargoLock,
   Hyperlane,
   BorderPort,
+  RouteScope,
 } from "../../data/types.ts";
-import { CargoType as CargoTypeEnum } from "../../data/types.ts";
+import {
+  CargoType as CargoTypeEnum,
+  RouteScope as RouteScopeEnum,
+} from "../../data/types.ts";
 import {
   TURN_DURATION,
   MAX_TRIPS_PER_TURN,
@@ -19,9 +23,11 @@ import {
   BASE_LICENSE_FEE,
   LICENSE_FEE_DISTANCE_DIVISOR,
   LICENSE_FEE_ROUTE_ESCALATION,
-  INTRA_SYSTEM_REVENUE_MULTIPLIER,
   DISTANCE_PREMIUM_RATE,
   DISTANCE_PREMIUM_CAP,
+  SCOPE_DEMAND_MULTIPLIERS,
+  BASE_GALACTIC_ROUTE_SLOTS,
+  BASE_SYSTEM_ROUTE_SLOTS,
 } from "../../data/constants.ts";
 import { calculatePrice } from "../economy/PriceCalculator.ts";
 import { getLicenseFeeMultiplier } from "../reputation/ReputationEffects.ts";
@@ -122,27 +128,81 @@ export function calculateLicenseFee(
   return Math.round(BASE_LICENSE_FEE * distMult * routeMult * repMult);
 }
 
+// ── Route Scope Classification ─────────────────────────────────────────
+//
+// Each route falls into exactly one scope, which determines:
+//   1. Which slot pool it consumes (system / empire / galactic)
+//   2. Which per-cargo demand multiplier applies to its revenue
+//
+// Scope is derived from the planet → system → empire chain. Falling back to
+// "empire" when an empire id is missing keeps generated/test routes from
+// crashing the slot accounting; it is the safest "neutral" bucket.
+
+type RouteEndpoints = Pick<
+  ActiveRoute,
+  "originPlanetId" | "destinationPlanetId"
+>;
+
+export function getRouteScope(
+  route: RouteEndpoints,
+  state: Pick<GameState, "galaxy">,
+): RouteScope {
+  const { planets, systems } = state.galaxy;
+  const origin = planets.find((p) => p.id === route.originPlanetId);
+  const dest = planets.find((p) => p.id === route.destinationPlanetId);
+  if (!origin || !dest) return RouteScopeEnum.Empire;
+  if (origin.systemId === dest.systemId) return RouteScopeEnum.System;
+
+  const originSystem = systems.find((s) => s.id === origin.systemId);
+  const destSystem = systems.find((s) => s.id === dest.systemId);
+  if (!originSystem || !destSystem) return RouteScopeEnum.Empire;
+  if (originSystem.empireId !== destSystem.empireId) {
+    return RouteScopeEnum.Galactic;
+  }
+  return RouteScopeEnum.Empire;
+}
+
+/**
+ * Resolve the scope-based revenue multiplier for a (cargoType, scope) pair.
+ * Centralised so the simulator, route estimator, and opportunity scanner all
+ * stay in lock-step.
+ */
+export function getScopeDemandMultiplier(
+  cargoType: CargoType,
+  scope: RouteScope,
+): number {
+  return SCOPE_DEMAND_MULTIPLIERS[cargoType][scope];
+}
+
 // ── Local Route Helpers ────────────────────────────────────────────────
 
 /**
  * Returns true when origin and destination are in the same star system.
- * These routes use the separate localRouteSlots pool.
+ * These routes use the separate localRouteSlots (system) pool.
  */
 export function isLocalRoute(
-  route: { originPlanetId: string; destinationPlanetId: string },
+  route: RouteEndpoints,
   state: Pick<GameState, "galaxy">,
 ): boolean {
-  const planets = state.galaxy.planets;
-  const originPlanet = planets.find((p) => p.id === route.originPlanetId);
-  const destPlanet = planets.find((p) => p.id === route.destinationPlanetId);
-  if (!originPlanet || !destPlanet) return false;
-  return originPlanet.systemId === destPlanet.systemId;
+  return getRouteScope(route, state) === RouteScopeEnum.System;
+}
+
+/**
+ * Returns true when origin and destination empires differ. These routes use
+ * the galacticRouteSlots pool.
+ */
+export function isGalacticRoute(
+  route: RouteEndpoints,
+  state: Pick<GameState, "galaxy">,
+): boolean {
+  return getRouteScope(route, state) === RouteScopeEnum.Galactic;
 }
 
 // ── Route Slot Helpers ─────────────────────────────────────────────────
 
 /**
- * Total main route slots available (base + tech bonus).
+ * Empire-tier slots available (intra-empire interstellar).
+ * Backed by `state.routeSlots` plus tech and hub bonuses.
  */
 export function getAvailableRouteSlots(state: GameState): number {
   return (
@@ -152,42 +212,92 @@ export function getAvailableRouteSlots(state: GameState): number {
   );
 }
 
-/**
- * Total local route slots available.
- */
+/** Alias used by 3-tier UI — same value as `getAvailableRouteSlots`. */
+export function getAvailableEmpireRouteSlots(state: GameState): number {
+  return getAvailableRouteSlots(state);
+}
+
+/** System-tier slot pool. Falls back to default when missing on legacy saves. */
 export function getAvailableLocalRouteSlots(state: GameState): number {
-  return state.localRouteSlots ?? 2;
+  return state.localRouteSlots ?? BASE_SYSTEM_ROUTE_SLOTS;
 }
 
-/**
- * Number of main route slots currently in use (excludes local routes).
- */
+/** Alias used by 3-tier UI — same value as `getAvailableLocalRouteSlots`. */
+export function getAvailableSystemRouteSlots(state: GameState): number {
+  return getAvailableLocalRouteSlots(state);
+}
+
+/** Galactic-tier slot pool. Falls back to default when missing on legacy saves. */
+export function getAvailableGalacticRouteSlots(state: GameState): number {
+  return state.galacticRouteSlots ?? BASE_GALACTIC_ROUTE_SLOTS;
+}
+
+/** Empire-tier slots in use (intra-empire interstellar only). */
 export function getUsedRouteSlots(state: GameState): number {
-  return state.activeRoutes.filter((r) => !isLocalRoute(r, state)).length;
+  return state.activeRoutes.filter(
+    (r) => getRouteScope(r, state) === RouteScopeEnum.Empire,
+  ).length;
 }
 
-/**
- * Number of local route slots currently in use.
- */
+/** Alias used by 3-tier UI — same value as `getUsedRouteSlots`. */
+export function getUsedEmpireRouteSlots(state: GameState): number {
+  return getUsedRouteSlots(state);
+}
+
+/** System-tier slots in use. */
 export function getUsedLocalRouteSlots(state: GameState): number {
-  return state.activeRoutes.filter((r) => isLocalRoute(r, state)).length;
+  return state.activeRoutes.filter(
+    (r) => getRouteScope(r, state) === RouteScopeEnum.System,
+  ).length;
 }
 
-/**
- * Number of free main route slots remaining.
- */
+/** Alias used by 3-tier UI — same value as `getUsedLocalRouteSlots`. */
+export function getUsedSystemRouteSlots(state: GameState): number {
+  return getUsedLocalRouteSlots(state);
+}
+
+/** Galactic-tier slots in use. */
+export function getUsedGalacticRouteSlots(state: GameState): number {
+  return state.activeRoutes.filter(
+    (r) => getRouteScope(r, state) === RouteScopeEnum.Galactic,
+  ).length;
+}
+
+/** Free empire-tier slots remaining. */
 export function getFreeRouteSlots(state: GameState): number {
   return Math.max(0, getAvailableRouteSlots(state) - getUsedRouteSlots(state));
 }
 
-/**
- * Number of free local route slots remaining.
- */
+/** Free system-tier slots remaining. */
 export function getFreeLocalRouteSlots(state: GameState): number {
   return Math.max(
     0,
     getAvailableLocalRouteSlots(state) - getUsedLocalRouteSlots(state),
   );
+}
+
+/** Free galactic-tier slots remaining. */
+export function getFreeGalacticRouteSlots(state: GameState): number {
+  return Math.max(
+    0,
+    getAvailableGalacticRouteSlots(state) - getUsedGalacticRouteSlots(state),
+  );
+}
+
+/** Free slots for a given scope — convenience for validators and UI. */
+export function getFreeSlotsForScope(
+  state: GameState,
+  scope: RouteScope,
+): number {
+  switch (scope) {
+    case RouteScopeEnum.System:
+      return getFreeLocalRouteSlots(state);
+    case RouteScopeEnum.Galactic:
+      return getFreeGalacticRouteSlots(state);
+    case RouteScopeEnum.Empire:
+    default:
+      return getFreeRouteSlots(state);
+  }
 }
 
 export interface RouteTrafficVisual {
@@ -635,9 +745,15 @@ export function setRouteCargo(
 }
 
 /**
- * Estimate revenue for a route+ship for one turn.
- * Matches the TurnSimulator formula: applies calculatePrice, distancePremium,
- * and INTRA_SYSTEM_REVENUE_MULTIPLIER so the displayed estimate is accurate.
+ * Estimate revenue for a route+ship for one turn. Mirrors the TurnSimulator
+ * formula so the displayed estimate matches actual simulation:
+ *
+ *   revenue = price × capacity × trips × scopeDemand × distancePremium
+ *
+ * For system-scope routes, only the per-cargo scope multiplier applies (no
+ * distance premium — there isn't enough distance to matter). For empire and
+ * galactic routes, the scope multiplier stacks with the standard distance
+ * premium.
  */
 export function estimateRouteRevenue(
   route: ActiveRoute,
@@ -663,28 +779,37 @@ export function estimateRouteRevenue(
 
   const totalCargoMoved = capacity * trips;
 
-  // Determine intra-system status: extract system from planet ID "planet-{si}-{syi}-{pi}"
-  const originParts = route.originPlanetId.split("-");
-  const destParts = route.destinationPlanetId.split("-");
-  const isIntraSystem =
-    state != null
-      ? isLocalRoute(route, state)
-      : originParts.length >= 4 &&
-        destParts.length >= 4 &&
-        originParts[0] === "planet" &&
-        destParts[0] === "planet" &&
-        `${originParts[1]}-${originParts[2]}` ===
-          `${destParts[1]}-${destParts[2]}`;
+  const scope =
+    state != null ? getRouteScope(route, state) : inferScopeFromIds(route);
+  const scopeMult = getScopeDemandMultiplier(route.cargoType, scope);
 
-  const distancePremium = Math.min(
-    DISTANCE_PREMIUM_CAP,
-    route.distance * DISTANCE_PREMIUM_RATE,
-  );
-  const revenueMultiplier = isIntraSystem
-    ? INTRA_SYSTEM_REVENUE_MULTIPLIER
-    : 1 + distancePremium;
+  const distancePremium =
+    scope === RouteScopeEnum.System
+      ? 0
+      : Math.min(DISTANCE_PREMIUM_CAP, route.distance * DISTANCE_PREMIUM_RATE);
+  const revenueMultiplier = scopeMult * (1 + distancePremium);
 
   return Math.round(totalCargoMoved * price * revenueMultiplier * 100) / 100;
+}
+
+/**
+ * Best-effort scope inference from planet ID structure when no state is
+ * available (legacy callers). Recognizes "planet-{si}-{syi}-{pi}" → system id.
+ * Cannot tell empire from system, so returns Empire for cross-system routes
+ * (the default neutral bucket).
+ */
+function inferScopeFromIds(
+  route: Pick<ActiveRoute, "originPlanetId" | "destinationPlanetId">,
+): RouteScope {
+  const originParts = route.originPlanetId.split("-");
+  const destParts = route.destinationPlanetId.split("-");
+  const sameSystem =
+    originParts.length >= 4 &&
+    destParts.length >= 4 &&
+    originParts[0] === "planet" &&
+    destParts[0] === "planet" &&
+    `${originParts[1]}-${originParts[2]}` === `${destParts[1]}-${destParts[2]}`;
+  return sameSystem ? RouteScopeEnum.System : RouteScopeEnum.Empire;
 }
 
 /**
@@ -723,6 +848,28 @@ export interface RouteOpportunity {
   shipCost: number;
   licenseFee: number;
   alreadyActive: boolean;
+  /** Route scope (system / empire / galactic) — drives slot pool + demand multiplier. */
+  scope: RouteScope;
+  /** Per-cargo scope demand multiplier applied to revenue. Surfaced for UI tooltips. */
+  scopeDemandMultiplier: number;
+}
+
+/**
+ * Classify a (origin, dest) pair given galaxy data. Used by the opportunity
+ * scanner where we have raw planet/system arrays in scope.
+ */
+function classifyScope(
+  origin: Planet,
+  dest: Planet,
+  systems: StarSystem[],
+): RouteScope {
+  if (origin.systemId === dest.systemId) return RouteScopeEnum.System;
+  const oSys = systems.find((s) => s.id === origin.systemId);
+  const dSys = systems.find((s) => s.id === dest.systemId);
+  if (!oSys || !dSys) return RouteScopeEnum.Empire;
+  return oSys.empireId !== dSys.empireId
+    ? RouteScopeEnum.Galactic
+    : RouteScopeEnum.Empire;
 }
 
 /**
@@ -833,14 +980,13 @@ export function scanAllRouteOpportunities(
 
         const destEntry = destMarket[cargoType];
         const price = calculatePrice(destEntry, cargoType);
-        const isIntraSystem = origin.systemId === dest.systemId;
-        const distancePremium = Math.min(
-          DISTANCE_PREMIUM_CAP,
-          distance * DISTANCE_PREMIUM_RATE,
-        );
-        const revenueMultiplier = isIntraSystem
-          ? INTRA_SYSTEM_REVENUE_MULTIPLIER
-          : 1 + distancePremium;
+        const scope = classifyScope(origin, dest, systems);
+        const scopeMult = getScopeDemandMultiplier(cargoType, scope);
+        const distancePremium =
+          scope === RouteScopeEnum.System
+            ? 0
+            : Math.min(DISTANCE_PREMIUM_CAP, distance * DISTANCE_PREMIUM_RATE);
+        const revenueMultiplier = scopeMult * (1 + distancePremium);
 
         // Pick the *most profitable* ship the player can field on this
         // specific route (owned, or affordable to buy). Trying only the
@@ -880,17 +1026,42 @@ export function scanAllRouteOpportunities(
             best.candidate.source === "owned" ? 0 : best.candidate.purchaseCost,
           licenseFee,
           alreadyActive,
+          scope,
+          scopeDemandMultiplier: scopeMult,
         });
       }
     }
   }
 
-  // Sort by profit descending and limit to top 200 for performance
+  // Sort by profit descending. The Route Finder caps the displayed list at
+  // 200, but a flat profit-DESC truncation lets a single high-margin cargo
+  // (typically galactic luxury, often 100+ entries on a fresh standard
+  // galaxy) crowd every other cargo out of the top 200 — the player then
+  // sees zero raw-materials or hazmat options even though the underlying
+  // opportunities exist. We reserve a per-cargo quota first (top-K by
+  // profit per cargo type), then fill the remaining slots from the global
+  // profit-sorted tail.
   opportunities.sort((a, b) => b.estProfit - a.estProfit);
-  if (opportunities.length > 200) {
-    opportunities.length = 200;
+  const HARD_CAP = 200;
+  if (opportunities.length <= HARD_CAP) return opportunities;
+
+  const PER_CARGO_QUOTA = 12;
+  const reserved: RouteOpportunity[] = [];
+  const overflow: RouteOpportunity[] = [];
+  const quotaUsed = new Map<CargoType, number>();
+  for (const opp of opportunities) {
+    const used = quotaUsed.get(opp.bestCargoType) ?? 0;
+    if (used < PER_CARGO_QUOTA) {
+      reserved.push(opp);
+      quotaUsed.set(opp.bestCargoType, used + 1);
+    } else {
+      overflow.push(opp);
+    }
   }
-  return opportunities;
+  const remaining = HARD_CAP - reserved.length;
+  return remaining > 0
+    ? [...reserved, ...overflow.slice(0, remaining)]
+    : reserved.slice(0, HARD_CAP);
 }
 
 interface ShipCandidate {

@@ -5,20 +5,30 @@ import type {
   CargoType,
   Planet,
   StarSystem,
+  RouteScope,
 } from "../../data/types.ts";
 import {
   CargoType as CargoTypeEnum,
   DiplomaticStatus,
+  RouteScope as RouteScopeEnum,
 } from "../../data/types.ts";
 import {
   ROUTE_MARKET_SIZE,
   ROUTE_MARKET_ENTRY_DURATION,
   SCOUT_COST_AP,
   SCOUT_COST_CASH,
+  ROUTE_MARKET_SCOPE_QUOTA,
+  DISTANCE_PREMIUM_RATE,
+  DISTANCE_PREMIUM_CAP,
 } from "../../data/constants.ts";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 import { calculatePrice } from "../economy/PriceCalculator.ts";
-import { calculateDistance, calculateTripsPerTurn } from "./RouteManager.ts";
+import {
+  calculateDistance,
+  calculateTripsPerTurn,
+  getScopeDemandMultiplier,
+} from "./RouteManager.ts";
+import { calculateTariff } from "./TariffCalculator.ts";
 import {
   getEmpireForPlanet,
   isEmpireAccessible,
@@ -56,10 +66,26 @@ function routeDistance(origin: Planet, dest: Planet, state: GameState): number {
 }
 
 /**
- * Estimate profit-per-turn for a route.
- * Uses: trips × capacity (avg cargo shuttle 80) × (destPrice - originPrice)
- * This mirrors the logic used in the route opportunity scanner but simplified
- * to a representative ship (avg cargoCapacity 80, speed 4).
+ * Classify a candidate (origin → dest) pair into a RouteScope.
+ */
+function classifyPairScope(
+  origin: Planet,
+  dest: Planet,
+  systems: StarSystem[],
+): RouteScope {
+  if (origin.systemId === dest.systemId) return RouteScopeEnum.System;
+  const oSys = systems.find((s) => s.id === origin.systemId);
+  const dSys = systems.find((s) => s.id === dest.systemId);
+  if (!oSys || !dSys) return RouteScopeEnum.Empire;
+  return oSys.empireId !== dSys.empireId
+    ? RouteScopeEnum.Galactic
+    : RouteScopeEnum.Empire;
+}
+
+/**
+ * Estimate profit-per-turn for a route. Mirrors the simulator's revenue
+ * formula (price × capacity × trips × scopeMult × distance premium) so
+ * scouted profits match what the player will actually earn.
  */
 function estimateExactProfit(
   origin: Planet,
@@ -85,11 +111,43 @@ function estimateExactProfit(
   const representativeSpeed = 4;
   const trips = calculateTripsPerTurn(distance, representativeSpeed);
 
+  const scope = classifyPairScope(origin, dest, state.galaxy.systems);
+  const scopeMult = getScopeDemandMultiplier(cargoType, scope);
+  const distancePremium =
+    scope === RouteScopeEnum.System
+      ? 0
+      : Math.min(DISTANCE_PREMIUM_CAP, distance * DISTANCE_PREMIUM_RATE);
+  const revenueMultiplier = scopeMult * (1 + distancePremium);
+
   const fuelPerTrip = distance * 2 * 0.8 * state.market.fuelPrice;
-  const revenue = trips * representativeCapacity * price;
+  const revenue = trips * representativeCapacity * price * revenueMultiplier;
   const fuelCost = trips * fuelPerTrip;
 
-  return Math.max(0, Math.round((revenue - fuelCost) * 100) / 100);
+  // Galactic-scope routes pay tariff to the destination empire — apply it
+  // here so the scouted "exact profit" actually matches what the player
+  // earns. Without this, scouted galactic profits over-state by 10–20%.
+  let tariff = 0;
+  if (scope === RouteScopeEnum.Galactic) {
+    const synthRoute = {
+      id: "estimator",
+      originPlanetId: origin.id,
+      destinationPlanetId: dest.id,
+      distance,
+      assignedShipIds: [],
+      cargoType,
+    };
+    tariff = calculateTariff(
+      synthRoute,
+      revenue,
+      "", // no owner empire — estimator treats the player as a generic carrier
+      state.galaxy.systems,
+      state.galaxy.empires,
+      state.reputation,
+      state.diplomaticRelations,
+    );
+  }
+
+  return Math.max(0, Math.round((revenue - fuelCost - tariff) * 100) / 100);
 }
 
 /**
@@ -191,10 +249,66 @@ function computeRiskTags(
 // Public API
 // ---------------------------------------------------------------------------
 
+interface CandidatePair {
+  origin: Planet;
+  dest: Planet;
+  scope: RouteScope;
+}
+
+/**
+ * Pick a cargo type for a candidate pair, weighting by the per-cargo demand
+ * multiplier for the pair's scope. Heavy goods cluster on system/empire
+ * routes; luxury and tech cluster on galactic. Embargoed cargo is excluded.
+ */
+function pickCargoForPair(
+  origin: Planet,
+  dest: Planet,
+  scope: RouteScope,
+  systems: StarSystem[],
+  planets: Planet[],
+  state: GameState,
+  rng: SeededRNG,
+): CargoType | null {
+  const originEmpireId = getEmpireForPlanet(origin.id, systems, planets);
+  const destEmpireId = getEmpireForPlanet(dest.id, systems, planets);
+
+  const allowed: Array<{ cargo: CargoType; weight: number }> = [];
+  for (const cargo of ALL_CARGO_TYPES) {
+    if (originEmpireId && destEmpireId && originEmpireId !== destEmpireId) {
+      const violation = checkTradePolicyViolation(
+        originEmpireId,
+        destEmpireId,
+        cargo,
+        state.empireTradePolicies,
+      );
+      if (violation) continue;
+    }
+    // Square the multiplier so the bias toward "scope-appropriate" cargo is
+    // visible without becoming deterministic — luxury still occasionally
+    // shows up on a system route, but rarely.
+    const mult = getScopeDemandMultiplier(cargo, scope);
+    const weight = Math.max(0.01, mult * mult);
+    allowed.push({ cargo, weight });
+  }
+  if (allowed.length === 0) return null;
+
+  const totalWeight = allowed.reduce((sum, e) => sum + e.weight, 0);
+  let target = rng.nextFloat(0, totalWeight);
+  for (const entry of allowed) {
+    target -= entry.weight;
+    if (target <= 0) return entry.cargo;
+  }
+  return allowed[allowed.length - 1].cargo;
+}
+
 /**
  * Generate a fresh batch of route market entries for the current turn.
- * Only considers O→D pairs where both empires are unlocked by the player.
- * Sets exactProfitPerTurn = null and scouted = false (hidden until scouted).
+ *
+ * The market is partitioned into three scope buckets (system / empire /
+ * galactic) using ROUTE_MARKET_SCOPE_QUOTA. Each bucket tries to hit its
+ * quota first; any leftover slack is filled from the remaining candidate
+ * pool so the player never sees an empty market because one tier had no
+ * candidates.
  */
 export function generateRouteMarketEntries(
   state: GameState,
@@ -204,8 +318,16 @@ export function generateRouteMarketEntries(
   const hyperlanes = state.hyperlanes ?? [];
   const marketSize = getMarketSize(state);
 
-  // Build candidate planet pairs filtered by empire access and hyperlane reachability
-  const candidatePairs: Array<{ origin: Planet; dest: Planet }> = [];
+  // Build candidate pairs grouped by scope. Same-system pairs ARE eligible
+  // now (system tier) — previously they were skipped entirely, which is part
+  // of why players saw "only a couple non-system routes": there were too few
+  // candidate pairs to fill the empire/galactic buckets in early-game maps
+  // with restricted empire access.
+  const bucketedCandidates: Record<RouteScope, CandidatePair[]> = {
+    [RouteScopeEnum.System]: [],
+    [RouteScopeEnum.Empire]: [],
+    [RouteScopeEnum.Galactic]: [],
+  };
 
   for (const origin of planets) {
     const originEmpireId = getEmpireForPlanet(origin.id, systems, planets);
@@ -217,96 +339,163 @@ export function generateRouteMarketEntries(
       const destEmpireId = getEmpireForPlanet(dest.id, systems, planets);
       if (!destEmpireId || !isEmpireAccessible(destEmpireId, state)) continue;
 
-      // Skip same-system intra-system pairs (too short for the market)
-      if (origin.systemId === dest.systemId) continue;
-
-      // If hyperlanes exist, require a valid path
-      if (hyperlanes.length > 0) {
+      // If hyperlanes exist, require a valid path between different systems
+      if (hyperlanes.length > 0 && origin.systemId !== dest.systemId) {
         const dist = routeDistance(origin, dest, state);
         if (dist <= 0 || dist === -1) continue;
       }
 
-      candidatePairs.push({ origin, dest });
+      const scope = classifyPairScope(origin, dest, systems);
+      bucketedCandidates[scope].push({ origin, dest, scope });
     }
   }
 
-  if (candidatePairs.length === 0) {
-    return [];
-  }
+  const totalCandidates =
+    bucketedCandidates.system.length +
+    bucketedCandidates.empire.length +
+    bucketedCandidates.galactic.length;
+  if (totalCandidates === 0) return [];
+
+  // Compute per-scope target counts. If a scope has no candidates, its quota
+  // is reassigned proportionally to the remaining scopes.
+  const targets = computeScopeTargets(marketSize, bucketedCandidates);
 
   const entries: RouteMarketEntry[] = [];
   const usedIds = new Set<string>();
 
-  // Try up to marketSize * 5 attempts to fill the market
-  const maxAttempts = marketSize * 5;
-  let attempts = 0;
+  const fillFromBucket = (
+    bucket: CandidatePair[],
+    target: number,
+    maxAttemptsPerEntry: number,
+  ): number => {
+    let added = 0;
+    let attempts = 0;
+    const maxAttempts = target * maxAttemptsPerEntry;
+    while (added < target && attempts < maxAttempts && bucket.length > 0) {
+      attempts++;
+      const pair = rng.pick(bucket);
+      const cargo = pickCargoForPair(
+        pair.origin,
+        pair.dest,
+        pair.scope,
+        systems,
+        planets,
+        state,
+        rng,
+      );
+      if (!cargo) continue;
 
-  while (entries.length < marketSize && attempts < maxAttempts) {
-    attempts++;
+      const pairKey = `${pair.origin.id}→${pair.dest.id}→${cargo}`;
+      if (usedIds.has(pairKey)) continue;
 
-    // Pick a random O→D pair
-    const pair = rng.pick(candidatePairs);
-    const { origin, dest } = pair;
+      const exactProfit = estimateExactProfit(
+        pair.origin,
+        pair.dest,
+        cargo,
+        state,
+      );
+      if (exactProfit <= 0) continue;
 
-    // Pick a random cargo type that is not embargoed
-    const shuffledCargo = [...ALL_CARGO_TYPES];
-    rng.shuffle(shuffledCargo);
+      usedIds.add(pairKey);
 
-    let selectedCargo: CargoType | null = null;
-    for (const cargoType of shuffledCargo) {
-      const originEmpireId = getEmpireForPlanet(origin.id, systems, planets);
-      const destEmpireId = getEmpireForPlanet(dest.id, systems, planets);
+      const estimatedProfitMin = Math.round(exactProfit * 0.7);
+      const estimatedProfitMax = Math.round(exactProfit * 1.3);
+      const riskTags = computeRiskTags(pair.origin, pair.dest, cargo, state);
 
-      if (originEmpireId && destEmpireId && originEmpireId !== destEmpireId) {
-        const violation = checkTradePolicyViolation(
-          originEmpireId,
-          destEmpireId,
-          cargoType,
-          state.empireTradePolicies,
-        );
-        if (violation) continue;
-      }
-
-      selectedCargo = cargoType;
-      break;
+      entries.push({
+        id: `rm-${state.turn}-${entries.length}-${rng.nextInt(0, 999999)}`,
+        originPlanetId: pair.origin.id,
+        destinationPlanetId: pair.dest.id,
+        cargoType: cargo,
+        estimatedProfitMin,
+        estimatedProfitMax,
+        exactProfitPerTurn: null,
+        riskTags,
+        scouted: false,
+        expiresOnTurn: state.turn + ROUTE_MARKET_ENTRY_DURATION,
+        claimedByAiId: null,
+      });
+      added++;
     }
+    return added;
+  };
 
-    if (!selectedCargo) continue;
+  const scopeOrder: RouteScope[] = [
+    RouteScopeEnum.System,
+    RouteScopeEnum.Empire,
+    RouteScopeEnum.Galactic,
+  ];
 
-    // Avoid exact duplicates within a single generation batch
-    const pairKey = `${origin.id}→${dest.id}→${selectedCargo}`;
-    if (usedIds.has(pairKey)) continue;
-    usedIds.add(pairKey);
+  // First pass — fill each bucket toward its quota.
+  for (const scope of scopeOrder) {
+    fillFromBucket(bucketedCandidates[scope], targets[scope], 6);
+  }
 
-    // Compute the hidden exact profit
-    const exactProfit = estimateExactProfit(origin, dest, selectedCargo, state);
-    if (exactProfit <= 0) continue;
-
-    // Estimated range is ±30% of the real value (hidden noise)
-    const estimatedProfitMin = Math.round(exactProfit * 0.7);
-    const estimatedProfitMax = Math.round(exactProfit * 1.3);
-
-    // Risk tags
-    const riskTags = computeRiskTags(origin, dest, selectedCargo, state);
-
-    const id = `rm-${state.turn}-${entries.length}-${rng.nextInt(0, 999999)}`;
-
-    entries.push({
-      id,
-      originPlanetId: origin.id,
-      destinationPlanetId: dest.id,
-      cargoType: selectedCargo,
-      estimatedProfitMin,
-      estimatedProfitMax,
-      exactProfitPerTurn: null, // hidden until scouted
-      riskTags,
-      scouted: false,
-      expiresOnTurn: state.turn + ROUTE_MARKET_ENTRY_DURATION,
-      claimedByAiId: null,
-    });
+  // Second pass — top up any unmet quota from any bucket that still has room.
+  // Order by largest remaining first so quotas converge.
+  let deficit = marketSize - entries.length;
+  if (deficit > 0) {
+    const allCandidates = [
+      ...bucketedCandidates.system,
+      ...bucketedCandidates.empire,
+      ...bucketedCandidates.galactic,
+    ];
+    fillFromBucket(allCandidates, deficit, 6);
   }
 
   return entries;
+}
+
+/**
+ * Allocate `marketSize` entries across the three scopes using
+ * ROUTE_MARKET_SCOPE_QUOTA. Scopes with zero candidates have their quota
+ * redistributed proportionally to scopes that DO have candidates so the
+ * market does not under-fill when one tier is unavailable.
+ */
+function computeScopeTargets(
+  marketSize: number,
+  bucketed: Record<RouteScope, CandidatePair[]>,
+): Record<RouteScope, number> {
+  const scopes: RouteScope[] = [
+    RouteScopeEnum.System,
+    RouteScopeEnum.Empire,
+    RouteScopeEnum.Galactic,
+  ];
+
+  let activeWeight = 0;
+  for (const scope of scopes) {
+    if (bucketed[scope].length > 0) {
+      activeWeight += ROUTE_MARKET_SCOPE_QUOTA[scope];
+    }
+  }
+
+  const targets: Record<RouteScope, number> = {
+    [RouteScopeEnum.System]: 0,
+    [RouteScopeEnum.Empire]: 0,
+    [RouteScopeEnum.Galactic]: 0,
+  };
+  if (activeWeight === 0) return targets;
+
+  let assigned = 0;
+  for (const scope of scopes) {
+    if (bucketed[scope].length === 0) continue;
+    const share = ROUTE_MARKET_SCOPE_QUOTA[scope] / activeWeight;
+    const target = Math.floor(marketSize * share);
+    targets[scope] = target;
+    assigned += target;
+  }
+
+  // Distribute rounding remainder to scopes with the largest weight first.
+  let remainder = marketSize - assigned;
+  const ordered = [...scopes]
+    .filter((s) => bucketed[s].length > 0)
+    .sort((a, b) => ROUTE_MARKET_SCOPE_QUOTA[b] - ROUTE_MARKET_SCOPE_QUOTA[a]);
+  for (const scope of ordered) {
+    if (remainder <= 0) break;
+    targets[scope]++;
+    remainder--;
+  }
+  return targets;
 }
 
 /**

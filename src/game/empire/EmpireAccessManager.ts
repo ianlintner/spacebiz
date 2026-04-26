@@ -180,30 +180,45 @@ export function validateRouteCreation(
     return "Destination empire is not yet accessible";
   }
 
-  // Check route slot availability (local and main routes use separate pools)
-  const isLocal = originPlanet.systemId === destinationPlanet.systemId;
-  if (isLocal) {
-    const availableLocalSlots = state.localRouteSlots ?? 2;
-    const usedLocalSlots = state.activeRoutes.filter((r) => {
-      const rOrigin = planets.find((p) => p.id === r.originPlanetId);
-      const rDest = planets.find((p) => p.id === r.destinationPlanetId);
-      return rOrigin && rDest && rOrigin.systemId === rDest.systemId;
-    }).length;
-    if (availableLocalSlots - usedLocalSlots <= 0) {
-      return "No available local route slots";
+  // Each route consumes a slot from the pool that matches its scope.
+  // System (intra-system), empire (intra-empire interstellar), and galactic
+  // (inter-empire) each draw from a separate pool.
+  const isSystem = originPlanet.systemId === destinationPlanet.systemId;
+  const isGalactic = !isSystem && originEmpireId !== destEmpireId;
+
+  const systemRoutes = state.activeRoutes.filter((r) => {
+    const o = planets.find((p) => p.id === r.originPlanetId);
+    const d = planets.find((p) => p.id === r.destinationPlanetId);
+    return o && d && o.systemId === d.systemId;
+  });
+  const galacticRoutes = state.activeRoutes.filter((r) => {
+    const o = planets.find((p) => p.id === r.originPlanetId);
+    const d = planets.find((p) => p.id === r.destinationPlanetId);
+    if (!o || !d || o.systemId === d.systemId) return false;
+    const oSys = systems.find((s) => s.id === o.systemId);
+    const dSys = systems.find((s) => s.id === d.systemId);
+    return !!oSys && !!dSys && oSys.empireId !== dSys.empireId;
+  });
+  const empireRoutes =
+    state.activeRoutes.length - systemRoutes.length - galacticRoutes.length;
+
+  if (isSystem) {
+    const available = state.localRouteSlots ?? 2;
+    if (available - systemRoutes.length <= 0) {
+      return "No available system route slots";
+    }
+  } else if (isGalactic) {
+    const available = state.galacticRouteSlots ?? 2;
+    if (available - galacticRoutes.length <= 0) {
+      return "No available galactic route slots";
     }
   } else {
-    const availableSlots =
+    const available =
       state.routeSlots +
       getTechRouteSlotBonus(state) +
       getRouteSlotBonus(state.stationHub);
-    const usedSlots = state.activeRoutes.filter((r) => {
-      const rOrigin = planets.find((p) => p.id === r.originPlanetId);
-      const rDest = planets.find((p) => p.id === r.destinationPlanetId);
-      return !(rOrigin && rDest && rOrigin.systemId === rDest.systemId);
-    }).length;
-    if (availableSlots - usedSlots <= 0) {
-      return "No available route slots";
+    if (available - empireRoutes <= 0) {
+      return "No available empire route slots";
     }
   }
 
