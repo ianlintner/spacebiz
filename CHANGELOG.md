@@ -1,3 +1,5 @@
+# Changelog
+
 ## [2026-W17] — 2026-04-26
 
 - rename dispatch mode upgrade-only → upgrade (#14)
@@ -14,7 +16,7 @@
 - dilemma system with success% scaling and AI narrative beats (#32)
 - double the slate + Paradox-style banner illustrations (#33)
 - drop PR trigger from Azure SWA deploy workflow (#34)
-- Add build info and fullscreen play mode (#35)
+- add build info and fullscreen play mode (#35)
 - upgrade Phaser 3 → Phaser 4 (#36)
 - refresh README + homepage with manual-style voice (#37)
 - preserve cargo type from finder filter into Custom Route modal (#38)
