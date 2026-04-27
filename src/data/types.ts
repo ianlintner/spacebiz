@@ -497,6 +497,14 @@ export interface Planet {
   x: number;
   y: number;
   population: number;
+  // 3D orbital params (system-local coordinates). Optional so existing test
+  // fixtures and pre-3D save files keep working; runtime planets generated
+  // by GalaxyGenerator always populate these. Read via getOrbitalParams() in
+  // src/game/system/OrbitalMechanics.ts to get safe defaults.
+  orbitRadius?: number;
+  orbitPeriodQuarters?: number;
+  orbitPhase?: number;
+  orbitInclination?: number;
 }
 
 export interface CargoMarketEntry {

@@ -641,6 +641,14 @@ export function generateGalaxy(
 
         const population = generatePopulation(rng, planetType);
 
+        // 3D orbital params for the system view. Inner-slot planets orbit
+        // faster (shorter period in quarters) and at smaller radius —
+        // preserves the existing "inner industry → outer leisure" feel.
+        const orbitRadius = 4 + orbitalFraction * 12;
+        const orbitPeriodQuarters = 4 + pi * 2;
+        const orbitPhase = rng.nextFloat(0, Math.PI * 2);
+        const orbitInclination = (rng.nextFloat(0, 1) - 0.5) * 0.3;
+
         const planet: Planet = {
           id: `planet-${si}-${syi}-${pi}`,
           name: nameGen.generatePlanetName(),
@@ -649,6 +657,10 @@ export function generateGalaxy(
           x: planetX,
           y: planetY,
           population,
+          orbitRadius,
+          orbitPeriodQuarters,
+          orbitPhase,
+          orbitInclination,
         };
         planets.push(planet);
       }
