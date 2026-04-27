@@ -617,6 +617,14 @@ export class SimPlaybackScene extends Phaser.Scene {
 
     // No dual-camera filter needed — the HUD chrome and ships all render on
     // the single Phaser camera; the 3D galaxy renders on its own canvas.
+
+    // Wire teardown via the SHUTDOWN event. Phaser's Systems.shutdown only
+    // emits this event — it does NOT auto-invoke a `shutdown()` method on
+    // user Scene classes. Without this listener the 3D galaxy canvas would
+    // leak into the DOM every turn, stacking up behind GalaxyMapScene.
+    const cleanup = (): void => this.cleanup();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
   }
 
   // ── Speed control ─────────────────────────────────────────────────────────
@@ -751,7 +759,15 @@ export class SimPlaybackScene extends Phaser.Scene {
     }
   }
 
-  shutdown(): void {
+  /**
+   * Tear down the playback scene's owned resources. Registered via
+   * `events.once("shutdown", ...)` in create() because Phaser does NOT call
+   * a user-defined `shutdown()` method on the Scene class — Systems.shutdown
+   * only emits the SHUTDOWN event. A regular method here would be dead code,
+   * leaking the 3D galaxy canvas every turn (visible as two galaxies stacked
+   * once the player returns to GalaxyMapScene).
+   */
+  private cleanup(): void {
     for (const ps of this.playbackShips) {
       ps.mainSprite.destroy();
       ps.glow.destroy();

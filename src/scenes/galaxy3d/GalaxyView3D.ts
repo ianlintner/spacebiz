@@ -154,6 +154,15 @@ export class GalaxyView3D {
     if (!parent.style.position) {
       parent.style.position = "relative";
     }
+    // Defensive: remove any orphaned 3D galaxy canvases that a previous scene
+    // failed to clean up. There can only ever be one active galaxy view at a
+    // time, so a stale sibling here is always a leak (e.g. a Scene whose
+    // shutdown handler didn't fire). Without this, the new canvas would
+    // stack on top of the orphan and the player would see two galaxies.
+    const orphans = parent.querySelectorAll<HTMLCanvasElement>(
+      `.${GALAXY_3D_CANVAS_CLASS}`,
+    );
+    orphans.forEach((el) => el.remove());
     parent.appendChild(this.canvas);
 
     this.renderer = new THREE.WebGLRenderer({
