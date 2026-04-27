@@ -90,7 +90,12 @@ export function buildStockList(state: GameState): StockEntry[] {
     if (ai.bankrupt) continue;
     const sym = makeSymbolFromName(ai.name, state.seed + ai.id.length);
     if (entries.find((e) => e.symbol === sym)) continue;
-    entries.push({ symbol: sym, name: ai.name, realCompany: true, anchorCash: ai.cash });
+    entries.push({
+      symbol: sym,
+      name: ai.name,
+      realCompany: true,
+      anchorCash: ai.cash,
+    });
   }
 
   // Flavor brands rounding it out to a meaty board.
@@ -106,7 +111,11 @@ export function buildStockList(state: GameState): StockEntry[] {
  * Compute a per-turn quote for a single stock. Deterministic given (seed, turn, symbol).
  * Real companies anchor near (cash / 100K); flavor brands oscillate around 50–500 cr.
  */
-export function quoteStock(entry: StockEntry, seed: number, turn: number): StockQuote {
+export function quoteStock(
+  entry: StockEntry,
+  seed: number,
+  turn: number,
+): StockQuote {
   // Hash symbol into the seed so different symbols walk independently.
   let h = 5381;
   for (let i = 0; i < entry.symbol.length; i++) {
@@ -123,9 +132,7 @@ export function quoteStock(entry: StockEntry, seed: number, turn: number): Stock
 
   // Daily walk: roll a return between -8% and +8%, with rare blowouts.
   const blowout = rng.next() < 0.04;
-  const ret = blowout
-    ? rng.nextFloat(-0.25, 0.25)
-    : rng.nextFloat(-0.08, 0.08);
+  const ret = blowout ? rng.nextFloat(-0.25, 0.25) : rng.nextFloat(-0.08, 0.08);
   const price = Math.max(1, Math.round(basePrice * (1 + ret) * 100) / 100);
   const changePct = ret;
 

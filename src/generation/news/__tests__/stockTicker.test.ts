@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  buildStockList,
-  quoteStock,
-  quoteAllStocks,
-} from "../stockTicker.ts";
+import { buildStockList, quoteStock, quoteAllStocks } from "../stockTicker.ts";
 import { makeFixtureState } from "./testFixtures.ts";
 
 describe("stockTicker", () => {
@@ -17,8 +13,12 @@ describe("stockTicker", () => {
 
   it("symbols are stable across turns for the same state", () => {
     const state = makeFixtureState({ turn: 1 });
-    const a = buildStockList(state).map((e) => e.symbol).sort();
-    const b = buildStockList(state).map((e) => e.symbol).sort();
+    const a = buildStockList(state)
+      .map((e) => e.symbol)
+      .sort();
+    const b = buildStockList(state)
+      .map((e) => e.symbol)
+      .sort();
     expect(a).toEqual(b);
   });
 

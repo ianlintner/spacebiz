@@ -38,7 +38,11 @@ export function makePlanet(id: string, name: string, systemId: string): Planet {
   } as unknown as Planet;
 }
 
-export function makeSystem(id: string, name: string, sectorId: string): StarSystem {
+export function makeSystem(
+  id: string,
+  name: string,
+  sectorId: string,
+): StarSystem {
   return {
     id,
     name,
@@ -54,7 +58,12 @@ export function makeSector(id: string, name: string): Sector {
   return { id, name } as unknown as Sector;
 }
 
-export function makeCompany(id: string, name: string, ceoName: string, cash: number): AICompany {
+export function makeCompany(
+  id: string,
+  name: string,
+  ceoName: string,
+  cash: number,
+): AICompany {
   return {
     id,
     name,
@@ -67,7 +76,10 @@ export function makeCompany(id: string, name: string, ceoName: string, cash: num
     personality: "balanced" as unknown as AICompany["personality"],
     bankrupt: false,
     ceoName,
-    ceoPortrait: { seed: 0, role: "ceo" } as unknown as AICompany["ceoPortrait"],
+    ceoPortrait: {
+      seed: 0,
+      role: "ceo",
+    } as unknown as AICompany["ceoPortrait"],
   } as unknown as AICompany;
 }
 
@@ -80,7 +92,9 @@ export interface FixtureOptions {
   systems?: StarSystem[];
   sectors?: Sector[];
   aiCompanies?: AICompany[];
-  activeEvents?: Array<Pick<GameEvent, "id" | "name" | "description"> & Partial<GameEvent>>;
+  activeEvents?: Array<
+    Pick<GameEvent, "id" | "name" | "description"> & Partial<GameEvent>
+  >;
 }
 
 export function makeFixtureState(opts: FixtureOptions = {}): GameState {
@@ -120,7 +134,9 @@ export function makeFixtureState(opts: FixtureOptions = {}): GameState {
   } as unknown as GameState;
 }
 
-export function makeFixtureTurnResult(overrides: Partial<TurnResult> = {}): TurnResult {
+export function makeFixtureTurnResult(
+  overrides: Partial<TurnResult> = {},
+): TurnResult {
   return {
     turn: 1,
     revenue: 50_000,

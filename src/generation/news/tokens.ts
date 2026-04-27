@@ -151,7 +151,8 @@ function pickStock(ctx: TokenContext): string {
   // Fallback: random 4-letter symbol.
   const alpha = "ABCDEFGHJKLMNPRSTVWXYZ";
   let out = "";
-  for (let i = 0; i < 4; i++) out += alpha[ctx.rng.nextInt(0, alpha.length - 1)];
+  for (let i = 0; i < 4; i++)
+    out += alpha[ctx.rng.nextInt(0, alpha.length - 1)];
   return out;
 }
 

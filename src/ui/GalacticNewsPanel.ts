@@ -60,7 +60,9 @@ export class GalacticNewsPanel extends Panel {
     // Phaser 4: prefer the filter API; fall back to setMask if filters absent
     // (defensive — current Phaser 4 RC supports both).
     const innerWithFilters = this.inner as unknown as {
-      filters?: { internal: { addMask(shape: Phaser.GameObjects.Graphics): void } };
+      filters?: {
+        internal: { addMask(shape: Phaser.GameObjects.Graphics): void };
+      };
     };
     if (innerWithFilters.filters?.internal?.addMask) {
       innerWithFilters.filters.internal.addMask(maskShape);
@@ -99,7 +101,11 @@ export class GalacticNewsPanel extends Panel {
     // Auto-scroll loop if content exceeds the viewport.
     const totalHeight = y;
     if (totalHeight > content.height && (config.scrollDuration ?? 12000) > 0) {
-      this.startAutoScroll(totalHeight, content.height, config.scrollDuration ?? 12000);
+      this.startAutoScroll(
+        totalHeight,
+        content.height,
+        config.scrollDuration ?? 12000,
+      );
     }
 
     // Hover pause: register interactive zone over the panel area.

@@ -30,7 +30,11 @@ export const CATEGORY_META: Record<TickerCategory, CategoryMeta> = {
   cosmic_weather: { badge: "WTH", label: "Cosmic Weather", toneColor: "text" },
   local: { badge: "LOC", label: "Local", toneColor: "textDim" },
   health: { badge: "HLT", label: "Health", toneColor: "textDim" },
-  religion: { badge: "PHI", label: "Religion & Philosophy", toneColor: "textDim" },
+  religion: {
+    badge: "PHI",
+    label: "Religion & Philosophy",
+    toneColor: "textDim",
+  },
   blotter: { badge: "BLT", label: "Crime Blotter", toneColor: "textDim" },
   food: { badge: "FUD", label: "Food & Cuisine", toneColor: "textDim" },
   realestate: { badge: "RE", label: "Real Estate", toneColor: "textDim" },

@@ -60,14 +60,14 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  id-token: write     # mint GitHub Actions OIDC JWT for backend auth
-  contents: read      # the runner doesn't write — the backend does
+  id-token: write # mint GitHub Actions OIDC JWT for backend auth
+  contents: read # the runner doesn't write — the backend does
 
 jobs:
   caretaker:
     name: Caretaker (${{ github.event_name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # backend does the heavy lifting; tail is cheap
+    timeout-minutes: 15 # backend does the heavy lifting; tail is cheap
 
     env:
       # Required: the only configuration the workflow needs.
