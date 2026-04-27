@@ -57,6 +57,21 @@ export class DataTable extends Phaser.GameObjects.Container {
   private wheelHitArea: Phaser.GameObjects.Rectangle;
   private maskShape: Phaser.GameObjects.Graphics;
   private renderedRows: Record<string, unknown>[] = [];
+  /**
+   * Tracks per-row child GameObjects so we can manually hide/crop rows that
+   * fall outside the visible viewport when scrolled. This is a belt-and-
+   * suspenders defense in addition to the WebGL filter mask, because
+   * filter masks on nested Containers can occasionally fail to clip
+   * descendants in Phaser 4 (transform staleness across multiple parent
+   * Containers, RT cache invalidation lag, etc.). Manual clipping is
+   * unconditional and guarantees rows never render outside the table frame.
+   */
+  private rowEntries: {
+    top: number;
+    height: number;
+    bg: Phaser.GameObjects.Rectangle;
+    children: Phaser.GameObjects.GameObject[];
+  }[] = [];
   private hasKeyboardFocus = false;
   private readonly keyboardNavigationEnabled: boolean;
   private destroyed = false;
@@ -222,6 +237,41 @@ export class DataTable extends Phaser.GameObjects.Container {
     );
     this.bodyContainer.y = this.headerHeight - this.scrollY;
     this.updateScrollIndicator();
+    this.clipRowsToViewport();
+  }
+
+  /**
+   * Manually hide rows that fall outside the visible viewport based on
+   * scrollY. This is belt-and-suspenders for the WebGL filter mask: even
+   * if the mask transform goes stale or fails to clip Container descendants
+   * after a scroll, hidden rows render nothing at all. The result is that
+   * scrolled-off rows can never bleed past the table frame, regardless of
+   * mask state.
+   *
+   * Partial-overlap rows (rows peeking above/below the viewport edges) are
+   * left fully visible; the filter mask handles edge clipping. We avoid
+   * resizing/cropping their backgrounds because that would interfere with
+   * row geometry stored in this.rowEntries and create reentrancy bugs
+   * across repeated scroll frames.
+   */
+  private clipRowsToViewport(): void {
+    const viewportH = this.tableConfig.height - this.headerHeight;
+    const viewTop = this.scrollY;
+    const viewBottom = this.scrollY + viewportH;
+
+    for (const entry of this.rowEntries) {
+      const rowTop = entry.top;
+      const rowBottom = entry.top + entry.height;
+      const offscreen = rowBottom <= viewTop || rowTop >= viewBottom;
+
+      const visible = !offscreen;
+      entry.bg.setVisible(visible);
+      for (const child of entry.children) {
+        (
+          child as unknown as { setVisible?: (v: boolean) => void }
+        ).setVisible?.(visible);
+      }
+    }
   }
 
   private renderHeader(): void {
@@ -332,6 +382,7 @@ export class DataTable extends Phaser.GameObjects.Container {
     // space, but appear cropped to nothing because the mask rectangle is
     // still aligned to the previous tab's transform.
     this.syncMaskPosition();
+    this.clipRowsToViewport();
   }
 
   private renderBody(): void {
@@ -340,6 +391,7 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.bodyContainer.removeAll(true);
     this.bodyContainer.y = this.headerHeight;
     this.selectedRowIndicator = null;
+    this.rowEntries = [];
 
     const sortedRows = [...this.rows];
     if (this.sortKey) {
@@ -531,14 +583,24 @@ export class DataTable extends Phaser.GameObjects.Container {
 
       this.bodyContainer.add(rowBg);
 
+      const childList: Phaser.GameObjects.GameObject[] = [];
       for (const icon of rowIcons) {
         icon.setAlpha(rowAlpha);
         this.bodyContainer.add(icon);
+        childList.push(icon);
       }
       for (const text of rowTexts) {
         text.setAlpha(rowAlpha);
         this.bodyContainer.add(text);
+        childList.push(text);
       }
+
+      this.rowEntries.push({
+        top: rowTop,
+        height: rowHeightPx,
+        bg: rowBg,
+        children: childList,
+      });
 
       yCursor += rowHeightPx;
     });
@@ -552,6 +614,7 @@ export class DataTable extends Phaser.GameObjects.Container {
       yCursor - (this.tableConfig.height - this.headerHeight),
     );
     this.updateScrollIndicator();
+    this.clipRowsToViewport();
   }
 
   private selectRow(
@@ -636,6 +699,7 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScroll);
     this.bodyContainer.y = this.headerHeight - this.scrollY;
     this.updateScrollIndicator();
+    this.clipRowsToViewport();
   }
 
   private getRowTop(rowIndex: number): number {

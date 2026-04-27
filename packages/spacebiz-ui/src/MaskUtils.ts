@@ -1,42 +1,56 @@
 import * as Phaser from "phaser";
 
 /**
- * Apply a clipping geometry mask to a GameObject in a way that works on both
- * Phaser 4 (filter-based mask) and Phaser 3 (legacy `setMask` API).
+ * Apply a clipping geometry mask to a GameObject.
  *
- * Why: this codebase targets Phaser 4 (`filters?.internal.addMask(...)`), but
- * during dev / CI / installs that lag behind the lockfile, `node_modules`
- * may resolve to Phaser 3.x where `filters` is `undefined` and the optional
- * chain silently no-ops. Without a fallback, masks never apply and content
- * (table rows, portrait stats) renders outside its frame.
+ * Phaser 4 + WebGL: the only supported geometry mask path is the filter-based
+ * mask via `gameObject.filters.internal.addMask(maskShape)`. The legacy
+ * `setMask(maskShape.createGeometryMask())` API only works on the Canvas
+ * Renderer in Phaser 4 (it silently no-ops under WebGL). Phaser's own type
+ * docs warn:
+ *   "GeometryMask is only supported in the Canvas Renderer. If you want to
+ *    use geometry to mask objects in WebGL, see FilterList#addMask."
  *
- * Container caveat: in Phaser 4 the filter-based mask attached to a Container
- * does not propagate to its child renderables, so DataTable rows escape the
- * frame on scroll. For Containers we fall through to the legacy
- * `setMask(createGeometryMask())` path which still functions in Phaser 4
- * (deprecation warning is acceptable and recognised by the team).
+ * The filter mask renders the target (and, for Containers, the entire
+ * container subtree) into a render texture, then composites only the masked
+ * region. This means it DOES propagate clipping to Container children — a
+ * previous fix in this file mistakenly believed otherwise and routed
+ * Containers to the no-op `setMask` path, which caused DataTable rows to
+ * escape the table on scroll.
+ *
+ * Callers that need rock-solid clipping for scrolling content should also
+ * implement viewport-based row visibility (see DataTable.clipRowsToViewport)
+ * as belt-and-suspenders, since filter masks can be defeated by transform
+ * staleness in nested containers.
  */
 export function applyClippingMask(
   target: Phaser.GameObjects.GameObject,
   maskShape: Phaser.GameObjects.Graphics,
 ): void {
-  const isContainer = target instanceof Phaser.GameObjects.Container;
-
-  // Phaser 4 filter masks don't clip Container children — use the legacy
-  // geometry mask path for Containers, which clips descendants correctly.
-  if (!isContainer) {
-    const filters = (
-      target as unknown as {
-        filters?: { internal?: { addMask?: (m: unknown) => void } };
-      }
-    ).filters;
-    if (filters?.internal?.addMask) {
-      filters.internal.addMask(maskShape);
-      return;
+  // Phaser 4 WebGL filter mask path — works for Containers and renderables.
+  // Use viewTransform: 'world' so maskShape.setPosition(matrix.tx, matrix.ty)
+  // (called from preupdate sync) is interpreted in world coords.
+  const filters = (
+    target as unknown as {
+      filters?: {
+        internal?: {
+          addMask?: (
+            mask: Phaser.GameObjects.Graphics,
+            invert?: boolean,
+            viewCamera?: Phaser.Cameras.Scene2D.Camera,
+            viewTransform?: "local" | "world",
+            scaleFactor?: number,
+          ) => unknown;
+        };
+      };
     }
+  ).filters;
+  if (filters?.internal?.addMask) {
+    filters.internal.addMask(maskShape, false, undefined, "world");
+    return;
   }
 
-  // Phaser 3 / Phaser 4 Container fallback: classic geometry mask
+  // Phaser 3 fallback (only useful during dev when node_modules lags).
   const t = target as unknown as {
     setMask?: (mask: Phaser.Display.Masks.GeometryMask) => unknown;
   };
