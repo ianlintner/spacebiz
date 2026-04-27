@@ -383,10 +383,13 @@ export class SystemView3D {
 
       const a = planetPositionAtTurn(origin, this.currentTurn);
       const b = planetPositionAtTurn(dest, this.currentTurn);
-      // Midpoint lifted up so route arcs above ecliptic and avoids the sun.
+      // Curve hugs the ecliptic so ships look like they're cruising through
+      // the orbital plane rather than arcing high above it. Just enough lift
+      // to avoid z-fighting orbit rings and to give a hint of an orbital
+      // transfer arc.
       const mid: Vec3 = {
         x: (a.x + b.x) / 2,
-        y: Math.max(2, (a.y + b.y) / 2 + 2.2),
+        y: (a.y + b.y) / 2 + 0.4,
         z: (a.z + b.z) / 2,
       };
       const curve = new THREE.CatmullRomCurve3([

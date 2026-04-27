@@ -1,4 +1,5 @@
 import * as Phaser from "phaser";
+import * as THREE from "three";
 import { gameStore } from "../data/GameStore.ts";
 import { simulateTurn } from "../game/simulation/TurnSimulator.ts";
 import { SeededRNG } from "../utils/SeededRNG.ts";
@@ -10,9 +11,6 @@ import {
   FloatingText,
   MilestoneOverlay,
   flashScreen,
-  addPulseTween,
-  addTwinkleTween,
-  registerAmbientCleanup,
   getShipIconKey,
   getShipColor,
   getShipMapKey,
@@ -22,19 +20,29 @@ import type { GameHUDScene } from "./GameHUDScene.ts";
 import type { GameState, TurnResult } from "../data/types.ts";
 import { EventCategory } from "../data/types.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
-import { findPath } from "../game/routes/HyperlaneRouter.ts";
-import {
-  buildGalaxyRouteTrafficVisuals,
-  buildTrafficPatrolWaypoints,
-} from "../game/routes/RouteManager.ts";
+import { buildGalaxyRouteTrafficVisuals } from "../game/routes/RouteManager.ts";
+import { GalaxyView3D } from "./galaxy3d/GalaxyView3D.ts";
 
 // ── Camera constants ──────────────────────────────────────────────────────────
-const MIN_ZOOM = 0.35;
-const MAX_ZOOM = 3.0;
-const ZOOM_STEP = 0.08;
 const DRAG_THRESHOLD = 5;
 function formatCash(amount: number): string {
   return "\u00A7" + Math.round(amount).toLocaleString("en-US");
+}
+
+// Animated ship for one route in the playback. Position is computed each
+// frame by sampling the route's 3D curve and projecting to screen.
+interface PlaybackShip {
+  routeId: string;
+  mainSprite:
+    | Phaser.GameObjects.Sprite
+    | Phaser.GameObjects.Image
+    | Phaser.GameObjects.Arc;
+  glow: Phaser.GameObjects.Arc;
+  t: number;
+  speed: number;
+  dir: 1 | -1;
+  delay: number;
+  elapsed: number;
 }
 
 // Entry for the live competition leaderboard
@@ -54,15 +62,17 @@ export class SimPlaybackScene extends Phaser.Scene {
   private turnResult!: TurnResult;
   private animationComplete = false;
 
-  // Camera IDs for dual-camera setup (main = world, hudCam = fixed UI at zoom 1)
-  private hudCamId = 0;
+  // 3D galaxy backdrop and animated ship layer.
+  private view3D: GalaxyView3D | null = null;
+  private vizRect = { x: 0, y: 0, w: 0, h: 0 };
+  private playbackShips: PlaybackShip[] = [];
+  private readonly tmpCurvePoint = new THREE.Vector3();
+  private readonly tmpCurveLook = new THREE.Vector3();
 
   // Camera drag state
   private isDragging = false;
   private dragStartX = 0;
   private dragStartY = 0;
-  private camStartX = 0;
-  private camStartY = 0;
 
   // Live leaderboard text references (updated each tween frame)
   private leaderCashTexts: Map<string, Phaser.GameObjects.Text> = new Map();
@@ -92,236 +102,39 @@ export class SimPlaybackScene extends Phaser.Scene {
 
     const ANIM_DURATION = 5000;
 
-    // ── Galaxy geometry ───────────────────────────────────────────────────────
-    const { systems, planets } = state.galaxy;
+    const { systems } = state.galaxy;
 
-    let gMinX = Infinity,
-      gMaxX = -Infinity,
-      gMinY = Infinity,
-      gMaxY = -Infinity;
-    for (const sys of systems) {
-      if (sys.x < gMinX) gMinX = sys.x;
-      if (sys.x > gMaxX) gMaxX = sys.x;
-      if (sys.y < gMinY) gMinY = sys.y;
-      if (sys.y > gMaxY) gMaxY = sys.y;
-    }
-    const galCx = (gMinX + gMaxX) / 2;
-    const galCy = (gMinY + gMaxY) / 2;
-    const galW = gMaxX - gMinX;
-    const galH = gMaxY - gMinY;
-
-    // Build planet→system & system lookup maps
-    const planetSystemMap = new Map<string, string>();
-    for (const planet of planets) {
-      planetSystemMap.set(planet.id, planet.systemId);
-    }
-    const systemLookup = new Map<
-      string,
-      { x: number; y: number; color: number }
-    >();
-    for (const sys of systems) {
-      systemLookup.set(sys.id, { x: sys.x, y: sys.y, color: sys.starColor });
-    }
-
-    // Compute bounding box of all active route endpoints for initial focus
-    const routeSystemIds = new Set<string>();
-    let rMinX = Infinity,
-      rMaxX = -Infinity,
-      rMinY = Infinity,
-      rMaxY = -Infinity;
-
-    const allActiveRoutes = [
-      ...this.newState.activeRoutes,
-      ...this.newState.aiCompanies.flatMap((c) => c.activeRoutes),
-    ];
-
-    for (const route of allActiveRoutes) {
-      for (const pid of [route.originPlanetId, route.destinationPlanetId]) {
-        const sysId = planetSystemMap.get(pid);
-        if (!sysId) continue;
-        routeSystemIds.add(sysId);
-        const sys = systemLookup.get(sysId);
-        if (!sys) continue;
-        if (sys.x < rMinX) rMinX = sys.x;
-        if (sys.x > rMaxX) rMaxX = sys.x;
-        if (sys.y < rMinY) rMinY = sys.y;
-        if (sys.y > rMaxY) rMaxY = sys.y;
-      }
-    }
-    const focusCx = isFinite(rMinX) ? (rMinX + rMaxX) / 2 : galCx;
-    const focusCy = isFinite(rMinY) ? (rMinY + rMaxY) / 2 : galCy;
-    const routeSpanW = isFinite(rMinX)
-      ? Math.max(rMaxX - rMinX + 400, galW * 0.5)
-      : galW * 0.8;
-    const routeSpanH = isFinite(rMinY)
-      ? Math.max(rMaxY - rMinY + 300, galH * 0.5)
-      : galH * 0.8;
-
-    // ── Camera setup ──────────────────────────────────────────────────────────
-    const cam = this.cameras.main;
+    // ── 3D galaxy view setup ──────────────────────────────────────────────────
+    // The playback scene now reuses GalaxyView3D for its galaxy backdrop so
+    // the simulation feels visually consistent with the persistent galaxy
+    // map. Phaser's main camera renders the HUD chrome (leaderboard, ticker,
+    // milestones, popups); ships and route lines come through the 3D layer.
     const vpX = L.navSidebarWidth;
     const vpY = L.contentTop;
     const vpW = L.gameWidth - L.navSidebarWidth;
     const vpH = L.gameHeight - L.contentTop - L.hudBottomBarHeight;
-    cam.setViewport(vpX, vpY, vpW, vpH);
+    this.vizRect = { x: vpX, y: vpY, w: vpW, h: vpH };
 
-    // Start zoomed in on route cluster (minimum MIN_ZOOM, max 1.2)
-    const fitZoomX = vpW / routeSpanW;
-    const fitZoomY = vpH / routeSpanH;
-    const startZoom = Math.max(Math.min(fitZoomX, fitZoomY, 1.2), MIN_ZOOM);
-    cam.setZoom(startZoom);
-    cam.centerOn(focusCx, focusCy);
+    const phaserCanvas = this.game.canvas;
+    this.view3D = new GalaxyView3D({
+      phaserCanvas,
+      designWidth: L.gameWidth,
+      designHeight: L.gameHeight,
+    });
+    this.view3D.setViewport(this.vizRect);
+    this.view3D.setGalaxy(
+      systems,
+      this.newState.hyperlanes ?? [],
+      this.newState.borderPorts ?? [],
+      this.newState.galaxy.empires,
+    );
 
-    // Fixed-zoom HUD camera — immune to main cam zoom/pan so UI stays anchored
-    // to the viewport. Route world objects → main cam, HUD → uiCam via
-    // cameraFilter pass at end of create().
-    const uiCam = this.cameras.add(vpX, vpY, vpW, vpH, false, "sim-hud-cam");
-    uiCam.setZoom(1);
-    this.hudCamId = uiCam.id;
-
-    // HUD coords are plain viewport-space since uiCam is at zoom 1
+    // HUD coords use viewport-space directly — no extra Phaser camera needed.
     const sfW = vpW;
     const sfH = vpH;
 
-    // ── Parallax starfield (3 depth layers) ───────────────────────────────────
-    const spreadW = galW + 2400;
-    const spreadH = galH + 1600;
-    const starTweens: Phaser.Tweens.Tween[] = [];
-    type ParallaxLayer = {
-      count: number;
-      scrollFactor: number;
-      minAlpha: number;
-      maxAlpha: number;
-      minScale: number;
-      maxScale: number;
-      depth: number;
-      tints: number[];
-    };
-    const PARALLAX_LAYERS: ParallaxLayer[] = [
-      {
-        count: 90,
-        scrollFactor: 0.05,
-        minAlpha: 0.06,
-        maxAlpha: 0.22,
-        minScale: 0.14,
-        maxScale: 0.32,
-        depth: -300,
-        tints: [0xffffff, 0xaaccff],
-      },
-      {
-        count: 60,
-        scrollFactor: 0.15,
-        minAlpha: 0.1,
-        maxAlpha: 0.4,
-        minScale: 0.22,
-        maxScale: 0.55,
-        depth: -200,
-        tints: [0xffffff, 0xaaccff, 0xffffcc],
-      },
-      {
-        count: 35,
-        scrollFactor: 0.3,
-        minAlpha: 0.15,
-        maxAlpha: 0.55,
-        minScale: 0.32,
-        maxScale: 0.75,
-        depth: -100,
-        tints: [0xffffff, 0xaaccff],
-      },
-    ];
-    for (const layer of PARALLAX_LAYERS) {
-      for (let i = 0; i < layer.count; i++) {
-        const sx = galCx + (Math.random() - 0.5) * spreadW;
-        const sy = galCy + (Math.random() - 0.5) * spreadH;
-        const alpha =
-          layer.minAlpha + Math.random() * (layer.maxAlpha - layer.minAlpha);
-        const scale =
-          layer.minScale + Math.random() * (layer.maxScale - layer.minScale);
-        const tint =
-          layer.tints[Math.floor(Math.random() * layer.tints.length)];
-        const dot = this.add
-          .image(sx, sy, "glow-dot")
-          .setAlpha(alpha)
-          .setScale(scale)
-          .setTint(tint)
-          .setDepth(layer.depth)
-          .setScrollFactor(layer.scrollFactor);
-        if (Math.random() > 0.65) {
-          const tw = addTwinkleTween(this, dot, {
-            minAlpha: Math.max(0.02, alpha * 0.3),
-            maxAlpha: Math.min(0.9, alpha * 1.8),
-            minDuration: 1800,
-            maxDuration: 6000,
-            delay: Math.random() * 5000,
-          });
-          starTweens.push(tw);
-        }
-      }
-    }
-    if (starTweens.length > 0) registerAmbientCleanup(this, starTweens);
-
-    // ── Hyperlane network ─────────────────────────────────────────────────────
-    const hyperlanes = this.newState.hyperlanes ?? [];
-    const hlGraphics = this.add.graphics().setDepth(-10);
-    for (const hl of hyperlanes) {
-      const sA = systemLookup.get(hl.systemA);
-      const sB = systemLookup.get(hl.systemB);
-      if (!sA || !sB) continue;
-      hlGraphics.lineStyle(1, theme.colors.accent, 0.15);
-      hlGraphics.beginPath();
-      hlGraphics.moveTo(sA.x, sA.y);
-      hlGraphics.lineTo(sB.x, sB.y);
-      hlGraphics.strokePath();
-    }
-
-    // ── Planet count per system ───────────────────────────────────────────────
-    const planetCountBySystem = new Map<string, number>();
-    for (const p of planets) {
-      planetCountBySystem.set(
-        p.systemId,
-        (planetCountBySystem.get(p.systemId) ?? 0) + 1,
-      );
-    }
-
-    // ── Star systems (route-highlighted vs dim) ───────────────────────────────
-    for (const sys of systems) {
-      const isRoute = routeSystemIds.has(sys.id);
-      const pCount = planetCountBySystem.get(sys.id) ?? 0;
-      const baseR = Math.max(3, 3 + Math.min(3, pCount));
-      const r = isRoute ? baseR + 2 : baseR;
-      const outerHalo = this.add
-        .circle(sys.x, sys.y, r * 4, sys.starColor)
-        .setAlpha(isRoute ? 0.12 : 0.04)
-        .setDepth(-5);
-      if (isRoute) {
-        addPulseTween(this, outerHalo, {
-          minAlpha: 0.06,
-          maxAlpha: 0.18,
-          duration: 2500 + Math.random() * 2000,
-          delay: Math.random() * 2000,
-        });
-      }
-      this.add
-        .circle(sys.x, sys.y, r * 1.8, sys.starColor)
-        .setAlpha(isRoute ? 0.3 : 0.12)
-        .setDepth(-4);
-      this.add
-        .circle(sys.x, sys.y, r, sys.starColor, isRoute ? 0.95 : 0.55)
-        .setDepth(-3);
-      this.add
-        .text(sys.x, sys.y + r + 5, sys.name, {
-          fontSize: `${isRoute ? theme.fonts.caption.size + 1 : theme.fonts.caption.size - 1}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: isRoute
-            ? colorToString(theme.colors.text)
-            : colorToString(theme.colors.textDim),
-          stroke: "#000000",
-          strokeThickness: isRoute ? 3 : 1,
-        })
-        .setOrigin(0.5, 0)
-        .setAlpha(isRoute ? 0.9 : 0.3)
-        .setDepth(-3);
-    }
+    // Stars + hyperlanes + parallax are now drawn by GalaxyView3D — the
+    // backdrop renders consistently with the persistent galaxy map.
 
     // ── Route revenue lookup ──────────────────────────────────────────────────
     const routeRevenueMap = new Map<string, number>();
@@ -329,101 +142,20 @@ export class SimPlaybackScene extends Phaser.Scene {
       routeRevenueMap.set(rp.routeId, rp.revenue);
     }
 
-    // AI company → empire color for route tinting
-    const empireColorById = new Map(
-      this.newState.galaxy.empires.map((e) => [e.id, e.color]),
-    );
-    const aiCompanyRouteColor = new Map(
-      this.newState.aiCompanies.map((c) => [
-        c.id,
-        empireColorById.get(c.empireId) ?? 0x8899aa,
-      ]),
-    );
-
-    // ── Route lines + animated ships (follow hyperlane network) ─────────────
-    const routeGraphics = this.add.graphics().setDepth(0);
-    const borderPorts = this.newState.borderPorts ?? [];
-
-    // Animate an array of targets along a series of waypoints, yoyoing forward
-    // and back indefinitely. Each segment tweens linearly with duration
-    // proportional to its distance so overall one-way trip = `oneWayDuration`.
-    type Rotatable = { setRotation: (r: number) => unknown };
-    type Movable = Phaser.GameObjects.GameObject & {
-      x: number;
-      y: number;
-      setPosition: (x: number, y: number) => unknown;
-    };
-    const runAlongPathYoyo = (
-      targets: Movable[],
-      waypoints: Array<{ x: number; y: number }>,
-      oneWayDuration: number,
-      initialDelay: number,
-      rotateTargets: Rotatable[],
-    ): void => {
-      if (waypoints.length < 2) return;
-      const segLens: number[] = [];
-      let totalLen = 0;
-      for (let i = 0; i < waypoints.length - 1; i++) {
-        const d = Math.hypot(
-          waypoints[i + 1].x - waypoints[i].x,
-          waypoints[i + 1].y - waypoints[i].y,
-        );
-        segLens.push(d);
-        totalLen += d;
-      }
-      if (totalLen < 1) return;
-
-      // Snap all targets to the starting waypoint
-      for (const t of targets) t.setPosition(waypoints[0].x, waypoints[0].y);
-
-      let forward = true;
-      let idx = 0;
-
-      const nextSeg = () => {
-        // Bail if any target was destroyed
-        for (const t of targets) if (!t.active) return;
-
-        const wps = forward ? waypoints : [...waypoints].reverse();
-        const lens = forward ? segLens : [...segLens].reverse();
-
-        if (idx >= wps.length - 1) {
-          // End reached — flip direction and start over
-          forward = !forward;
-          idx = 0;
-          nextSeg();
-          return;
-        }
-        const from = wps[idx];
-        const to = wps[idx + 1];
-        const a = Math.atan2(to.y - from.y, to.x - from.x);
-        for (const r of rotateTargets) r.setRotation(a);
-        const dur = Math.max(60, (lens[idx] / totalLen) * oneWayDuration);
-        this.tweens.add({
-          targets,
-          x: to.x,
-          y: to.y,
-          duration: dur,
-          ease: "Linear",
-          onComplete: () => {
-            idx++;
-            nextSeg();
-          },
-        });
-      };
-
-      if (initialDelay > 0) {
-        this.time.delayedCall(initialDelay, nextSeg);
-      } else {
-        nextSeg();
-      }
-    };
-
+    // ── Route traffic + animated ships (3D-projected) ──────────────────────
+    // GalaxyView3D draws the actual route lines; this loop just builds the
+    // animated ship sprites and registers their `t` state. Per-frame in
+    // update(), we advance t along the route's 3D curve and project to
+    // screen coords so the sprites glide along the lanes.
     const trafficVisuals = buildGalaxyRouteTrafficVisuals(this.newState);
+    this.view3D.setRoutes(trafficVisuals);
 
     const allRoutes = [
       ...this.newState.activeRoutes,
       ...this.newState.aiCompanies.flatMap((c) => c.activeRoutes),
     ];
+
+    const halfDur = ANIM_DURATION / 2;
 
     for (const visual of trafficVisuals) {
       const route = allRoutes.find(
@@ -431,199 +163,81 @@ export class SimPlaybackScene extends Phaser.Scene {
       );
       if (!route) continue;
 
-      const [oSysId, dSysId] = [
-        visual.pathSystemIds[0],
-        visual.pathSystemIds[visual.pathSystemIds.length - 1],
-      ];
-      if (!oSysId || !dSysId) continue;
-      const oSys = systemLookup.get(oSysId);
-      const dSys = systemLookup.get(dSysId);
-      if (!oSys || !dSys) continue;
-      const ox = oSys.x;
-      const oy = oSys.y;
-      const dx = dSys.x;
-      const dy = dSys.y;
-      const halfDur = ANIM_DURATION / 2;
-      const routeDelay = 0;
-      const routeRevenue = routeRevenueMap.get(route.id) ?? 0;
-      const routeColor =
-        visual.ownerId === "player"
-          ? routeRevenue >= 1000
-            ? theme.colors.profit
-            : routeRevenue > 0
-              ? theme.colors.accent
-              : theme.colors.textDim
-          : (aiCompanyRouteColor.get(visual.ownerId) ?? 0x8899aa);
-
-      // Find the hyperlane path; fall back to direct line if none exists
-      const path = findPath(oSysId, dSysId, hyperlanes, borderPorts);
-      const routeSystemIdList =
-        path && path.systems.length >= 2 ? path.systems : visual.pathSystemIds;
-      const waypoints: Array<{ x: number; y: number }> = [];
-      for (const sid of routeSystemIdList) {
-        const s = systemLookup.get(sid);
-        if (s) waypoints.push({ x: s.x, y: s.y });
-      }
-      const patrolWaypoints = buildTrafficPatrolWaypoints(route.id, waypoints);
-      if (patrolWaypoints.length < 2) continue;
-
-      // Multi-segment route graphics (glow + solid line per segment)
-      routeGraphics.lineStyle(6, routeColor, 0.1);
-      routeGraphics.beginPath();
-      routeGraphics.moveTo(patrolWaypoints[0].x, patrolWaypoints[0].y);
-      for (let i = 1; i < patrolWaypoints.length; i++) {
-        routeGraphics.lineTo(patrolWaypoints[i].x, patrolWaypoints[i].y);
-      }
-      routeGraphics.strokePath();
-      routeGraphics.lineStyle(2, routeColor, 0.75);
-      routeGraphics.beginPath();
-      routeGraphics.moveTo(patrolWaypoints[0].x, patrolWaypoints[0].y);
-      for (let i = 1; i < patrolWaypoints.length; i++) {
-        routeGraphics.lineTo(patrolWaypoints[i].x, patrolWaypoints[i].y);
-      }
-      routeGraphics.strokePath();
-      // Waypoint halos along the path (lighter at intermediate nodes)
-      for (let i = 0; i < patrolWaypoints.length; i++) {
-        const isEndpoint = i === 0 || i === patrolWaypoints.length - 1;
-        this.add
-          .circle(
-            patrolWaypoints[i].x,
-            patrolWaypoints[i].y,
-            isEndpoint ? 9 : 5,
-            routeColor,
-            isEndpoint ? 0.18 : 0.12,
-          )
-          .setDepth(1);
-      }
-
-      // Ship sprite or fallback pip
       for (let unitIndex = 0; unitIndex < visual.visibleUnits; unitIndex++) {
         const ship =
           visual.assignedShips[unitIndex % visual.assignedShips.length];
-        const shipIconKey = getShipIconKey(ship.class);
         const shipTint = getShipColor(ship.class);
-        const delay = Math.floor(
-          (unitIndex / visual.visibleUnits) * halfDur * 0.5,
-        );
         const mapSprKey = getShipMapKey(ship.class);
         const mapAnimKey = getShipMapAnimKey(ship.class);
+        const shipIconKey = getShipIconKey(ship.class);
         const unitAlpha = Math.max(0.72, 0.95 - unitIndex * 0.06);
+        const delayMs = Math.floor(
+          (unitIndex / visual.visibleUnits) * halfDur * 0.5,
+        );
 
+        let mainSprite:
+          | Phaser.GameObjects.Sprite
+          | Phaser.GameObjects.Image
+          | Phaser.GameObjects.Arc;
         if (mapSprKey && mapAnimKey && this.textures.exists(mapSprKey)) {
           const sp = this.add
-            .sprite(ox, oy, mapSprKey, "1")
+            .sprite(0, 0, mapSprKey, "1")
             .setDisplaySize(32, 32)
             .setTint(shipTint)
             .setAlpha(unitAlpha)
             .setDepth(12 + unitIndex * 0.01);
           sp.play(mapAnimKey);
-          const sg = this.add
-            .circle(
-              ox,
-              oy,
-              16,
-              shipTint,
-              Math.max(0.08, 0.15 - unitIndex * 0.02),
-            )
-            .setDepth(11 + unitIndex * 0.01);
-          runAlongPathYoyo(
-            [sp as unknown as Movable, sg as unknown as Movable],
-            patrolWaypoints,
-            halfDur,
-            delay,
-            [sp],
-          );
-          for (let t = 0; t < 3; t++) {
-            const trail = this.add
-              .circle(ox, oy, 3 - t, shipTint, Math.max(0.08, 0.45 - t * 0.12))
-              .setDepth(10 + unitIndex * 0.01);
-            runAlongPathYoyo(
-              [trail as unknown as Movable],
-              patrolWaypoints,
-              halfDur,
-              delay + 85 * (t + 1),
-              [],
-            );
-          }
+          mainSprite = sp;
         } else if (shipIconKey && this.textures.exists(shipIconKey)) {
-          const sp = this.add
-            .image(ox, oy, shipIconKey)
+          mainSprite = this.add
+            .image(0, 0, shipIconKey)
             .setDisplaySize(22, 22)
             .setTint(shipTint)
             .setAlpha(unitAlpha)
             .setDepth(12 + unitIndex * 0.01);
-          const sg = this.add
-            .circle(
-              ox,
-              oy,
-              13,
-              shipTint,
-              Math.max(0.08, 0.18 - unitIndex * 0.02),
-            )
-            .setDepth(11 + unitIndex * 0.01);
-          runAlongPathYoyo(
-            [sp as unknown as Movable, sg as unknown as Movable],
-            patrolWaypoints,
-            halfDur,
-            delay,
-            [sp],
-          );
-          for (let t = 0; t < 3; t++) {
-            const trail = this.add
-              .circle(ox, oy, 3 - t, shipTint, Math.max(0.08, 0.45 - t * 0.12))
-              .setDepth(10 + unitIndex * 0.01);
-            runAlongPathYoyo(
-              [trail as unknown as Movable],
-              patrolWaypoints,
-              halfDur,
-              delay + 85 * (t + 1),
-              [],
-            );
-          }
         } else {
-          const pip = this.add
-            .circle(ox, oy, 5, shipTint, unitAlpha)
+          mainSprite = this.add
+            .circle(0, 0, 5, shipTint, unitAlpha)
             .setDepth(12 + unitIndex * 0.01);
-          const glow = this.add
-            .circle(
-              ox,
-              oy,
-              11,
-              shipTint,
-              Math.max(0.08, 0.2 - unitIndex * 0.03),
-            )
-            .setDepth(11 + unitIndex * 0.01);
-          runAlongPathYoyo(
-            [pip as unknown as Movable, glow as unknown as Movable],
-            patrolWaypoints,
-            halfDur,
-            delay,
-            [],
-          );
-          for (let t = 0; t < 2; t++) {
-            const trail = this.add
-              .circle(ox, oy, 3 - t, shipTint, Math.max(0.08, 0.4 - t * 0.15))
-              .setDepth(10 + unitIndex * 0.01);
-            runAlongPathYoyo(
-              [trail as unknown as Movable],
-              patrolWaypoints,
-              halfDur,
-              delay + 85 * (t + 1),
-              [],
-            );
-          }
         }
+        const glow = this.add
+          .circle(0, 0, 14, shipTint, Math.max(0.08, 0.18 - unitIndex * 0.02))
+          .setDepth(11 + unitIndex * 0.01);
+
+        // Route runs end-to-end in halfDur, then yoyos back. Speed in t/s.
+        const speed = 1000 / halfDur;
+        this.playbackShips.push({
+          routeId: route.id,
+          mainSprite,
+          glow,
+          t: 0,
+          speed,
+          dir: 1,
+          delay: delayMs,
+          elapsed: 0,
+        });
       }
-      // Revenue popup at midpoint
+
+      // Revenue popup at midpoint (positioned per frame from projected
+      // curve midpoint when it fires).
+      const routeRevenue = routeRevenueMap.get(route.id) ?? 0;
       if (routeRevenue > 0) {
-        const midX = (ox + dx) / 2;
-        const midY = (oy + dy) / 2;
-        this.time.delayedCall(halfDur + routeDelay, () => {
-          if (this.animationComplete) return;
+        this.time.delayedCall(halfDur, () => {
+          if (this.animationComplete || !this.view3D) return;
+          const curve = this.view3D.getRouteCurve(route.id);
+          if (!curve) return;
+          const mid = new THREE.Vector3();
+          curve.getPointAt(0.5, mid);
+          const proj = this.view3D.projectToScreenDesign({
+            x: mid.x,
+            y: mid.y,
+            z: mid.z,
+          });
+          if (!proj.visible) return;
           new FloatingText(
             this,
-            midX,
-            midY,
+            proj.x,
+            proj.y,
             "+" + formatCash(routeRevenue),
             theme.colors.profit,
             { size: "large", riseDistance: 60 },
@@ -633,17 +247,7 @@ export class SimPlaybackScene extends Phaser.Scene {
       }
     }
 
-    // Pulse route lines alpha
-    this.tweens.add({
-      targets: routeGraphics,
-      alpha: { from: 0.65, to: 1.0 },
-      duration: 1400,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-    });
-
-    // ── Camera drag & zoom ────────────────────────────────────────────────────
+    // ── Camera input → drives 3D camera ─────────────────────────────────────
     this.input.on(
       "wheel",
       (
@@ -652,31 +256,25 @@ export class SimPlaybackScene extends Phaser.Scene {
         _dx: number,
         dy: number,
       ) => {
-        cam.setZoom(
-          Phaser.Math.Clamp(
-            cam.zoom + (dy < 0 ? ZOOM_STEP : -ZOOM_STEP),
-            MIN_ZOOM,
-            MAX_ZOOM,
-          ),
-        );
+        if (!this.view3D) return;
+        this.view3D.zoom(dy * 0.06);
       },
     );
     this.input.on("pointerdown", (ptr: Phaser.Input.Pointer) => {
       this.isDragging = false;
       this.dragStartX = ptr.x;
       this.dragStartY = ptr.y;
-      this.camStartX = cam.scrollX;
-      this.camStartY = cam.scrollY;
     });
     this.input.on("pointermove", (ptr: Phaser.Input.Pointer) => {
-      if (!ptr.isDown) return;
+      if (!ptr.isDown || !this.view3D) return;
       const ddx = ptr.x - this.dragStartX;
       const ddy = ptr.y - this.dragStartY;
       if (!this.isDragging && Math.abs(ddx) + Math.abs(ddy) < DRAG_THRESHOLD)
         return;
       this.isDragging = true;
-      cam.scrollX = this.camStartX - ddx / cam.zoom;
-      cam.scrollY = this.camStartY - ddy / cam.zoom;
+      this.view3D.pan(ptr.x - this.dragStartX, ptr.y - this.dragStartY);
+      this.dragStartX = ptr.x;
+      this.dragStartY = ptr.y;
     });
     this.input.on("pointerup", () => {
       this.isDragging = false;
@@ -1017,14 +615,8 @@ export class SimPlaybackScene extends Phaser.Scene {
       btn.setScrollFactor(0);
     }
 
-    // ── Dual-camera filter pass ──────────────────────────────────────────────
-    // HUD elements (scrollFactor 0) render only on uiCam; everything else only
-    // on the main (world) cam. cameraFilter is a skip-bitmask: setting it to a
-    // camera's id hides the object from that camera.
-    for (const child of this.children.list) {
-      const sf = (child as unknown as { scrollFactorX?: number }).scrollFactorX;
-      child.cameraFilter = sf === 0 ? cam.id : this.hudCamId;
-    }
+    // No dual-camera filter needed — the HUD chrome and ships all render on
+    // the single Phaser camera; the 3D galaxy renders on its own canvas.
   }
 
   // ── Speed control ─────────────────────────────────────────────────────────
@@ -1109,6 +701,64 @@ export class SimPlaybackScene extends Phaser.Scene {
         onComplete: () => container.destroy(),
       });
     });
+  }
+
+  override update(_time: number, delta: number): void {
+    if (!this.view3D) return;
+    const dt = delta / 1000;
+    const tmp = this.tmpCurvePoint;
+    const tmpLook = this.tmpCurveLook;
+    for (const ps of this.playbackShips) {
+      ps.elapsed += delta;
+      if (ps.elapsed < ps.delay) continue;
+      const curve = this.view3D.getRouteCurve(ps.routeId);
+      if (!curve) {
+        ps.mainSprite.setVisible(false);
+        ps.glow.setVisible(false);
+        continue;
+      }
+      ps.t += ps.speed * ps.dir * dt;
+      if (ps.t >= 1) {
+        ps.t = 1;
+        ps.dir = -1;
+      } else if (ps.t <= 0) {
+        ps.t = 0;
+        ps.dir = 1;
+      }
+      curve.getPointAt(ps.t, tmp);
+      const lookT = Math.min(1, Math.max(0, ps.t + 0.02 * ps.dir));
+      curve.getPointAt(lookT, tmpLook);
+      const proj = this.view3D.projectToScreenDesign({
+        x: tmp.x,
+        y: tmp.y,
+        z: tmp.z,
+      });
+      const projNext = this.view3D.projectToScreenDesign({
+        x: tmpLook.x,
+        y: tmpLook.y,
+        z: tmpLook.z,
+      });
+      ps.mainSprite.setVisible(proj.visible);
+      ps.glow.setVisible(proj.visible);
+      if (!proj.visible) continue;
+      ps.mainSprite.setPosition(proj.x, proj.y);
+      ps.glow.setPosition(proj.x, proj.y);
+      const rot = Math.atan2(projNext.y - proj.y, projNext.x - proj.x);
+      const rotatable = ps.mainSprite as Phaser.GameObjects.GameObject & {
+        setRotation?: (r: number) => unknown;
+      };
+      rotatable.setRotation?.(rot);
+    }
+  }
+
+  shutdown(): void {
+    for (const ps of this.playbackShips) {
+      ps.mainSprite.destroy();
+      ps.glow.destroy();
+    }
+    this.playbackShips = [];
+    this.view3D?.destroy();
+    this.view3D = null;
   }
 
   // ── Skip animation ────────────────────────────────────────────────────────

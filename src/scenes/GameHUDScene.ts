@@ -104,6 +104,9 @@ export class GameHUDScene extends Phaser.Scene {
   private activeContentScene = "GalaxyMapScene";
   private activeContentData?: object;
   private previousCash = 0;
+  // Track turn so the stateListener can detect a turn-advance and clear the
+  // adviser drawer — otherwise messages from prior turns pile up.
+  private lastSeenTurn = 0;
   private navIndicators = new Map<string, Phaser.GameObjects.Rectangle>();
   private navBackgrounds = new Map<string, Phaser.GameObjects.Rectangle>();
   private navIcons = new Map<string, Phaser.GameObjects.Image>();
@@ -163,10 +166,19 @@ export class GameHUDScene extends Phaser.Scene {
   private readonly overlaySceneKeys = ["PlanetDetailScene", "DilemmaScene"];
 
   private stateListener = (_data: unknown) => {
+    const state = gameStore.getState();
+    // Clear stale adviser messages when the turn advances. Without this the
+    // drawer accumulates dozens of messages across turns and the player has
+    // to mash Next to dismiss them all.
+    if (state.turn !== this.lastSeenTurn && this.adviserPanel) {
+      this.lastSeenTurn = state.turn;
+      this.adviserPanel.clear();
+      this.updateAdviserBadge(0);
+    }
     this.updateHUD();
     this.maybeShowDilemma();
     if (this.newsTicker) {
-      this.newsTicker.updateItems(this.buildTickerItems(gameStore.getState()));
+      this.newsTicker.updateItems(this.buildTickerItems(state));
     }
   };
 
@@ -186,6 +198,7 @@ export class GameHUDScene extends Phaser.Scene {
     const audio = getAudioDirector();
 
     this.previousCash = state.cash;
+    this.lastSeenTurn = state.turn;
     audio.setMusicState("planning");
     audio.setPlanningSubstate("galaxy");
 

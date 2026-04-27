@@ -90,6 +90,11 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   private usesPngPortraits = false;
   private slideTween: Phaser.Tweens.Tween | null = null;
   private drawerOpen = false;
+  // Auto-dismiss after 60s of no interaction so the drawer doesn't pile up
+  // dozens of stale messages between turns. Reset on user nav, cancelled on
+  // turn advance via `clear()`.
+  private autoDismissTimer: Phaser.Time.TimerEvent | null = null;
+  private static readonly AUTO_DISMISS_MS = 60_000;
   private closedX: number; // x when drawer is closed (only tab visible)
   private openX: number; // x when drawer is open (tab + panel visible)
   private escKey: Phaser.Input.Keyboard.Key | null = null;
@@ -581,6 +586,7 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   /** Close the drawer with slide animation. */
   closeDrawer(): void {
     if (!this.drawerOpen) return;
+    this.cancelAutoDismiss();
     this.slideClosed(() => {
       this.drawerOpen = false;
       this.stopTypewriter();
@@ -638,6 +644,7 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   /** Clear all messages (keeps drawer closed). */
   clear(): void {
     this.stopTypewriter();
+    this.cancelAutoDismiss();
     this.messages = [];
     this.currentIndex = 0;
     this.msgLabel.setText("");
@@ -709,6 +716,7 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     this.updateAccentBar(msg.mood);
     this.startTypewriter(msg.text);
     this.updateNav();
+    this.restartAutoDismiss();
   }
 
   private nextMessage(): void {
@@ -717,6 +725,27 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
       this.displayCurrent();
     } else {
       this.closeDrawer();
+    }
+  }
+
+  private restartAutoDismiss(): void {
+    this.cancelAutoDismiss();
+    this.autoDismissTimer = this.scene.time.delayedCall(
+      AdviserPanel.AUTO_DISMISS_MS,
+      () => {
+        this.autoDismissTimer = null;
+        if (!this.drawerOpen) return;
+        // 60s elapsed without user interaction — close the drawer. Messages
+        // remain queued; user can re-open via the tab to read them.
+        this.closeDrawer();
+      },
+    );
+  }
+
+  private cancelAutoDismiss(): void {
+    if (this.autoDismissTimer) {
+      this.autoDismissTimer.remove(false);
+      this.autoDismissTimer = null;
     }
   }
 
