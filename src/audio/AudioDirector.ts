@@ -339,15 +339,30 @@ class AudioDirector {
   private scoreTimerId: number | null = null;
 
   private game: Phaser.Game | null = null;
+  private firstGestureListenerInstalled = false;
 
   attachScene(scene: Phaser.Scene): void {
     this.game = scene.game;
     this.ensureInitialized();
+    this.installFirstGestureListener();
+  }
 
-    // Unlock audio context on the first user gesture.
-    scene.input.once("pointerdown", () => {
+  // Register a window-level gesture listener. attachScene() runs in BootScene,
+  // which transitions away ~200ms after preload — a per-scene listener almost
+  // never fires before being torn down, so resume() never runs and BGM never
+  // starts on auto-load. A DOM listener survives scene transitions.
+  private installFirstGestureListener(): void {
+    if (this.firstGestureListenerInstalled) return;
+    if (typeof window === "undefined") return;
+    this.firstGestureListenerInstalled = true;
+
+    const handler = (): void => {
       void this.resume();
-    });
+    };
+    const opts: AddEventListenerOptions = { once: true, capture: true };
+    window.addEventListener("pointerdown", handler, opts);
+    window.addEventListener("keydown", handler, opts);
+    window.addEventListener("touchstart", handler, { ...opts, passive: true });
   }
 
   setEnabled(enabled: boolean): void {
