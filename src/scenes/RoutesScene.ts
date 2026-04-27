@@ -787,6 +787,9 @@ export class RoutesScene extends Phaser.Scene {
       const dEmp = planetEmpireMap.get(o.destinationPlanetId) ?? null;
       if (!matchesScopeBand(oSys, dSys, oEmp, dEmp, this.finderScopeBand))
         return false;
+      // OR logic is intentional: show routes that touch the selected empire
+      // (either as origin OR destination) so players see all trade activity
+      // involving their empire, not just intra-empire routes.
       if (
         this.finderEmpireFilter !== null &&
         oEmp !== this.finderEmpireFilter &&
@@ -995,10 +998,7 @@ export class RoutesScene extends Phaser.Scene {
 
   private updateEmpireFilterButtonStyles(): void {
     const empires = gameStore.getState().galaxy.empires ?? [];
-    const values: Array<string | null> = [
-      null,
-      ...empires.map((e) => e.id),
-    ];
+    const values: Array<string | null> = [null, ...empires.map((e) => e.id)];
     for (let i = 0; i < this.empireFilterButtons.length; i++) {
       const isActive = values[i] === this.finderEmpireFilter;
       this.empireFilterButtons[i].setAlpha(isActive ? 1.0 : 0.5);

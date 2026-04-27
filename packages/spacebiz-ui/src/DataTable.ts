@@ -470,10 +470,22 @@ export class DataTable extends Phaser.GameObjects.Container {
         rowBg.input.cursor = "pointer";
       }
 
-      rowBg.on("pointerover", () => rowBg.setFillStyle(theme.colors.rowHover));
+      // Attach inline tooltip for rows that have one (resolved before event handlers
+      // so the single pointerover/pointerout pair can handle both hover color and tooltip)
+      const tooltipText = this.tableConfig.rowTooltipFn?.(row) ?? null;
+
+      rowBg.on("pointerover", (pointer: Phaser.Input.Pointer) => {
+        rowBg.setFillStyle(theme.colors.rowHover);
+        if (tooltipText) {
+          this.rowTooltipTimer = this.scene.time.delayedCall(400, () => {
+            this.showRowTooltip(tooltipText, pointer.x, pointer.y);
+          });
+        }
+      });
       rowBg.on("pointerout", () => {
         rowBg.setAlpha(rowAlpha);
         rowBg.setFillStyle(bgColor);
+        this.hideRowTooltip();
       });
       rowBg.on("pointerdown", () => {
         this.focus();
@@ -488,14 +500,7 @@ export class DataTable extends Phaser.GameObjects.Container {
         rowBg.setAlpha(rowAlpha);
       });
 
-      // Attach inline tooltip for rows that have one
-      const tooltipText = this.tableConfig.rowTooltipFn?.(row) ?? null;
       if (tooltipText) {
-        rowBg.on("pointerover", (pointer: Phaser.Input.Pointer) => {
-          this.rowTooltipTimer = this.scene.time.delayedCall(400, () => {
-            this.showRowTooltip(tooltipText, pointer.x, pointer.y);
-          });
-        });
         rowBg.on("pointermove", (pointer: Phaser.Input.Pointer) => {
           if (this.rowTooltipContainer?.visible) {
             const { width, height } = this.scene.scale;
@@ -510,7 +515,6 @@ export class DataTable extends Phaser.GameObjects.Container {
             this.rowTooltipContainer.setPosition(cx, cy);
           }
         });
-        rowBg.on("pointerout", () => this.hideRowTooltip());
       }
 
       this.bodyContainer.add(rowBg);
