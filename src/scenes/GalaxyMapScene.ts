@@ -44,6 +44,11 @@ interface SystemMarker {
   accessible: boolean;
 }
 
+interface EmpireMarker {
+  empire: Empire;
+  nameText: Phaser.GameObjects.Text;
+}
+
 interface TrafficShip {
   routeId: string;
   ship: Ship;
@@ -60,6 +65,7 @@ export class GalaxyMapScene extends Phaser.Scene {
   private view3D: GalaxyView3D | null = null;
   private vizRect = { x: 0, y: 0, w: 0, h: 0 };
   private systemMarkers: SystemMarker[] = [];
+  private empireMarkers: EmpireMarker[] = [];
   private trafficShips: TrafficShip[] = [];
   private empireInfoCard: Phaser.GameObjects.Container | null = null;
   private routeTrafficStateKey: string | null = null;
@@ -121,6 +127,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.lastBorderPortsRef = state.borderPorts ?? null;
 
     this.buildSystemMarkers(state);
+    this.buildEmpireMarkers(state);
     this.rebuildTrafficShips(state, initialVisuals);
     this.installCameraInput();
     this.installInfoCardDismiss();
@@ -168,6 +175,7 @@ export class GalaxyMapScene extends Phaser.Scene {
         this.lastHyperlanesRef = nextState.hyperlanes ?? null;
         this.lastBorderPortsRef = nextState.borderPorts ?? null;
         this.rebuildSystemMarkers(nextState);
+        this.rebuildEmpireMarkers(nextState);
       } else if (
         (galaxyMaybeChanged || hyperlanesMaybeChanged || portsMaybeChanged) &&
         hyperlanesChanged
@@ -207,6 +215,10 @@ export class GalaxyMapScene extends Phaser.Scene {
         m.lockIcon?.destroy();
       }
       this.systemMarkers = [];
+      for (const m of this.empireMarkers) {
+        m.nameText.destroy();
+      }
+      this.empireMarkers = [];
       this.destroyInfoCard();
       this.view3D?.destroy();
       this.view3D = null;
@@ -218,6 +230,7 @@ export class GalaxyMapScene extends Phaser.Scene {
   override update(_time: number, delta: number): void {
     if (!this.view3D) return;
     this.updateSystemMarkers();
+    this.updateEmpireMarkers();
     this.updateTrafficShips(delta);
   }
 
@@ -393,8 +406,67 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.buildSystemMarkers(state);
   }
 
+  /**
+   * Build a label for each empire, positioned at the empire's territory
+   * centroid. Always visible (light tinted) so the political layer reads
+   * even when zoomed in close enough to drop system labels.
+   */
+  private buildEmpireMarkers(state: GameState): void {
+    const theme = getTheme();
+    for (const emp of state.galaxy.empires) {
+      const accessible = isEmpireAccessible(emp.id, state);
+      // Tint by empire color, lightened toward white for legibility against
+      // the dim halo. Strong stroke holds it readable across busy starfields.
+      const baseColor = emp.color;
+      const tinted = lightenHex(baseColor, 0.55);
+      const nameText = this.add
+        .text(0, 0, emp.name, {
+          fontSize: `${theme.fonts.body.size + 1}px`,
+          fontFamily: theme.fonts.body.family,
+          color: colorToString(tinted),
+          stroke: "#000000",
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5, 0.5)
+        .setAlpha(accessible ? 0.7 : 0.5)
+        .setDepth(45);
+      this.empireMarkers.push({ empire: emp, nameText });
+    }
+  }
+
+  private rebuildEmpireMarkers(state: GameState): void {
+    for (const m of this.empireMarkers) {
+      m.nameText.destroy();
+    }
+    this.empireMarkers = [];
+    this.buildEmpireMarkers(state);
+  }
+
+  private updateEmpireMarkers(): void {
+    if (!this.view3D) return;
+    for (const m of this.empireMarkers) {
+      const centroid = this.view3D.getEmpireCentroid(m.empire.id);
+      if (!centroid) {
+        m.nameText.setVisible(false);
+        continue;
+      }
+      const proj = this.view3D.projectToScreenDesign(centroid);
+      m.nameText.setVisible(proj.visible);
+      if (!proj.visible) continue;
+      m.nameText.setPosition(proj.x, proj.y);
+    }
+  }
+
   private updateSystemMarkers(): void {
     if (!this.view3D) return;
+    // LOD: when the camera is pulled back the galaxy fills the viewport with
+    // tiny, overlapping system labels. Beyond this distance threshold we hide
+    // system names and let the empire-name layer carry orientation. The
+    // threshold scales with galaxy size so it works for tiny and huge galaxies
+    // alike. Star hitboxes stay clickable regardless.
+    const camDist = this.view3D.getCameraDistance();
+    const halfExtent = this.view3D.getGalaxyHalfExtent();
+    const showSystemLabels = camDist < halfExtent * 2.0;
     for (const m of this.systemMarkers) {
       const world = this.view3D.getSystemWorldPosition(m.system.id);
       if (!world) {
@@ -407,7 +479,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       const proj = this.view3D.projectToScreenDesign(world);
       const visible = proj.visible;
       m.hitbox.setVisible(visible);
-      m.nameText.setVisible(visible);
+      m.nameText.setVisible(visible && showSystemLabels);
       m.flag?.setVisible(visible);
       m.lockIcon?.setVisible(visible);
       if (!visible) continue;
@@ -668,4 +740,14 @@ export class GalaxyMapScene extends Phaser.Scene {
 
     return container;
   }
+}
+
+function lightenHex(hex: number, t: number): number {
+  const r = (hex >> 16) & 0xff;
+  const g = (hex >> 8) & 0xff;
+  const b = hex & 0xff;
+  const lr = Math.round(r + (255 - r) * t);
+  const lg = Math.round(g + (255 - g) * t);
+  const lb = Math.round(b + (255 - b) * t);
+  return (lr << 16) | (lg << 8) | lb;
 }

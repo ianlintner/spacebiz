@@ -60,6 +60,7 @@ export class GalaxyView3D {
   private readonly systemMeshes = new Map<string, THREE.Mesh>();
   private readonly systemHalos = new Map<string, THREE.Sprite>();
   private readonly empireHalos = new Map<string, THREE.Sprite>();
+  private readonly empireCentroids = new Map<string, Vec3>();
   private readonly systemPositions = new Map<string, Vec3>();
   private hyperlaneLines: THREE.LineSegments | null = null;
   private routeLines: THREE.Line[] = [];
@@ -256,6 +257,7 @@ export class GalaxyView3D {
       mat.dispose();
     }
     this.empireHalos.clear();
+    this.empireCentroids.clear();
     this.systemPositions.clear();
     if (this.hyperlaneLines) {
       this.hyperlaneLines.geometry.dispose();
@@ -385,32 +387,79 @@ export class GalaxyView3D {
       mat.dispose();
     }
     this.empireHalos.clear();
+    this.empireCentroids.clear();
 
-    const systemById = new Map(systems.map((s) => [s.id, s] as const));
-    for (const emp of empires) {
-      const home = systemById.get(emp.homeSystemId);
-      if (!home) continue;
-      const pos = this.systemPositions.get(home.id);
+    // Group systems by empire, derive a centroid + bounding radius per
+    // empire. Empire territory is then visualized as one large additive
+    // bubble per empire that hugs the actual member systems instead of
+    // floating over just the home system.
+    const empireSystems = new Map<string, Vec3[]>();
+    for (const sys of systems) {
+      const pos = this.systemPositions.get(sys.id);
       if (!pos) continue;
+      const arr = empireSystems.get(sys.empireId) ?? [];
+      arr.push(pos);
+      empireSystems.set(sys.empireId, arr);
+    }
+
+    for (const emp of empires) {
+      const positions = empireSystems.get(emp.id);
+      if (!positions || positions.length === 0) continue;
+
+      let cx = 0;
+      let cz = 0;
+      for (const p of positions) {
+        cx += p.x;
+        cz += p.z;
+      }
+      cx /= positions.length;
+      cz /= positions.length;
+
+      let maxDist = 0;
+      for (const p of positions) {
+        const d = Math.hypot(p.x - cx, p.z - cz);
+        if (d > maxDist) maxDist = d;
+      }
+      // Padding so the bubble extends past outermost system rather than
+      // clipping it. Floor avoids a degenerate radius for single-system empires.
+      const radius = Math.max(8, maxDist + 6);
+
+      const centroid: Vec3 = { x: cx, y: -0.5, z: cz };
+      this.empireCentroids.set(emp.id, centroid);
 
       const halo = new THREE.Sprite(
         new THREE.SpriteMaterial({
           map: createRadialGradientTexture(emp.color),
           color: emp.color,
           transparent: true,
-          opacity: 0.18,
+          opacity: 0.16,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         }),
       );
-      // Sit slightly below the ecliptic so the additive haze hugs the plane
-      // rather than blooming over the camera-facing star sprites.
-      halo.position.set(pos.x, pos.y - 1, pos.z);
-      const haloSize = Math.max(20, this.galaxyHalfExtent * 0.45);
-      halo.scale.set(haloSize, haloSize, 1);
+      halo.position.set(centroid.x, centroid.y, centroid.z);
+      halo.scale.set(radius * 2.2, radius * 2.2, 1);
       this.scene.add(halo);
       this.empireHalos.set(emp.id, halo);
     }
+  }
+
+  /** Returns the world position of an empire's territory centroid. */
+  getEmpireCentroid(empireId: string): Vec3 | null {
+    return this.empireCentroids.get(empireId) ?? null;
+  }
+
+  /** Current camera distance from the galaxy origin — used by the scene
+   *  to LOD label visibility (system labels at close range, empire labels
+   *  always visible). */
+  getCameraDistance(): number {
+    return this.cameraDistance;
+  }
+
+  /** Half-extent the camera bounds were sized to. Useful for the scene to
+   *  pick zoom thresholds proportional to galaxy size. */
+  getGalaxyHalfExtent(): number {
+    return this.galaxyHalfExtent;
   }
 
   private rebuildHyperlanes(
@@ -500,35 +549,33 @@ export class GalaxyView3D {
       const path = visual.pathSystemIds;
       if (path.length < 2) continue;
 
+      // Ships travel along the hyperlane network — straight segments between
+      // adjacent path systems, no arch. The route line is drawn brighter than
+      // the hyperlane base layer so active trade lanes read clearly through
+      // the network.
       const controlPoints: THREE.Vector3[] = [];
-      for (let i = 0; i < path.length; i++) {
-        const pos = this.systemPositions.get(path[i]);
+      for (const id of path) {
+        const pos = this.systemPositions.get(id);
         if (!pos) continue;
-        controlPoints.push(new THREE.Vector3(pos.x, pos.y, pos.z));
-        // Insert a lifted control point between every adjacent pair so the
-        // curve arches above the hyperlane plane and reads as a "trade lane"
-        // rather than overlapping the existing hyperlane line segments.
-        if (i < path.length - 1) {
-          const next = this.systemPositions.get(path[i + 1]);
-          if (!next) continue;
-          const dx = next.x - pos.x;
-          const dz = next.z - pos.z;
-          const dist = Math.hypot(dx, dz);
-          const lift = 3 + dist * 0.06;
-          controlPoints.push(
-            new THREE.Vector3(
-              (pos.x + next.x) / 2,
-              Math.max(pos.y, next.y) + lift,
-              (pos.z + next.z) / 2,
-            ),
-          );
-        }
+        // Tiny y offset so the route line sits just above the hyperlane line
+        // and doesn't z-fight when the camera is near-coplanar.
+        controlPoints.push(new THREE.Vector3(pos.x, pos.y + 0.15, pos.z));
       }
       if (controlPoints.length < 2) continue;
 
-      const curve = new THREE.CatmullRomCurve3(controlPoints);
+      // CatmullRom on collinear-ish points still smooths slightly; force
+      // chordal+centripetal off and use linear "curve type" for tight
+      // adherence to the lane.
+      const curve = new THREE.CatmullRomCurve3(
+        controlPoints,
+        false,
+        "catmullrom",
+        0,
+      );
       this.routeCurves.set(visual.routeId, curve);
-      const points = curve.getPoints(64);
+      // Sample once per segment endpoint — straight lanes don't need many
+      // intermediate points and this keeps geometry cheap.
+      const points = curve.getPoints(Math.max(2, controlPoints.length - 1) * 4);
       const geom = new THREE.BufferGeometry().setFromPoints(points);
       const isPlayer = visual.ownerId === "player";
       const mat = new THREE.LineBasicMaterial({
