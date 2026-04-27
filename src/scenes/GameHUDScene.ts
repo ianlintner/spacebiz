@@ -926,6 +926,13 @@ export class GameHUDScene extends Phaser.Scene {
       gameStore.update({ phase: "simulation" });
       audio.setMusicState("sim");
       audio.sfx("ui_end_turn");
+      // Close + clear the Rex drawer so it doesn't sit open over the
+      // simulation playback. The state-listener-driven clear (lines
+      // 173-176) only fires once `state.turn` advances at the END of
+      // the simulation, but players want the panel out of the way the
+      // moment they hit End Turn.
+      this.adviserPanel?.clear();
+      this.updateAdviserBadge(0);
     } else if (sceneName === "TurnReportScene") {
       // Quarter summary is non-blocking — keep phase as planning so the
       // player can navigate freely while the report is on screen.

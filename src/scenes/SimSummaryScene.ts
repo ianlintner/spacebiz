@@ -209,6 +209,13 @@ export class SimSummaryScene extends Phaser.Scene {
     const theme = getTheme();
     const L = getLayout();
 
+    // Opaque backdrop blocks any underlying scene's renderer (e.g. the
+    // GalaxyMapScene Three.js canvas) from showing through.
+    this.add
+      .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 1)
+      .setOrigin(0, 0)
+      .setDepth(-200);
+
     createStarfield(this);
 
     // ── Title bar ──────────────────────────────────────────

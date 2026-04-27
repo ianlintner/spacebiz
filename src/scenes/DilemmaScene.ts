@@ -172,6 +172,17 @@ export class DilemmaScene extends Phaser.Scene {
     const theme = getTheme();
     const L = getLayout();
 
+    // Two-layer backdrop:
+    //   1. Fully opaque rect blocks GalaxyMapScene's Three.js canvas, which
+    //      kept rendering through the previous semi-transparent overlay
+    //      ("Galaxy bleeding through UI" / "2 Galaxies on bg" QA).
+    //   2. Tinted scrim on top gives the modal-overlay accent without
+    //      letting the live galaxy show through.
+    const solid = this.add
+      .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 1)
+      .setOrigin(0, 0);
+    solid.setDepth(-1);
+
     this.overlay = this.add
       .rectangle(
         0,
@@ -179,7 +190,7 @@ export class DilemmaScene extends Phaser.Scene {
         L.gameWidth,
         L.gameHeight,
         theme.colors.modalOverlay,
-        0.78,
+        0.92,
       )
       .setOrigin(0, 0)
       .setInteractive();
@@ -326,9 +337,10 @@ export class DilemmaScene extends Phaser.Scene {
     card.setDepth(12);
     this.widgets.push(card);
 
-    // Card background
+    // Card background — opaque so neighbouring chips and copy don't read
+    // as "fighting" the panel underneath (QA: dilemma screen cluttered).
     const bg = this.add
-      .rectangle(0, 0, optionWidth, OPTION_HEIGHT, theme.colors.panelBg, 0.55)
+      .rectangle(0, 0, optionWidth, OPTION_HEIGHT, theme.colors.panelBg, 1)
       .setOrigin(0, 0)
       .setStrokeStyle(1, theme.colors.panelBorder);
     card.add(bg);
@@ -346,29 +358,19 @@ export class DilemmaScene extends Phaser.Scene {
     successPct.setOrigin(0.5, 0);
     card.add(successPct);
 
+    // The big success% above already conveys the number — suppress the
+    // bar's own inline label so we don't render "55% / 55%" stacked.
     const bar = new ProgressBar(this, {
       x: colX,
       y: colY + 28,
       width: colWidth,
-      height: 8,
+      height: 6,
       value: success,
       maxValue: 100,
       fillColor: successColor(success, theme),
+      showLabel: false,
     });
     card.add(bar);
-
-    const successHint = this.add.text(
-      colX + colWidth / 2,
-      colY + 42,
-      "outcome strength",
-      {
-        fontSize: `${theme.fonts.caption.size - 1}px`,
-        fontFamily: theme.fonts.caption.family,
-        color: colorToString(theme.colors.textDim),
-      },
-    );
-    successHint.setOrigin(0.5, 0);
-    card.add(successHint);
 
     const choose = new Button(this, {
       x: colX,

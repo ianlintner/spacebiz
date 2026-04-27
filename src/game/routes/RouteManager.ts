@@ -1038,22 +1038,26 @@ export function scanAllRouteOpportunities(
   // (typically galactic luxury, often 100+ entries on a fresh standard
   // galaxy) crowd every other cargo out of the top 200 — the player then
   // sees zero raw-materials or hazmat options even though the underlying
-  // opportunities exist. We reserve a per-cargo quota first (top-K by
-  // profit per cargo type), then fill the remaining slots from the global
-  // profit-sorted tail.
+  // opportunities exist. We reserve a per-(scope × cargo) quota first so
+  // intra-empire and intra-system routes survive the truncation alongside
+  // galactic ones (galactic scope's higher revenue multiplier otherwise
+  // sweeps the top-K of every cargo bucket and leaves "Intra Empire"
+  // permanently empty for some seeds), then fill the remaining slots from
+  // the global profit-sorted tail.
   opportunities.sort((a, b) => b.estProfit - a.estProfit);
   const HARD_CAP = 200;
   if (opportunities.length <= HARD_CAP) return opportunities;
 
-  const PER_CARGO_QUOTA = 12;
+  const PER_BUCKET_QUOTA = 6;
   const reserved: RouteOpportunity[] = [];
   const overflow: RouteOpportunity[] = [];
-  const quotaUsed = new Map<CargoType, number>();
+  const quotaUsed = new Map<string, number>();
   for (const opp of opportunities) {
-    const used = quotaUsed.get(opp.bestCargoType) ?? 0;
-    if (used < PER_CARGO_QUOTA) {
+    const key = `${opp.scope}|${opp.bestCargoType}`;
+    const used = quotaUsed.get(key) ?? 0;
+    if (used < PER_BUCKET_QUOTA) {
       reserved.push(opp);
-      quotaUsed.set(opp.bestCargoType, used + 1);
+      quotaUsed.set(key, used + 1);
     } else {
       overflow.push(opp);
     }

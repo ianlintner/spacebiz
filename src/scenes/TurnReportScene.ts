@@ -70,6 +70,14 @@ export class TurnReportScene extends Phaser.Scene {
     // Auto-save after each completed turn so the player can resume later
     autoSave(state);
 
+    // Opaque backdrop FIRST, so the underlying GalaxyMapScene's Three.js
+    // canvas can't render through (QA: galaxy bleeding through UI). The
+    // starfield draws on top of it for ambience.
+    this.add
+      .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 1)
+      .setOrigin(0, 0)
+      .setDepth(-200);
+
     // Starfield background
     createStarfield(this);
 
@@ -426,6 +434,8 @@ export class TurnReportScene extends Phaser.Scene {
       ],
     });
 
+    // Top-routes panel is ~60px of content — show the best two so the rows
+    // don't overflow into "Rival Snapshot" below.
     const routeRows = routePerf
       .map((rp) => ({
         route: routeLabelMap.get(rp.routeId) ?? rp.routeId,
@@ -434,7 +444,7 @@ export class TurnReportScene extends Phaser.Scene {
         margin: rp.revenue - rp.fuelCost,
       }))
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 4);
+      .slice(0, 2);
     routeTable.setRows(routeRows);
 
     // -----------------------------------------------------------------------
@@ -478,6 +488,9 @@ export class TurnReportScene extends Phaser.Scene {
         ],
       });
 
+      // Cap visible rivals to what physically fits inside TR_AI_H (~42px of
+      // content). Earlier code requested 5 rows and they spilled into the
+      // Market Changes panel below (QA: "End of Turn Summary Clutter").
       const aiRows = aiSummaries
         .map((s) => ({
           name: s.companyName,
@@ -486,7 +499,7 @@ export class TurnReportScene extends Phaser.Scene {
           status: s.bankrupt ? "BANKRUPT" : "Active",
         }))
         .sort((a, b) => b.cash - a.cash)
-        .slice(0, 5);
+        .slice(0, 2);
       aiTable.setRows(aiRows);
     }
 
