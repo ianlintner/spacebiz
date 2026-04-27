@@ -22,6 +22,7 @@ import { getPlanetPortraitTextureKey } from "../data/planetPortraits.ts";
 import { getPortraitTextureKey } from "../data/portraits.ts";
 import { getLeaderTextureKey } from "../data/empireLeaderPortraits.ts";
 import { portraitLoader } from "../game/PortraitLoader.ts";
+import { applyClippingMask } from "@spacebiz/ui";
 
 function fitImageContain(
   image: Phaser.GameObjects.Image,
@@ -51,9 +52,12 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
   private portraitWidth: number;
   private portraitHeight: number;
   private panelWidth: number;
+  private panelHeight: number;
+  private statRowSpacing: number;
 
-  // portrait area = top 55% of content area
-  // name + stats = bottom 45%
+  // Portrait image area + name/stats area share the panel height. Ratio is
+  // tuned so a 9-stat list (RoutesScene route opportunity) still fits at the
+  // smallest sidebar height (~454px when a 158px minimap is reserved).
 
   constructor(scene: Phaser.Scene, config: PortraitPanelConfig) {
     super(scene, config.x, config.y);
@@ -64,7 +68,9 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     const panelHeight = config.height ?? L.contentHeight;
 
     this.portraitWidth = this.panelWidth - theme.spacing.sm * 2;
-    this.portraitHeight = Math.floor(panelHeight * 0.55);
+    this.portraitHeight = Math.floor(panelHeight * 0.5);
+    this.panelHeight = panelHeight;
+    this.statRowSpacing = 20;
     this.statLabels = [];
 
     // Glass-styled panel background
@@ -87,7 +93,9 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     // Created on demand in updatePortrait when a loaded texture is available
     this.portraitImage = null;
 
-    // Geometry mask to clip portrait within panel bounds (Phaser 4 Mask filter)
+    // Geometry mask to clip portrait within panel bounds. Uses applyClippingMask
+    // so the legacy Phaser 3 setMask path is reachable when the filters API
+    // isn't available (the optional chain alone silently no-ops).
     this.portraitMaskShape = scene.make.graphics({});
     this.portraitMaskShape.fillStyle(0xffffff, 1);
     this.portraitMaskShape.fillRect(
@@ -96,7 +104,7 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
       this.portraitWidth,
       this.portraitHeight,
     );
-    this.portraitGraphics.filters?.internal.addMask(this.portraitMaskShape);
+    applyClippingMask(this.portraitGraphics, this.portraitMaskShape);
 
     // Name label — below portrait area, centered, heading + accent
     const nameLabelY =
@@ -114,11 +122,13 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     scene.children.remove(this.nameLabel);
     this.add(this.nameLabel);
 
-    // Clip all content (stats, name, portrait) to panel bounds (Phaser 4 Mask filter)
+    // Clip all content (stats, name, portrait) to panel bounds. Without this
+    // (working) clip mask, long stat lists overflow the panel into the minimap
+    // below. Falls back to Phaser 3 setMask when filters isn't available.
     const clipShape = scene.make.graphics({});
     clipShape.fillStyle(0xffffff, 1);
     clipShape.fillRect(config.x, config.y, this.panelWidth, panelHeight);
-    this.filters?.internal.addMask(clipShape);
+    applyClippingMask(this, clipShape);
 
     scene.add.existing(this);
   }
@@ -154,7 +164,7 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
           theme.spacing.sm + this.portraitHeight / 2,
           texKey,
         );
-        this.portraitImage.filters?.internal.addMask(this.portraitMaskShape);
+        applyClippingMask(this.portraitImage, this.portraitMaskShape);
         this.add(this.portraitImage);
       } else {
         this.portraitImage.setTexture(texKey);
@@ -350,12 +360,23 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
       theme.spacing.md +
       this.nameLabel.height;
     const startY = nameLabelBottom + theme.spacing.sm;
-    const rowSpacing = 24;
+    const rowSpacing = this.statRowSpacing;
     const leftX = theme.spacing.md;
     const rightX = this.panelWidth - theme.spacing.md;
+    // Cap how many rows we draw so stats can't extend past the panel into
+    // whatever sits below it (e.g. the routes-screen minimap). The clipping
+    // mask is the visual safety net; this is the layout-time guard.
+    const maxRowsByHeight = Math.max(
+      0,
+      Math.floor((this.panelHeight - startY - theme.spacing.sm) / rowSpacing),
+    );
+    const visibleStats = stats.slice(
+      0,
+      Math.min(stats.length, maxRowsByHeight),
+    );
 
-    for (let i = 0; i < stats.length; i++) {
-      const stat = stats[i];
+    for (let i = 0; i < visibleStats.length; i++) {
+      const stat = visibleStats[i];
       const rowY = startY + i * rowSpacing;
 
       // Label (left-aligned, caption style, textDim)

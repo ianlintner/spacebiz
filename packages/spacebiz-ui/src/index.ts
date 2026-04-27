@@ -53,6 +53,8 @@ export type { TabGroupConfig, TabConfig } from "./TabGroup.ts";
 export { DataTable } from "./DataTable.ts";
 export type { DataTableConfig, ColumnDef } from "./DataTable.ts";
 
+export { applyClippingMask } from "./MaskUtils.ts";
+
 // Ambient / visual effects
 export { createStarfield } from "./Starfield.ts";
 export type { StarfieldConfig } from "./Starfield.ts";

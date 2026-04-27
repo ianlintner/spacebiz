@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { getTheme } from "./Theme.ts";
+import { applyClippingMask } from "./MaskUtils.ts";
 
 export interface ScrollableListConfig {
   x: number;
@@ -45,7 +46,7 @@ export class ScrollableList extends Phaser.GameObjects.Container {
     this.maskGraphics.setPosition(config.x, config.y);
 
     this.contentContainer = scene.add.container(0, 0);
-    this.contentContainer.filters?.internal.addMask(this.maskGraphics);
+    applyClippingMask(this.contentContainer, this.maskGraphics);
     this.add(this.contentContainer);
 
     // Wheel capture area (kept behind list content so it doesn't block row clicks)
