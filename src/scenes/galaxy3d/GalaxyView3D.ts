@@ -45,6 +45,30 @@ export interface GalaxyView3DOptions {
 const COORD_SCALE = 0.08;
 const Y_WOBBLE = 4;
 
+/**
+ * Stable DOM class for every Three.js galaxy canvas. Multiple scenes
+ * (GalaxyMapScene, SimPlaybackScene) can host their own 3D view at different
+ * times; the class lets any modal/overlay scene hide all of them via
+ * setGalaxy3DVisible(false) without needing a reference to the owning scene.
+ * The Phaser canvas at zIndex 0 cannot occlude these canvases (zIndex 2), so
+ * DOM-level hiding is the only reliable way to keep galaxy pixels from
+ * bleeding through Phaser-drawn modals.
+ */
+export const GALAXY_3D_CANVAS_CLASS = "galaxy-3d-canvas";
+
+/**
+ * Hide or show every 3D galaxy canvas currently in the DOM. Idempotent and
+ * safe to call when no canvas is mounted.
+ */
+export function setGalaxy3DVisible(visible: boolean): void {
+  const els = document.querySelectorAll<HTMLCanvasElement>(
+    `.${GALAXY_3D_CANVAS_CLASS}`,
+  );
+  els.forEach((el) => {
+    el.style.display = visible ? "" : "none";
+  });
+}
+
 const HYPERLANE_OPEN_COLOR = 0x6dc8ff;
 const HYPERLANE_RESTRICTED_COLOR = 0xffaa00;
 const HYPERLANE_CLOSED_COLOR = 0xff4444;
@@ -117,6 +141,11 @@ export class GalaxyView3D {
     this.canvas.style.zIndex = "2";
     this.canvas.style.left = "0px";
     this.canvas.style.top = "0px";
+    // Stable class so any scene can hide the 3D canvas from the DOM. The
+    // Phaser canvas sits at zIndex 0; this canvas at zIndex 2 paints above it,
+    // so Phaser-side opaque rectangles cannot occlude it. Modal/overlay scenes
+    // call setGalaxy3DVisible(false) to display:none every matching element.
+    this.canvas.classList.add(GALAXY_3D_CANVAS_CLASS);
 
     const parent = this.phaserCanvas.parentElement;
     if (!parent) {

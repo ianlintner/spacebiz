@@ -10,6 +10,7 @@ import {
   createStarfield,
 } from "../ui/index.ts";
 import type { SimulationResult } from "../game/simulation/SimulationLogger.ts";
+import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
 
 // ── Company color palette ──────────────────────────────────────
 
@@ -209,8 +210,14 @@ export class SimSummaryScene extends Phaser.Scene {
     const theme = getTheme();
     const L = getLayout();
 
-    // Opaque backdrop blocks any underlying scene's renderer (e.g. the
-    // GalaxyMapScene Three.js canvas) from showing through.
+    // Hide any active 3D galaxy canvas at the DOM level — Phaser's opaque
+    // rectangle below cannot occlude a sibling canvas at zIndex 2.
+    setGalaxy3DVisible(false);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      setGalaxy3DVisible(true);
+    });
+
+    // Opaque backdrop — defensive backup for the DOM hide above.
     this.add
       .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 1)
       .setOrigin(0, 0)

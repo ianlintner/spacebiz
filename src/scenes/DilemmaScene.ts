@@ -11,6 +11,7 @@ import {
 } from "../ui/index.ts";
 import { resolveChoiceEvent } from "../game/events/ChoiceEventResolver.ts";
 import { tagLabel } from "../game/events/SuccessFormula.ts";
+import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
 import type {
   ChoiceEvent,
   ChoiceOption,
@@ -172,12 +173,19 @@ export class DilemmaScene extends Phaser.Scene {
     const theme = getTheme();
     const L = getLayout();
 
-    // Two-layer backdrop:
-    //   1. Fully opaque rect blocks GalaxyMapScene's Three.js canvas, which
-    //      kept rendering through the previous semi-transparent overlay
-    //      ("Galaxy bleeding through UI" / "2 Galaxies on bg" QA).
-    //   2. Tinted scrim on top gives the modal-overlay accent without
-    //      letting the live galaxy show through.
+    // The Three.js galaxy canvas (zIndex 2) sits ABOVE the Phaser canvas
+    // (zIndex 0), so any Phaser-side opaque rectangle cannot occlude it.
+    // Hide the 3D canvas at the DOM level for the duration of this modal so
+    // the galaxy can't bleed through. Restored on shutdown below.
+    setGalaxy3DVisible(false);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      setGalaxy3DVisible(true);
+    });
+
+    // Opaque scene background + tinted scrim. The opaque rect is now
+    // belt-and-suspenders to the DOM hide above — kept so the modal still
+    // has a defined background colour even if the canvas hide is bypassed
+    // (e.g. transient resize churn).
     const solid = this.add
       .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 1)
       .setOrigin(0, 0);
