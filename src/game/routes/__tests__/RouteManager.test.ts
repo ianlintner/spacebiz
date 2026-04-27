@@ -785,5 +785,30 @@ describe("RouteManager", () => {
       const missing = ALL_CARGO_TYPES.filter((c) => !seenCargoTypes.has(c));
       expect(missing).toEqual([]);
     });
+
+    // Regression for the "Missing Routes always for intra-empire" QA bug:
+    // before the per-(scope × cargo) quota, galactic routes' higher revenue
+    // multiplier swept the top-K of every cargo bucket and the 200-row cap
+    // truncated every intra-empire opportunity, leaving the "Intra Empire"
+    // filter permanently empty on some seeds.
+    it.each([1, 2, 3, 7, 42])(
+      "surfaces at least one intra-empire opportunity at game start (seed %i)",
+      (seed) => {
+        const { state } = createNewGame(seed);
+        const opps = scanAllRouteOpportunities(
+          state.galaxy.planets,
+          state.galaxy.systems,
+          state.fleet,
+          state.market,
+          state.activeRoutes,
+          state.cash,
+          state,
+        );
+        const intraEmpireCount = opps.filter(
+          (o) => o.scope === "empire",
+        ).length;
+        expect(intraEmpireCount).toBeGreaterThan(0);
+      },
+    );
   });
 });
