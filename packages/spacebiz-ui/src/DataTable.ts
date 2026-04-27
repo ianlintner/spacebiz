@@ -33,6 +33,10 @@ export interface DataTableConfig {
   autoFocus?: boolean;
   emptyStateText?: string;
   emptyStateHint?: string;
+  /** Per-row alpha (0–1). Return < 1 to dim unavailable rows. Default: 0.95. */
+  rowAlphaFn?: (row: Record<string, unknown>) => number;
+  /** Return a tooltip string for a row, or null for no tooltip. */
+  rowTooltipFn?: (row: Record<string, unknown>) => string | null;
 }
 
 export class DataTable extends Phaser.GameObjects.Container {
@@ -58,6 +62,13 @@ export class DataTable extends Phaser.GameObjects.Container {
   private scrollTrack: Phaser.GameObjects.Rectangle;
   private scrollThumb: Phaser.GameObjects.Rectangle;
   private canvasWheelHandler: ((e: WheelEvent) => void) | null = null;
+
+  // ── Inline row tooltip ──
+  private rowTooltipContainer: Phaser.GameObjects.Container | null = null;
+  private rowTooltipBorder: Phaser.GameObjects.Rectangle | null = null;
+  private rowTooltipBg: Phaser.GameObjects.Rectangle | null = null;
+  private rowTooltipLabel: Phaser.GameObjects.Text | null = null;
+  private rowTooltipTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor(scene: Phaser.Scene, config: DataTableConfig) {
     super(scene, config.x, config.y);
@@ -299,6 +310,7 @@ export class DataTable extends Phaser.GameObjects.Container {
   }
 
   setRows(rows: Record<string, unknown>[]): void {
+    this.hideRowTooltip();
     this.rows = [...rows];
     this.scrollY = 0;
     if (this.rows.length === 0) {
@@ -312,6 +324,7 @@ export class DataTable extends Phaser.GameObjects.Container {
 
   private renderBody(): void {
     const theme = getTheme();
+    this.hideRowTooltip();
     this.bodyContainer.removeAll(true);
     this.bodyContainer.y = this.headerHeight;
     this.selectedRowIndicator = null;
@@ -442,11 +455,12 @@ export class DataTable extends Phaser.GameObjects.Container {
       }
 
       const rowHeightPx = Math.max(this.rowHeight, maxTextHeight + 14);
+      const rowAlpha = this.tableConfig.rowAlphaFn?.(row) ?? 0.95;
 
       const rowBg = this.scene.add
         .rectangle(0, rowTop, this.tableConfig.width, rowHeightPx, bgColor)
         .setOrigin(0, 0)
-        .setAlpha(0.95)
+        .setAlpha(rowAlpha)
         .setInteractive(
           new Phaser.Geom.Rectangle(0, 0, this.tableConfig.width, rowHeightPx),
           Phaser.Geom.Rectangle.Contains,
@@ -456,30 +470,61 @@ export class DataTable extends Phaser.GameObjects.Container {
         rowBg.input.cursor = "pointer";
       }
 
-      rowBg.on("pointerover", () => rowBg.setFillStyle(theme.colors.rowHover));
+      // Attach inline tooltip for rows that have one (resolved before event handlers
+      // so the single pointerover/pointerout pair can handle both hover color and tooltip)
+      const tooltipText = this.tableConfig.rowTooltipFn?.(row) ?? null;
+
+      rowBg.on("pointerover", (pointer: Phaser.Input.Pointer) => {
+        rowBg.setFillStyle(theme.colors.rowHover);
+        if (tooltipText) {
+          this.rowTooltipTimer = this.scene.time.delayedCall(400, () => {
+            this.showRowTooltip(tooltipText, pointer.x, pointer.y);
+          });
+        }
+      });
       rowBg.on("pointerout", () => {
-        rowBg.setAlpha(0.95);
+        rowBg.setAlpha(rowAlpha);
         rowBg.setFillStyle(bgColor);
+        this.hideRowTooltip();
       });
       rowBg.on("pointerdown", () => {
         this.focus();
-        rowBg.setAlpha(0.72);
+        rowBg.setAlpha(rowAlpha * 0.75);
       });
       rowBg.on("pointerup", () => {
-        rowBg.setAlpha(0.95);
+        rowBg.setAlpha(rowAlpha);
         playUiSfx("ui_row_select");
         this.selectRow(i, rowTop, rowHeightPx, true);
       });
       rowBg.on("pointerupoutside", () => {
-        rowBg.setAlpha(0.95);
+        rowBg.setAlpha(rowAlpha);
       });
+
+      if (tooltipText) {
+        rowBg.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+          if (this.rowTooltipContainer?.visible) {
+            const { width, height } = this.scene.scale;
+            const tw = this.rowTooltipBorder?.width ?? 0;
+            const th = this.rowTooltipBorder?.height ?? 0;
+            const cx =
+              pointer.x + 14 + tw > width ? pointer.x - tw - 4 : pointer.x + 14;
+            const cy =
+              pointer.y + 14 + th > height
+                ? pointer.y - th - 4
+                : pointer.y + 14;
+            this.rowTooltipContainer.setPosition(cx, cy);
+          }
+        });
+      }
 
       this.bodyContainer.add(rowBg);
 
       for (const icon of rowIcons) {
+        icon.setAlpha(rowAlpha);
         this.bodyContainer.add(icon);
       }
       for (const text of rowTexts) {
+        text.setAlpha(rowAlpha);
         this.bodyContainer.add(text);
       }
 
@@ -736,6 +781,54 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.maskShape.setPosition(matrix.tx, matrix.ty);
   }
 
+  private ensureRowTooltip(): void {
+    if (this.rowTooltipContainer) return;
+    const theme = getTheme();
+    const bw = 1;
+    const maxW = 300;
+    this.rowTooltipBorder = this.scene.add
+      .rectangle(0, 0, maxW, 30, theme.colors.panelBorder)
+      .setOrigin(0, 0);
+    this.rowTooltipBg = this.scene.add
+      .rectangle(bw, bw, maxW - bw * 2, 30 - bw * 2, theme.colors.panelBg)
+      .setOrigin(0, 0);
+    this.rowTooltipLabel = this.scene.add
+      .text(theme.spacing.sm, theme.spacing.xs, "", {
+        fontSize: `${theme.fonts.caption.size}px`,
+        fontFamily: theme.fonts.caption.family,
+        color: colorToString(theme.colors.text),
+        wordWrap: { width: maxW - theme.spacing.sm * 2 },
+      })
+      .setOrigin(0, 0);
+    this.rowTooltipContainer = this.scene.add.container(0, 0, [
+      this.rowTooltipBorder,
+      this.rowTooltipBg,
+      this.rowTooltipLabel,
+    ]);
+    this.rowTooltipContainer.setDepth(2000).setVisible(false);
+  }
+
+  private showRowTooltip(text: string, x: number, y: number): void {
+    this.ensureRowTooltip();
+    const theme = getTheme();
+    const bw = 1;
+    this.rowTooltipLabel!.setText(text);
+    const tw = this.rowTooltipLabel!.width + theme.spacing.sm * 2;
+    const th = this.rowTooltipLabel!.height + theme.spacing.xs * 2;
+    this.rowTooltipBorder!.setSize(tw, th);
+    this.rowTooltipBg!.setSize(tw - bw * 2, th - bw * 2);
+    const { width, height } = this.scene.scale;
+    const cx = x + 14 + tw > width ? x - tw - 4 : x + 14;
+    const cy = y + 14 + th > height ? y - th - 4 : y + 14;
+    this.rowTooltipContainer!.setPosition(cx, cy).setVisible(true);
+  }
+
+  private hideRowTooltip(): void {
+    this.rowTooltipTimer?.destroy();
+    this.rowTooltipTimer = null;
+    this.rowTooltipContainer?.setVisible(false);
+  }
+
   destroy(fromScene?: boolean): void {
     if (this.destroyed) return;
     this.destroyed = true;
@@ -750,6 +843,8 @@ export class DataTable extends Phaser.GameObjects.Container {
     if (this.keyboardNavigationEnabled) {
       this.scene.input.keyboard?.off("keydown", this.handleKeyDown, this);
     }
+    this.rowTooltipTimer?.destroy();
+    this.rowTooltipContainer?.destroy();
     this.maskShape.destroy();
     super.destroy(fromScene);
   }
