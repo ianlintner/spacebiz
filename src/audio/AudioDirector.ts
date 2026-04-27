@@ -279,7 +279,7 @@ class AudioDirector {
   private usingExternalBgm = false;
   private externalBgm: HTMLAudioElement | null = null;
   private externalBgmTrackIndex = 0;
-  private externalBgmPlayAttempted = false;
+
   private settingsHydrated = false;
   private currentState: MusicState = "menu";
   private currentPlanningSubstate: PlanningSubstate = "galaxy";
@@ -1038,10 +1038,9 @@ class AudioDirector {
     // Always reset before play — avoids stale partial-range state left by
     // the preload="metadata" background fetch in production (Azure SWA range
     // responses leave the element unable to stream without a load() reset).
-    // switchExternalTrack() already calls load() and clears externalBgmPlayAttempted,
+    // switchExternalTrack() already calls load() before delegating here,
     // so a double load() on manual track switch is harmless.
     this.externalBgm.load();
-    this.externalBgmPlayAttempted = true;
     try {
       await this.externalBgm.play();
     } catch (err) {
@@ -1075,7 +1074,6 @@ class AudioDirector {
     this.externalBgm.src = track.url;
     this.externalBgm.currentTime = 0;
     this.externalBgm.load();
-    this.externalBgmPlayAttempted = false; // load() already called; no pre-load needed
 
     if (shouldPlay) {
       void this.playExternalBgmIfNeeded();
