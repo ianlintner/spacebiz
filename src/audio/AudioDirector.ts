@@ -1035,16 +1035,20 @@ class AudioDirector {
   private async playExternalBgmIfNeeded(): Promise<void> {
     if (!this.externalBgm || !this.enabled) return;
     if (!this.externalBgm.paused) return;
-    // iOS Safari leaves the element in a broken state after a failed play() —
-    // subsequent play() calls also fail until load() resets it.
-    if (this.externalBgmPlayAttempted) {
-      this.externalBgm.load();
-    }
+    // Always reset before play — avoids stale partial-range state left by
+    // the preload="metadata" background fetch in production (Azure SWA range
+    // responses leave the element unable to stream without a load() reset).
+    // switchExternalTrack() already calls load() and clears externalBgmPlayAttempted,
+    // so a double load() on manual track switch is harmless.
+    this.externalBgm.load();
     this.externalBgmPlayAttempted = true;
     try {
       await this.externalBgm.play();
-    } catch {
-      // Browser autoplay rules can block this until a user gesture.
+    } catch (err) {
+      // NotAllowedError = autoplay blocked until user gesture; everything else is real.
+      if (err instanceof DOMException && err.name !== "NotAllowedError") {
+        console.warn("[AudioDirector] BGM play failed:", err.name, err.message);
+      }
     }
   }
 

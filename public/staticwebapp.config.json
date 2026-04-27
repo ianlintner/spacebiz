@@ -34,8 +34,7 @@
     {
       "route": "/concepts/audio/*",
       "headers": {
-        "Cache-Control": "public, max-age=31536000, immutable",
-        "Accept-Ranges": "bytes"
+        "Cache-Control": "public, max-age=31536000, immutable"
       }
     },
     {
