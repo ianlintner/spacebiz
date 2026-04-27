@@ -83,7 +83,7 @@ jobs:
       - name: Install caretaker
         run: |
           pip install --upgrade pip
-          pip install caretaker
+          pip install "git+https://github.com/ianlintner/caretaker.git@v0.23.0"
 
       - name: Stream caretaker run
         run: |
