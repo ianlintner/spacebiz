@@ -239,7 +239,8 @@ export class RoutesScene extends Phaser.Scene {
       })),
       defaultIndex: 0,
       onChange: (value) => {
-        this.finderCargoFilter = value === "" ? null : (value as CargoTypeValue);
+        this.finderCargoFilter =
+          value === "" ? null : (value as CargoTypeValue);
         this.refreshFinderTable();
       },
     });
@@ -289,9 +290,7 @@ export class RoutesScene extends Phaser.Scene {
       })),
       defaultIndex: 0,
       onChange: (value) => {
-        this.finderScopeBand = (
-          value === "" ? null : value
-        ) as RouteScopeBand;
+        this.finderScopeBand = (value === "" ? null : value) as RouteScopeBand;
         this.refreshFinderTable();
       },
     });

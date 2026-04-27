@@ -10,6 +10,7 @@ import {
   FloatingText,
   AdviserPanel,
 } from "../ui/index.ts";
+import { HorizontalNewsTicker } from "../ui/HorizontalNewsTicker.ts";
 import { gameStore } from "../data/GameStore.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { checkTutorialAdvancement } from "../game/adviser/AdviserEngine.ts";
@@ -28,6 +29,7 @@ import {
   getUsedGalacticRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import type { GameState } from "../data/types.ts";
+import { generateTickerFeed } from "../generation/news/tickerFeed.ts";
 
 /**
  * Compact "Sys 1/2 · Emp 2/4 · Gal 0/2" string for the HUD route-slot
@@ -124,6 +126,7 @@ export class GameHUDScene extends Phaser.Scene {
   private apBadgeLabel!: Label;
   private navBadges = new Map<string, Phaser.GameObjects.Arc>();
   private endTurnModal: Modal | null = null;
+  private newsTicker: HorizontalNewsTicker | null = null;
   private readonly navIconButtonSize = 46;
   private readonly navIconSpacing = 8;
   private readonly navHitHeight = 50;
@@ -162,6 +165,9 @@ export class GameHUDScene extends Phaser.Scene {
   private stateListener = (_data: unknown) => {
     this.updateHUD();
     this.maybeShowDilemma();
+    if (this.newsTicker) {
+      this.newsTicker.updateItems(this.buildTickerItems(gameStore.getState()));
+    }
   };
 
   constructor() {
@@ -347,7 +353,7 @@ export class GameHUDScene extends Phaser.Scene {
     ];
 
     const navSidebarTop = L.hudTopBarHeight;
-    const navSidebarH = L.gameHeight - L.hudTopBarHeight - L.hudBottomBarHeight;
+    const navSidebarH = L.hudBottomBarTop - L.hudTopBarHeight;
 
     // Sidebar background strip
     this.add
@@ -547,7 +553,8 @@ export class GameHUDScene extends Phaser.Scene {
     });
 
     // ── Bottom Bar ───────────────────────────────────────────
-    const bottomBarY = L.gameHeight - L.hudBottomBarHeight;
+    const bottomBarY = L.hudBottomBarTop;
+    const bottomBarMidY = bottomBarY + L.hudBottomBarHeight / 2;
 
     this.add
       .nineslice(
@@ -568,7 +575,7 @@ export class GameHUDScene extends Phaser.Scene {
     // Phase indicator (left side of bottom bar)
     this.phaseLabel = new Label(this, {
       x: 20,
-      y: L.gameHeight - L.hudBottomBarHeight / 2,
+      y: bottomBarMidY,
       text: `Phase: ${state.phase}`,
       style: "caption",
     });
@@ -577,7 +584,7 @@ export class GameHUDScene extends Phaser.Scene {
     // Action prompt (right of phase label, with enough clearance)
     this.actionPromptLabel = new Label(this, {
       x: 200,
-      y: L.gameHeight - L.hudBottomBarHeight / 2,
+      y: bottomBarMidY,
       text: "",
       style: "caption",
       color: theme.colors.textDim,
@@ -589,7 +596,7 @@ export class GameHUDScene extends Phaser.Scene {
     const slotSummary = formatSlotSummary(state);
     this.routeSlotLabel = new Label(this, {
       x: L.gameWidth - 200,
-      y: L.gameHeight - L.hudBottomBarHeight / 2 - 8,
+      y: bottomBarMidY - 8,
       text: slotSummary.text,
       style: "caption",
       color: slotSummary.anySaturated
@@ -605,7 +612,7 @@ export class GameHUDScene extends Phaser.Scene {
       : "No research";
     this.researchLabel = new Label(this, {
       x: L.gameWidth - 200,
-      y: L.gameHeight - L.hudBottomBarHeight / 2 + 8,
+      y: bottomBarMidY + 8,
       text: researchText,
       style: "caption",
       color: techState?.currentResearchId
@@ -643,6 +650,33 @@ export class GameHUDScene extends Phaser.Scene {
       },
     });
     this.endTurnButton.setVisible(state.phase === "planning");
+
+    // ── Horizontal News Ticker strip (below bottom bar) ──
+    const tickerY = L.gameHeight - L.hudTickerHeight;
+    this.add
+      .rectangle(
+        0,
+        tickerY,
+        L.gameWidth,
+        L.hudTickerHeight,
+        theme.colors.background,
+      )
+      .setOrigin(0, 0)
+      .setAlpha(0.97)
+      .setDepth(290);
+    // 1px top border
+    this.add
+      .rectangle(0, tickerY, L.gameWidth, 1, theme.colors.panelBorder)
+      .setOrigin(0, 0)
+      .setDepth(291);
+    this.newsTicker = new HorizontalNewsTicker(
+      this,
+      L.navSidebarWidth,
+      tickerY,
+      L.gameWidth - L.navSidebarWidth,
+      L.hudTickerHeight,
+    );
+    this.newsTicker.updateItems(this.buildTickerItems(state));
 
     // ── Adviser Panel (drawer-style, upper-right) ──
     // Tab (36px) is at x=0 of the container, panel body at x=36.
@@ -700,6 +734,8 @@ export class GameHUDScene extends Phaser.Scene {
       this.scale.off("resize", onResize);
       gameStore.off("stateChanged", this.stateListener);
       this.destroyAudioPanel();
+      this.newsTicker?.destroy();
+      this.newsTicker = null;
     });
 
     // Launch content scene (restored on resize, default GalaxyMapScene)
@@ -850,9 +886,16 @@ export class GameHUDScene extends Phaser.Scene {
       this.destroyAudioPanel();
     }
 
-    // Stop overlay scenes that might be stacked on top
+    // Stop overlay scenes that might be stacked on top.
+    // DilemmaScene is exempt if it has pending choices — it closes itself.
     for (const key of this.overlaySceneKeys) {
       if (this.scene.isActive(key)) {
+        if (key === "DilemmaScene") {
+          const hasPending = gameStore
+            .getState()
+            .pendingChoiceEvents.some((e) => e.dilemmaId !== undefined);
+          if (hasPending) continue;
+        }
         this.scene.stop(key);
       }
     }
@@ -1656,6 +1699,12 @@ export class GameHUDScene extends Phaser.Scene {
       },
     });
     this.endTurnModal.setDepth(500);
+  }
+
+  private buildTickerItems(state: GameState) {
+    const lastTurn = state.history[state.history.length - 1];
+    if (!lastTurn) return [];
+    return generateTickerFeed(state, lastTurn);
   }
 
   /** Determine the best scene to show after a turn report, based on game state. */

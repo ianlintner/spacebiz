@@ -27,12 +27,12 @@ const HEADER_HEIGHT = 56;
 const PADDING = 18;
 
 const BANNER_W = 480;
-const BANNER_H = 180;
-const BANNER_GAP = 14;
+const BANNER_H = 80;
+const BANNER_GAP = 10;
 
 const PROMPT_HEIGHT = 78;
-const OPTION_HEIGHT = 116;
-const OPTION_GAP = 10;
+const OPTION_HEIGHT = 90;
+const OPTION_GAP = 8;
 
 // ---------------------------------------------------------------------------
 // Helpers

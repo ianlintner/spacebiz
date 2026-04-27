@@ -11,8 +11,6 @@ import {
   MilestoneOverlay,
   getLayout,
 } from "../ui/index.ts";
-import { GalacticNewsPanel } from "../ui/GalacticNewsPanel.ts";
-import { generateTickerFeed } from "../generation/news/tickerFeed.ts";
 import { autoSave } from "../game/SaveManager.ts";
 import type { TurnResult } from "../data/types.ts";
 import type { GameHUDScene } from "./GameHUDScene.ts";
@@ -493,27 +491,15 @@ export class TurnReportScene extends Phaser.Scene {
     }
 
     // -----------------------------------------------------------------------
-    // Bottom row: Galactic News Network (left) + Market Changes (right)
+    // Bottom row: Market Changes (full width — ticker moved to global HUD)
     // -----------------------------------------------------------------------
     const bottomY =
       aiSummaries.length > 0 ? TR_AI_Y + TR_AI_H + TR_GAP : TR_AI_Y;
-    const halfWidth = L.mainContentWidth / 2 - 5;
 
-    // Galactic News Network ticker (bottom-left)
-    const tickerItems = generateTickerFeed(state, lastTurn);
-    new GalacticNewsPanel(this, {
+    const marketPanel = new Panel(this, {
       x: L.mainContentLeft,
       y: bottomY,
-      width: halfWidth,
-      height: TR_BOTTOM_H,
-      items: tickerItems,
-    });
-
-    // Market Changes (bottom-right)
-    const marketPanel = new Panel(this, {
-      x: L.mainContentLeft + L.mainContentWidth / 2 + 5,
-      y: bottomY,
-      width: halfWidth,
+      width: L.mainContentWidth,
       height: TR_BOTTOM_H,
       title: "Market Changes",
     });
@@ -533,11 +519,11 @@ export class TurnReportScene extends Phaser.Scene {
     );
     marketPanel.add(fuelLabel);
 
-    // Show summary of cargo delivered this turn
+    // Show summary of cargo delivered this turn (more rows now that panel is full width)
     const cargoEntries = Object.entries(lastTurn.cargoDelivered)
       .filter(([, amount]) => amount > 0)
       .sort((a, b) => (b[1] as number) - (a[1] as number))
-      .slice(0, 3);
+      .slice(0, 6);
     let marketY = mpContent.y + 32;
     if (cargoEntries.length > 0) {
       const cargoHeader = this.add.text(
@@ -553,10 +539,14 @@ export class TurnReportScene extends Phaser.Scene {
       marketPanel.add(cargoHeader);
       marketY += 20;
 
-      for (const [cargoType, amount] of cargoEntries) {
+      const colCount = Math.min(3, cargoEntries.length);
+      const colWidth = Math.floor(mpContent.width / colCount);
+      cargoEntries.forEach(([cargoType, amount], idx) => {
+        const col = idx % colCount;
+        const row = Math.floor(idx / colCount);
         const cargoLine = this.add.text(
-          mpContent.x + 16,
-          marketY,
+          mpContent.x + 8 + col * colWidth,
+          marketY + row * 18,
           `${cargoType}: ${(amount as number).toLocaleString("en-US")} units`,
           {
             fontSize: `${theme.fonts.caption.size}px`,
@@ -565,8 +555,8 @@ export class TurnReportScene extends Phaser.Scene {
           },
         );
         marketPanel.add(cargoLine);
-        marketY += 18;
-      }
+      });
+      marketY += Math.ceil(cargoEntries.length / colCount) * 18;
     }
 
     if (lastTurn.passengersTransported > 0) {

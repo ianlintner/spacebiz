@@ -17,6 +17,8 @@ export interface LayoutMetrics {
   contentGap: number;
   hudTopBarHeight: number;
   hudBottomBarHeight: number;
+  hudTickerHeight: number;
+  hudBottomBarTop: number;
   navSidebarWidth: number;
   contentTop: number;
   contentHeight: number;
@@ -38,6 +40,7 @@ function computeMetrics(w: number, h: number): LayoutMetrics {
   const navSidebarWidth = isPortrait ? 0 : 56;
   const hudTopBarHeight = 56;
   const hudBottomBarHeight = 52;
+  const hudTickerHeight = 20;
   const contentGap = 12;
 
   // Scale content to fill available space, keeping small margins on each side.
@@ -46,7 +49,8 @@ function computeMetrics(w: number, h: number): LayoutMetrics {
   const contentLeft = Math.floor((w - maxContentWidth) / 2);
 
   const contentTop = hudTopBarHeight;
-  const contentHeight = h - hudTopBarHeight - hudBottomBarHeight;
+  const contentHeight =
+    h - hudTopBarHeight - hudBottomBarHeight - hudTickerHeight;
 
   const sidebarLeft = contentLeft;
   const mainContentLeft = isCompact
@@ -56,6 +60,8 @@ function computeMetrics(w: number, h: number): LayoutMetrics {
     ? maxContentWidth
     : maxContentWidth - sidebarWidth - contentGap;
 
+  const hudBottomBarTop = h - hudBottomBarHeight - hudTickerHeight;
+
   return {
     gameWidth: w,
     gameHeight: h,
@@ -64,6 +70,8 @@ function computeMetrics(w: number, h: number): LayoutMetrics {
     contentGap,
     hudTopBarHeight,
     hudBottomBarHeight,
+    hudTickerHeight,
+    hudBottomBarTop,
     navSidebarWidth,
     contentTop,
     contentHeight,
@@ -99,10 +107,11 @@ export const SIDEBAR_WIDTH = 240;
 export const CONTENT_GAP = 12;
 export const HUD_TOP_BAR_HEIGHT = 56;
 export const HUD_BOTTOM_BAR_HEIGHT = 52;
+export const HUD_TICKER_HEIGHT = 20;
 export const NAV_SIDEBAR_WIDTH = 56;
 export const CONTENT_TOP = HUD_TOP_BAR_HEIGHT;
 export const CONTENT_HEIGHT =
-  GAME_HEIGHT - HUD_TOP_BAR_HEIGHT - HUD_BOTTOM_BAR_HEIGHT;
+  GAME_HEIGHT - HUD_TOP_BAR_HEIGHT - HUD_BOTTOM_BAR_HEIGHT - HUD_TICKER_HEIGHT;
 export const CONTENT_LEFT = Math.floor((GAME_WIDTH - MAX_CONTENT_WIDTH) / 2);
 export const SIDEBAR_LEFT = CONTENT_LEFT;
 export const MAIN_CONTENT_LEFT = SIDEBAR_LEFT + SIDEBAR_WIDTH + CONTENT_GAP;
