@@ -80,6 +80,17 @@ export class SystemView3D {
   private resizeObserver: ResizeObserver | null = null;
   private destroyed = false;
 
+  // Camera state (orbital around the sun at origin). Bounded so the user
+  // can never lose the system off-screen.
+  private cameraDistance = 28;
+  private cameraYaw = 0;
+  private cameraPitch = Math.PI * 0.32;
+  private static readonly CAMERA_DISTANCE_MIN = 16;
+  private static readonly CAMERA_DISTANCE_MAX = 48;
+  private static readonly CAMERA_PITCH_MIN = Math.PI * 0.18;
+  private static readonly CAMERA_PITCH_MAX = Math.PI * 0.46;
+  private static readonly CAMERA_YAW_RANGE = Math.PI * 0.45;
+
   constructor(opts: SystemView3DOptions) {
     this.phaserCanvas = opts.phaserCanvas;
     this.designWidth = opts.designWidth;
@@ -117,16 +128,18 @@ export class SystemView3D {
     // Camera tilted ~35° off top-down. y is "up", camera looks at the sun
     // which sits at the origin in system-local space.
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
-    this.camera.position.set(0, 18, 24);
-    this.camera.lookAt(0, 0, 0);
+    this.applyCameraOrbit();
 
-    // Lighting: sun-as-point-light at origin + faint cool ambient
-    this.scene.add(new THREE.AmbientLight(0x4a5680, 0.55));
-    const sunLight = new THREE.PointLight(0xfff0c8, 2.2, 0, 1.4);
+    // Lighting: sun-as-point-light at origin + brighter cool ambient so
+    // distant planets don't fall to near-black on the night side.
+    this.scene.add(new THREE.AmbientLight(0x6878a0, 0.85));
+    const sunLight = new THREE.PointLight(0xfff0c8, 2.0, 0, 1.4);
     sunLight.position.set(0, 0, 0);
     this.scene.add(sunLight);
 
-    // Sun mesh and additive halo sprite (camera-facing for free corona look)
+    // Sun mesh + tighter additive halo. Halo was 6× sun radius and bled
+    // onto inner planets; keep it close to the sun and dim so adjacent
+    // planets read as separate objects.
     this.sunMesh = new THREE.Mesh(
       new THREE.SphereGeometry(SUN_RADIUS, 32, 24),
       new THREE.MeshBasicMaterial({ color: 0xffe89a }),
@@ -138,12 +151,12 @@ export class SystemView3D {
         map: createRadialGradientTexture(0xfff0c8),
         color: 0xffe89a,
         transparent: true,
-        opacity: 0.55,
+        opacity: 0.32,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       }),
     );
-    this.sunHalo.scale.set(SUN_RADIUS * 6, SUN_RADIUS * 6, 1);
+    this.sunHalo.scale.set(SUN_RADIUS * 3.4, SUN_RADIUS * 3.4, 1);
     this.scene.add(this.sunHalo);
 
     this.buildStarfield();
@@ -289,7 +302,7 @@ export class SystemView3D {
         roughness: 0.85,
         metalness: 0.05,
         emissive: color,
-        emissiveIntensity: 0.08,
+        emissiveIntensity: 0.22,
       });
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(radius, 24, 18),
@@ -336,9 +349,9 @@ export class SystemView3D {
       const geom = new THREE.BufferGeometry();
       geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
       const mat = new THREE.LineBasicMaterial({
-        color: 0x4d6da3,
+        color: 0x8aa6d8,
         transparent: true,
-        opacity: 0.22,
+        opacity: 0.55,
         depthWrite: false,
       });
       const line = new THREE.LineLoop(geom, mat);
@@ -401,6 +414,70 @@ export class SystemView3D {
    */
   getRouteCurve(routeId: string): THREE.CatmullRomCurve3 | null {
     return this.routeCurves.get(routeId) ?? null;
+  }
+
+  /**
+   * Toggle the Three.js canvas visibility. Used to hide the 3D scene when
+   * a Phaser modal (PlanetDetail, route builder, etc.) launches over the
+   * system map — otherwise the WebGL canvas's z-index covers Phaser modals.
+   */
+  setVisible(visible: boolean): void {
+    this.canvas.style.display = visible ? "" : "none";
+  }
+
+  /**
+   * Adjust camera zoom by a wheel delta (positive = zoom out, negative =
+   * zoom in). Internally clamped to a sensible range so the user can never
+   * pull the camera away from the system.
+   */
+  zoom(delta: number): void {
+    this.cameraDistance = clamp(
+      this.cameraDistance + delta,
+      SystemView3D.CAMERA_DISTANCE_MIN,
+      SystemView3D.CAMERA_DISTANCE_MAX,
+    );
+    this.applyCameraOrbit();
+  }
+
+  /**
+   * Pan the camera in screen-x and screen-y. Maps to bounded yaw and pitch
+   * orbits around the sun so the user can rock the view but never lose the
+   * system or look at it edge-on.
+   */
+  pan(dxScreen: number, dyScreen: number): void {
+    const yawDelta = (-dxScreen / 320) * Math.PI;
+    const pitchDelta = (-dyScreen / 320) * Math.PI;
+    this.cameraYaw = clamp(
+      this.cameraYaw + yawDelta,
+      -SystemView3D.CAMERA_YAW_RANGE,
+      SystemView3D.CAMERA_YAW_RANGE,
+    );
+    this.cameraPitch = clamp(
+      this.cameraPitch + pitchDelta,
+      SystemView3D.CAMERA_PITCH_MIN,
+      SystemView3D.CAMERA_PITCH_MAX,
+    );
+    this.applyCameraOrbit();
+  }
+
+  /**
+   * Reset the camera to its initial framing. Hooked up to a double-click on
+   * the viewport.
+   */
+  resetCamera(): void {
+    this.cameraDistance = 28;
+    this.cameraYaw = 0;
+    this.cameraPitch = Math.PI * 0.32;
+    this.applyCameraOrbit();
+  }
+
+  private applyCameraOrbit(): void {
+    const r = this.cameraDistance;
+    const x = Math.sin(this.cameraYaw) * Math.sin(this.cameraPitch) * r;
+    const z = Math.cos(this.cameraYaw) * Math.sin(this.cameraPitch) * r;
+    const y = Math.cos(this.cameraPitch) * r;
+    this.camera.position.set(x, y, z);
+    this.camera.lookAt(0, 0, 0);
   }
 
   private startRenderLoop(): void {
@@ -469,6 +546,10 @@ export class SystemView3D {
       this.resizeObserver.observe(this.phaserCanvas.parentElement);
     }
   }
+}
+
+function clamp(v: number, min: number, max: number): number {
+  return v < min ? min : v > max ? max : v;
 }
 
 function createRadialGradientTexture(centerColor: number): THREE.CanvasTexture {

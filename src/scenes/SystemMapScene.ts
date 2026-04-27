@@ -51,6 +51,7 @@ export class SystemMapScene extends Phaser.Scene {
   private trafficShips: TrafficShip[] = [];
   private vizRect = { x: 0, y: 0, w: 0, h: 0 };
   private lastTurn = 1;
+  private modalHidden = false;
 
   constructor() {
     super({ key: "SystemMapScene" });
@@ -214,6 +215,8 @@ export class SystemMapScene extends Phaser.Scene {
       theme,
     );
     this.rebuildTrafficShips(state, system.id);
+    this.installCameraInput();
+    this.installModalVisibilityToggle();
 
     // React to game state changes — turn advancement and route edits both
     // come through this channel.
@@ -255,6 +258,7 @@ export class SystemMapScene extends Phaser.Scene {
 
   override update(_time: number, delta: number): void {
     if (!this.view3D) return;
+    this.syncModalVisibility();
     this.updatePlanetMarkers();
     this.updateTrafficShips(delta);
   }
@@ -494,4 +498,87 @@ export class SystemMapScene extends Phaser.Scene {
       );
     }
   }
+
+  /**
+   * Bind mouse-wheel zoom and pointer-drag pan to the 3D camera. The 3D
+   * canvas itself has pointer-events disabled (Phaser owns input), so we
+   * hook Phaser's input system instead. Camera bounds in SystemView3D
+   * keep the system on-screen no matter how the user pulls.
+   */
+  private installCameraInput(): void {
+    const inViewport = (worldX: number, worldY: number): boolean =>
+      worldX >= this.vizRect.x &&
+      worldX <= this.vizRect.x + this.vizRect.w &&
+      worldY >= this.vizRect.y &&
+      worldY <= this.vizRect.y + this.vizRect.h;
+
+    const onWheel = (
+      _ptr: Phaser.Input.Pointer,
+      _objs: unknown,
+      _dx: number,
+      dy: number,
+    ): void => {
+      if (!this.view3D) return;
+      this.view3D.zoom(dy * 0.02);
+    };
+    this.input.on("wheel", onWheel);
+
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+    const onDown = (ptr: Phaser.Input.Pointer): void => {
+      if (!inViewport(ptr.worldX, ptr.worldY)) return;
+      dragging = true;
+      lastX = ptr.x;
+      lastY = ptr.y;
+    };
+    const onUp = (): void => {
+      dragging = false;
+    };
+    const onMove = (ptr: Phaser.Input.Pointer): void => {
+      if (!dragging || !this.view3D) return;
+      const dx = ptr.x - lastX;
+      const dy = ptr.y - lastY;
+      lastX = ptr.x;
+      lastY = ptr.y;
+      this.view3D.pan(dx, dy);
+    };
+    this.input.on("pointerdown", onDown);
+    this.input.on("pointerup", onUp);
+    this.input.on("pointerupoutside", onUp);
+    this.input.on("pointermove", onMove);
+
+    const cleanup = (): void => {
+      this.input.off("wheel", onWheel);
+      this.input.off("pointerdown", onDown);
+      this.input.off("pointerup", onUp);
+      this.input.off("pointerupoutside", onUp);
+      this.input.off("pointermove", onMove);
+    };
+    this.events.once("shutdown", cleanup);
+    this.events.once("destroy", cleanup);
+  }
+
+  /**
+   * Hide the 3D canvas while a Phaser modal/overlay scene is on top of the
+   * system view. The Three canvas sits at z-index 2 (above Phaser) so the
+   * sun and planets would otherwise bleed through modal windows. Polled in
+   * `update()` since Phaser 4's SceneManager doesn't expose a global
+   * lifecycle event bus that types cleanly.
+   */
+  private syncModalVisibility(): void {
+    if (!this.view3D) return;
+    const hasOverlay = OVERLAY_SCENE_KEYS.some((k) => this.scene.isActive(k));
+    if (hasOverlay !== this.modalHidden) {
+      this.modalHidden = hasOverlay;
+      this.view3D.setVisible(!hasOverlay);
+    }
+  }
+
+  private installModalVisibilityToggle(): void {
+    // Poll in update() — see syncModalVisibility().
+    this.modalHidden = false;
+  }
 }
+
+const OVERLAY_SCENE_KEYS = ["PlanetDetailScene"];
