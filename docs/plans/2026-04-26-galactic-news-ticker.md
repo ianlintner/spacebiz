@@ -19,52 +19,68 @@ Tone: dry sci-fi with knowing genre homages (Douglas Adams, Asimov, Dune, Star T
 
 Each category has its own pool. The feed selects from at most ~3 categories per turn so the same theme doesn't dominate.
 
-| # | Category | Tone | Example header |
-|---|---|---|---|
-| 1 | Galactic Politics | serious | "{empire} parliament adjourns over tariff vote" |
-| 2 | Corporate Earnings | serious | "{company} posts {percent}% revenue growth Q{n}" |
-| 3 | Market Movers | serious/numeric | "{stock} jumps {percent}% on contract win" |
-| 4 | Crime & Piracy | serious | "Customs seize {tonnage} tonnes of contraband near {port}" |
-| 5 | Science & Tech | serious sci-fi | "{empire} researchers claim FTL coil efficiency record" |
-| 6 | Sports | light | "{empire} routs {empire2} 18-3 in zero-G ball semifinal" |
-| 7 | Celebrity & Media | light | "Holovid star {ceo} denies third divorce in weekly statement" |
-| 8 | Cosmic Weather | serious | "Class-3 ion storm forecast over {system} by Tuesday cycle" |
-| 9 | Local Planet News | light | "{port} traffic council unveils new pedestrian sky-bridge" |
-| 10 | Health & Medical | mixed | "Longevity treatments now available on {port} for {credits}" |
-| 11 | Religion & Philosophy | mixed | "Cult of the Frozen Logician schisms over heat-death debate" |
-| 12 | Odd Crime Blotter | dry humor | "{port} man arrested attempting to mail self to {planet}" |
-| 13 | Food & Cuisine | light | "Three-star reviewer pans {port} restaurant: 'tastes of regret'" |
-| 14 | Real Estate | mixed | "Megastructure permit issued for orbital ring above {planet}" |
-| 15 | Travel & Tourism | light | "{planet} resort posts record {percent}% occupancy this cycle" |
-| 16 | Fashion & Trends | light/satirical | "Anti-grav heels make comeback on {port} runway week" |
-| 17 | Education & Academia | mixed | "{empire} University paper retracted over fabricated stardata" |
-| 18 | Xenobiology | mixed | "Researchers describe new sentient mold on {planet}" |
-| 19 | Obituaries & Tributes | serious | "Industrialist {ceo} eulogized as 'tireless and largely tolerable'" |
-| 20 | Sci-Fi Homages | dry humor | "Towel sales up {percent}% on {planet} ahead of Galactic Hitchhiker's Day" |
+| #   | Category              | Tone            | Example header                                                             |
+| --- | --------------------- | --------------- | -------------------------------------------------------------------------- |
+| 1   | Galactic Politics     | serious         | "{empire} parliament adjourns over tariff vote"                            |
+| 2   | Corporate Earnings    | serious         | "{company} posts {percent}% revenue growth Q{n}"                           |
+| 3   | Market Movers         | serious/numeric | "{stock} jumps {percent}% on contract win"                                 |
+| 4   | Crime & Piracy        | serious         | "Customs seize {tonnage} tonnes of contraband near {port}"                 |
+| 5   | Science & Tech        | serious sci-fi  | "{empire} researchers claim FTL coil efficiency record"                    |
+| 6   | Sports                | light           | "{empire} routs {empire2} 18-3 in zero-G ball semifinal"                   |
+| 7   | Celebrity & Media     | light           | "Holovid star {ceo} denies third divorce in weekly statement"              |
+| 8   | Cosmic Weather        | serious         | "Class-3 ion storm forecast over {system} by Tuesday cycle"                |
+| 9   | Local Planet News     | light           | "{port} traffic council unveils new pedestrian sky-bridge"                 |
+| 10  | Health & Medical      | mixed           | "Longevity treatments now available on {port} for {credits}"               |
+| 11  | Religion & Philosophy | mixed           | "Cult of the Frozen Logician schisms over heat-death debate"               |
+| 12  | Odd Crime Blotter     | dry humor       | "{port} man arrested attempting to mail self to {planet}"                  |
+| 13  | Food & Cuisine        | light           | "Three-star reviewer pans {port} restaurant: 'tastes of regret'"           |
+| 14  | Real Estate           | mixed           | "Megastructure permit issued for orbital ring above {planet}"              |
+| 15  | Travel & Tourism      | light           | "{planet} resort posts record {percent}% occupancy this cycle"             |
+| 16  | Fashion & Trends      | light/satirical | "Anti-grav heels make comeback on {port} runway week"                      |
+| 17  | Education & Academia  | mixed           | "{empire} University paper retracted over fabricated stardata"             |
+| 18  | Xenobiology           | mixed           | "Researchers describe new sentient mold on {planet}"                       |
+| 19  | Obituaries & Tributes | serious         | "Industrialist {ceo} eulogized as 'tireless and largely tolerable'"        |
+| 20  | Sci-Fi Homages        | dry humor       | "Towel sales up {percent}% on {planet} ahead of Galactic Hitchhiker's Day" |
 
 ## Data model
 
 ```ts
 type TickerCategory =
-  | "headline"          // real game event
-  | "leader"            // ranking commentary
-  | "stock"             // market mover line
-  | "politics" | "corporate" | "market_mover" | "crime" | "science"
-  | "sports" | "celebrity" | "cosmic_weather" | "local" | "health"
-  | "religion" | "blotter" | "food" | "realestate" | "travel"
-  | "fashion" | "academia" | "xenobiology" | "obituary" | "homage";
+  | "headline" // real game event
+  | "leader" // ranking commentary
+  | "stock" // market mover line
+  | "politics"
+  | "corporate"
+  | "market_mover"
+  | "crime"
+  | "science"
+  | "sports"
+  | "celebrity"
+  | "cosmic_weather"
+  | "local"
+  | "health"
+  | "religion"
+  | "blotter"
+  | "food"
+  | "realestate"
+  | "travel"
+  | "fashion"
+  | "academia"
+  | "xenobiology"
+  | "obituary"
+  | "homage";
 
 interface TickerItem {
   category: TickerCategory;
-  text: string;          // already-substituted, ready to render
-  priority: number;      // higher = pinned higher in panel
-  color?: number;        // optional override (stock up green, down red)
+  text: string; // already-substituted, ready to render
+  priority: number; // higher = pinned higher in panel
+  color?: number; // optional override (stock up green, down red)
 }
 
 interface FlavorTemplate {
   category: TickerCategory;
-  template: string;      // contains {empire} {company} {ceo} {planet} {percent} ...
-  weight?: number;       // default 1
+  template: string; // contains {empire} {company} {ceo} {planet} {percent} ...
+  weight?: number; // default 1
 }
 ```
 
@@ -72,23 +88,23 @@ interface FlavorTemplate {
 
 Extends the existing Storyteller `{empire}/{rival}/{port}` set:
 
-| Token | Source |
-|---|---|
-| `{empire}`, `{empire2}` | random distinct empires |
-| `{company}` | random AI company name |
-| `{ceo}`, `{ceo2}` | random distinct CEO names |
-| `{planet}`, `{planet2}` | random distinct planet names |
-| `{port}` | alias for `{planet}` (matches Storyteller convention) |
-| `{system}` | random star system |
-| `{sector}` | random sector |
-| `{stock}` | 4-letter stock symbol |
-| `{percent}` | small/medium/large numeric % (sign chosen by template) |
-| `{credits}` | "1.2M cr" / "340K cr" style amount |
-| `{tonnage}` | "240 tonnes" / "1,800 tonnes" |
-| `{n}` | small int 2..9 |
-| `{n2}` | small int 10..99 |
-| `{adj}` | curated sci-fi adjective ("rogue", "deuterium-soaked", "mostly-harmless") |
-| `{commodity}` | curated cargo / luxury good |
+| Token                   | Source                                                                    |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `{empire}`, `{empire2}` | random distinct empires                                                   |
+| `{company}`             | random AI company name                                                    |
+| `{ceo}`, `{ceo2}`       | random distinct CEO names                                                 |
+| `{planet}`, `{planet2}` | random distinct planet names                                              |
+| `{port}`                | alias for `{planet}` (matches Storyteller convention)                     |
+| `{system}`              | random star system                                                        |
+| `{sector}`              | random sector                                                             |
+| `{stock}`               | 4-letter stock symbol                                                     |
+| `{percent}`             | small/medium/large numeric % (sign chosen by template)                    |
+| `{credits}`             | "1.2M cr" / "340K cr" style amount                                        |
+| `{tonnage}`             | "240 tonnes" / "1,800 tonnes"                                             |
+| `{n}`                   | small int 2..9                                                            |
+| `{n2}`                  | small int 10..99                                                          |
+| `{adj}`                 | curated sci-fi adjective ("rogue", "deuterium-soaked", "mostly-harmless") |
+| `{commodity}`           | curated cargo / luxury good                                               |
 
 `tokens.ts` runs a single regex pass with a fallback so unknown tokens render unchanged (prevents UI breakage if a template ships with a typo).
 

@@ -2,7 +2,10 @@ import type { GameState, TurnResult } from "../../data/types.ts";
 import { SeededRNG } from "../../utils/SeededRNG.ts";
 import type { TickerItem, TickerCategory } from "./types.ts";
 import { FLAVOR_CATEGORIES } from "./categories.ts";
-import { ALL_FLAVOR_TEMPLATES, getTemplatesForCategory } from "./flavorTemplates.ts";
+import {
+  ALL_FLAVOR_TEMPLATES,
+  getTemplatesForCategory,
+} from "./flavorTemplates.ts";
 import { substituteTickerTokens } from "./tokens.ts";
 import { quoteAllStocks, type StockQuote } from "./stockTicker.ts";
 
@@ -70,7 +73,8 @@ export function generateTickerFeed(
   for (let i = 0; i < leaders.length; i++) {
     const l = leaders[i];
     const rank = i + 1;
-    const lead = i === 0 ? "leads" : i === leaders.length - 1 ? "trails" : "holds";
+    const lead =
+      i === 0 ? "leads" : i === leaders.length - 1 ? "trails" : "holds";
     items.push({
       category: "leader",
       text: `#${rank} ${l.name} ${lead} the field at ${formatCash(l.cash)}${l.isPlayer ? " (you)" : ""}`,
@@ -79,7 +83,11 @@ export function generateTickerFeed(
   }
 
   // ── 3) Stock movers ───────────────────────────────────────────
-  const allQuotes: StockQuote[] = quoteAllStocks(state, state.seed, turnResult.turn);
+  const allQuotes: StockQuote[] = quoteAllStocks(
+    state,
+    state.seed,
+    turnResult.turn,
+  );
   const sortedByMove = allQuotes
     .slice()
     .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct));

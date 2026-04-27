@@ -62,7 +62,8 @@ describe("tickerFeed", () => {
         it.category === "headline" ||
         it.category === "leader" ||
         it.category === "stock"
-      ) continue;
+      )
+        continue;
       counts.set(it.category, (counts.get(it.category) ?? 0) + 1);
     }
     for (const c of counts.values()) {
