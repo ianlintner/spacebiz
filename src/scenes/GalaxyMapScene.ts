@@ -1,21 +1,19 @@
 import * as Phaser from "phaser";
+import * as THREE from "three";
 import { gameStore } from "../data/GameStore.ts";
 import {
-  createStarfield,
   getTheme,
   colorToString,
   Label,
   getLayout,
-  addPulseTween,
-  getShipIconKey,
   getShipColor,
+  getShipIconKey,
   getShipMapKey,
   getShipMapAnimKey,
 } from "../ui/index.ts";
-import { drawEmpireBorders } from "../ui/EmpireBorders.ts";
 import {
-  generateEmpireFlags,
   getEmpireFlagKey,
+  generateEmpireFlags,
   FLAG_WIDTH,
   FLAG_HEIGHT,
 } from "../ui/EmpireFlagGenerator.ts";
@@ -24,7 +22,6 @@ import { isEmpireAccessible } from "../game/empire/EmpireAccessManager.ts";
 import {
   buildGalaxyRouteTrafficVisuals,
   buildGalaxyRouteTrafficStateKey,
-  buildTrafficPatrolWaypoints,
   getAvailableRouteSlots,
   getUsedRouteSlots,
   getAvailableLocalRouteSlots,
@@ -33,47 +30,51 @@ import {
   getUsedGalacticRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import type { RouteTrafficVisual } from "../game/routes/RouteManager.ts";
+import { GalaxyView3D } from "./galaxy3d/GalaxyView3D.ts";
 
 import type { GameHUDScene } from "./GameHUDScene.ts";
-import type { Empire, GameState, Ship } from "../data/types.ts";
+import type { Empire, GameState, Ship, StarSystem } from "../data/types.ts";
 
-// ── Camera zoom / pan constants ─────────────────────────────────────────────
+interface SystemMarker {
+  system: StarSystem;
+  hitbox: Phaser.GameObjects.Zone;
+  nameText: Phaser.GameObjects.Text;
+  flag: Phaser.GameObjects.Image | null;
+  lockIcon: Phaser.GameObjects.Text | null;
+  accessible: boolean;
+}
 
-const MIN_ZOOM = 0.35;
-const MAX_ZOOM = 1.6;
-const ZOOM_STEP = 0.08;
-const DEFAULT_ZOOM = 0.55;
-const DRAG_THRESHOLD = 5; // px before a click becomes a drag
-
-type Waypoint = { x: number; y: number };
-type Movable = {
-  x: number;
-  y: number;
-  active: boolean;
-  setRotation: (r: number) => unknown;
-};
-
-type TrafficDisplayObject =
-  | Phaser.GameObjects.Sprite
-  | Phaser.GameObjects.Image
-  | Phaser.GameObjects.Arc;
-
-type TrafficLayerHandle = {
-  routeGraphics: Phaser.GameObjects.Graphics;
-  sprites: TrafficDisplayObject[];
-  timers: Phaser.Time.TimerEvent[];
-};
+interface TrafficShip {
+  routeId: string;
+  ship: Ship;
+  sprite:
+    | Phaser.GameObjects.Sprite
+    | Phaser.GameObjects.Image
+    | Phaser.GameObjects.Arc;
+  t: number;
+  speed: number;
+  dir: 1 | -1;
+}
 
 export class GalaxyMapScene extends Phaser.Scene {
-  private isDragging = false;
-  private dragStartX = 0;
-  private dragStartY = 0;
-  private camStartX = 0;
-  private camStartY = 0;
-  private routeTrafficLayer: TrafficLayerHandle | null = null;
+  private view3D: GalaxyView3D | null = null;
+  private vizRect = { x: 0, y: 0, w: 0, h: 0 };
+  private systemMarkers: SystemMarker[] = [];
+  private trafficShips: TrafficShip[] = [];
+  private empireInfoCard: Phaser.GameObjects.Container | null = null;
   private routeTrafficStateKey: string | null = null;
-  /** Camera ID of the fixed HUD camera (zoom=1). Objects with this as cameraFilter skip it. */
-  private hudCamId = 0;
+
+  // Last state slices used to drive the 3D scene. Reference-compared so we
+  // only rebuild Three.js geometry when the visual contents of the galaxy
+  // actually change — not on every cash or tech tick.
+  private lastSystemsRef: GameState["galaxy"]["systems"] | null = null;
+  private lastEmpiresRef: GameState["galaxy"]["empires"] | null = null;
+  private lastHyperlanesRef: GameState["hyperlanes"] | null = null;
+  private lastBorderPortsRef: GameState["borderPorts"] | null = null;
+
+  // Reused per-frame scratch (no GC churn in update loop).
+  private readonly tmpWorld = new THREE.Vector3();
+  private readonly tmpWorldNext = new THREE.Vector3();
 
   constructor() {
     super({ key: "GalaxyMapScene" });
@@ -83,584 +84,148 @@ export class GalaxyMapScene extends Phaser.Scene {
     const L = getLayout();
     const theme = getTheme();
     const state = gameStore.getState();
-    const { systems, planets, empires } = state.galaxy;
-    // ── World extents (from galaxy data) ──
-    let wMinX = Infinity;
-    let wMaxX = -Infinity;
-    let wMinY = Infinity;
-    let wMaxY = -Infinity;
-    for (const sys of systems) {
-      if (sys.x < wMinX) wMinX = sys.x;
-      if (sys.x > wMaxX) wMaxX = sys.x;
-      if (sys.y < wMinY) wMinY = sys.y;
-      if (sys.y > wMaxY) wMaxY = sys.y;
-    }
+    const { systems, empires } = state.galaxy;
 
-    const galCx = (wMinX + wMaxX) / 2;
-    const galCy = (wMinY + wMaxY) / 2 + L.contentTop;
-
-    // Create the fixed HUD camera early so hudCamId is set for all dynamic object creation
-    const uiCam = this.cameras.add(
-      0,
-      0,
-      L.gameWidth,
-      L.gameHeight,
-      false,
-      "hud-cam",
-    );
-    uiCam.setZoom(1);
-    this.hudCamId = uiCam.id;
-
-    createStarfield(this, {
-      depth: -320,
-      drift: true,
-      twinkle: true,
-      shimmer: true,
-      haze: true,
-      minZoom: MIN_ZOOM,
-      overscan: 180,
-      edgeFeather: 0.15,
-      worldBounds: {
-        minX: wMinX,
-        maxX: wMaxX,
-        minY: wMinY + L.contentTop,
-        maxY: wMaxY + L.contentTop,
-      },
-      centerX: galCx,
-      centerY: galCy,
-    });
-
-    const addHudBackdrop = (
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-      originX: number,
-      originY: number,
-    ): Phaser.GameObjects.Rectangle =>
-      this.add
-        .rectangle(x, y, width, height, theme.colors.background, 0.46)
-        .setStrokeStyle(1, theme.colors.panelBorder, 0.22)
-        .setOrigin(originX, originY)
-        .setScrollFactor(0)
-        .setDepth(900);
-
-    // ── Empire territory borders (Stellaris-inspired) ──
-    drawEmpireBorders(this, systems, empires, {
-      yOffset: L.contentTop,
-      influence: 130,
-      gridStep: 8,
-    });
-
-    // ── Empire flags at home systems ──
+    // Pre-generate empire flag textures so we can use them in 2D overlays.
     generateEmpireFlags(this, empires, state.seed);
-    const systemById = new Map(systems.map((s) => [s.id, s]));
-    for (const empire of empires) {
-      const homeSys = systemById.get(empire.homeSystemId);
-      if (!homeSys) continue;
-      const flagKey = getEmpireFlagKey(empire.id);
-      if (!this.textures.exists(flagKey)) continue;
-      const flagX = homeSys.x - FLAG_WIDTH / 2;
-      const flagY = homeSys.y + L.contentTop - 20;
-      const flag = this.add
-        .image(flagX, flagY, flagKey)
-        .setOrigin(0, 1)
-        .setAlpha(0.85);
-      flag.setDisplaySize(FLAG_WIDTH, FLAG_HEIGHT);
-    }
 
-    // ── Build empire accessibility lookup ──
-    const empireAccessible = new Map<string, boolean>();
-    for (const emp of empires) {
-      empireAccessible.set(emp.id, isEmpireAccessible(emp.id, state));
-    }
-    const empireMap = new Map(empires.map((e) => [e.id, e]));
+    // Carve a 3D viewport out of the main content area, leaving strips at
+    // top (HUD: title, slot count) and bottom (legend) for 2D Phaser chrome.
+    this.vizRect = {
+      x: L.mainContentLeft + 4,
+      y: L.contentTop + 60,
+      w: L.mainContentWidth - 8,
+      h: L.contentHeight - 70,
+    };
 
-    // ── Build lookups ──
-    const planetSystemMap = new Map<string, string>();
-    for (const planet of planets) {
-      planetSystemMap.set(planet.id, planet.systemId);
-    }
-    const systemMap = new Map<string, { x: number; y: number }>();
-    for (const sys of systems) {
-      systemMap.set(sys.id, { x: sys.x, y: sys.y });
-    }
+    const phaserCanvas = this.game.canvas;
+    this.view3D = new GalaxyView3D({
+      phaserCanvas,
+      designWidth: L.gameWidth,
+      designHeight: L.gameHeight,
+    });
+    this.view3D.setViewport(this.vizRect);
+    this.view3D.setGalaxy(
+      systems,
+      state.hyperlanes ?? [],
+      state.borderPorts ?? [],
+      empires,
+    );
+    const initialVisuals = buildGalaxyRouteTrafficVisuals(state);
+    this.view3D.setRoutes(initialVisuals);
+    this.routeTrafficStateKey = buildGalaxyRouteTrafficStateKey(state);
 
-    // ── Hyperlane network ──
-    const hyperlanes = state.hyperlanes ?? [];
-    const borderPorts = state.borderPorts ?? [];
-    if (hyperlanes.length > 0) {
-      const hlGraphics = this.add.graphics();
+    this.lastSystemsRef = systems;
+    this.lastEmpiresRef = empires;
+    this.lastHyperlanesRef = state.hyperlanes ?? null;
+    this.lastBorderPortsRef = state.borderPorts ?? null;
 
-      // Border port lookup: hyperlane → status
-      const portStatusMap = new Map<string, string>();
-      for (const bp of borderPorts) {
-        // If any port on a hyperlane is closed, mark the lane as closed
-        const existing = portStatusMap.get(bp.hyperlaneId);
-        if (bp.status === "closed" || existing === "closed") {
-          portStatusMap.set(bp.hyperlaneId, "closed");
-        } else if (bp.status === "restricted" && existing !== "closed") {
-          portStatusMap.set(bp.hyperlaneId, "restricted");
-        } else if (!existing) {
-          portStatusMap.set(bp.hyperlaneId, bp.status);
-        }
-      }
+    this.buildSystemMarkers(state);
+    this.rebuildTrafficShips(state, initialVisuals);
+    this.installCameraInput();
+    this.installInfoCardDismiss();
 
-      for (const hl of hyperlanes) {
-        const sysA = systemMap.get(hl.systemA);
-        const sysB = systemMap.get(hl.systemB);
-        if (!sysA || !sysB) continue;
+    // ── HUD overlay (top-of-content strip) ─────────────────────────────────
+    this.buildHud(state, theme, L);
 
-        const portStatus = portStatusMap.get(hl.id);
-
-        // Color lanes by status: closed=red dim, restricted=yellow dim, open=cyan dim
-        if (portStatus === "closed") {
-          hlGraphics.lineStyle(1, 0xff4444, 0.15);
-        } else if (portStatus === "restricted") {
-          hlGraphics.lineStyle(1, 0xffaa00, 0.2);
-        } else {
-          hlGraphics.lineStyle(1, theme.colors.accent, 0.18);
-        }
-
-        hlGraphics.beginPath();
-        hlGraphics.moveTo(sysA.x, sysA.y + L.contentTop);
-        hlGraphics.lineTo(sysB.x, sysB.y + L.contentTop);
-        hlGraphics.strokePath();
-      }
-
-      // Draw border port markers (small diamonds at border crossings)
-      const drawnPorts = new Set<string>();
-      for (const bp of borderPorts) {
-        if (drawnPorts.has(bp.hyperlaneId)) continue;
-        drawnPorts.add(bp.hyperlaneId);
-
-        const hl = hyperlanes.find((h) => h.id === bp.hyperlaneId);
-        if (!hl) continue;
-        const sysA = systemMap.get(hl.systemA);
-        const sysB = systemMap.get(hl.systemB);
-        if (!sysA || !sysB) continue;
-
-        // Draw small marker at midpoint
-        const mx = (sysA.x + sysB.x) / 2;
-        const my = (sysA.y + sysB.y) / 2 + L.contentTop;
-
-        const markerColor =
-          bp.status === "closed"
-            ? 0xff4444
-            : bp.status === "restricted"
-              ? 0xffaa00
-              : 0x44ff88;
-
-        hlGraphics.fillStyle(markerColor, 0.6);
-        hlGraphics.fillCircle(mx, my, 2);
-      }
-    }
-
-    // ── Hyperlane-following ship movement helper ─────────────────────────────
-    // Animates a sprite through a sequence of waypoints at a fixed cruising
-    // speed (pixels/second). Each segment uses a linear tween and chains into
-    // the next on completion, so ships follow the hyperlane network exactly.
-    const tweenAlongPath = (
-      sprite: Movable,
-      waypoints: Waypoint[],
-      speedPxPerSec: number,
-      onComplete: () => void,
+    // ── State subscription ─────────────────────────────────────────────────
+    const handleStateChanged = (
+      nextStateUnknown: unknown,
+      changedKeysUnknown: unknown,
     ): void => {
-      if (!sprite.active || waypoints.length < 2) {
-        onComplete();
-        return;
-      }
-      let idx = 0;
-      const step = () => {
-        if (!sprite.active) return;
-        if (idx >= waypoints.length - 1) {
-          onComplete();
-          return;
-        }
-        const from = waypoints[idx];
-        const to = waypoints[idx + 1];
-        const a = Math.atan2(to.y - from.y, to.x - from.x);
-        sprite.setRotation(a);
-        const dist = Math.hypot(to.x - from.x, to.y - from.y);
-        const dur = Math.max(500, (dist / speedPxPerSec) * 1000);
-        this.tweens.add({
-          targets: sprite,
-          x: to.x,
-          y: to.y,
-          duration: dur,
-          ease: "Linear",
-          onComplete: () => {
-            idx++;
-            step();
-          },
-        });
-      };
-      step();
-    };
+      const nextState = nextStateUnknown as GameState;
+      const changedKeys = changedKeysUnknown as
+        | Set<keyof GameState>
+        | undefined;
+      if (!this.view3D) return;
 
-    /** Convert a list of system IDs into world-space waypoints. */
-    const systemsToWaypoints = (systemIds: string[]): Waypoint[] => {
-      const wps: Waypoint[] = [];
-      for (const sid of systemIds) {
-        const s = systemMap.get(sid);
-        if (s) wps.push({ x: s.x, y: s.y + L.contentTop });
-      }
-      return wps;
-    };
+      const galaxyMaybeChanged = !changedKeys || changedKeys.has("galaxy");
+      const hyperlanesMaybeChanged =
+        !changedKeys || changedKeys.has("hyperlanes");
+      const portsMaybeChanged = !changedKeys || changedKeys.has("borderPorts");
+      const routesMaybeChanged =
+        !changedKeys ||
+        changedKeys.has("activeRoutes") ||
+        changedKeys.has("aiCompanies") ||
+        changedKeys.has("fleet");
 
-    const createTrafficSprite = (
-      ship: Ship,
-      startWp: Waypoint,
-      unitIndex: number,
-      visibleUnits: number,
-    ): TrafficDisplayObject => {
-      const shipIconKey = getShipIconKey(ship.class);
-      const shipTint = getShipColor(ship.class);
-      const mapSprKey = getShipMapKey(ship.class);
-      const mapAnimKey = getShipMapAnimKey(ship.class);
+      const systemsChanged =
+        nextState.galaxy.systems !== this.lastSystemsRef ||
+        nextState.galaxy.empires !== this.lastEmpiresRef;
+      const hyperlanesChanged =
+        (nextState.hyperlanes ?? null) !== this.lastHyperlanesRef ||
+        (nextState.borderPorts ?? null) !== this.lastBorderPortsRef;
 
-      if (mapSprKey && mapAnimKey && this.textures.exists(mapSprKey)) {
-        const shipSprite = this.add
-          .sprite(startWp.x, startWp.y, mapSprKey, "1")
-          .setDisplaySize(28, 28)
-          .setTint(shipTint)
-          .setAlpha(Math.max(0.72, 0.92 - unitIndex * 0.04))
-          .setDepth(5 + unitIndex * 0.01);
-        shipSprite.play(mapAnimKey);
-        return shipSprite;
-      }
-
-      if (shipIconKey && this.textures.exists(shipIconKey)) {
-        const size = 16 + Math.max(0, 3 - visibleUnits);
-        return this.add
-          .image(startWp.x, startWp.y, shipIconKey)
-          .setDisplaySize(size, size)
-          .setTint(shipTint)
-          .setAlpha(Math.max(0.7, 0.88 - unitIndex * 0.05))
-          .setDepth(5 + unitIndex * 0.01);
-      }
-
-      return this.add
-        .circle(startWp.x, startWp.y, 2, shipTint, 0.75)
-        .setDepth(5 + unitIndex * 0.01);
-    };
-
-    // Map AI company ID → empire hex color for route line tinting
-    const aiCompanyRouteColor = new Map<string, number>();
-    for (const company of state.aiCompanies) {
-      const empire = empireMap.get(company.empireId);
-      if (empire) aiCompanyRouteColor.set(company.id, empire.color);
-    }
-
-    const createRouteTrafficLayer = (
-      trafficVisuals: RouteTrafficVisual[],
-    ): TrafficLayerHandle => {
-      const routeGraphics = this.add.graphics().setDepth(3);
-      routeGraphics.cameraFilter = this.hudCamId;
-      const sprites: TrafficDisplayObject[] = [];
-      const timers: Phaser.Time.TimerEvent[] = [];
-
-      const schedule = (delay: number, callback: () => void): void => {
-        timers.push(this.time.delayedCall(delay, callback));
-      };
-
-      const makePatrol = (
-        sprite: TrafficDisplayObject,
-        forwardWaypoints: Waypoint[],
-        reverseWaypoints: Waypoint[],
-        initialForward: boolean,
-        initialDelay: number,
-      ): void => {
-        const movable = sprite as unknown as Movable;
-        const patrol = (forward: boolean): void => {
-          if (!sprite.active) return;
-          const wps = forward ? forwardWaypoints : reverseWaypoints;
-          sprite.setPosition(wps[0].x, wps[0].y);
-          tweenAlongPath(movable, wps, 90, () => {
-            if (!sprite.active) return;
-            schedule(900, () => patrol(!forward));
-          });
-        };
-
-        schedule(initialDelay, () => patrol(initialForward));
-      };
-
-      for (const visual of trafficVisuals) {
-        const forwardWaypoints = buildTrafficPatrolWaypoints(
-          visual.routeId,
-          systemsToWaypoints(visual.pathSystemIds),
+      if (galaxyMaybeChanged && systemsChanged) {
+        this.view3D.setGalaxy(
+          nextState.galaxy.systems,
+          nextState.hyperlanes ?? [],
+          nextState.borderPorts ?? [],
+          nextState.galaxy.empires,
         );
-        const reverseWaypoints = [...forwardWaypoints].reverse();
-        if (forwardWaypoints.length < 2) continue;
-
-        const isPlayer = visual.ownerId === "player";
-        const lineColor = isPlayer
-          ? theme.colors.accent
-          : (aiCompanyRouteColor.get(visual.ownerId) ?? 0x8899aa);
-        const lineAlpha = isPlayer ? 0.55 : 0.32;
-        const lineWidth = isPlayer ? 1.5 : 1;
-        routeGraphics.lineStyle(lineWidth, lineColor, lineAlpha);
-        routeGraphics.beginPath();
-        routeGraphics.moveTo(forwardWaypoints[0].x, forwardWaypoints[0].y);
-        for (let i = 1; i < forwardWaypoints.length; i++) {
-          routeGraphics.lineTo(forwardWaypoints[i].x, forwardWaypoints[i].y);
-        }
-        routeGraphics.strokePath();
-
-        const startWp = forwardWaypoints[0];
-        for (let unitIndex = 0; unitIndex < visual.visibleUnits; unitIndex++) {
-          const ship =
-            visual.assignedShips[unitIndex % visual.assignedShips.length];
-          const sprite = createTrafficSprite(
-            ship,
-            startWp,
-            unitIndex,
-            visual.visibleUnits,
-          );
-          sprite.cameraFilter = this.hudCamId;
-          sprites.push(sprite);
-
-          const phaseDelay = Math.floor(
-            (unitIndex / visual.visibleUnits) * 2200,
-          );
-          makePatrol(
-            sprite,
-            forwardWaypoints,
-            reverseWaypoints,
-            unitIndex % 2 === 0,
-            phaseDelay,
-          );
-        }
-      }
-
-      this.tweens.add({
-        targets: routeGraphics,
-        alpha: {
-          from: theme.ambient.routePulseAlphaMin,
-          to: theme.ambient.routePulseAlphaMax,
-        },
-        duration: theme.ambient.routePulseDuration,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-
-      return { routeGraphics, sprites, timers };
-    };
-
-    const destroyRouteTrafficLayer = (): void => {
-      if (!this.routeTrafficLayer) return;
-
-      for (const timer of this.routeTrafficLayer.timers) {
-        timer.remove(false);
-      }
-      this.tweens.killTweensOf(this.routeTrafficLayer.routeGraphics);
-      this.routeTrafficLayer.routeGraphics.destroy();
-
-      for (const sprite of this.routeTrafficLayer.sprites) {
-        this.tweens.killTweensOf(sprite);
-        sprite.destroy();
-      }
-
-      this.routeTrafficLayer = null;
-      this.routeTrafficStateKey = null;
-    };
-
-    const refreshRouteTrafficLayer = (currentState: GameState): void => {
-      const nextTrafficStateKey = buildGalaxyRouteTrafficStateKey(currentState);
-
-      if (
-        this.routeTrafficLayer &&
-        this.routeTrafficStateKey === nextTrafficStateKey
+        this.lastSystemsRef = nextState.galaxy.systems;
+        this.lastEmpiresRef = nextState.galaxy.empires;
+        this.lastHyperlanesRef = nextState.hyperlanes ?? null;
+        this.lastBorderPortsRef = nextState.borderPorts ?? null;
+        this.rebuildSystemMarkers(nextState);
+      } else if (
+        (galaxyMaybeChanged || hyperlanesMaybeChanged || portsMaybeChanged) &&
+        hyperlanesChanged
       ) {
-        return;
+        this.view3D.setGalaxy(
+          nextState.galaxy.systems,
+          nextState.hyperlanes ?? [],
+          nextState.borderPorts ?? [],
+          nextState.galaxy.empires,
+        );
+        this.lastHyperlanesRef = nextState.hyperlanes ?? null;
+        this.lastBorderPortsRef = nextState.borderPorts ?? null;
       }
 
-      destroyRouteTrafficLayer();
-      const trafficVisuals = buildGalaxyRouteTrafficVisuals(currentState);
-      this.routeTrafficLayer = createRouteTrafficLayer(trafficVisuals);
-      this.routeTrafficStateKey = nextTrafficStateKey;
-    };
-
-    refreshRouteTrafficLayer(state);
-
-    const handleStateChanged = (nextState: unknown): void => {
-      refreshRouteTrafficLayer(nextState as GameState);
+      if (routesMaybeChanged) {
+        const nextKey = buildGalaxyRouteTrafficStateKey(nextState);
+        if (nextKey !== this.routeTrafficStateKey) {
+          const visuals = buildGalaxyRouteTrafficVisuals(nextState);
+          this.view3D.setRoutes(visuals);
+          this.rebuildTrafficShips(nextState, visuals);
+          this.routeTrafficStateKey = nextKey;
+        }
+      }
     };
     gameStore.on("stateChanged", handleStateChanged);
-    this.events.once("shutdown", () => {
+
+    const cleanup = (): void => {
       gameStore.off("stateChanged", handleStateChanged);
-      destroyRouteTrafficLayer();
-    });
-    this.events.once("destroy", () => {
-      gameStore.off("stateChanged", handleStateChanged);
-      destroyRouteTrafficLayer();
-    });
-
-    // ── Star systems ──
-    const planetCountsBySystem = new Map<string, number>();
-    for (const p of planets) {
-      planetCountsBySystem.set(
-        p.systemId,
-        (planetCountsBySystem.get(p.systemId) ?? 0) + 1,
-      );
-    }
-
-    // Empire info card container (destroyed & rebuilt per click)
-    let empireInfoCard: Phaser.GameObjects.Container | null = null;
-
-    const destroyInfoCard = () => {
-      if (empireInfoCard) {
-        empireInfoCard.destroy(true);
-        empireInfoCard = null;
+      for (const t of this.trafficShips) {
+        t.sprite.destroy();
       }
+      this.trafficShips = [];
+      for (const m of this.systemMarkers) {
+        m.hitbox.destroy();
+        m.nameText.destroy();
+        m.flag?.destroy();
+        m.lockIcon?.destroy();
+      }
+      this.systemMarkers = [];
+      this.destroyInfoCard();
+      this.view3D?.destroy();
+      this.view3D = null;
     };
+    this.events.once("shutdown", cleanup);
+    this.events.once("destroy", cleanup);
+  }
 
-    for (const system of systems) {
-      const sysX = system.x;
-      const sysY = system.y + L.contentTop;
-      const planetCount = planetCountsBySystem.get(system.id) ?? 0;
-      const accessible = empireAccessible.get(system.empireId) ?? false;
+  override update(_time: number, delta: number): void {
+    if (!this.view3D) return;
+    this.updateSystemMarkers();
+    this.updateTrafficShips(delta);
+  }
 
-      // Stars with more planets are slightly larger (3-7px radius)
-      const mainRadius = 3 + Math.min(4, planetCount);
-
-      if (!accessible) {
-        // Locked empire — dim dot, no glow
-        const dimStar = this.add
-          .circle(sysX, sysY, Math.max(2, mainRadius * 0.5), system.starColor)
-          .setAlpha(0.25);
-
-        this.add
-          .text(sysX, sysY + 8, system.name, {
-            fontSize: `${theme.fonts.caption.size}px`,
-            fontFamily: theme.fonts.caption.family,
-            color: colorToString(theme.colors.textDim),
-            stroke: "#000000",
-            strokeThickness: 2,
-          })
-          .setOrigin(0.5, 0)
-          .setAlpha(0.3);
-
-        // Lock icon
-        this.add
-          .text(sysX + mainRadius + 4, sysY - 6, "\uD83D\uDD12", {
-            fontSize: "10px",
-          })
-          .setOrigin(0, 0.5)
-          .setAlpha(0.4);
-
-        dimStar.setInteractive(
-          new Phaser.Geom.Circle(
-            mainRadius,
-            mainRadius,
-            Math.max(mainRadius + 10, 16),
-          ),
-          Phaser.Geom.Circle.Contains,
-        );
-        if (dimStar.input) {
-          dimStar.input.cursor = "pointer";
-        }
-        dimStar.on("pointerup", () => {
-          getAudioDirector().sfx("map_star_select");
-          const emp = empireMap.get(system.empireId);
-          const empName = emp?.name ?? "Unknown";
-          destroyInfoCard();
-          empireInfoCard = this.createEmpireInfoCard(
-            sysX,
-            sysY,
-            empName,
-            emp,
-            state,
-            false,
-          );
-        });
-        continue;
-      }
-
-      // Outer soft halo — large and dim for atmosphere
-      const outerHalo = this.add
-        .circle(sysX, sysY, mainRadius * 4, system.starColor)
-        .setAlpha(0.06);
-      addPulseTween(this, outerHalo, {
-        minAlpha: 0.03,
-        maxAlpha: 0.1,
-        duration: 4000 + Math.random() * 3000,
-        delay: Math.random() * 3000,
-      });
-
-      // Inner glow halo
-      const halo = this.add
-        .circle(sysX, sysY, mainRadius * 2.2, system.starColor)
-        .setAlpha(0.2);
-      addPulseTween(this, halo, {
-        minAlpha: 0.1,
-        maxAlpha: 0.35,
-        duration: 2500 + Math.random() * 2000,
-        delay: Math.random() * 2000,
-      });
-
-      const star = this.add.circle(sysX, sysY, mainRadius, system.starColor);
-      star.setInteractive(
-        new Phaser.Geom.Circle(
-          mainRadius,
-          mainRadius,
-          Math.max(mainRadius + 10, 16),
-        ),
-        Phaser.Geom.Circle.Contains,
-      );
-      if (star.input) {
-        star.input.cursor = "pointer";
-      }
-
-      this.add
-        .text(sysX, sysY + 12, system.name, {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.text),
-          stroke: "#000000",
-          strokeThickness: 2,
-        })
-        .setOrigin(0.5, 0);
-
-      star.on("pointerup", () => {
-        getAudioDirector().sfx("map_star_select");
-        const hud = this.scene.get("GameHUDScene") as GameHUDScene;
-        hud.switchContentScene("SystemMapScene", { systemId: system.id });
-      });
-
-      star.on("pointerover", () => {
-        star.setRadius(mainRadius + 3);
-        halo.setAlpha(0.34);
-      });
-      star.on("pointerout", () => {
-        star.setRadius(mainRadius);
-        halo.setAlpha(0.18);
-      });
-    }
-
-    // Click on empty space dismisses empire info card
-    this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
-      if (this.isDragging) return;
-      // Check if we clicked on a game object — if not, dismiss
-      const overObjects = this.input.hitTestPointer(pointer);
-      if (overObjects.length === 0) {
-        destroyInfoCard();
-      }
-    });
-
-    // ── Camera setup: zoom + pan ──
-    const cam = this.cameras.main;
-    // Don't use setBounds — at low zoom the viewport exceeds world size
-    // and Phaser locks the camera. We handle clamping manually in pan.
-    cam.setZoom(DEFAULT_ZOOM);
-
-    // Center camera on galaxy centroid (already computed for parallax above)
-    cam.centerOn(galCx, galCy);
-
-    // ── HUD overlay elements (rendered by fixed uiCam only, immune to zoom) ──
-    const hudObjects: Phaser.GameObjects.GameObject[] = [];
-
+  private buildHud(
+    state: GameState,
+    theme: ReturnType<typeof getTheme>,
+    L: ReturnType<typeof getLayout>,
+  ): void {
     const sysUsed = getUsedLocalRouteSlots(state);
     const sysTot = getAvailableLocalRouteSlots(state);
     const empUsed = getUsedRouteSlots(state);
@@ -670,131 +235,388 @@ export class GalaxyMapScene extends Phaser.Scene {
     const slotsUsed = sysUsed + empUsed + galUsed;
     const slotsTotal = sysTot + empTot + galTot;
 
-    // Offset HUD labels further below the top bar so they clear the
-    // company name / cash readout (which can extend slightly past the
-    // nominal hudTopBarHeight via portrait ring + padding).
     const hudLabelTop = L.contentTop + 18;
-    hudObjects.push(addHudBackdrop(12, hudLabelTop - 4, 156, 46, 0, 0));
-    hudObjects.push(
-      addHudBackdrop(L.gameWidth - 16, hudLabelTop - 4, 250, 58, 1, 0),
-    );
-
-    hudObjects.push(
-      new Label(this, {
-        x: 20,
-        y: hudLabelTop,
-        text: "Galaxy Map",
-        style: "caption",
-        color: theme.colors.textDim,
-      })
-        .setScrollFactor(0)
-        .setDepth(901),
-    );
-    hudObjects.push(
-      new Label(this, {
-        x: 20,
-        y: hudLabelTop + 18,
-        text: `Sys ${sysUsed}/${sysTot} · Emp ${empUsed}/${empTot} · Gal ${galUsed}/${galTot}`,
-        style: "caption",
-        color:
-          slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
-      })
-        .setScrollFactor(0)
-        .setDepth(901),
-    );
-    // Right-anchored legend. fixedWidth + align:right guarantees the
-    // text occupies a known block that the right-edge origin (1,0)
-    // anchors flush with the viewport edge, so narrower canvases can't
-    // clip the trailing characters ("p[an]", "syst[em]", "rout[es]").
-    hudObjects.push(
+    const addBackdrop = (
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      ox: number,
+      oy: number,
+    ): Phaser.GameObjects.Rectangle =>
       this.add
-        .text(
-          L.gameWidth - 20,
-          hudLabelTop,
-          "Scroll to zoom \u00b7 Drag to pan\nStar size = planets in system\nLines = active trade routes",
-          {
-            fontSize: `${theme.fonts.caption.size}px`,
-            fontFamily: theme.fonts.caption.family,
-            color: colorToString(theme.colors.textDim),
-            align: "right",
-            fixedWidth: 240,
-            stroke: "#000000",
-            strokeThickness: 2,
-          },
-        )
-        .setOrigin(1, 0)
-        .setAlpha(0.85)
-        .setScrollFactor(0)
-        .setDepth(901),
+        .rectangle(x, y, w, h, theme.colors.background, 0.46)
+        .setStrokeStyle(1, theme.colors.panelBorder, 0.22)
+        .setOrigin(ox, oy)
+        .setDepth(900);
+
+    addBackdrop(L.mainContentLeft + 8, hudLabelTop - 4, 156, 46, 0, 0);
+    addBackdrop(
+      L.mainContentLeft + L.mainContentWidth - 8,
+      hudLabelTop - 4,
+      280,
+      58,
+      1,
+      0,
     );
 
-    // Apply dual-camera filters: world objects → main cam only, HUD → uiCam only
-    const hudSet = new Set(hudObjects);
-    for (const child of this.children.list) {
-      child.cameraFilter = hudSet.has(child as Phaser.GameObjects.GameObject)
-        ? cam.id
-        : this.hudCamId;
+    new Label(this, {
+      x: L.mainContentLeft + 16,
+      y: hudLabelTop,
+      text: "Galaxy Map",
+      style: "caption",
+      color: theme.colors.textDim,
+    }).setDepth(901);
+    new Label(this, {
+      x: L.mainContentLeft + 16,
+      y: hudLabelTop + 18,
+      text: `Sys ${sysUsed}/${sysTot} · Emp ${empUsed}/${empTot} · Gal ${galUsed}/${galTot}`,
+      style: "caption",
+      color: slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
+    }).setDepth(901);
+
+    this.add
+      .text(
+        L.mainContentLeft + L.mainContentWidth - 16,
+        hudLabelTop,
+        "Scroll to zoom · Drag to pan\nClick a star to view its system\nLines = active trade routes",
+        {
+          fontSize: `${theme.fonts.caption.size}px`,
+          fontFamily: theme.fonts.caption.family,
+          color: colorToString(theme.colors.textDim),
+          align: "right",
+          fixedWidth: 260,
+          stroke: "#000000",
+          strokeThickness: 2,
+        },
+      )
+      .setOrigin(1, 0)
+      .setAlpha(0.85)
+      .setDepth(901);
+  }
+
+  private buildSystemMarkers(state: GameState): void {
+    const theme = getTheme();
+    const { systems, empires } = state.galaxy;
+    const empireMap = new Map(empires.map((e) => [e.id, e] as const));
+    const accessibleByEmp = new Map<string, boolean>();
+    for (const emp of empires) {
+      accessibleByEmp.set(emp.id, isEmpireAccessible(emp.id, state));
     }
 
-    // Mouse-wheel zoom (Phaser emits: pointer, currentlyOver, deltaX, deltaY, deltaZ)
-    this.input.on(
-      "wheel",
-      (
-        _pointer: Phaser.Input.Pointer,
-        _over: Phaser.GameObjects.GameObject[],
-        _dx: number,
-        dy: number,
-      ) => {
-        const newZoom = Phaser.Math.Clamp(
-          cam.zoom + (dy < 0 ? ZOOM_STEP : -ZOOM_STEP),
-          MIN_ZOOM,
-          MAX_ZOOM,
-        );
-        cam.setZoom(newZoom);
-      },
-    );
+    for (const sys of systems) {
+      const accessible = accessibleByEmp.get(sys.empireId) ?? false;
+      const hitbox = this.add
+        .zone(0, 0, 36, 36)
+        .setOrigin(0.5, 0.5)
+        .setInteractive({ cursor: "pointer", useHandCursor: true });
 
-    // Click-drag pan (with threshold so clicks on stars aren't treated as drags)
-    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      this.isDragging = false;
-      this.dragStartX = pointer.x;
-      this.dragStartY = pointer.y;
-      this.camStartX = cam.scrollX;
-      this.camStartY = cam.scrollY;
-    });
+      const nameText = this.add
+        .text(0, 0, sys.name, {
+          fontSize: `${theme.fonts.caption.size}px`,
+          fontFamily: theme.fonts.caption.family,
+          color: colorToString(
+            accessible ? theme.colors.text : theme.colors.textDim,
+          ),
+          stroke: "#000000",
+          strokeThickness: 2,
+        })
+        .setOrigin(0.5, 0)
+        .setAlpha(accessible ? 1 : 0.45)
+        .setDepth(50);
 
-    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      if (!pointer.isDown) return;
-      const dx = pointer.x - this.dragStartX;
-      const dy = pointer.y - this.dragStartY;
-      if (!this.isDragging && Math.abs(dx) + Math.abs(dy) < DRAG_THRESHOLD) {
-        return;
+      let flag: Phaser.GameObjects.Image | null = null;
+      const empire = empireMap.get(sys.empireId);
+      if (empire && empire.homeSystemId === sys.id) {
+        const flagKey = getEmpireFlagKey(empire.id);
+        if (this.textures.exists(flagKey)) {
+          flag = this.add
+            .image(0, 0, flagKey)
+            .setOrigin(0.5, 1)
+            .setAlpha(0.85)
+            .setDepth(48);
+          flag.setDisplaySize(FLAG_WIDTH, FLAG_HEIGHT);
+        }
       }
-      this.isDragging = true;
-      cam.scrollX = this.camStartX - dx / cam.zoom;
-      cam.scrollY = this.camStartY - dy / cam.zoom;
-    });
 
-    this.input.on("pointerup", () => {
-      this.isDragging = false;
+      let lockIcon: Phaser.GameObjects.Text | null = null;
+      if (!accessible) {
+        lockIcon = this.add
+          .text(0, 0, "🔒", { fontSize: "12px" })
+          .setOrigin(0, 0.5)
+          .setAlpha(0.7)
+          .setDepth(50);
+      }
+
+      hitbox.on("pointerup", () => {
+        getAudioDirector().sfx("map_star_select");
+        if (accessible) {
+          const hud = this.scene.get("GameHUDScene") as GameHUDScene;
+          hud.switchContentScene("SystemMapScene", { systemId: sys.id });
+          return;
+        }
+        // Locked empire — show info card instead of navigating.
+        const proj = this.view3D?.projectToScreenDesign(
+          this.view3D.getSystemWorldPosition(sys.id) ?? { x: 0, y: 0, z: 0 },
+        );
+        const empName = empire?.name ?? "Unknown";
+        this.destroyInfoCard();
+        this.empireInfoCard = this.createEmpireInfoCard(
+          proj?.x ?? this.vizRect.x + this.vizRect.w / 2,
+          proj?.y ?? this.vizRect.y + this.vizRect.h / 2,
+          empName,
+          empire,
+          state,
+          false,
+        );
+      });
+
+      this.systemMarkers.push({
+        system: sys,
+        hitbox,
+        nameText,
+        flag,
+        lockIcon,
+        accessible,
+      });
+    }
+  }
+
+  private rebuildSystemMarkers(state: GameState): void {
+    for (const m of this.systemMarkers) {
+      m.hitbox.destroy();
+      m.nameText.destroy();
+      m.flag?.destroy();
+      m.lockIcon?.destroy();
+    }
+    this.systemMarkers = [];
+    this.buildSystemMarkers(state);
+  }
+
+  private updateSystemMarkers(): void {
+    if (!this.view3D) return;
+    for (const m of this.systemMarkers) {
+      const world = this.view3D.getSystemWorldPosition(m.system.id);
+      if (!world) {
+        m.hitbox.setVisible(false);
+        m.nameText.setVisible(false);
+        m.flag?.setVisible(false);
+        m.lockIcon?.setVisible(false);
+        continue;
+      }
+      const proj = this.view3D.projectToScreenDesign(world);
+      const visible = proj.visible;
+      m.hitbox.setVisible(visible);
+      m.nameText.setVisible(visible);
+      m.flag?.setVisible(visible);
+      m.lockIcon?.setVisible(visible);
+      if (!visible) continue;
+      m.hitbox.setPosition(proj.x, proj.y);
+      m.nameText.setPosition(proj.x, proj.y + 12);
+      if (m.flag) m.flag.setPosition(proj.x, proj.y - 16);
+      if (m.lockIcon) m.lockIcon.setPosition(proj.x + 12, proj.y - 6);
+    }
+  }
+
+  private rebuildTrafficShips(
+    state: GameState,
+    visuals: RouteTrafficVisual[],
+  ): void {
+    for (const t of this.trafficShips) {
+      t.sprite.destroy();
+    }
+    this.trafficShips = [];
+
+    const fleetByOwner = new Map<string, Map<string, Ship>>();
+    fleetByOwner.set("player", new Map(state.fleet.map((s) => [s.id, s])));
+    for (const c of state.aiCompanies) {
+      fleetByOwner.set(c.id, new Map(c.fleet.map((s) => [s.id, s])));
+    }
+
+    for (const visual of visuals) {
+      if (visual.assignedShips.length === 0) continue;
+      if (visual.visibleUnits === 0) continue;
+
+      for (let i = 0; i < visual.visibleUnits; i++) {
+        const ship = visual.assignedShips[i % visual.assignedShips.length];
+        const sprite = this.createShipSprite(ship);
+        this.trafficShips.push({
+          routeId: visual.routeId,
+          ship,
+          sprite,
+          t: i / Math.max(1, visual.visibleUnits),
+          speed: 0.018 + Math.random() * 0.012,
+          dir: 1,
+        });
+      }
+    }
+  }
+
+  private createShipSprite(
+    ship: Ship,
+  ):
+    | Phaser.GameObjects.Sprite
+    | Phaser.GameObjects.Image
+    | Phaser.GameObjects.Arc {
+    const tint = getShipColor(ship.class);
+    const mapKey = getShipMapKey(ship.class);
+    const animKey = getShipMapAnimKey(ship.class);
+    const iconKey = getShipIconKey(ship.class);
+
+    if (mapKey && animKey && this.textures.exists(mapKey)) {
+      const sprite = this.add
+        .sprite(0, 0, mapKey, "1")
+        .setDisplaySize(20, 20)
+        .setTint(tint)
+        .setDepth(40);
+      sprite.play(animKey);
+      return sprite;
+    }
+    if (iconKey && this.textures.exists(iconKey)) {
+      return this.add
+        .image(0, 0, iconKey)
+        .setDisplaySize(14, 14)
+        .setTint(tint)
+        .setDepth(40);
+    }
+    return this.add.circle(0, 0, 2.5, tint, 0.85).setDepth(40);
+  }
+
+  private updateTrafficShips(delta: number): void {
+    if (!this.view3D) return;
+    const dt = delta / 1000;
+    const v3 = this.view3D;
+    const tmp = this.tmpWorld;
+    const tmpNext = this.tmpWorldNext;
+    for (const ts of this.trafficShips) {
+      const curve = v3.getRouteCurve(ts.routeId);
+      if (!curve) {
+        (
+          ts.sprite as Phaser.GameObjects.GameObject & {
+            setVisible?: (v: boolean) => unknown;
+          }
+        ).setVisible?.(false);
+        continue;
+      }
+      ts.t += ts.speed * ts.dir * dt;
+      if (ts.t >= 1) {
+        ts.t = 1;
+        ts.dir = -1;
+      } else if (ts.t <= 0) {
+        ts.t = 0;
+        ts.dir = 1;
+      }
+      curve.getPointAt(ts.t, tmp);
+      const lookT = Math.min(1, Math.max(0, ts.t + 0.02 * ts.dir));
+      curve.getPointAt(lookT, tmpNext);
+
+      const proj = v3.projectToScreenDesign({ x: tmp.x, y: tmp.y, z: tmp.z });
+      const projNext = v3.projectToScreenDesign({
+        x: tmpNext.x,
+        y: tmpNext.y,
+        z: tmpNext.z,
+      });
+      const sprite = ts.sprite as Phaser.GameObjects.GameObject & {
+        setPosition: (x: number, y: number) => unknown;
+        setVisible?: (v: boolean) => unknown;
+        setRotation?: (r: number) => unknown;
+      };
+      sprite.setVisible?.(proj.visible);
+      if (!proj.visible) continue;
+      sprite.setPosition(proj.x, proj.y);
+      sprite.setRotation?.(
+        Math.atan2(projNext.y - proj.y, projNext.x - proj.x),
+      );
+    }
+  }
+
+  private installCameraInput(): void {
+    const inViewport = (worldX: number, worldY: number): boolean =>
+      worldX >= this.vizRect.x &&
+      worldX <= this.vizRect.x + this.vizRect.w &&
+      worldY >= this.vizRect.y &&
+      worldY <= this.vizRect.y + this.vizRect.h;
+
+    const onWheel = (
+      _ptr: Phaser.Input.Pointer,
+      _objs: unknown,
+      _dx: number,
+      dy: number,
+    ): void => {
+      if (!this.view3D) return;
+      this.view3D.zoom(dy * 0.06);
+    };
+    this.input.on("wheel", onWheel);
+
+    let dragging = false;
+    let dragMoved = false;
+    let lastX = 0;
+    let lastY = 0;
+    const onDown = (ptr: Phaser.Input.Pointer): void => {
+      if (!inViewport(ptr.worldX, ptr.worldY)) return;
+      dragging = true;
+      dragMoved = false;
+      lastX = ptr.x;
+      lastY = ptr.y;
+    };
+    const onUp = (): void => {
+      dragging = false;
+    };
+    const onMove = (ptr: Phaser.Input.Pointer): void => {
+      if (!dragging || !this.view3D) return;
+      const dx = ptr.x - lastX;
+      const dy = ptr.y - lastY;
+      if (!dragMoved && Math.abs(dx) + Math.abs(dy) < 4) return;
+      dragMoved = true;
+      lastX = ptr.x;
+      lastY = ptr.y;
+      this.view3D.pan(dx, dy);
+    };
+    this.input.on("pointerdown", onDown);
+    this.input.on("pointerup", onUp);
+    this.input.on("pointerupoutside", onUp);
+    this.input.on("pointermove", onMove);
+
+    const cleanup = (): void => {
+      this.input.off("wheel", onWheel);
+      this.input.off("pointerdown", onDown);
+      this.input.off("pointerup", onUp);
+      this.input.off("pointerupoutside", onUp);
+      this.input.off("pointermove", onMove);
+    };
+    this.events.once("shutdown", cleanup);
+    this.events.once("destroy", cleanup);
+  }
+
+  private installInfoCardDismiss(): void {
+    this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      const overObjects = this.input.hitTestPointer(pointer);
+      if (overObjects.length === 0) {
+        this.destroyInfoCard();
+      }
     });
   }
 
+  private destroyInfoCard(): void {
+    if (this.empireInfoCard) {
+      this.empireInfoCard.destroy(true);
+      this.empireInfoCard = null;
+    }
+  }
+
   private createEmpireInfoCard(
-    worldX: number,
-    worldY: number,
+    screenX: number,
+    screenY: number,
     name: string,
     empire: Empire | undefined,
     state: GameState,
     accessible: boolean,
   ): Phaser.GameObjects.Container {
     const theme = getTheme();
-    const container = this.add.container(worldX + 20, worldY - 20);
-    container.cameraFilter = this.hudCamId;
+    const container = this.add.container(screenX + 20, screenY - 20);
+    container.setDepth(950);
     const cardW = 260;
-    const lines: string[] = [];
-    lines.push(name);
-
+    const lines: string[] = [name];
     if (empire) {
       lines.push(`Leader: ${empire.leaderName}`);
       lines.push(`Disposition: ${empire.disposition}`);
@@ -814,13 +636,11 @@ export class GalaxyMapScene extends Phaser.Scene {
         }
       }
     }
-
-    lines.push(accessible ? "Status: Unlocked" : "Status: Locked \uD83D\uDD12");
+    lines.push(accessible ? "Status: Unlocked" : "Status: Locked 🔒");
 
     const lineHeight = 16;
     const cardH = lines.length * lineHeight + 16;
 
-    // Background
     const bg = this.add.graphics();
     bg.fillStyle(theme.colors.panelBg, 0.92);
     bg.fillRoundedRect(0, 0, cardW, cardH, 6);
