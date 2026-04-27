@@ -677,7 +677,10 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   };
 
   // ----- Step 11b: Generate adviser messages -----
+  // Cap the queue so a player who never opens Rex's drawer doesn't accumulate
+  // 30+ stale messages over many turns.
   const adviserMessages = generateTurnMessages(nextState, turnResult);
+  const ADVISER_QUEUE_CAP = 12;
   nextState = {
     ...nextState,
     adviser: {
@@ -685,7 +688,7 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       pendingMessages: [
         ...nextState.adviser.pendingMessages,
         ...adviserMessages,
-      ],
+      ].slice(-ADVISER_QUEUE_CAP),
     },
   };
 

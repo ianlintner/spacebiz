@@ -169,11 +169,18 @@ export class GameHUDScene extends Phaser.Scene {
     const state = gameStore.getState();
     // Clear stale adviser messages when the turn advances. Without this the
     // drawer accumulates dozens of messages across turns and the player has
-    // to mash Next to dismiss them all.
+    // to mash Next to dismiss them all. We also wipe `state.adviser
+    // .pendingMessages` so the queue doesn't keep growing in the background
+    // (Rex was reaching 30+ announcements after a few turns).
     if (state.turn !== this.lastSeenTurn && this.adviserPanel) {
       this.lastSeenTurn = state.turn;
       this.adviserPanel.clear();
       this.updateAdviserBadge(0);
+      if (state.adviser.pendingMessages.length > 0) {
+        gameStore.update({
+          adviser: { ...state.adviser, pendingMessages: [] },
+        });
+      }
     }
     this.updateHUD();
     this.maybeShowDilemma();

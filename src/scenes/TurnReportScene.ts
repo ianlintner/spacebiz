@@ -63,7 +63,7 @@ export class TurnReportScene extends Phaser.Scene {
     //   - Market:       72 →  20 content, fuel-price line only (cargo +
     //                  passengers detail moved to the global ticker).
     const TR_GAP = 8;
-    const TR_PL_H = 192;
+    const TR_PL_H = 220;
     const TR_ROUTE_H = 152;
     const TR_AI_H = 152;
     const TR_BOTTOM_H = 72;
@@ -303,20 +303,22 @@ export class TurnReportScene extends Phaser.Scene {
     });
 
     // ── Performance grade badge ────────────────────────────────────────────
+    // Lives in the panel title bar (top-right) so it never overlaps P&L rows.
     const { grade, color: gradeColor } = getTurnGrade(
       lastTurn.netProfit,
       lastTurn.revenue,
     );
+    const titleBarH = theme.panel.titleHeight;
     const gradeLabel = this.add
-      .text(plContent.x + plContent.width - 8, plContent.y + 4, grade, {
-        fontSize: "42px",
+      .text(L.mainContentWidth - theme.spacing.md, titleBarH / 2, grade, {
+        fontSize: "24px",
         fontFamily: theme.fonts.heading.family,
         fontStyle: "bold",
         color: "#" + gradeColor.toString(16).padStart(6, "0"),
         stroke: "#000000",
-        strokeThickness: 3,
+        strokeThickness: 2,
       })
-      .setOrigin(1, 0)
+      .setOrigin(1, 0.5)
       .setAlpha(0)
       .setScale(1.5);
     plPanel.add(gradeLabel);
@@ -331,17 +333,24 @@ export class TurnReportScene extends Phaser.Scene {
     });
 
     // ── Streak badge ───────────────────────────────────────────────────────
+    // Sits below the Net Profit row so the fire emoji can't overlap the cash
+    // value. TR_PL_H bumped to 220 to make room.
     const streakTurns = state.storyteller.consecutiveProfitTurns;
     if (streakTurns >= 2) {
       const streakText = `\uD83D\uDD25 ${streakTurns}-Turn Streak!`;
       const streakBadge = this.add
-        .text(plContent.x + plContent.width / 2, rowY, streakText, {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.accent),
-          stroke: "#000000",
-          strokeThickness: 2,
-        })
+        .text(
+          plContent.x + plContent.width / 2,
+          rowY + theme.fonts.value.size + 8,
+          streakText,
+          {
+            fontSize: `${theme.fonts.caption.size}px`,
+            fontFamily: theme.fonts.caption.family,
+            color: colorToString(theme.colors.accent),
+            stroke: "#000000",
+            strokeThickness: 2,
+          },
+        )
         .setOrigin(0.5, 0)
         .setAlpha(0);
       plPanel.add(streakBadge);
