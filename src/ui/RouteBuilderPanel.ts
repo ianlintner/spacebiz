@@ -27,6 +27,7 @@ import { getLayout } from "./Layout.ts";
 import { Button } from "./Button.ts";
 import { Label } from "./Label.ts";
 import { RoutePickerMap } from "./RoutePickerMap.ts";
+import { Modal } from "./Modal.ts";
 import { Panel } from "./Panel.ts";
 import { DEPTH_MODAL } from "./DepthLayers.ts";
 import type { SceneUiDirector } from "./SceneUiDirector.ts";
@@ -977,6 +978,12 @@ class RouteBuilderPanel {
     if (validationError) {
       this.statusValue.setText(`\u26A0 ${validationError}`);
       this.statusValue.setLabelColor(getTheme().colors.loss);
+      const errModal = new Modal(this.scene, {
+        title: "Cannot Create Route",
+        body: validationError,
+        onOk: () => errModal.destroy(),
+      });
+      errModal.show();
       return;
     }
 
@@ -997,6 +1004,12 @@ class RouteBuilderPanel {
         `\u26A0 Insufficient funds — license fee: §${licenseFee.toLocaleString("en-US")}`,
       );
       this.statusValue.setLabelColor(getTheme().colors.loss);
+      const fundsModal = new Modal(this.scene, {
+        title: "Insufficient Funds",
+        body: `License fee: §${licenseFee.toLocaleString("en-US")}. You only have §${Math.floor(latestState.cash).toLocaleString("en-US")}.`,
+        onOk: () => fundsModal.destroy(),
+      });
+      fundsModal.show();
       return;
     }
 

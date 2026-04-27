@@ -9,6 +9,7 @@ import {
   colorToString,
   Button,
   DataTable,
+  Dropdown,
   MiniMap,
   Modal,
   ScrollableList,
@@ -104,10 +105,6 @@ export class RoutesScene extends Phaser.Scene {
   private finderDistanceBand: DistanceBand = null;
   private finderScopeBand: RouteScopeBand = null;
   private finderEmpireFilter: string | null = null;
-  private filterButtons: Button[] = [];
-  private distanceBandButtons: Button[] = [];
-  private scopeBandButtons: Button[] = [];
-  private empireFilterButtons: Button[] = [];
 
   // ── Sidebar mini-map ──
   private miniMap!: MiniMap;
@@ -212,166 +209,125 @@ export class RoutesScene extends Phaser.Scene {
     );
     finderContent.add(this.finderSummary);
 
-    // ── Filter rows (cargo / distance / scope) ──
-    // Each row is laid out via flowButtonRow so a long label or narrow panel
-    // wraps gracefully instead of running off the right edge.
+    // ── Filter dropdowns (cargo / distance / scope / empire) ──
+    // Two compact rows of two dropdowns replace the previous four button rows,
+    // recovering ~90 px of vertical space for the route table.
     const filterY = tabContentY + summaryHeight - 4;
-    const filterMaxX = contentInnerX + contentInnerW;
-    const filterBtnPadX = 8;
+    const dropH = 28;
+    const dropGap = 8;
 
+    // Row 1 — Cargo type
     const allCargoFilters: Array<{
       label: string;
       value: CargoTypeValue | null;
     }> = [
-      { label: "All", value: null },
+      { label: "Cargo: All", value: null },
       ...Object.values(CargoType).map((ct) => ({
         label: getCargoShortLabel(ct),
         value: ct as CargoTypeValue,
       })),
     ];
-    this.filterButtons = allCargoFilters.map(
-      (f) =>
-        new Button(this, {
-          x: 0,
-          y: 0,
-          autoWidth: true,
-          paddingX: filterBtnPadX,
-          height: 26,
-          label: f.label,
-          fontSize: 11,
-          onClick: () => {
-            this.finderCargoFilter = f.value;
-            this.updateFilterButtonStyles();
-            this.refreshFinderTable();
-          },
-        }),
-    );
-    const cargoRowBottom = this.flowButtonRow(
-      finderContent,
-      contentInnerX,
-      filterY,
-      filterMaxX,
-      this.filterButtons,
-    );
-    this.updateFilterButtonStyles();
+    const cargoDropdown = new Dropdown(this, {
+      x: contentInnerX,
+      y: filterY,
+      width: 130,
+      height: dropH,
+      fontSize: 11,
+      options: allCargoFilters.map((f) => ({
+        label: f.label,
+        value: f.value ?? "",
+      })),
+      defaultIndex: 0,
+      onChange: (value) => {
+        this.finderCargoFilter = value === "" ? null : (value as CargoTypeValue);
+        this.refreshFinderTable();
+      },
+    });
+    finderContent.add(cargoDropdown);
 
+    // Row 1 — Distance band
     const distanceBands: Array<{ label: string; value: DistanceBand }> = [
-      { label: "Any dist.", value: null },
+      { label: "Any Distance", value: null },
       { label: "Short (<50)", value: "short" },
       { label: "Med (50-150)", value: "medium" },
       { label: "Long (>150)", value: "long" },
     ];
-    this.distanceBandButtons = distanceBands.map(
-      (band) =>
-        new Button(this, {
-          x: 0,
-          y: 0,
-          autoWidth: true,
-          paddingX: filterBtnPadX,
-          height: 26,
-          label: band.label,
-          fontSize: 11,
-          onClick: () => {
-            this.finderDistanceBand = band.value;
-            this.updateDistanceBandButtonStyles();
-            this.refreshFinderTable();
-          },
-        }),
-    );
-    const distanceRowBottom = this.flowButtonRow(
-      finderContent,
-      contentInnerX,
-      cargoRowBottom + 4,
-      filterMaxX,
-      this.distanceBandButtons,
-    );
-    this.updateDistanceBandButtonStyles();
+    const distDropdown = new Dropdown(this, {
+      x: contentInnerX + 130 + dropGap,
+      y: filterY,
+      width: 145,
+      height: dropH,
+      fontSize: 11,
+      options: distanceBands.map((b) => ({
+        label: b.label,
+        value: b.value ?? "",
+      })),
+      defaultIndex: 0,
+      onChange: (value) => {
+        this.finderDistanceBand = (value === "" ? null : value) as DistanceBand;
+        this.refreshFinderTable();
+      },
+    });
+    finderContent.add(distDropdown);
 
-    const scopeBands: Array<{
-      label: string;
-      value: RouteScopeBand;
-      testId: string;
-    }> = [
-      { label: "All", value: null, testId: "btn-finder-scope-any" },
-      {
-        label: "Intra System",
-        value: "system",
-        testId: "btn-finder-scope-system",
-      },
-      {
-        label: "Intra Empire",
-        value: "empire",
-        testId: "btn-finder-scope-empire",
-      },
-      {
-        label: "Galactic",
-        value: "galactic",
-        testId: "btn-finder-scope-galactic",
-      },
+    // Row 2 — Scope band
+    const scopeBands: Array<{ label: string; value: RouteScopeBand }> = [
+      { label: "All Scopes", value: null },
+      { label: "Intra System", value: "system" },
+      { label: "Intra Empire", value: "empire" },
+      { label: "Galactic", value: "galactic" },
     ];
-    this.scopeBandButtons = scopeBands.map(
-      (scope) =>
-        new Button(this, {
-          x: 0,
-          y: 0,
-          autoWidth: true,
-          paddingX: filterBtnPadX,
-          height: 26,
-          label: scope.label,
-          fontSize: 11,
-          testId: scope.testId,
-          onClick: () => {
-            this.finderScopeBand = scope.value;
-            this.updateScopeBandButtonStyles();
-            this.refreshFinderTable();
-          },
-        }),
-    );
-    const scopeRowBottom = this.flowButtonRow(
-      finderContent,
-      contentInnerX,
-      distanceRowBottom + 4,
-      filterMaxX,
-      this.scopeBandButtons,
-    );
-    this.updateScopeBandButtonStyles();
+    const scopeDropdown = new Dropdown(this, {
+      x: contentInnerX,
+      y: filterY + dropH + 4,
+      width: 145,
+      height: dropH,
+      fontSize: 11,
+      options: scopeBands.map((s) => ({
+        label: s.label,
+        value: s.value ?? "",
+      })),
+      defaultIndex: 0,
+      onChange: (value) => {
+        this.finderScopeBand = (
+          value === "" ? null : value
+        ) as RouteScopeBand;
+        this.refreshFinderTable();
+      },
+    });
+    finderContent.add(scopeDropdown);
 
-    // ── Empire filter row ──
+    // Row 2 — Empire
     const initState = gameStore.getState();
     this.finderEmpireFilter = initState.playerEmpireId ?? null;
     const empires = initState.galaxy.empires ?? [];
-    const empireFilterValues: Array<{ label: string; value: string | null }> = [
-      { label: "All Empires", value: null },
+    const empireOptions = [
+      { label: "All Empires", value: "" },
       ...empires.map((e) => ({ label: e.name.slice(0, 14), value: e.id })),
     ];
-    this.empireFilterButtons = empireFilterValues.map(
-      (f) =>
-        new Button(this, {
-          x: 0,
-          y: 0,
-          autoWidth: true,
-          paddingX: filterBtnPadX,
-          height: 26,
-          label: f.label,
-          fontSize: 11,
-          onClick: () => {
-            this.finderEmpireFilter = f.value;
-            this.updateEmpireFilterButtonStyles();
-            this.refreshFinderTable();
-          },
-        }),
+    const defaultEmpireIdx = Math.max(
+      0,
+      empireOptions.findIndex(
+        (o) => o.value === (initState.playerEmpireId ?? ""),
+      ),
     );
-    const empireRowBottom = this.flowButtonRow(
-      finderContent,
-      contentInnerX,
-      scopeRowBottom + 4,
-      filterMaxX,
-      this.empireFilterButtons,
-    );
-    this.updateEmpireFilterButtonStyles();
+    const empireDropdown = new Dropdown(this, {
+      x: contentInnerX + 145 + dropGap,
+      y: filterY + dropH + 4,
+      width: 160,
+      height: dropH,
+      fontSize: 11,
+      options: empireOptions,
+      defaultIndex: defaultEmpireIdx,
+      onChange: (value) => {
+        this.finderEmpireFilter = value === "" ? null : value;
+        this.refreshFinderTable();
+      },
+    });
+    finderContent.add(empireDropdown);
 
-    // Finder table starts just below the last filter row.
-    const finderTableTop = empireRowBottom + 8;
+    // Finder table starts just below the two filter rows.
+    const finderTableTop = filterY + dropH + 4 + dropH + 8;
     const finderTableHeight =
       panelH -
       38 -
@@ -517,9 +473,12 @@ export class RoutesScene extends Phaser.Scene {
       autoWidth: true,
       label: "Create Route [Enter]",
       onClick: () => {
-        const idx = this.finderTable.getSelectedRowIndex();
-        if (idx >= 0 && idx < this.opportunities.length) {
-          this.createRouteFromOpportunityIndex(idx);
+        const rowData = this.finderTable.getSelectedRow();
+        if (rowData) {
+          const oppIdx = rowData["_index"] as number;
+          if (oppIdx >= 0 && oppIdx < this.opportunities.length) {
+            this.createRouteFromOpportunityIndex(oppIdx);
+          }
         }
       },
     });
@@ -959,50 +918,6 @@ export class RoutesScene extends Phaser.Scene {
     }
 
     this.finderTable.setRows(rows);
-  }
-
-  private updateFilterButtonStyles(): void {
-    const allCargoFilters: Array<CargoTypeValue | null> = [
-      null,
-      ...Object.values(CargoType).map((ct) => ct as CargoTypeValue),
-    ];
-    for (let i = 0; i < this.filterButtons.length; i++) {
-      const btn = this.filterButtons[i];
-      const isActive = allCargoFilters[i] === this.finderCargoFilter;
-      btn.setAlpha(isActive ? 1.0 : 0.5);
-    }
-  }
-
-  private updateDistanceBandButtonStyles(): void {
-    const bands: Array<DistanceBand> = [null, "short", "medium", "long"];
-    for (let i = 0; i < this.distanceBandButtons.length; i++) {
-      const btn = this.distanceBandButtons[i];
-      const isActive = bands[i] === this.finderDistanceBand;
-      btn.setAlpha(isActive ? 1.0 : 0.5);
-    }
-  }
-
-  private updateScopeBandButtonStyles(): void {
-    const scopes: Array<RouteScopeBand> = [
-      null,
-      "system",
-      "empire",
-      "galactic",
-    ];
-    for (let i = 0; i < this.scopeBandButtons.length; i++) {
-      const btn = this.scopeBandButtons[i];
-      const isActive = scopes[i] === this.finderScopeBand;
-      btn.setAlpha(isActive ? 1.0 : 0.5);
-    }
-  }
-
-  private updateEmpireFilterButtonStyles(): void {
-    const empires = gameStore.getState().galaxy.empires ?? [];
-    const values: Array<string | null> = [null, ...empires.map((e) => e.id)];
-    for (let i = 0; i < this.empireFilterButtons.length; i++) {
-      const isActive = values[i] === this.finderEmpireFilter;
-      this.empireFilterButtons[i].setAlpha(isActive ? 1.0 : 0.5);
-    }
   }
 
   /**
