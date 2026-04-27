@@ -148,5 +148,9 @@ function angularDelta(
 ): number {
   const angleA = Math.atan2(a.z, a.x);
   const angleB = Math.atan2(b.z, b.x);
-  return Math.abs(angleB - angleA);
+  // Normalise the difference into (-π, π] before taking |·| so a sweep
+  // crossing the ±π boundary doesn't silently report ~2π−smallAngle.
+  const raw = angleB - angleA;
+  const normalised = ((raw + Math.PI) % (Math.PI * 2)) - Math.PI;
+  return Math.abs(normalised);
 }

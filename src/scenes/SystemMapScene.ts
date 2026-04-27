@@ -52,6 +52,15 @@ export class SystemMapScene extends Phaser.Scene {
   private vizRect = { x: 0, y: 0, w: 0, h: 0 };
   private lastTurn = 1;
   private modalHidden = false;
+  // Reused per-frame scratch vectors (avoid GC churn in update loop).
+  private readonly tmpWorld = new THREE.Vector3();
+  private readonly tmpWorldNext = new THREE.Vector3();
+  // Last galaxy-state slices used to drive the 3D scene. Reference-compared
+  // in handleStateChanged so we only rebuild Three.js geometry when the
+  // visual contents of the system actually change — not on every cash or
+  // tech tick.
+  private lastPlanetsRef: GameState["galaxy"]["planets"] | null = null;
+  private lastRoutesRef: GameState["activeRoutes"] | null = null;
 
   constructor() {
     super({ key: "SystemMapScene" });
@@ -207,6 +216,8 @@ export class SystemMapScene extends Phaser.Scene {
     this.view3D.setSystem(system, planets, state.activeRoutes);
     this.view3D.setTurn(state.turn);
     this.lastTurn = state.turn;
+    this.lastPlanetsRef = state.galaxy.planets;
+    this.lastRoutesRef = state.activeRoutes;
 
     this.buildPlanetMarkers(
       planets,
@@ -220,19 +231,49 @@ export class SystemMapScene extends Phaser.Scene {
 
     // React to game state changes — turn advancement and route edits both
     // come through this channel.
-    const handleStateChanged = (nextStateUnknown: unknown): void => {
+    const handleStateChanged = (
+      nextStateUnknown: unknown,
+      changedKeysUnknown: unknown,
+    ): void => {
       const nextState = nextStateUnknown as GameState;
+      const changedKeys = changedKeysUnknown as
+        | Set<keyof GameState>
+        | undefined;
+      // Skip the (expensive) Three.js geometry rebuild unless something
+      // visually relevant changed: the galaxy (planets), active routes,
+      // or the turn counter. GameStore swaps array references whenever
+      // contents change, so reference-equality is sufficient. Falling back
+      // to the ref check keeps us correct for callers like setState() that
+      // may not provide a precise changedKeys set.
+      const galaxyMaybeChanged =
+        !changedKeys || changedKeys.has("galaxy") || changedKeys.has("fleet");
+      const routesMaybeChanged =
+        !changedKeys || changedKeys.has("activeRoutes");
+      const turnMaybeChanged = !changedKeys || changedKeys.has("turn");
+      if (!galaxyMaybeChanged && !routesMaybeChanged && !turnMaybeChanged) {
+        return;
+      }
       const sys = nextState.galaxy.systems.find((s) => s.id === this.systemId);
       if (!sys || !this.view3D) return;
-      const sysPlanets = nextState.galaxy.planets.filter(
-        (p) => p.systemId === this.systemId,
-      );
-      this.view3D.setSystem(sys, sysPlanets, nextState.activeRoutes);
-      if (nextState.turn !== this.lastTurn) {
+
+      const planetsChanged = nextState.galaxy.planets !== this.lastPlanetsRef;
+      const routesChanged = nextState.activeRoutes !== this.lastRoutesRef;
+      const turnChanged = nextState.turn !== this.lastTurn;
+      if (planetsChanged || routesChanged) {
+        const sysPlanets = nextState.galaxy.planets.filter(
+          (p) => p.systemId === this.systemId,
+        );
+        this.view3D.setSystem(sys, sysPlanets, nextState.activeRoutes);
+        this.lastPlanetsRef = nextState.galaxy.planets;
+        this.lastRoutesRef = nextState.activeRoutes;
+      }
+      if (turnChanged) {
         this.view3D.setTurn(nextState.turn);
         this.lastTurn = nextState.turn;
       }
-      this.rebuildTrafficShips(nextState, sys.id);
+      if (planetsChanged || routesChanged || turnChanged) {
+        this.rebuildTrafficShips(nextState, sys.id);
+      }
     };
     gameStore.on("stateChanged", handleStateChanged);
 
@@ -455,8 +496,8 @@ export class SystemMapScene extends Phaser.Scene {
     if (!this.view3D) return;
     const dt = delta / 1000;
     const v3 = this.view3D;
-    const tmp = new THREE.Vector3();
-    const tmpNext = new THREE.Vector3();
+    const tmp = this.tmpWorld;
+    const tmpNext = this.tmpWorldNext;
     for (const ts of this.trafficShips) {
       const curve = v3.getRouteCurve(ts.routeId);
       if (!curve) {

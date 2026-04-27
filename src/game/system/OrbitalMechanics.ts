@@ -34,6 +34,13 @@ export function getOrbitalParams(planet: Planet): OrbitalParams {
  * Compute a planet's 3D position at a given turn (one quarter per turn).
  * Pure function — no Phaser, no Three.js. Y is the up axis (small inclination
  * tilt off the X/Z ecliptic plane).
+ *
+ * Note: this is a visual approximation, not a true rotated orbital plane.
+ * The X/Z radius is preserved at orbitRadius regardless of inclination —
+ * a real inclined orbit would shorten the ecliptic projection by cos(i).
+ * At the inclination range used (±0.15 rad) the geometric error is <2%,
+ * and the orbit-ring visualization in SystemView3D uses the same formula
+ * so the planet sits exactly on its drawn ring.
  */
 export function planetPositionAtTurn(planet: Planet, turn: number): Vec3 {
   const o = getOrbitalParams(planet);

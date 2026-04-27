@@ -335,9 +335,11 @@ export class SystemView3D {
     const segments = 128;
     for (const planet of this.planets) {
       const o = getOrbitalParams(planet);
-      const positions = new Float32Array((segments + 1) * 3);
+      // LineLoop closes the polygon automatically — `segments` points,
+      // not `segments + 1`.
+      const positions = new Float32Array(segments * 3);
       const sinIncl = Math.sin(o.orbitInclination);
-      for (let i = 0; i <= segments; i++) {
+      for (let i = 0; i < segments; i++) {
         const a = (i / segments) * Math.PI * 2;
         const x = Math.cos(a) * o.orbitRadius;
         const z = Math.sin(a) * o.orbitRadius;
