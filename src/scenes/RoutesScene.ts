@@ -40,10 +40,13 @@ import {
   setRoutePaused,
   getAvailableRouteSlots,
   getUsedRouteSlots,
+  getFreeRouteSlots,
   getAvailableLocalRouteSlots,
   getUsedLocalRouteSlots,
+  getFreeLocalRouteSlots,
   getAvailableGalacticRouteSlots,
   getUsedGalacticRouteSlots,
+  getFreeGalacticRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import type { RouteOpportunity } from "../game/routes/RouteManager.ts";
 import {
@@ -100,9 +103,11 @@ export class RoutesScene extends Phaser.Scene {
   private finderCargoFilter: CargoTypeValue | null = null;
   private finderDistanceBand: DistanceBand = null;
   private finderScopeBand: RouteScopeBand = null;
+  private finderEmpireFilter: string | null = null;
   private filterButtons: Button[] = [];
   private distanceBandButtons: Button[] = [];
   private scopeBandButtons: Button[] = [];
+  private empireFilterButtons: Button[] = [];
 
   // ── Sidebar mini-map ──
   private miniMap!: MiniMap;
@@ -287,10 +292,14 @@ export class RoutesScene extends Phaser.Scene {
       value: RouteScopeBand;
       testId: string;
     }> = [
-      { label: "Any scope", value: null, testId: "btn-finder-scope-any" },
-      { label: "System", value: "system", testId: "btn-finder-scope-system" },
+      { label: "All", value: null, testId: "btn-finder-scope-any" },
       {
-        label: "Empire",
+        label: "Intra System",
+        value: "system",
+        testId: "btn-finder-scope-system",
+      },
+      {
+        label: "Intra Empire",
         value: "empire",
         testId: "btn-finder-scope-empire",
       },
@@ -327,22 +336,67 @@ export class RoutesScene extends Phaser.Scene {
     );
     this.updateScopeBandButtonStyles();
 
-    // Lock the table position from the actual flowed bottom of the filter
-    // rows so the table never overlaps a wrapped row.
-    tableTop = scopeRowBottom + 8;
-    tableHeight =
+    // ── Empire filter row ──
+    const initState = gameStore.getState();
+    this.finderEmpireFilter = initState.playerEmpireId ?? null;
+    const empires = initState.galaxy.empires ?? [];
+    const empireFilterValues: Array<{ label: string; value: string | null }> = [
+      { label: "All Empires", value: null },
+      ...empires.map((e) => ({ label: e.name.slice(0, 14), value: e.id })),
+    ];
+    this.empireFilterButtons = empireFilterValues.map(
+      (f) =>
+        new Button(this, {
+          x: 0,
+          y: 0,
+          autoWidth: true,
+          paddingX: filterBtnPadX,
+          height: 26,
+          label: f.label,
+          fontSize: 11,
+          onClick: () => {
+            this.finderEmpireFilter = f.value;
+            this.updateEmpireFilterButtonStyles();
+            this.refreshFinderTable();
+          },
+        }),
+    );
+    const empireRowBottom = this.flowButtonRow(
+      finderContent,
+      contentInnerX,
+      scopeRowBottom + 4,
+      filterMaxX,
+      this.empireFilterButtons,
+    );
+    this.updateEmpireFilterButtonStyles();
+
+    // Finder table starts just below the last filter row.
+    const finderTableTop = empireRowBottom + 8;
+    const finderTableHeight =
       panelH -
       38 -
       tabBarHeight -
-      (tableTop - tabContentY) -
+      (finderTableTop - tabContentY) -
       buttonAreaHeight -
       8;
 
+    // Active-routes tab has a fixed header area (summary + hint texts only).
+    const activeTableTop = tabContentY + summaryHeight;
+    const activeTableHeight =
+      panelH - 38 - tabBarHeight - summaryHeight - buttonAreaHeight - 8;
+
+    // Feed the shared variables still referenced by routeTable / buttons below.
+    tableTop = activeTableTop;
+    tableHeight = activeTableHeight;
+
     this.finderTable = new DataTable(this, {
       x: contentInnerX,
-      y: tableTop,
+      y: finderTableTop,
       width: contentInnerW,
-      height: tableHeight,
+      height: finderTableHeight,
+      rowAlphaFn: (row) => (row["_unavailableReason"] ? 0.4 : 0.95),
+      rowTooltipFn: (row) =>
+        (row["_unavailableReason"] as string | undefined) ?? null,
       columns: [
         // Column widths sum to 632 — fits inside contentInnerW at the
         // non-compact boundary (game width 1100 → contentInnerW ≈ 644).
@@ -456,7 +510,7 @@ export class RoutesScene extends Phaser.Scene {
 
     // Finder action buttons (laid out via flowButtonRow so they wrap if the
     // panel ever shrinks below the combined button width)
-    const finderButtonY = tableTop + tableHeight + 8;
+    const finderButtonY = finderTableTop + finderTableHeight + 8;
     const createSelectedBtn = new Button(this, {
       x: 0,
       y: 0,
@@ -717,7 +771,12 @@ export class RoutesScene extends Phaser.Scene {
       );
     }
 
-    // Apply cargo type + distance band + scope filters
+    // Pre-compute free slots for unavailability checks
+    const freeSystemSlots = getFreeLocalRouteSlots(state);
+    const freeEmpireSlots = getFreeRouteSlots(state);
+    const freeGalacticSlots = getFreeGalacticRouteSlots(state);
+
+    // Apply cargo type + distance band + scope + empire filters
     const filtered = this.opportunities.filter((o) => {
       if (this.finderCargoFilter && o.bestCargoType !== this.finderCargoFilter)
         return false;
@@ -727,6 +786,15 @@ export class RoutesScene extends Phaser.Scene {
       const oEmp = planetEmpireMap.get(o.originPlanetId) ?? null;
       const dEmp = planetEmpireMap.get(o.destinationPlanetId) ?? null;
       if (!matchesScopeBand(oSys, dSys, oEmp, dEmp, this.finderScopeBand))
+        return false;
+      // OR logic is intentional: show routes that touch the selected empire
+      // (either as origin OR destination) so players see all trade activity
+      // involving their empire, not just intra-empire routes.
+      if (
+        this.finderEmpireFilter !== null &&
+        oEmp !== this.finderEmpireFilter &&
+        dEmp !== this.finderEmpireFilter
+      )
         return false;
       return true;
     });
@@ -755,7 +823,8 @@ export class RoutesScene extends Phaser.Scene {
     const hasActiveFilter =
       this.finderCargoFilter !== null ||
       this.finderDistanceBand !== null ||
-      this.finderScopeBand !== null;
+      this.finderScopeBand !== null ||
+      this.finderEmpireFilter !== null;
     const displayLimit = hasActiveFilter ? 200 : 50;
     const displayed = filtered.slice(0, displayLimit);
 
@@ -763,9 +832,32 @@ export class RoutesScene extends Phaser.Scene {
       // Map back to the original opportunities index for portrait/create
       const origIdx = this.opportunities.indexOf(opp);
 
+      // Determine route scope for slot checking
+      const oSysId = planetSystemMap.get(opp.originPlanetId) ?? "";
+      const dSysId = planetSystemMap.get(opp.destinationPlanetId) ?? "";
+      const oEmpId = planetEmpireMap.get(opp.originPlanetId) ?? null;
+      const dEmpId = planetEmpireMap.get(opp.destinationPlanetId) ?? null;
+      const isSystemRoute = oSysId === dSysId;
+      const isGalacticRoute =
+        !isSystemRoute &&
+        oEmpId !== null &&
+        dEmpId !== null &&
+        oEmpId !== dEmpId;
+
+      let unavailableReason: string | undefined;
+      if (opp.alreadyActive) {
+        unavailableReason = "Route already active";
+      } else if (isSystemRoute && freeSystemSlots <= 0) {
+        unavailableReason = "No system route slots available";
+      } else if (isGalacticRoute && freeGalacticSlots <= 0) {
+        unavailableReason = "No galactic route slots available";
+      } else if (!isSystemRoute && !isGalacticRoute && freeEmpireSlots <= 0) {
+        unavailableReason = "No empire route slots available";
+      }
+
       // Empire & tariff info (use prebuilt map to avoid linear scans)
-      const originEmpireId = planetEmpireMap.get(opp.originPlanetId) ?? null;
-      const destEmpireId = planetEmpireMap.get(opp.destinationPlanetId) ?? null;
+      const originEmpireId = oEmpId;
+      const destEmpireId = dEmpId;
       const originEmpire = (state.galaxy.empires ?? []).find(
         (e) => e.id === originEmpireId,
       );
@@ -812,6 +904,7 @@ export class RoutesScene extends Phaser.Scene {
 
       return {
         _index: origIdx,
+        _unavailableReason: unavailableReason,
         origin: opp.originName,
         destination: opp.destinationName,
         empire: empireLabel,
@@ -900,6 +993,15 @@ export class RoutesScene extends Phaser.Scene {
       const btn = this.scopeBandButtons[i];
       const isActive = scopes[i] === this.finderScopeBand;
       btn.setAlpha(isActive ? 1.0 : 0.5);
+    }
+  }
+
+  private updateEmpireFilterButtonStyles(): void {
+    const empires = gameStore.getState().galaxy.empires ?? [];
+    const values: Array<string | null> = [null, ...empires.map((e) => e.id)];
+    for (let i = 0; i < this.empireFilterButtons.length; i++) {
+      const isActive = values[i] === this.finderEmpireFilter;
+      this.empireFilterButtons[i].setAlpha(isActive ? 1.0 : 0.5);
     }
   }
 
