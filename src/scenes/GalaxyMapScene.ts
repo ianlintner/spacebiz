@@ -52,6 +52,7 @@ interface EmpireMarker {
 interface TrafficShip {
   routeId: string;
   ship: Ship;
+  ownerId: string;
   sprite:
     | Phaser.GameObjects.Sprite
     | Phaser.GameObjects.Image
@@ -59,6 +60,14 @@ interface TrafficShip {
   t: number;
   speed: number;
   dir: 1 | -1;
+}
+
+interface LayerToggleButton {
+  bg: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
+  hit: Phaser.GameObjects.Zone;
+  isOn: () => boolean;
+  setOn: (on: boolean) => void;
 }
 
 export class GalaxyMapScene extends Phaser.Scene {
@@ -69,6 +78,19 @@ export class GalaxyMapScene extends Phaser.Scene {
   private trafficShips: TrafficShip[] = [];
   private empireInfoCard: Phaser.GameObjects.Container | null = null;
   private routeTrafficStateKey: string | null = null;
+
+  // ── Layer state (toggleable via the bottom button row) ────────────────────
+  private showEmpires = true;
+  private showSystemNames = true;
+  private showShips = true;
+  // Cycle through: null (all) → "player" → each AI company id → null …
+  // Routes/ships not matching the filter are ghosted; full hide is via the
+  // ship layer toggle.
+  private companyFilter: string | null = null;
+  private companyFilterCycle: (string | null)[] = [null];
+  private layerToggles: LayerToggleButton[] = [];
+  private companyFilterButton: LayerToggleButton | null = null;
+  private sidebarObjects: Phaser.GameObjects.GameObject[] = [];
 
   // Last state slices used to drive the 3D scene. Reference-compared so we
   // only rebuild Three.js geometry when the visual contents of the galaxy
@@ -96,12 +118,15 @@ export class GalaxyMapScene extends Phaser.Scene {
     generateEmpireFlags(this, empires, state.seed);
 
     // Carve a 3D viewport out of the main content area, leaving strips at
-    // top (HUD: title, slot count) and bottom (legend) for 2D Phaser chrome.
+    // top (HUD: title, slot count) and bottom (layer toggles) for 2D Phaser
+    // chrome. The left sidebar slot becomes the galaxy info panel.
+    const TOP_STRIP = 60;
+    const BOTTOM_STRIP = 60; // layer toggle row height
     this.vizRect = {
       x: L.mainContentLeft + 4,
-      y: L.contentTop + 60,
+      y: L.contentTop + TOP_STRIP,
       w: L.mainContentWidth - 8,
-      h: L.contentHeight - 70,
+      h: L.contentHeight - TOP_STRIP - BOTTOM_STRIP,
     };
 
     const phaserCanvas = this.game.canvas;
@@ -134,6 +159,8 @@ export class GalaxyMapScene extends Phaser.Scene {
 
     // ── HUD overlay (top-of-content strip) ─────────────────────────────────
     this.buildHud(state, theme, L);
+    this.buildSidebar(state, theme, L);
+    this.buildLayerToggleRow(state, theme, L);
 
     // ── State subscription ─────────────────────────────────────────────────
     const handleStateChanged = (
@@ -219,6 +246,20 @@ export class GalaxyMapScene extends Phaser.Scene {
         m.nameText.destroy();
       }
       this.empireMarkers = [];
+      for (const obj of this.sidebarObjects) obj.destroy();
+      this.sidebarObjects = [];
+      for (const t of this.layerToggles) {
+        t.bg.destroy();
+        t.label.destroy();
+        t.hit.destroy();
+      }
+      this.layerToggles = [];
+      if (this.companyFilterButton) {
+        this.companyFilterButton.bg.destroy();
+        this.companyFilterButton.label.destroy();
+        this.companyFilterButton.hit.destroy();
+        this.companyFilterButton = null;
+      }
       this.destroyInfoCard();
       this.view3D?.destroy();
       this.view3D = null;
@@ -306,6 +347,303 @@ export class GalaxyMapScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setAlpha(0.85)
       .setDepth(901);
+  }
+
+  /**
+   * Sidebar info panel (left of the 3D viewport). Mirrors the sidebar slot
+   * other scenes use — keeps the visual rhythm consistent and gives players
+   * an at-a-glance read of empire roster and galaxy stats.
+   */
+  private buildSidebar(
+    state: GameState,
+    theme: ReturnType<typeof getTheme>,
+    L: ReturnType<typeof getLayout>,
+  ): void {
+    if (L.sidebarWidth <= 0) return;
+    const x = L.sidebarLeft;
+    const y = L.contentTop;
+    const w = L.sidebarWidth;
+    const h = L.contentHeight;
+
+    const bg = this.add
+      .rectangle(x, y, w, h, theme.colors.panelBg, 0.55)
+      .setStrokeStyle(1, theme.colors.panelBorder, 0.4)
+      .setOrigin(0, 0)
+      .setDepth(40);
+    this.sidebarObjects.push(bg);
+
+    const titleText = this.add
+      .text(x + 12, y + 12, "Galaxy Overview", {
+        fontSize: `${theme.fonts.heading.size}px`,
+        fontFamily: theme.fonts.heading.family,
+        color: colorToString(theme.colors.accent),
+      })
+      .setDepth(41);
+    this.sidebarObjects.push(titleText);
+
+    const empires = state.galaxy.empires;
+    const systems = state.galaxy.systems;
+    const hyperlanes = state.hyperlanes ?? [];
+    const stats = [
+      `Systems: ${systems.length}`,
+      `Empires: ${empires.length}`,
+      `Hyperlanes: ${hyperlanes.length}`,
+      `Player Empire: ${empires.find((e) => e.id === state.playerEmpireId)?.name ?? "—"}`,
+    ];
+    let cy = y + 38;
+    for (const line of stats) {
+      const t = this.add
+        .text(x + 12, cy, line, {
+          fontSize: `${theme.fonts.caption.size}px`,
+          fontFamily: theme.fonts.caption.family,
+          color: colorToString(theme.colors.text),
+        })
+        .setDepth(41);
+      this.sidebarObjects.push(t);
+      cy += 16;
+    }
+
+    cy += 8;
+    const empireHeader = this.add
+      .text(x + 12, cy, "EMPIRES", {
+        fontSize: `${theme.fonts.caption.size}px`,
+        fontFamily: theme.fonts.caption.family,
+        color: colorToString(theme.colors.accent),
+      })
+      .setDepth(41);
+    this.sidebarObjects.push(empireHeader);
+    cy += 20;
+
+    // System count per empire so the player can rank empires by size at a
+    // glance — matches the visual mass of empire halos in the 3D view.
+    const empSystemCount = new Map<string, number>();
+    for (const sys of systems) {
+      empSystemCount.set(
+        sys.empireId,
+        (empSystemCount.get(sys.empireId) ?? 0) + 1,
+      );
+    }
+    const empiresSorted = [...empires].sort(
+      (a, b) =>
+        (empSystemCount.get(b.id) ?? 0) - (empSystemCount.get(a.id) ?? 0),
+    );
+    for (const emp of empiresSorted) {
+      const swatch = this.add
+        .rectangle(x + 12, cy + 6, 10, 10, emp.color)
+        .setOrigin(0, 0.5)
+        .setDepth(41);
+      this.sidebarObjects.push(swatch);
+      const accessible = isEmpireAccessible(emp.id, state);
+      const lockSuffix = accessible ? "" : " 🔒";
+      const sysCount = empSystemCount.get(emp.id) ?? 0;
+      const txt = this.add
+        .text(
+          x + 28,
+          cy,
+          `${emp.name}${lockSuffix}\n${sysCount} systems · ${Math.round(emp.tariffRate * 100)}% tariff`,
+          {
+            fontSize: `${theme.fonts.caption.size}px`,
+            fontFamily: theme.fonts.caption.family,
+            color: colorToString(
+              accessible ? theme.colors.text : theme.colors.textDim,
+            ),
+          },
+        )
+        .setAlpha(accessible ? 1 : 0.6)
+        .setDepth(41);
+      this.sidebarObjects.push(txt);
+      cy += 32;
+      if (cy > y + h - 24) break;
+    }
+  }
+
+  /**
+   * Bottom toggle row: layer visibility (Empires/Names/Ships) + a company
+   * filter that cycles through `null → player → each AI co → null`. Routes
+   * and ships not matching the filter are ghosted to a low alpha; hiding
+   * the Ships layer outright removes them entirely.
+   */
+  private buildLayerToggleRow(
+    state: GameState,
+    theme: ReturnType<typeof getTheme>,
+    L: ReturnType<typeof getLayout>,
+  ): void {
+    // Build the filter cycle from the current set of companies in play.
+    this.companyFilterCycle = [
+      null,
+      "player",
+      ...state.aiCompanies.map((c) => c.id),
+    ];
+    const labelForFilter = (id: string | null): string => {
+      if (id === null) return "Filter: All Companies";
+      if (id === "player") return `Filter: ${state.companyName}`;
+      const co = state.aiCompanies.find((c) => c.id === id);
+      return `Filter: ${co?.name ?? id}`;
+    };
+
+    const rowY = L.contentTop + L.contentHeight - 56;
+    let x = L.mainContentLeft + 8;
+
+    const makeToggle = (
+      label: string,
+      isOn: () => boolean,
+      onClick: () => void,
+      width: number,
+    ): LayerToggleButton => {
+      const bg = this.add
+        .rectangle(x, rowY, width, 36, theme.colors.panelBg, 0.85)
+        .setStrokeStyle(1, theme.colors.panelBorder, 0.6)
+        .setOrigin(0, 0)
+        .setDepth(902);
+      const text = this.add
+        .text(x + width / 2, rowY + 18, label, {
+          fontSize: `${theme.fonts.caption.size}px`,
+          fontFamily: theme.fonts.caption.family,
+          color: colorToString(theme.colors.text),
+        })
+        .setOrigin(0.5, 0.5)
+        .setDepth(903);
+      const hit = this.add
+        .zone(x, rowY, width, 36)
+        .setOrigin(0, 0)
+        .setInteractive({ cursor: "pointer", useHandCursor: true });
+      const refresh = (): void => {
+        const on = isOn();
+        bg.setFillStyle(
+          on ? theme.colors.accent : theme.colors.panelBg,
+          on ? 0.5 : 0.85,
+        );
+        bg.setStrokeStyle(
+          1,
+          on ? theme.colors.accent : theme.colors.panelBorder,
+          on ? 0.9 : 0.6,
+        );
+        text.setColor(
+          colorToString(on ? theme.colors.text : theme.colors.textDim),
+        );
+      };
+      hit.on("pointerup", () => {
+        getAudioDirector().sfx("ui_tab_switch");
+        onClick();
+        refresh();
+      });
+      const btn: LayerToggleButton = {
+        bg,
+        label: text,
+        hit,
+        isOn,
+        setOn: () => refresh(),
+      };
+      refresh();
+      x += width + 8;
+      return btn;
+    };
+
+    this.layerToggles.push(
+      makeToggle(
+        "Empires",
+        () => this.showEmpires,
+        () => this.setEmpiresVisible(!this.showEmpires),
+        90,
+      ),
+    );
+    this.layerToggles.push(
+      makeToggle(
+        "Names",
+        () => this.showSystemNames,
+        () => {
+          this.showSystemNames = !this.showSystemNames;
+        },
+        80,
+      ),
+    );
+    this.layerToggles.push(
+      makeToggle(
+        "Ships",
+        () => this.showShips,
+        () => this.setShipsVisible(!this.showShips),
+        80,
+      ),
+    );
+
+    // Company filter — wider button, separate row slot. Custom isOn() returns
+    // true whenever a filter is active so the styling reflects "filtering on".
+    const filterWidth = 220;
+    const filterBg = this.add
+      .rectangle(x, rowY, filterWidth, 36, theme.colors.panelBg, 0.85)
+      .setStrokeStyle(1, theme.colors.panelBorder, 0.6)
+      .setOrigin(0, 0)
+      .setDepth(902);
+    const filterText = this.add
+      .text(
+        x + filterWidth / 2,
+        rowY + 18,
+        labelForFilter(this.companyFilter),
+        {
+          fontSize: `${theme.fonts.caption.size}px`,
+          fontFamily: theme.fonts.caption.family,
+          color: colorToString(theme.colors.text),
+        },
+      )
+      .setOrigin(0.5, 0.5)
+      .setDepth(903);
+    const filterHit = this.add
+      .zone(x, rowY, filterWidth, 36)
+      .setOrigin(0, 0)
+      .setInteractive({ cursor: "pointer", useHandCursor: true });
+    const refreshFilter = (): void => {
+      const on = this.companyFilter !== null;
+      filterBg.setFillStyle(
+        on ? theme.colors.accent : theme.colors.panelBg,
+        on ? 0.5 : 0.85,
+      );
+      filterBg.setStrokeStyle(
+        1,
+        on ? theme.colors.accent : theme.colors.panelBorder,
+        on ? 0.9 : 0.6,
+      );
+      filterText.setText(labelForFilter(this.companyFilter));
+      filterText.setColor(
+        colorToString(on ? theme.colors.text : theme.colors.textDim),
+      );
+    };
+    filterHit.on("pointerup", () => {
+      getAudioDirector().sfx("ui_tab_switch");
+      this.cycleCompanyFilter();
+      refreshFilter();
+    });
+    refreshFilter();
+    this.companyFilterButton = {
+      bg: filterBg,
+      label: filterText,
+      hit: filterHit,
+      isOn: () => this.companyFilter !== null,
+      setOn: () => refreshFilter(),
+    };
+  }
+
+  private setEmpiresVisible(on: boolean): void {
+    this.showEmpires = on;
+    this.view3D?.setEmpireHalosVisible(on);
+  }
+
+  private setShipsVisible(on: boolean): void {
+    this.showShips = on;
+    for (const t of this.trafficShips) {
+      (
+        t.sprite as Phaser.GameObjects.GameObject & {
+          setVisible?: (v: boolean) => unknown;
+        }
+      ).setVisible?.(on);
+    }
+  }
+
+  private cycleCompanyFilter(): void {
+    const idx = this.companyFilterCycle.indexOf(this.companyFilter);
+    const next =
+      this.companyFilterCycle[(idx + 1) % this.companyFilterCycle.length];
+    this.companyFilter = next;
+    this.view3D?.setRouteCompanyFilter(next);
   }
 
   private buildSystemMarkers(state: GameState): void {
@@ -445,6 +783,10 @@ export class GalaxyMapScene extends Phaser.Scene {
   private updateEmpireMarkers(): void {
     if (!this.view3D) return;
     for (const m of this.empireMarkers) {
+      if (!this.showEmpires) {
+        m.nameText.setVisible(false);
+        continue;
+      }
       const centroid = this.view3D.getEmpireCentroid(m.empire.id);
       if (!centroid) {
         m.nameText.setVisible(false);
@@ -466,7 +808,8 @@ export class GalaxyMapScene extends Phaser.Scene {
     // alike. Star hitboxes stay clickable regardless.
     const camDist = this.view3D.getCameraDistance();
     const halfExtent = this.view3D.getGalaxyHalfExtent();
-    const showSystemLabels = camDist < halfExtent * 2.0;
+    // Combine LOD distance gating with the player's manual Names toggle.
+    const showSystemLabels = this.showSystemNames && camDist < halfExtent * 2.0;
     for (const m of this.systemMarkers) {
       const world = this.view3D.getSystemWorldPosition(m.system.id);
       if (!world) {
@@ -512,9 +855,17 @@ export class GalaxyMapScene extends Phaser.Scene {
       for (let i = 0; i < visual.visibleUnits; i++) {
         const ship = visual.assignedShips[i % visual.assignedShips.length];
         const sprite = this.createShipSprite(ship);
+        if (!this.showShips) {
+          (
+            sprite as Phaser.GameObjects.GameObject & {
+              setVisible?: (v: boolean) => unknown;
+            }
+          ).setVisible?.(false);
+        }
         this.trafficShips.push({
           routeId: visual.routeId,
           ship,
+          ownerId: visual.ownerId,
           sprite,
           t: i / Math.max(1, visual.visibleUnits),
           speed: 0.018 + Math.random() * 0.012,
@@ -560,14 +911,22 @@ export class GalaxyMapScene extends Phaser.Scene {
     const v3 = this.view3D;
     const tmp = this.tmpWorld;
     const tmpNext = this.tmpWorldNext;
+    const filter = this.companyFilter;
     for (const ts of this.trafficShips) {
       const curve = v3.getRouteCurve(ts.routeId);
+      const sprite = ts.sprite as Phaser.GameObjects.GameObject & {
+        setPosition: (x: number, y: number) => unknown;
+        setVisible?: (v: boolean) => unknown;
+        setRotation?: (r: number) => unknown;
+        setAlpha?: (a: number) => unknown;
+      };
+      // Layer toggle: ship layer off → fully hidden, no further work.
+      if (!this.showShips) {
+        sprite.setVisible?.(false);
+        continue;
+      }
       if (!curve) {
-        (
-          ts.sprite as Phaser.GameObjects.GameObject & {
-            setVisible?: (v: boolean) => unknown;
-          }
-        ).setVisible?.(false);
+        sprite.setVisible?.(false);
         continue;
       }
       ts.t += ts.speed * ts.dir * dt;
@@ -588,17 +947,17 @@ export class GalaxyMapScene extends Phaser.Scene {
         y: tmpNext.y,
         z: tmpNext.z,
       });
-      const sprite = ts.sprite as Phaser.GameObjects.GameObject & {
-        setPosition: (x: number, y: number) => unknown;
-        setVisible?: (v: boolean) => unknown;
-        setRotation?: (r: number) => unknown;
-      };
       sprite.setVisible?.(proj.visible);
       if (!proj.visible) continue;
       sprite.setPosition(proj.x, proj.y);
       sprite.setRotation?.(
         Math.atan2(projNext.y - proj.y, projNext.x - proj.x),
       );
+      // Filter ghosting: non-matching ships drop to a low alpha but remain
+      // visible so the player can see they're still flying — full hide is
+      // via the Ships layer toggle.
+      const ghosted = filter !== null && ts.ownerId !== filter;
+      sprite.setAlpha?.(ghosted ? 0.18 : 1);
     }
   }
 

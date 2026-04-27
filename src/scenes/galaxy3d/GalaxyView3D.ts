@@ -65,6 +65,13 @@ export class GalaxyView3D {
   private hyperlaneLines: THREE.LineSegments | null = null;
   private routeLines: THREE.Line[] = [];
   private readonly routeCurves = new Map<string, THREE.CatmullRomCurve3>();
+  // Map of route line → ownerId, for the company filter. Same length and
+  // order as routeLines so we can ghost non-matching routes per filter.
+  private readonly routeOwners: string[] = [];
+  // Base opacity per route line (player vs AI), captured at build time so the
+  // filter can restore the correct full-strength alpha when cleared.
+  private readonly routeBaseOpacity: number[] = [];
+  private routeCompanyFilter: string | null = null;
   private starfield: THREE.Points | null = null;
 
   private viewport: ViewportRect = { x: 0, y: 0, w: 0, h: 0 };
@@ -163,6 +170,24 @@ export class GalaxyView3D {
 
   setRoutes(trafficVisuals: RouteTrafficVisual[]): void {
     this.rebuildRouteLines(trafficVisuals);
+  }
+
+  /** Toggle the empire territory bubbles. */
+  setEmpireHalosVisible(visible: boolean): void {
+    for (const halo of this.empireHalos.values()) {
+      halo.visible = visible;
+    }
+  }
+
+  /**
+   * Filter route line opacity by company. `null` = full opacity for all.
+   * When set, routes whose owner doesn't match get ghosted to a dim alpha so
+   * the player can still see the lane network without the visual noise of
+   * unrelated companies' traffic.
+   */
+  setRouteCompanyFilter(ownerId: string | null): void {
+    this.routeCompanyFilter = ownerId;
+    this.applyRouteFilterAlpha();
   }
 
   /**
@@ -308,7 +333,10 @@ export class GalaxyView3D {
     // Re-derive camera distance bounds and reset to a sensible framing now
     // that we know how big the galaxy actually is.
     this.cameraDistanceMin = Math.max(30, this.galaxyHalfExtent * 0.6);
-    this.cameraDistanceMax = this.galaxyHalfExtent * 4;
+    // Generous zoom-out so players can see the entire galaxy from afar — but
+    // still gated so the galaxy can't shrink to a single pixel and the
+    // starfield stays meaningful.
+    this.cameraDistanceMax = this.galaxyHalfExtent * 8;
     this.cameraDistance = clamp(
       this.galaxyHalfExtent * 1.8,
       this.cameraDistanceMin,
@@ -544,6 +572,8 @@ export class GalaxyView3D {
     }
     this.routeLines = [];
     this.routeCurves.clear();
+    this.routeOwners.length = 0;
+    this.routeBaseOpacity.length = 0;
 
     for (const visual of visuals) {
       const path = visual.pathSystemIds;
@@ -578,15 +608,31 @@ export class GalaxyView3D {
       const points = curve.getPoints(Math.max(2, controlPoints.length - 1) * 4);
       const geom = new THREE.BufferGeometry().setFromPoints(points);
       const isPlayer = visual.ownerId === "player";
+      const baseOpacity = isPlayer ? 0.7 : 0.4;
       const mat = new THREE.LineBasicMaterial({
         color: isPlayer ? ROUTE_PLAYER_COLOR : ROUTE_AI_COLOR,
         transparent: true,
-        opacity: isPlayer ? 0.7 : 0.4,
+        opacity: baseOpacity,
         depthWrite: false,
       });
       const line = new THREE.Line(geom, mat);
       this.scene.add(line);
       this.routeLines.push(line);
+      this.routeOwners.push(visual.ownerId);
+      this.routeBaseOpacity.push(baseOpacity);
+    }
+    this.applyRouteFilterAlpha();
+  }
+
+  private applyRouteFilterAlpha(): void {
+    const filter = this.routeCompanyFilter;
+    for (let i = 0; i < this.routeLines.length; i++) {
+      const line = this.routeLines[i];
+      const owner = this.routeOwners[i];
+      const base = this.routeBaseOpacity[i];
+      const mat = line.material as THREE.LineBasicMaterial;
+      // Ghost non-matching routes; matching (or no filter) get full strength.
+      mat.opacity = filter && owner !== filter ? base * 0.18 : base;
     }
   }
 
