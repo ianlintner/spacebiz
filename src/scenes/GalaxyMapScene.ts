@@ -31,6 +31,10 @@ import {
 } from "../game/routes/RouteManager.ts";
 import type { RouteTrafficVisual } from "../game/routes/RouteManager.ts";
 import { GalaxyView3D } from "./galaxy3d/GalaxyView3D.ts";
+import type {
+  ProjectedScreen,
+  Vec3,
+} from "./galaxy3d/GalaxyView3D.ts";
 
 import type { GameHUDScene } from "./GameHUDScene.ts";
 import type { Empire, GameState, Ship, StarSystem } from "../data/types.ts";
@@ -754,19 +758,23 @@ export class GalaxyMapScene extends Phaser.Scene {
     for (const emp of state.galaxy.empires) {
       const accessible = isEmpireAccessible(emp.id, state);
       // Tint by empire color, lightened toward white for legibility against
-      // the dim halo. Strong stroke holds it readable across busy starfields.
+      // the dim halo. Earlier this rendered at body+1 fontSize / alpha 0.7
+      // and crowded the system label layer in dense regions (Drax/Zenthari).
+      // Now reads as a quieter political backdrop, with a per-frame zoom
+      // gate (see updateEmpireMarkers) hiding it entirely when the camera
+      // is close to a system.
       const baseColor = emp.color;
       const tinted = lightenHex(baseColor, 0.55);
       const nameText = this.add
         .text(0, 0, emp.name, {
-          fontSize: `${theme.fonts.body.size + 1}px`,
+          fontSize: `${theme.fonts.body.size}px`,
           fontFamily: theme.fonts.body.family,
           color: colorToString(tinted),
           stroke: "#000000",
-          strokeThickness: 3,
+          strokeThickness: 2,
         })
         .setOrigin(0.5, 0.5)
-        .setAlpha(accessible ? 0.7 : 0.5)
+        .setAlpha(accessible ? 0.32 : 0.24)
         .setDepth(45);
       this.empireMarkers.push({ empire: emp, nameText });
     }
@@ -782,8 +790,17 @@ export class GalaxyMapScene extends Phaser.Scene {
 
   private updateEmpireMarkers(): void {
     if (!this.view3D) return;
+    // Zoom-based hide: when the player has pulled in close to a region
+    // (cameraDistance < halfExtent * 0.95), the per-empire label sits over
+    // 5–10 system labels in the same frustum and crowds them out. At that
+    // zoom the player no longer needs the political context — they're
+    // looking at one or two systems. The "Empires" toggle still wins if
+    // the player wants the layer off entirely.
+    const camDist = this.view3D.getCameraDistance();
+    const halfExtent = this.view3D.getGalaxyHalfExtent();
+    const zoomedIn = camDist < halfExtent * 0.95;
     for (const m of this.empireMarkers) {
-      if (!this.showEmpires) {
+      if (!this.showEmpires || zoomedIn) {
         m.nameText.setVisible(false);
         continue;
       }
@@ -810,26 +827,72 @@ export class GalaxyMapScene extends Phaser.Scene {
     const halfExtent = this.view3D.getGalaxyHalfExtent();
     // Combine LOD distance gating with the player's manual Names toggle.
     const showSystemLabels = this.showSystemNames && camDist < halfExtent * 2.0;
-    for (const m of this.systemMarkers) {
-      const world = this.view3D.getSystemWorldPosition(m.system.id);
-      if (!world) {
+
+    // Grid-based collision avoidance: bucket each visible system's projected
+    // centre into a fixed cell. The first system in a cell shows its label,
+    // any later system in the same cell hides its label. O(n) per frame;
+    // accessible (player-relevant) systems win cell ownership over locked
+    // ones so the politically-important names aren't suppressed.
+    const cellSize = 56;
+    const occupied = new Set<string>();
+    // Two-pass: pass 1 reserves cells for accessible systems, pass 2 fills
+    // remaining cells with locked systems. Both build screen positions.
+    type Project = { proj: ProjectedScreen; world: Vec3 } | null;
+    const projects: Project[] = new Array(this.systemMarkers.length);
+    for (let i = 0; i < this.systemMarkers.length; i++) {
+      const world = this.view3D.getSystemWorldPosition(
+        this.systemMarkers[i].system.id,
+      );
+      projects[i] = world
+        ? { proj: this.view3D.projectToScreenDesign(world), world }
+        : null;
+    }
+    const labelDecisions: boolean[] = new Array(this.systemMarkers.length);
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 0; i < this.systemMarkers.length; i++) {
+        const m = this.systemMarkers[i];
+        const p = projects[i];
+        if (!p || !p.proj.visible) {
+          labelDecisions[i] = false;
+          continue;
+        }
+        if (pass === 0 && !m.accessible) continue;
+        if (pass === 1 && m.accessible) continue;
+        if (labelDecisions[i] !== undefined) continue;
+        const cellX = Math.floor(p.proj.x / cellSize);
+        const cellY = Math.floor((p.proj.y + 12) / cellSize);
+        const key = `${cellX},${cellY}`;
+        if (occupied.has(key)) {
+          labelDecisions[i] = false;
+        } else {
+          occupied.add(key);
+          labelDecisions[i] = true;
+        }
+      }
+    }
+
+    for (let i = 0; i < this.systemMarkers.length; i++) {
+      const m = this.systemMarkers[i];
+      const p = projects[i];
+      if (!p) {
         m.hitbox.setVisible(false);
         m.nameText.setVisible(false);
         m.flag?.setVisible(false);
         m.lockIcon?.setVisible(false);
         continue;
       }
-      const proj = this.view3D.projectToScreenDesign(world);
-      const visible = proj.visible;
+      const visible = p.proj.visible;
       m.hitbox.setVisible(visible);
-      m.nameText.setVisible(visible && showSystemLabels);
+      m.nameText.setVisible(
+        visible && showSystemLabels && labelDecisions[i] === true,
+      );
       m.flag?.setVisible(visible);
       m.lockIcon?.setVisible(visible);
       if (!visible) continue;
-      m.hitbox.setPosition(proj.x, proj.y);
-      m.nameText.setPosition(proj.x, proj.y + 12);
-      if (m.flag) m.flag.setPosition(proj.x, proj.y - 16);
-      if (m.lockIcon) m.lockIcon.setPosition(proj.x + 12, proj.y - 6);
+      m.hitbox.setPosition(p.proj.x, p.proj.y);
+      m.nameText.setPosition(p.proj.x, p.proj.y + 12);
+      if (m.flag) m.flag.setPosition(p.proj.x, p.proj.y - 16);
+      if (m.lockIcon) m.lockIcon.setPosition(p.proj.x + 12, p.proj.y - 6);
     }
   }
 

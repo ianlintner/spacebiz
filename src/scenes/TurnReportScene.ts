@@ -15,6 +15,7 @@ import { autoSave } from "../game/SaveManager.ts";
 import type { TurnResult } from "../data/types.ts";
 import type { GameHUDScene } from "./GameHUDScene.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
+import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
 
 function formatCash(amount: number): string {
   const sign = amount < 0 ? "-" : "";
@@ -48,14 +49,27 @@ export class TurnReportScene extends Phaser.Scene {
     const state = gameStore.getState();
     getAudioDirector().setMusicState("report");
 
-    // Flow constants: ensure all panels fit in contentHeight (612px)
+    // Flow constants: budget = contentHeight (592px) − 3 × TR_GAP (24px) = 568px.
+    // Panel chrome (title bar 36 + bottom padding 8 + content top padding 8 = 52);
+    // DataTable header is 36px and each row 32px. Earlier sizes (104/86/132)
+    // could not fit even a single row + header inside their panel, so rows
+    // overflowed and visibly collided with the next section's title (e.g.
+    // "Deep Freight Lines §105,222 2 Active" landing on top of "Market
+    // Changes"). Current sizes:
+    //   - PL Panel:    192 → 140 content, fits 5 rows × 20 + separator + net.
+    //                  PL row spacing was tightened from 28 → 20 below.
+    //   - Top Routes:  152 → 100 content = header 36 + 2 rows × 32 exactly.
+    //   - Rival Snap:  152 → 100 content = header 36 + 2 rows × 32 exactly.
+    //   - Market:       72 →  20 content, fuel-price line only (cargo +
+    //                  passengers detail moved to the global ticker).
     const TR_GAP = 8;
     const TR_PL_H = 192;
-    const TR_ROUTE_H = 104;
-    const TR_AI_H = 86;
-    const TR_BOTTOM_H = 132;
+    const TR_ROUTE_H = 152;
+    const TR_AI_H = 152;
+    const TR_BOTTOM_H = 72;
     const TR_ROUTE_Y = L.contentTop + TR_PL_H + TR_GAP;
     const TR_AI_Y = TR_ROUTE_Y + TR_ROUTE_H + TR_GAP;
+    const TR_PL_ROW_GAP = 20; // tightened from 28 so 5 rows + separator + net fit
 
     const history = state.history;
     const lastTurn: TurnResult | undefined = history[history.length - 1];
@@ -70,9 +84,16 @@ export class TurnReportScene extends Phaser.Scene {
     // Auto-save after each completed turn so the player can resume later
     autoSave(state);
 
-    // Opaque backdrop FIRST, so the underlying GalaxyMapScene's Three.js
-    // canvas can't render through (QA: galaxy bleeding through UI). The
-    // starfield draws on top of it for ambience.
+    // Hide any active 3D galaxy/system canvas at the DOM level. Phaser-side
+    // backdrops cannot occlude the Three.js canvas (zIndex 2 > Phaser zIndex
+    // 0), so a Phaser opaque rectangle alone is insufficient. Restored on
+    // shutdown so the next content scene (GalaxyMapScene) is visible again.
+    setGalaxy3DVisible(false);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      setGalaxy3DVisible(true);
+    });
+
+    // Opaque scene backdrop — defensive backup if the DOM hide is bypassed.
     this.add
       .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 1)
       .setOrigin(0, 0)
@@ -209,7 +230,7 @@ export class TurnReportScene extends Phaser.Scene {
         },
       });
 
-      rowY += 28;
+      rowY += TR_PL_ROW_GAP;
     }
 
     // Separator line
@@ -518,7 +539,10 @@ export class TurnReportScene extends Phaser.Scene {
     });
     const mpContent = marketPanel.getContentArea();
 
-    // Fuel price summary
+    // Fuel price (left) + cargo/passenger totals as a single inline summary
+    // line (right). Earlier the cargo grid + passengers stretched the panel
+    // beyond its 72px height — they now condense into a single caption that
+    // fits the available content area.
     const fuelText = `Fuel price: ${formatCash(state.market.fuelPrice)} (${state.market.fuelTrend})`;
     const fuelLabel = this.add.text(
       mpContent.x + 8,
@@ -532,58 +556,39 @@ export class TurnReportScene extends Phaser.Scene {
     );
     marketPanel.add(fuelLabel);
 
-    // Show summary of cargo delivered this turn (more rows now that panel is full width)
     const cargoEntries = Object.entries(lastTurn.cargoDelivered)
       .filter(([, amount]) => amount > 0)
-      .sort((a, b) => (b[1] as number) - (a[1] as number))
-      .slice(0, 6);
-    let marketY = mpContent.y + 32;
-    if (cargoEntries.length > 0) {
-      const cargoHeader = this.add.text(
-        mpContent.x + 8,
-        marketY,
-        "Cargo delivered this turn:",
+      .sort((a, b) => (b[1] as number) - (a[1] as number));
+    const totalCargo = cargoEntries.reduce(
+      (acc, [, amount]) => acc + (amount as number),
+      0,
+    );
+    const summaryParts: string[] = [];
+    if (totalCargo > 0) {
+      const top = cargoEntries
+        .slice(0, 2)
+        .map(([t, a]) => `${t}: ${(a as number).toLocaleString("en-US")}`)
+        .join(" · ");
+      summaryParts.push(`Cargo ${totalCargo.toLocaleString("en-US")} (${top})`);
+    }
+    if (lastTurn.passengersTransported > 0) {
+      summaryParts.push(
+        `Pax ${lastTurn.passengersTransported.toLocaleString("en-US")}`,
+      );
+    }
+    if (summaryParts.length > 0) {
+      const summaryLabel = this.add.text(
+        mpContent.x + mpContent.width - 8,
+        mpContent.y + 4,
+        summaryParts.join("  ·  "),
         {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
           color: colorToString(theme.colors.textDim),
         },
       );
-      marketPanel.add(cargoHeader);
-      marketY += 20;
-
-      const colCount = Math.min(3, cargoEntries.length);
-      const colWidth = Math.floor(mpContent.width / colCount);
-      cargoEntries.forEach(([cargoType, amount], idx) => {
-        const col = idx % colCount;
-        const row = Math.floor(idx / colCount);
-        const cargoLine = this.add.text(
-          mpContent.x + 8 + col * colWidth,
-          marketY + row * 18,
-          `${cargoType}: ${(amount as number).toLocaleString("en-US")} units`,
-          {
-            fontSize: `${theme.fonts.caption.size}px`,
-            fontFamily: theme.fonts.caption.family,
-            color: colorToString(theme.colors.text),
-          },
-        );
-        marketPanel.add(cargoLine);
-      });
-      marketY += Math.ceil(cargoEntries.length / colCount) * 18;
-    }
-
-    if (lastTurn.passengersTransported > 0) {
-      const paxText = this.add.text(
-        mpContent.x + 8,
-        marketY + 4,
-        `Passengers: ${lastTurn.passengersTransported.toLocaleString("en-US")}`,
-        {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.text),
-        },
-      );
-      marketPanel.add(paxText);
+      summaryLabel.setOrigin(1, 0);
+      marketPanel.add(summaryLabel);
     }
 
     // -----------------------------------------------------------------------
