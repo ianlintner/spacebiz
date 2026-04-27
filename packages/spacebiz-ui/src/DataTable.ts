@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 import { playUiSfx } from "./UiSound.ts";
+import { applyClippingMask } from "./MaskUtils.ts";
 
 export interface ColumnDef {
   key: string;
@@ -95,7 +96,11 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.addAt(this.wheelHitArea, 0);
     this.wheelHitArea.setData("consumesWheel", true);
 
-    // Mask for body scrolling
+    // Mask for body scrolling. Prefer Phaser 4's filter-based mask, but fall
+    // back to Phaser 3's setMask(createGeometryMask) when the filters API is
+    // unavailable (e.g. during dev when node_modules is still on Phaser 3.x).
+    // Without the fallback, optional chaining silently no-ops and rows render
+    // past the table frame into surrounding UI.
     this.maskShape = scene.make.graphics({});
     this.maskShape.fillStyle(0xffffff);
     this.maskShape.fillRect(
@@ -105,7 +110,7 @@ export class DataTable extends Phaser.GameObjects.Container {
       config.height - this.headerHeight,
     );
     this.maskShape.setPosition(config.x, config.y);
-    this.bodyContainer.filters?.internal.addMask(this.maskShape);
+    applyClippingMask(this.bodyContainer, this.maskShape);
 
     // Scroll indicator (visual-only, not interactive)
     const trackHeight = config.height - this.headerHeight;
@@ -320,6 +325,13 @@ export class DataTable extends Phaser.GameObjects.Container {
     }
     this.selectedRowIndicator = null;
     this.renderBody();
+    // Force the clipping mask back to the current world position. setRows is
+    // typically called from a filter change or tab switch, both of which can
+    // leave the mask one frame stale (it's normally only resync'd on
+    // preupdate). The visible symptom: rows render correctly inside body
+    // space, but appear cropped to nothing because the mask rectangle is
+    // still aligned to the previous tab's transform.
+    this.syncMaskPosition();
   }
 
   private renderBody(): void {
