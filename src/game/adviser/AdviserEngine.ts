@@ -211,7 +211,8 @@ export function checkTutorialAdvancement(
     ...adviser,
     tutorialStepIndex: nextIndex,
     tutorialComplete: isComplete,
-    pendingMessages: [...adviser.pendingMessages, msg],
+    // Cap the queue defensively (matches TurnSimulator).
+    pendingMessages: [...adviser.pendingMessages, msg].slice(-12),
   };
 }
 
