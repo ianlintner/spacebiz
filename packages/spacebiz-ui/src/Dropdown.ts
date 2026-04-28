@@ -1,6 +1,11 @@
 import * as Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 import { playUiSfx } from "./UiSound.ts";
+import {
+  FocusManager,
+  createFocusRing,
+  type Focusable,
+} from "./foundation/FocusManager.ts";
 
 export interface DropdownOption {
   label: string;
@@ -19,19 +24,28 @@ export interface DropdownConfig {
   fontSize?: number;
 }
 
-export class Dropdown extends Phaser.GameObjects.Container {
+export class Dropdown
+  extends Phaser.GameObjects.Container
+  implements Focusable
+{
   private bg: Phaser.GameObjects.Rectangle;
   private label: Phaser.GameObjects.Text;
   private arrow: Phaser.GameObjects.Text;
   private border: Phaser.GameObjects.Rectangle;
+  private focusRing: Phaser.GameObjects.Rectangle;
   private options: DropdownOption[];
   private selectedIndex: number;
+  private highlightedIndex = -1;
   private dropdownOpen = false;
   private overlayObjects: Phaser.GameObjects.GameObject[] = [];
+  private optionBgs: Phaser.GameObjects.Rectangle[] = [];
   private onChangeFn?: (value: string, index: number) => void;
   private widthPx: number;
   private heightPx: number;
   private fontSize: number;
+  private isFocused = false;
+  private focusManager: FocusManager | null = null;
+  private keyHandler: ((event: KeyboardEvent) => void) | null = null;
   /** Click-away listener registered on the canvas */
   private canvasClickHandler: ((e: MouseEvent) => void) | null = null;
 
@@ -112,13 +126,108 @@ export class Dropdown extends Phaser.GameObjects.Container {
       }
     });
 
+    // Focus ring
+    this.focusRing = createFocusRing(scene, this.widthPx, this.heightPx);
+    this.add(this.focusRing);
+
     this.setSize(this.widthPx, this.heightPx);
     scene.add.existing(this);
+
+    // Register with the scene's focus manager and listen for keys.
+    this.focusManager = FocusManager.forScene(scene);
+    this.focusManager.register(this);
+    this.keyHandler = (event: KeyboardEvent) => this.handleKey(event);
+    scene.input.keyboard?.on("keydown", this.keyHandler);
 
     // Cleanup on scene shutdown
     this.scene.events.once("shutdown", () => {
       this.closeDropdown();
     });
+  }
+
+  // ── Focusable ────────────────────────────────────────────────────────────
+
+  setFocus(focused: boolean): void {
+    if (focused) {
+      this.focusManager?.setFocus(this);
+    } else if (this.isFocused) {
+      this.focusManager?.setFocus(null);
+    }
+  }
+
+  focus(): void {
+    if (this.isFocused) return;
+    this.isFocused = true;
+    this.focusRing.setVisible(true);
+  }
+
+  blur(): void {
+    if (!this.isFocused) return;
+    this.isFocused = false;
+    this.focusRing.setVisible(false);
+    if (this.dropdownOpen) this.closeDropdown();
+  }
+
+  isFocusable(): boolean {
+    return this.visible && this.active;
+  }
+
+  private handleKey(event: KeyboardEvent): void {
+    if (!this.isFocused || !this.visible) return;
+    if (this.dropdownOpen) {
+      if (event.code === "ArrowDown") {
+        this.setHighlight(
+          (this.highlightedIndex + 1 + this.options.length) %
+            this.options.length,
+        );
+        event.preventDefault();
+      } else if (event.code === "ArrowUp") {
+        this.setHighlight(
+          (this.highlightedIndex - 1 + this.options.length) %
+            this.options.length,
+        );
+        event.preventDefault();
+      } else if (event.code === "Enter" || event.code === "Space") {
+        if (this.highlightedIndex >= 0) {
+          this.commitSelection(this.highlightedIndex);
+        }
+        event.preventDefault();
+      } else if (event.code === "Escape") {
+        this.closeDropdown();
+        event.preventDefault();
+      }
+    } else {
+      if (event.code === "Enter" || event.code === "Space") {
+        this.openDropdown();
+        event.preventDefault();
+      } else if (event.code === "ArrowDown" || event.code === "ArrowUp") {
+        this.openDropdown();
+        event.preventDefault();
+      }
+    }
+  }
+
+  private setHighlight(index: number): void {
+    const theme = getTheme();
+    if (this.highlightedIndex >= 0 && this.optionBgs[this.highlightedIndex]) {
+      this.optionBgs[this.highlightedIndex].setFillStyle(
+        this.highlightedIndex === this.selectedIndex
+          ? theme.colors.buttonHover
+          : theme.colors.headerBg,
+      );
+    }
+    this.highlightedIndex = index;
+    if (index >= 0 && this.optionBgs[index]) {
+      this.optionBgs[index].setFillStyle(theme.colors.rowHover);
+    }
+  }
+
+  private commitSelection(index: number): void {
+    playUiSfx("ui_click");
+    this.selectedIndex = index;
+    this.label.setText(this.options[index].label);
+    this.closeDropdown();
+    this.onChangeFn?.(this.options[index].value, index);
   }
 
   getSelectedIndex(): number {
@@ -139,6 +248,7 @@ export class Dropdown extends Phaser.GameObjects.Container {
     if (this.dropdownOpen) return;
     this.dropdownOpen = true;
     playUiSfx("ui_click");
+    this.optionBgs = [];
 
     const theme = getTheme();
     const optH = this.heightPx;
@@ -162,6 +272,7 @@ export class Dropdown extends Phaser.GameObjects.Container {
         .setOrigin(0, 0)
         .setDepth(1000);
       this.overlayObjects.push(optBg);
+      this.optionBgs.push(optBg);
 
       const optBorder = this.scene.add
         .rectangle(worldPos.tx, optY, this.widthPx, optH)
@@ -210,15 +321,13 @@ export class Dropdown extends Phaser.GameObjects.Container {
 
       const selectIdx = i; // capture
       optBg.on("pointerdown", () => {
-        playUiSfx("ui_click");
-        this.selectedIndex = selectIdx;
-        this.label.setText(this.options[selectIdx].label);
-        this.closeDropdown();
-        if (this.onChangeFn) {
-          this.onChangeFn(this.options[selectIdx].value, selectIdx);
-        }
+        this.commitSelection(selectIdx);
       });
     }
+
+    // Start keyboard highlight on the currently selected option.
+    this.highlightedIndex = -1;
+    this.setHighlight(this.selectedIndex);
 
     // Close when clicking outside — use a delayed listener so the current
     // click doesn't immediately fire it.
@@ -261,6 +370,8 @@ export class Dropdown extends Phaser.GameObjects.Container {
       obj.destroy();
     }
     this.overlayObjects = [];
+    this.optionBgs = [];
+    this.highlightedIndex = -1;
 
     if (this.canvasClickHandler) {
       this.scene.game.canvas.removeEventListener(
@@ -275,6 +386,12 @@ export class Dropdown extends Phaser.GameObjects.Container {
   }
 
   destroy(fromScene?: boolean): void {
+    if (this.keyHandler && this.scene) {
+      this.scene.input.keyboard?.off("keydown", this.keyHandler);
+      this.keyHandler = null;
+    }
+    this.focusManager?.unregister(this);
+    this.focusManager = null;
     this.closeDropdown();
     super.destroy(fromScene);
   }
