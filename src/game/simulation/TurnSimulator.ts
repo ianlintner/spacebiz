@@ -38,6 +38,11 @@ import {
   getRouteSpeedModifier,
   isPassengerRouteBlocked,
 } from "../events/EventEngine.ts";
+import { applyCharterTurn } from "../charters/CharterManager.ts";
+import {
+  processCharterAuctionsTurn,
+  pruneResolvedAuctions,
+} from "../charters/CharterAuction.ts";
 import {
   tickEventChains,
   checkChainTriggers,
@@ -496,6 +501,51 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
     ? getHubUpkeep(nextState.stationHub)
     : 0;
 
+  // ----- Step 4b2: Charter auction driver (AI bids + resolution) -----
+  // Run BEFORE charter upkeep so a player who just won a fixed-term charter
+  // doesn't immediately face an upkeep tick (fixed-term has no upkeep anyway,
+  // but order keeps semantics clean). Pure — caller applies the partial state.
+  const auctionTurn = processCharterAuctionsTurn(nextState);
+  if (
+    auctionTurn.playerRefund > 0 ||
+    auctionTurn.resolvedAuctionIds.length > 0 ||
+    auctionTurn.activeAuctions !== (nextState.activeAuctions ?? [])
+  ) {
+    nextState = {
+      ...nextState,
+      activeAuctions: pruneResolvedAuctions(
+        auctionTurn.activeAuctions,
+        nextState.turn,
+      ),
+      galaxy: { ...nextState.galaxy, empires: auctionTurn.empires },
+      charters: auctionTurn.playerCharters,
+      aiCompanies: auctionTurn.aiCompanies,
+      cash: nextState.cash + auctionTurn.playerRefund,
+    };
+  }
+
+  // ----- Step 4c: Charter lifecycle (per-turn upkeep + fixed-term expiry) -----
+  // Pure step — applies forfeits to empire pools and refunds open slots when
+  // charters expire or fail to pay. Linked routes are deleted in the same
+  // pass so the player isn't left with phantom routes. AI cash and charters
+  // are updated in-place via the returned aiCompanies list.
+  const charterTurn = applyCharterTurn(nextState);
+  const charterUpkeep = charterTurn.playerUpkeep;
+  if (charterTurn.forfeitedRouteIds.length > 0) {
+    nextState = {
+      ...nextState,
+      activeRoutes: nextState.activeRoutes.filter(
+        (r) => !charterTurn.forfeitedRouteIds.includes(r.id),
+      ),
+    };
+  }
+  nextState = {
+    ...nextState,
+    charters: charterTurn.playerCharters,
+    aiCompanies: charterTurn.aiCompanies,
+    galaxy: { ...nextState.galaxy, empires: charterTurn.empires },
+  };
+
   // ----- Step 5: Process loans -----
   const { updatedLoans, totalInterest } = processLoans(nextState.loans);
   nextState = { ...nextState, loans: updatedLoans };
@@ -632,7 +682,8 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
     totalInterest -
     totalTariffCosts -
     totalMothballFees -
-    hubUpkeep;
+    hubUpkeep -
+    charterUpkeep;
   const newCash = nextState.cash + netProfit;
   nextState = { ...nextState, cash: Math.round(newCash * 100) / 100 };
 
@@ -661,7 +712,7 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
     maintenanceCosts: Math.round(maintenanceCosts * 100) / 100,
     loanPayments: totalInterest,
     tariffCosts: totalTariffCosts,
-    otherCosts: totalMothballFees + hubUpkeep,
+    otherCosts: totalMothballFees + hubUpkeep + charterUpkeep,
     netProfit: Math.round(netProfit * 100) / 100,
     cashAtEnd: nextState.cash,
     cargoDelivered,

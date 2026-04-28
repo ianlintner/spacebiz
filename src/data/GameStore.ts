@@ -75,6 +75,7 @@ function createDefaultState(): GameState {
     researchEvents: [],
     unlockedNavTabs: ["map", "routes", "fleet", "finance"],
     reputationTier: "unknown",
+    empireReputation: {},
   };
 }
 

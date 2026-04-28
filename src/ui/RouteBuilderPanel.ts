@@ -23,6 +23,8 @@ import {
   validateRouteCreation,
   getEmpireForPlanet,
 } from "../game/empire/EmpireAccessManager.ts";
+import { findChartersForRoute } from "../game/charters/CharterManager.ts";
+import { PLAYER_COMPANY_ID } from "../data/constants.ts";
 import { getLayout } from "./Layout.ts";
 import { Button } from "./Button.ts";
 import { Label } from "./Label.ts";
@@ -987,6 +989,39 @@ class RouteBuilderPanel {
       return;
     }
 
+    // Charter check — every new route must be backed by a held charter
+    // matching the route's empire and pool (domestic / foreign).
+    const charterMatch = findChartersForRoute(
+      latestState,
+      PLAYER_COMPANY_ID,
+      origin.id,
+      destination.id,
+    );
+    if ("error" in charterMatch) {
+      const destEmpireId = getEmpireForPlanet(
+        destination.id,
+        latestState.galaxy.systems,
+        latestState.galaxy.planets,
+      );
+      const destEmpire = (latestState.galaxy.empires ?? []).find(
+        (e) => e.id === destEmpireId,
+      );
+      const empireName = destEmpire?.name ?? "this empire";
+      const message =
+        charterMatch.error === "no-matching-charter"
+          ? `You don't hold a charter in ${empireName}. Acquire one through a contract or auction before opening this route.`
+          : "Route endpoints could not be classified into an empire pool.";
+      this.statusValue.setText(`⚠ ${message}`);
+      this.statusValue.setLabelColor(getTheme().colors.loss);
+      const errModal2 = new Modal(this.scene, {
+        title: "Charter Required",
+        body: message,
+        onOk: () => errModal2.destroy(),
+      });
+      errModal2.show();
+      return;
+    }
+
     const distance = calculateDistance(
       origin,
       destination,
@@ -1013,7 +1048,13 @@ class RouteBuilderPanel {
       return;
     }
 
-    const route = createRoute(origin.id, destination.id, distance, cargo);
+    const route = createRoute(
+      origin.id,
+      destination.id,
+      distance,
+      cargo,
+      charterMatch.charterId,
+    );
 
     let updatedFleet = [...latestState.fleet];
     let updatedRoutes = [...latestState.activeRoutes, route];

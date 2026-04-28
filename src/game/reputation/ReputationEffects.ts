@@ -106,6 +106,62 @@ export function makePremiumContract(baseContract: Contract): Contract {
 // State Helper
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Per-Empire Reputation
+// ---------------------------------------------------------------------------
+
+/** Default reputation for an empire the player has no recorded standing with. */
+export const DEFAULT_EMPIRE_REPUTATION = 50;
+
+/**
+ * Read the player's reputation with a specific empire. Falls back to the
+ * default neutral value when the entry is missing (e.g. v6 saves, or an
+ * empire the player has never interacted with).
+ */
+export function getEmpireRep(state: GameState, empireId: string): number {
+  return state.empireReputation?.[empireId] ?? DEFAULT_EMPIRE_REPUTATION;
+}
+
+/**
+ * Return a new `empireReputation` map with the given empire's reputation
+ * adjusted by `delta`, clamped to [0, 100]. Pure — does not mutate state.
+ * Callers should pass the result to `gameStore.update({ empireReputation: ... })`.
+ */
+export function adjustEmpireRep(
+  state: GameState,
+  empireId: string,
+  delta: number,
+): Record<string, number> {
+  const current = getEmpireRep(state, empireId);
+  const next = Math.max(0, Math.min(100, current + delta));
+  return { ...(state.empireReputation ?? {}), [empireId]: next };
+}
+
+/**
+ * Compute the "fame" reputation — a single global score derived from the
+ * player's standing across all empires. Used for cross-empire gates that
+ * don't have a single subject empire (premium contract access, scoring,
+ * portrait expressions, etc.).
+ *
+ * Strategy: weighted blend of mean and max. The mean keeps notorious players
+ * from gaming the system by being legendary in one empire; the max ensures
+ * a player respected nowhere but legendary in their home empire still feels
+ * recognised.
+ *   fame = 0.6 * mean + 0.4 * max
+ *
+ * When `empireReputation` is empty/missing, falls back to the legacy global
+ * `state.reputation` so Phase 1 does not change any gameplay numbers.
+ */
+export function computeFameRep(state: GameState): number {
+  const map = state.empireReputation;
+  if (!map) return state.reputation;
+  const values = Object.values(map);
+  if (values.length === 0) return state.reputation;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const max = values.reduce((a, b) => Math.max(a, b), 0);
+  return Math.round(0.6 * mean + 0.4 * max);
+}
+
 /**
  * Derive reputation tier from game state history.
  * Returns the letter grade corresponding to the last turn's net profit,

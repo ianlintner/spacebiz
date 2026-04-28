@@ -427,5 +427,156 @@ describe("Contract Lifecycle", () => {
       expect(result.galacticRouteSlots).toBe(state.galacticRouteSlots ?? 3);
       expect(result.localRouteSlots).toBe(state.localRouteSlots ?? 2);
     });
+
+    it("rewardCharter grants a permanent player charter and decrements empire pool on completion", () => {
+      const contract = makeContract({
+        type: ContractType.PassengerFerry,
+        status: ContractStatus.Active,
+        linkedRouteId: "route-1",
+        turnsRemaining: 1,
+        rewardCharter: { empireId: "empire-1", pool: "domestic" },
+      });
+      const route: ActiveRoute = {
+        id: "route-1",
+        originPlanetId: "planet-1",
+        destinationPlanetId: "planet-2",
+        distance: 10,
+        cargoType: CargoType.Passengers,
+        assignedShipIds: ["ship-1"],
+      };
+      const state = createTestState({
+        contracts: [contract],
+        activeRoutes: [route],
+        charters: [],
+        empireReputation: { "empire-1": 50 },
+        galaxy: {
+          sectors: [],
+          empires: [
+            {
+              id: "empire-1",
+              name: "Empire One",
+              color: 0xffffff,
+              tariffRate: 0.1,
+              disposition: "neutral",
+              homeSystemId: "system-1",
+              leaderName: "Leader",
+              leaderPortrait: { portraitId: "p", category: "human" },
+              routeSlotPool: {
+                policyStance: "regulated",
+                domesticTotal: 6,
+                foreignTotal: 2,
+                domesticOpen: 5,
+                foreignOpen: 2,
+              },
+            },
+          ],
+          systems: [
+            {
+              id: "system-1",
+              name: "S1",
+              sectorId: "sector-1",
+              empireId: "empire-1",
+              x: 0,
+              y: 0,
+              starColor: 0xffffff,
+            },
+          ],
+          planets: [
+            {
+              id: "planet-1",
+              name: "P1",
+              systemId: "system-1",
+              type: "terran",
+              x: 0,
+              y: 0,
+              population: 1000,
+            },
+          ],
+        },
+      });
+
+      const result = processContracts(state);
+      expect(result.charters).toHaveLength(1);
+      const charter = result.charters![0];
+      expect(charter.empireId).toBe("empire-1");
+      expect(charter.pool).toBe("domestic");
+      expect(charter.term.kind).toBe("permanent");
+      if (charter.term.kind === "permanent") {
+        expect(charter.term.upkeepPerTurn).toBeGreaterThan(0);
+      }
+      expect(charter.sourceContractId).toBe(contract.id);
+      const empire = result.galaxy!.empires[0];
+      expect(empire.routeSlotPool?.domesticOpen).toBe(4);
+    });
+
+    it("rewardCharter on AI-accepted contract grants to the AI company", () => {
+      const contract = makeContract({
+        type: ContractType.PassengerFerry,
+        status: ContractStatus.Active,
+        linkedRouteId: "route-ai-1",
+        turnsRemaining: 1,
+        aiCompanyId: "ai-1",
+        rewardCharter: { empireId: "empire-1", pool: "foreign" },
+      });
+      const route: ActiveRoute = {
+        id: "route-ai-1",
+        originPlanetId: "planet-1",
+        destinationPlanetId: "planet-2",
+        distance: 10,
+        cargoType: CargoType.Passengers,
+        assignedShipIds: ["ai-ship-1"],
+      };
+      const state = createTestState({
+        contracts: [contract],
+        activeRoutes: [route],
+        charters: [],
+        empireReputation: { "empire-1": 50 },
+        aiCompanies: [
+          {
+            id: "ai-1",
+            name: "AI",
+            empireId: "empire-1",
+            cash: 100000,
+            fleet: [],
+            activeRoutes: [],
+            reputation: 50,
+            totalCargoDelivered: 0,
+            personality: "steadyHauler",
+            bankrupt: false,
+            ceoName: "AI",
+            ceoPortrait: { portraitId: "p", category: "human" },
+          },
+        ],
+        galaxy: {
+          sectors: [],
+          empires: [
+            {
+              id: "empire-1",
+              name: "Empire One",
+              color: 0xffffff,
+              tariffRate: 0,
+              disposition: "neutral",
+              homeSystemId: "system-1",
+              leaderName: "Leader",
+              leaderPortrait: { portraitId: "p", category: "human" },
+              routeSlotPool: {
+                policyStance: "regulated",
+                domesticTotal: 6,
+                foreignTotal: 2,
+                domesticOpen: 6,
+                foreignOpen: 2,
+              },
+            },
+          ],
+          systems: [],
+          planets: [],
+        },
+      });
+
+      const result = processContracts(state);
+      expect(result.charters).toHaveLength(0);
+      expect(result.aiCompanies![0].charters).toHaveLength(1);
+      expect(result.aiCompanies![0].charters![0].pool).toBe("foreign");
+    });
   });
 });
