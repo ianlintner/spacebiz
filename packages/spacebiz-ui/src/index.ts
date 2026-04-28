@@ -109,6 +109,9 @@ export {
 } from "./CargoIcons.ts";
 export type { CargoTypeValue } from "./CargoIcons.ts";
 
+// Notifications
+export * from "./notifications/index.ts";
+
 // Ship icon utilities
 export {
   generateShipIcons,
