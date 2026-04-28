@@ -1,6 +1,11 @@
 import * as Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 import { playUiSfx } from "./UiSound.ts";
+import {
+  FocusManager,
+  createFocusRing,
+  type Focusable,
+} from "./foundation/FocusManager.ts";
 
 export interface TabConfig {
   label: string;
@@ -16,12 +21,19 @@ export interface TabGroupConfig {
   defaultTab?: number;
 }
 
-export class TabGroup extends Phaser.GameObjects.Container {
+export class TabGroup
+  extends Phaser.GameObjects.Container
+  implements Focusable
+{
   private tabs: TabConfig[];
   private tabButtons: Phaser.GameObjects.Container[] = [];
   private activeIndex: number;
   private tabHeight: number;
   private tabGroupWidth: number;
+  private focusRing: Phaser.GameObjects.Rectangle | null = null;
+  private isFocused = false;
+  private focusManager: FocusManager | null = null;
+  private keyHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor(scene: Phaser.Scene, config: TabGroupConfig) {
     super(scene, config.x, config.y);
@@ -131,7 +143,75 @@ export class TabGroup extends Phaser.GameObjects.Container {
       this.add(tab.content);
     });
 
+    // Focus ring sized to one tab; repositioned over the active tab.
+    this.focusRing = createFocusRing(scene, tabWidth, this.tabHeight);
+    this.add(this.focusRing);
+    this.positionFocusRing();
+
     scene.add.existing(this);
+
+    this.focusManager = FocusManager.forScene(scene);
+    this.focusManager.register(this);
+    this.keyHandler = (event: KeyboardEvent) => this.handleKey(event);
+    scene.input.keyboard?.on("keydown", this.keyHandler);
+  }
+
+  private positionFocusRing(): void {
+    if (!this.focusRing) return;
+    const tabWidth = this.tabGroupWidth / this.tabs.length;
+    const theme = getTheme();
+    const ringOffset = theme.focusRing.offset;
+    this.focusRing.setPosition(
+      tabWidth * this.activeIndex - ringOffset,
+      -ringOffset,
+    );
+  }
+
+  // ── Focusable ────────────────────────────────────────────────────────────
+
+  setFocus(focused: boolean): void {
+    if (focused) {
+      this.focusManager?.setFocus(this);
+    } else if (this.isFocused) {
+      this.focusManager?.setFocus(null);
+    }
+  }
+
+  focus(): void {
+    if (this.isFocused) return;
+    this.isFocused = true;
+    this.focusRing?.setVisible(true);
+  }
+
+  blur(): void {
+    if (!this.isFocused) return;
+    this.isFocused = false;
+    this.focusRing?.setVisible(false);
+  }
+
+  isFocusable(): boolean {
+    return this.visible && this.active && this.tabs.length > 0;
+  }
+
+  private handleKey(event: KeyboardEvent): void {
+    if (!this.isFocused || !this.visible) return;
+    let target = -1;
+    if (event.code === "ArrowRight") {
+      target = (this.activeIndex + 1) % this.tabs.length;
+    } else if (event.code === "ArrowLeft") {
+      target = (this.activeIndex - 1 + this.tabs.length) % this.tabs.length;
+    } else if (event.code === "Home") {
+      target = 0;
+    } else if (event.code === "End") {
+      target = this.tabs.length - 1;
+    } else {
+      return;
+    }
+    if (target !== this.activeIndex) {
+      playUiSfx("ui_tab_switch");
+      this.setActiveTab(target);
+    }
+    event.preventDefault();
   }
 
   setActiveTab(index: number): void {
@@ -145,6 +225,17 @@ export class TabGroup extends Phaser.GameObjects.Container {
     this.activeIndex = index;
     this.updateTabVisuals(index, true);
     this.tabs[index].content.setVisible(true);
+    this.positionFocusRing();
+  }
+
+  destroy(fromScene?: boolean): void {
+    if (this.keyHandler && this.scene) {
+      this.scene.input.keyboard?.off("keydown", this.keyHandler);
+      this.keyHandler = null;
+    }
+    this.focusManager?.unregister(this);
+    this.focusManager = null;
+    super.destroy(fromScene);
   }
 
   private updateTabVisuals(index: number, active: boolean): void {

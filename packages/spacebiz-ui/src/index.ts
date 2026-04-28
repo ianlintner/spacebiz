@@ -21,6 +21,9 @@ export * from "./TextMetrics.ts";
 // Layout primitives (Sizer-style flex containers + resize contract)
 export * from "./layout/index.ts";
 
+export { FocusManager } from "./foundation/FocusManager.ts";
+export type { Focusable } from "./foundation/FocusManager.ts";
+
 // Sound registration (call once at game boot)
 export { registerUiSoundHandler } from "./UiSound.ts";
 export type { UiSoundHandler } from "./UiSound.ts";
@@ -111,6 +114,9 @@ export {
   CARGO_TYPE_LIST,
 } from "./CargoIcons.ts";
 export type { CargoTypeValue } from "./CargoIcons.ts";
+
+// Notifications
+export * from "./notifications/index.ts";
 
 // Ship icon utilities
 export {

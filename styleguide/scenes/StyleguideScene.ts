@@ -30,6 +30,8 @@ import {
   GridSizer,
   FixWidthSizer,
   Anchor,
+  ToastManager,
+  ConfirmDialog,
   // Layout constants
   SIDEBAR_WIDTH,
   CONTENT_GAP,
@@ -125,6 +127,7 @@ export class StyleguideScene extends Phaser.Scene {
     y = this.addIconButtonSection(y);
     y = this.addStatusBadgeSection(y);
     y = this.addLayoutPrimitivesSection(y);
+    y = this.addNotificationSection(y);
     y += 60;
 
     this.maxScroll = Math.max(0, y - GAME_HEIGHT);
@@ -2316,5 +2319,108 @@ export class StyleguideScene extends Phaser.Scene {
 
     y += 140;
     return y;
+  }
+
+  /* ── 26. Notifications: Toasts + ConfirmDialog ────────────── */
+
+  private addNotificationSection(y: number): number {
+    y = this.addSubheading(y, "NOTIFICATIONS — TOASTS & CONFIRM DIALOG");
+
+    const kinds: Array<{
+      label: string;
+      kind: "info" | "success" | "warning" | "error";
+      message: string;
+    }> = [
+      {
+        label: "Info Toast",
+        kind: "info",
+        message: "Route plotted to Solara.",
+      },
+      {
+        label: "Success Toast",
+        kind: "success",
+        message: "Cargo delivered. +$12,400 profit.",
+      },
+      {
+        label: "Warning Toast",
+        kind: "warning",
+        message: "Fuel reserves below 25%.",
+      },
+      {
+        label: "Error Toast",
+        kind: "error",
+        message: "Ship lost in pirate ambush at Helix Ring.",
+      },
+    ];
+
+    let x = 60;
+    for (const { label, kind, message } of kinds) {
+      const btn = new Button(this, {
+        x,
+        y: y + 10,
+        autoWidth: true,
+        label,
+        onClick: () => {
+          ToastManager.show(this, { message, kind });
+        },
+      });
+      this.scrollContainer.add(btn);
+      x += btn.width + 12;
+    }
+
+    const dismissAllBtn = new Button(this, {
+      x,
+      y: y + 10,
+      autoWidth: true,
+      label: "Dismiss All",
+      onClick: () => ToastManager.dismissAll(this),
+    });
+    this.scrollContainer.add(dismissAllBtn);
+
+    y += 70;
+
+    // Confirm dialog buttons
+    const confirmBtn = new Button(this, {
+      x: 60,
+      y: y + 10,
+      autoWidth: true,
+      label: "Open Confirm Dialog",
+      onClick: () => {
+        void ConfirmDialog.show(this, {
+          title: "Plot Route",
+          message: "Commit this route plan and end the planning phase?",
+        }).then((ok) => {
+          ToastManager.show(this, {
+            message: ok ? "Route confirmed." : "Cancelled.",
+            kind: ok ? "success" : "info",
+          });
+        });
+      },
+    });
+    this.scrollContainer.add(confirmBtn);
+
+    const dangerBtn = new Button(this, {
+      x: 60 + confirmBtn.width + 16,
+      y: y + 10,
+      autoWidth: true,
+      label: "Open Danger Confirm",
+      onClick: () => {
+        void ConfirmDialog.show(this, {
+          title: "Sell Ship",
+          message: "Sell the Bulk Freighter Aurora?\nThis cannot be undone.",
+          confirmLabel: "Sell",
+          cancelLabel: "Keep",
+          kind: "danger",
+        }).then((ok) => {
+          ToastManager.show(this, {
+            message: ok ? "Ship sold." : "Sale cancelled.",
+            kind: ok ? "warning" : "info",
+          });
+        });
+      },
+    });
+    this.scrollContainer.add(dangerBtn);
+
+    return y + 80;
   }
 }

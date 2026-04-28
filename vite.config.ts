@@ -76,7 +76,12 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: "node",
+    // jsdom enables real Phaser GameObjects under Vitest. The headless harness
+    // (packages/spacebiz-ui/src/__tests__/_harness) installs a canvas polyfill
+    // via setupFiles so Phaser's text/texture pipeline can boot. Pure-logic
+    // tests don't depend on `node` env specifically and run unchanged.
+    environment: "jsdom",
+    setupFiles: ["packages/spacebiz-ui/src/__tests__/_harness/setup.ts"],
     exclude: [
       "node_modules",
       "dist",

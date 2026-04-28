@@ -3,6 +3,11 @@ import { getTheme, colorToString } from "./Theme.ts";
 import { playUiSfx } from "./UiSound.ts";
 import { autoButtonWidth, fitTextWithEllipsis } from "./TextMetrics.ts";
 import { registerWidget, slugifyLabel } from "./WidgetHooks.ts";
+import {
+  FocusManager,
+  createFocusRing,
+  type Focusable,
+} from "./foundation/FocusManager.ts";
 
 export interface ButtonConfig {
   x: number;
@@ -43,16 +48,20 @@ export interface ButtonConfig {
   fontSize?: number;
 }
 
-export class Button extends Phaser.GameObjects.Container {
+export class Button extends Phaser.GameObjects.Container implements Focusable {
   private bg: Phaser.GameObjects.NineSlice;
   private label: Phaser.GameObjects.Text;
   private accentLine: Phaser.GameObjects.Rectangle;
+  private focusRing: Phaser.GameObjects.Rectangle | null = null;
   private hitZone: Phaser.GameObjects.Zone | null = null;
   private widthPx: number;
   private heightPx: number;
   private isDisabled: boolean;
+  private isFocused = false;
   private onClickFn: () => void;
   private idleShimmerTween: Phaser.Tweens.Tween | null = null;
+  private focusManager: FocusManager | null = null;
+  private keyHandler: ((event: KeyboardEvent) => void) | null = null;
   private readonly hitPaddingX = 10;
   private readonly hitPaddingY = 8;
 
@@ -131,13 +140,21 @@ export class Button extends Phaser.GameObjects.Container {
       .setOrigin(0, 0)
       .setAlpha(this.isDisabled ? 0.25 : 0.4);
 
-    this.add([this.bg, this.accentLine, this.label]);
+    // Focus ring — drawn behind everything else, hidden until focused.
+    this.focusRing = createFocusRing(scene, width, height);
+    this.add([this.focusRing, this.bg, this.accentLine, this.label]);
 
     if (!this.isDisabled) {
       this.setupInteractive();
     }
 
     scene.add.existing(this);
+
+    // Register with the scene's FocusManager so Tab can reach this button.
+    this.focusManager = FocusManager.forScene(scene);
+    this.focusManager.register(this);
+    this.keyHandler = (event: KeyboardEvent) => this.handleKey(event);
+    scene.input.keyboard?.on("keydown", this.keyHandler);
 
     const unregister = registerWidget({
       testId: config.testId ?? slugifyLabel(config.label, "button"),
@@ -240,11 +257,51 @@ export class Button extends Phaser.GameObjects.Container {
       this.hitZone.disableInteractive();
       this.label.setColor(colorToString(theme.colors.textDim));
       this.accentLine.setAlpha(0.25);
+      // Disabled buttons cannot be focused; drop focus if we had it.
+      if (this.isFocused) {
+        this.focusManager?.setFocus(null);
+      }
     } else {
       this.bg.setTexture("btn-normal");
       this.setupInteractive();
       this.label.setColor(colorToString(theme.colors.text));
       this.accentLine.setAlpha(0.4);
+    }
+  }
+
+  // ── Focusable ────────────────────────────────────────────────────────────
+
+  /** Programmatically focus or blur this button. */
+  setFocus(focused: boolean): void {
+    if (focused) {
+      this.focusManager?.setFocus(this);
+    } else if (this.isFocused) {
+      this.focusManager?.setFocus(null);
+    }
+  }
+
+  focus(): void {
+    if (this.isFocused) return;
+    this.isFocused = true;
+    this.focusRing?.setVisible(true);
+  }
+
+  blur(): void {
+    if (!this.isFocused) return;
+    this.isFocused = false;
+    this.focusRing?.setVisible(false);
+  }
+
+  isFocusable(): boolean {
+    return !this.isDisabled && this.visible && this.active;
+  }
+
+  private handleKey(event: KeyboardEvent): void {
+    if (!this.isFocused || this.isDisabled || !this.visible) return;
+    if (event.code === "Enter" || event.code === "Space") {
+      playUiSfx("ui_click_primary");
+      this.onClickFn();
+      event.preventDefault();
     }
   }
 
@@ -321,6 +378,12 @@ export class Button extends Phaser.GameObjects.Container {
       this.idleShimmerTween.stop();
       this.idleShimmerTween = null;
     }
+    if (this.keyHandler && this.scene) {
+      this.scene.input.keyboard?.off("keydown", this.keyHandler);
+      this.keyHandler = null;
+    }
+    this.focusManager?.unregister(this);
+    this.focusManager = null;
     this.hitZone?.destroy();
     this.hitZone = null;
     super.destroy(fromScene);
