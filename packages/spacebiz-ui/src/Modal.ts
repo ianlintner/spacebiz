@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import { getTheme, colorToString } from "./Theme.ts";
 import { autoButtonWidth } from "./TextMetrics.ts";
 import { registerWidget } from "./WidgetHooks.ts";
+import { createFocusRing } from "./foundation/FocusManager.ts";
 
 export interface ModalConfig {
   title: string;
@@ -14,6 +15,16 @@ export interface ModalConfig {
   height?: number;
   /** Test id prefix. The modal registers `${testId}-ok`, `${testId}-cancel`, `${testId}-close`. */
   testId?: string;
+  /**
+   * When false, the modal cannot be dismissed by ESC, the close glyph, or
+   * clicking the overlay. Useful for blocking confirmations. Defaults to true.
+   */
+  closable?: boolean;
+}
+
+interface InternalFocusable {
+  ring: Phaser.GameObjects.Rectangle;
+  activate: () => void;
 }
 
 export class Modal extends Phaser.GameObjects.Container {
@@ -21,10 +32,14 @@ export class Modal extends Phaser.GameObjects.Container {
   private panel: Phaser.GameObjects.Container;
   private config: ModalConfig;
   private isShowing = false;
+  private internalFocusables: InternalFocusable[] = [];
+  private focusedIndex = -1;
+  private readonly closable: boolean;
 
   constructor(scene: Phaser.Scene, config: ModalConfig) {
     super(scene, 0, 0);
     this.config = config;
+    this.closable = config.closable !== false;
     const theme = getTheme();
 
     const gameWidth = scene.cameras.main.width;
@@ -40,6 +55,7 @@ export class Modal extends Phaser.GameObjects.Container {
     // (modalOverlay intentionally retained from legacy palette — semantic
     // tokens don't yet model a dedicated overlay scrim; tracked for follow-up.)
     this.overlay.on("pointerup", () => {
+      if (!this.closable) return;
       if (config.onCancel) {
         config.onCancel();
       }
@@ -118,21 +134,40 @@ export class Modal extends Phaser.GameObjects.Container {
         fontFamily: theme.fonts.heading.family,
         color: colorToString(theme.color.text.muted),
       })
-      .setOrigin(1, 0)
-      .setInteractive({ useHandCursor: true });
-    closeText.on("pointerover", () => {
-      closeText.setColor(colorToString(theme.color.accent.primary));
-    });
-    closeText.on("pointerout", () => {
-      closeText.setColor(colorToString(theme.color.text.muted));
-    });
-    closeText.on("pointerup", () => {
-      config.onCancel?.();
-      if (this.scene) {
-        this.hide();
-      }
-    });
+      .setOrigin(1, 0);
+    if (this.closable) {
+      closeText.setInteractive({ useHandCursor: true });
+      closeText.on("pointerover", () => {
+        closeText.setColor(colorToString(theme.color.accent.primary));
+      });
+      closeText.on("pointerout", () => {
+        closeText.setColor(colorToString(theme.color.text.muted));
+      });
+      closeText.on("pointerup", () => {
+        this.cancel();
+      });
+    } else {
+      closeText.setVisible(false);
+    }
     this.panel.add(closeText);
+
+    if (this.closable) {
+      // The close glyph is right-anchored, so use its bounds as the ring's
+      // top-left origin in panel-local space.
+      const closeBounds = closeText.getBounds();
+      const closeRing = createFocusRing(
+        scene,
+        closeBounds.width,
+        closeBounds.height,
+        closeBounds.x,
+        closeText.y,
+      );
+      this.panel.add(closeRing);
+      this.internalFocusables.push({
+        ring: closeRing,
+        activate: () => this.cancel(),
+      });
+    }
 
     // Body text
     const bodyText = scene.add.text(
@@ -231,7 +266,18 @@ export class Modal extends Phaser.GameObjects.Container {
       okLabel.setColor(colorToString(theme.color.text.primary));
     });
 
-    this.panel.add([okBg, okLabel]);
+    const okRing = createFocusRing(
+      scene,
+      buttonWidth,
+      buttonHeight,
+      okX,
+      buttonY,
+    );
+    this.panel.add([okBg, okLabel, okRing]);
+    this.internalFocusables.push({
+      ring: okRing,
+      activate: () => this.confirm(),
+    });
 
     // Cancel button (optional)
     if (hasCancelBtn) {
@@ -291,7 +337,18 @@ export class Modal extends Phaser.GameObjects.Container {
         cancelLabel.setColor(colorToString(theme.color.text.muted));
       });
 
-      this.panel.add([cancelBg, cancelLabel]);
+      const cancelRing = createFocusRing(
+        scene,
+        buttonWidth,
+        buttonHeight,
+        cancelX,
+        buttonY,
+      );
+      this.panel.add([cancelBg, cancelLabel, cancelRing]);
+      this.internalFocusables.push({
+        ring: cancelRing,
+        activate: () => this.cancel(),
+      });
     }
 
     this.add(this.panel);
@@ -363,30 +420,73 @@ export class Modal extends Phaser.GameObjects.Container {
   show(): void {
     this.isShowing = true;
     this.setVisible(true);
+    // Prefer the OK button so Enter immediately confirms. The internal
+    // focusables are pushed in order [close?, ok, cancel?]; OK is therefore
+    // index 1 when the modal is closable and index 0 otherwise.
+    const okIndex = this.closable ? 1 : 0;
+    if (this.internalFocusables[okIndex]) {
+      this.setFocusedIndex(okIndex);
+    }
   }
 
   hide(): void {
     this.isShowing = false;
     this.setVisible(false);
+    this.setFocusedIndex(-1);
+  }
+
+  private setFocusedIndex(index: number): void {
+    if (this.focusedIndex >= 0 && this.internalFocusables[this.focusedIndex]) {
+      this.internalFocusables[this.focusedIndex].ring.setVisible(false);
+    }
+    this.focusedIndex = index;
+    if (index >= 0 && this.internalFocusables[index]) {
+      this.internalFocusables[index].ring.setVisible(true);
+    }
+  }
+
+  private cycleFocus(direction: 1 | -1): void {
+    const n = this.internalFocusables.length;
+    if (n === 0) return;
+    const current = this.focusedIndex < 0 ? -1 : this.focusedIndex;
+    const next = (current + direction + n) % n;
+    this.setFocusedIndex(next);
+  }
+
+  private confirm(): void {
+    this.config.onOk?.();
+    if (this.scene) this.hide();
+  }
+
+  private cancel(): void {
+    if (!this.closable) return;
+    this.config.onCancel?.();
+    if (this.scene) this.hide();
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
     if (!this.isShowing || !this.visible) return;
 
-    if (event.code === "Enter") {
-      this.config.onOk?.();
-      if (this.scene) {
-        this.hide();
+    if (event.code === "Tab") {
+      this.cycleFocus(event.shiftKey ? -1 : 1);
+      event.preventDefault();
+      return;
+    }
+
+    if (event.code === "Enter" || event.code === "Space") {
+      const focused = this.internalFocusables[this.focusedIndex];
+      if (focused) {
+        focused.activate();
+      } else {
+        this.confirm();
       }
       event.preventDefault();
       return;
     }
 
     if (event.code === "Escape") {
-      this.config.onCancel?.();
-      if (this.scene) {
-        this.hide();
-      }
+      if (!this.closable) return;
+      this.cancel();
       event.preventDefault();
     }
   }

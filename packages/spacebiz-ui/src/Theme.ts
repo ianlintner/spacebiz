@@ -169,6 +169,16 @@ export interface ThemeConfig {
     /** Orbital decoration full-rotation duration (ms). */
     orbitalRotationDuration: number;
   };
+  /**
+   * Keyboard focus ring drawn around the currently focused widget.
+   * Width is the stroke thickness in pixels; offset is the gap between the
+   * widget bounds and the ring.
+   */
+  focusRing: {
+    color: number;
+    width: number;
+    offset: number;
+  };
 }
 
 const SHARED_TYPOGRAPHY = {
@@ -207,6 +217,11 @@ const SHARED_TYPOGRAPHY = {
     panelIdlePulseDuration: 4000,
     buttonIdleShimmerDuration: 3000,
     orbitalRotationDuration: 90000,
+  },
+  focusRing: {
+    color: 0x33ffdd,
+    width: 2,
+    offset: 2,
   },
 } as const;
 
