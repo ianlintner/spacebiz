@@ -25,6 +25,10 @@ import {
   InfoCard,
   IconButton,
   StatusBadge,
+  Spinner,
+  Accordion,
+  ContextMenu,
+  Toolbar,
   // Layout constants
   SIDEBAR_WIDTH,
   CONTENT_GAP,
@@ -119,6 +123,7 @@ export class StyleguideScene extends Phaser.Scene {
     y = this.addInfoCardSection(y);
     y = this.addIconButtonSection(y);
     y = this.addStatusBadgeSection(y);
+    y = this.addMiscWidgetsSection(y);
     y += 60;
 
     this.maxScroll = Math.max(0, y - GAME_HEIGHT);
@@ -2148,5 +2153,219 @@ export class StyleguideScene extends Phaser.Scene {
     }
 
     return y + 40;
+  }
+
+  /* ── 26. Misc Widgets (Spinner, Accordion, ContextMenu, Toolbar) ── */
+
+  private addMiscWidgetsSection(y: number): number {
+    y = this.addSubheading(y, "MISC WIDGETS");
+
+    // Spinners — different sizes / colors.
+    const spinnerLbl = new Label(this, {
+      x: 60,
+      y,
+      text: "Spinners (size + color variants):",
+      style: "caption",
+      color: this.theme.colors.textDim,
+    });
+    this.scrollContainer.add(spinnerLbl);
+
+    const spinnerY = y + 30;
+    const spinners: Array<{ size: number; color?: number }> = [
+      { size: 16 },
+      { size: 24 },
+      { size: 32, color: this.theme.colors.profit },
+      { size: 40, color: this.theme.colors.warning },
+    ];
+    let sx = 80;
+    for (const cfg of spinners) {
+      const s = new Spinner(this, {
+        x: sx,
+        y: spinnerY,
+        size: cfg.size,
+        color: cfg.color,
+      });
+      this.children.remove(s);
+      this.scrollContainer.add(s);
+      sx += cfg.size + 28;
+    }
+    y += 80;
+
+    // Toolbar.
+    const toolbarLbl = new Label(this, {
+      x: 60,
+      y,
+      text: "Toolbar (grouped buttons + icons):",
+      style: "caption",
+      color: this.theme.colors.textDim,
+    });
+    this.scrollContainer.add(toolbarLbl);
+    y += 24;
+
+    const toolbar = new Toolbar(this, {
+      x: 60,
+      y,
+      groups: [
+        {
+          items: [
+            {
+              kind: "icon",
+              icon: "icon-map",
+              onClick: () => {},
+              active: true,
+            },
+            { kind: "icon", icon: "icon-fleet", onClick: () => {} },
+            { kind: "icon", icon: "icon-routes", onClick: () => {} },
+          ],
+        },
+        {
+          items: [
+            { kind: "button", label: "Save", onClick: () => {} },
+            { kind: "button", label: "Load", onClick: () => {} },
+          ],
+        },
+        {
+          items: [{ kind: "button", label: "End Turn", onClick: () => {} }],
+        },
+      ],
+    });
+    this.children.remove(toolbar);
+    this.scrollContainer.add(toolbar);
+    y += toolbar.height + 24;
+
+    // Accordion.
+    const accordionLbl = new Label(this, {
+      x: 60,
+      y,
+      text: "Accordion (click headers to expand):",
+      style: "caption",
+      color: this.theme.colors.textDim,
+    });
+    this.scrollContainer.add(accordionLbl);
+    y += 24;
+
+    const buildAccordionContent = (text: string, h = 70) => {
+      return () => {
+        const c = this.add.container(0, 0);
+        const bg = this.add
+          .rectangle(0, 0, 440, h, this.theme.colors.panelBg, 0.6)
+          .setOrigin(0, 0)
+          .setStrokeStyle(1, this.theme.colors.panelBorder, 0.3);
+        c.add(bg);
+        const lbl = new Label(this, {
+          x: 12,
+          y: 12,
+          text,
+          style: "body",
+          maxWidth: 410,
+        });
+        c.add(lbl);
+        // Make the container "tall enough" via setSize so Accordion auto-detects.
+        c.setSize(440, h);
+        return c;
+      };
+    };
+
+    const accordion = new Accordion(this, {
+      x: 60,
+      y,
+      width: 440,
+      defaultExpanded: [0],
+      sections: [
+        {
+          title: "Overview",
+          content: buildAccordionContent(
+            "Sections collapse and expand independently.",
+            60,
+          ),
+          contentHeight: 60,
+        },
+        {
+          title: "Details",
+          content: buildAccordionContent(
+            "Multiple lines of detail content can\nlive inside an accordion section.",
+            80,
+          ),
+          contentHeight: 80,
+        },
+        {
+          title: "Allow multiple? (default false)",
+          content: buildAccordionContent(
+            "Set { allowMultiple: true } to keep\nmore than one section open at once.",
+            70,
+          ),
+          contentHeight: 70,
+        },
+      ],
+    });
+    this.children.remove(accordion);
+    this.scrollContainer.add(accordion);
+    y += accordion.getTotalHeight() + 200;
+
+    // ContextMenu — attached to a "right-click me" target.
+    const ctxLbl = new Label(this, {
+      x: 60,
+      y,
+      text: "Context menu (right-click the target):",
+      style: "caption",
+      color: this.theme.colors.textDim,
+    });
+    this.scrollContainer.add(ctxLbl);
+    y += 24;
+
+    const target = this.add
+      .rectangle(60, y, 220, 60, this.theme.colors.panelBg, 0.7)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, this.theme.colors.accent, 0.6);
+    target.setInteractive();
+    this.scrollContainer.add(target);
+    const targetLbl = new Label(this, {
+      x: 60 + 110,
+      y: y + 30,
+      text: "Right-click here",
+      style: "body",
+      color: this.theme.colors.text,
+    }).setOrigin(0.5);
+    this.scrollContainer.add(targetLbl);
+
+    ContextMenu.attach(target, [
+      {
+        label: "Inspect",
+        onClick: () =>
+          new FloatingText(
+            this,
+            300,
+            y - this.scrollY,
+            "Inspected",
+            this.theme.colors.accent,
+          ),
+      },
+      {
+        label: "Duplicate",
+        onClick: () =>
+          new FloatingText(
+            this,
+            300,
+            y - this.scrollY,
+            "Duplicated",
+            this.theme.colors.profit,
+          ),
+      },
+      { separator: true, label: "" },
+      { label: "Disabled action", disabled: true, onClick: () => {} },
+      {
+        label: "Delete",
+        onClick: () =>
+          new FloatingText(
+            this,
+            300,
+            y - this.scrollY,
+            "Deleted",
+            this.theme.colors.loss,
+          ),
+      },
+    ]);
+
+    return y + 90;
   }
 }
