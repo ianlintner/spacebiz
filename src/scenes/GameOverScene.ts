@@ -7,6 +7,7 @@ import {
   Button,
   Panel,
   DataTable,
+  ScrollFrame,
   createStarfield,
   getLayout,
   AdviserPanel,
@@ -278,11 +279,18 @@ export class GameOverScene extends Phaser.Scene {
 
     const highScores = getHighScores();
 
-    const hsTable = new DataTable(this, {
+    const hsTableFrame = new ScrollFrame(this, {
       x: hsPanelX + 10,
       y: hsPanelY + 40,
       width: hsPanelWidth - 20,
       height: hsPanelHeight - 50,
+    });
+    const hsTable = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: hsPanelWidth - 20,
+      height: hsPanelHeight - 50,
+      contentSized: true,
       columns: [
         {
           key: "rank",
@@ -318,6 +326,7 @@ export class GameOverScene extends Phaser.Scene {
       score: hs.score,
       seed: hs.seed,
     }));
+    hsTableFrame.setContent(hsTable);
     hsTable.setRows(hsRows);
 
     // -----------------------------------------------------------------------
@@ -334,11 +343,18 @@ export class GameOverScene extends Phaser.Scene {
       title: "Company Rankings",
     });
 
-    const rankTable = new DataTable(this, {
+    const rankTableFrame = new ScrollFrame(this, {
       x: L.fullContentLeft + 10,
       y: rankPanelY + 40,
       width: hsPanelX + hsPanelWidth - L.fullContentLeft - 20,
       height: rankPanelHeight - 50,
+    });
+    const rankTable = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: hsPanelX + hsPanelWidth - L.fullContentLeft - 20,
+      height: rankPanelHeight - 50,
+      contentSized: true,
       columns: [
         { key: "rank", label: "#", width: 50, align: "center" },
         {
@@ -381,6 +397,7 @@ export class GameOverScene extends Phaser.Scene {
       routes: r.routeCount,
       score: r.score,
     }));
+    rankTableFrame.setContent(rankTable);
     rankTable.setRows(rankRows);
 
     // -----------------------------------------------------------------------

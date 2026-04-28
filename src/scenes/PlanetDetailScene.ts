@@ -8,6 +8,7 @@ import {
   Label,
   Button,
   DataTable,
+  ScrollFrame,
   Modal,
   PortraitPanel,
   openRouteBuilder,
@@ -135,11 +136,18 @@ export class PlanetDetailScene extends Phaser.Scene {
     const tableWidth = contentArea.width;
     const colScale = tableWidth / 600; // scale columns proportionally
 
-    const table = new DataTable(this, {
+    const tableFrame = new ScrollFrame(this, {
       x: contentX + contentArea.x,
       y: tableY,
       width: tableWidth,
       height: 320,
+    });
+    const table = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: tableWidth,
+      height: 320,
+      contentSized: true,
       columns: [
         {
           key: "cargoType",
@@ -191,6 +199,7 @@ export class PlanetDetailScene extends Phaser.Scene {
         },
       ],
     });
+    tableFrame.setContent(table);
 
     // Build rows from market data
     if (planetMarket) {

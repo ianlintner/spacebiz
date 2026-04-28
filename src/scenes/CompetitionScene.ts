@@ -4,6 +4,7 @@ import type { AICompany } from "../data/types.ts";
 import {
   getTheme,
   DataTable,
+  ScrollFrame,
   Panel,
   PortraitPanel,
   createStarfield,
@@ -129,11 +130,18 @@ export class CompetitionScene extends Phaser.Scene {
       return value === "Bankrupt" ? theme.colors.loss : theme.colors.profit;
     };
 
-    this.table = new DataTable(this, {
+    const tableFrame = new ScrollFrame(this, {
       x: absX,
       y: absY,
       width: content.width,
       height: content.height - 20,
+    });
+    this.table = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: content.width,
+      height: content.height - 20,
+      contentSized: true,
       columns: [
         { key: "name", label: "Company", width: 120 },
         { key: "empire", label: "Empire", width: 100 },
@@ -167,6 +175,7 @@ export class CompetitionScene extends Phaser.Scene {
         );
       },
     });
+    tableFrame.setContent(this.table);
     this.table.setRows(rows);
   }
 

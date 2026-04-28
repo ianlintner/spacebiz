@@ -6,6 +6,7 @@ import {
   Panel,
   Button,
   DataTable,
+  ScrollFrame,
   PortraitPanel,
   createStarfield,
   MilestoneOverlay,
@@ -427,11 +428,18 @@ export class TurnReportScene extends Phaser.Scene {
       title: "Top Routes",
     });
 
-    const routeTable = new DataTable(this, {
+    const routeTableFrame = new ScrollFrame(this, {
       x: L.mainContentLeft + 10,
       y: TR_ROUTE_Y + 38,
       width: L.mainContentWidth - 20,
       height: TR_ROUTE_H - 44,
+    });
+    const routeTable = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: L.mainContentWidth - 20,
+      height: TR_ROUTE_H - 44,
+      contentSized: true,
       columns: [
         {
           key: "route",
@@ -475,6 +483,7 @@ export class TurnReportScene extends Phaser.Scene {
       }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 2);
+    routeTableFrame.setContent(routeTable);
     routeTable.setRows(routeRows);
 
     // -----------------------------------------------------------------------
@@ -490,11 +499,18 @@ export class TurnReportScene extends Phaser.Scene {
         title: "Rival Snapshot",
       });
 
-      const aiTable = new DataTable(this, {
+      const aiTableFrame = new ScrollFrame(this, {
         x: L.mainContentLeft + 10,
         y: TR_AI_Y + 38,
         width: L.mainContentWidth - 20,
         height: TR_AI_H - 44,
+      });
+      const aiTable = new DataTable(this, {
+        x: 0,
+        y: 0,
+        width: L.mainContentWidth - 20,
+        height: TR_AI_H - 44,
+        contentSized: true,
         columns: [
           { key: "name", label: "Company", width: 300 },
           {
@@ -530,6 +546,7 @@ export class TurnReportScene extends Phaser.Scene {
         }))
         .sort((a, b) => b.cash - a.cash)
         .slice(0, 2);
+      aiTableFrame.setContent(aiTable);
       aiTable.setRows(aiRows);
     }
 

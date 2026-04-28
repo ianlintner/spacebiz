@@ -10,6 +10,7 @@ import {
   colorToString,
   Button,
   DataTable,
+  ScrollFrame,
   Modal,
   Panel,
   TabGroup,
@@ -186,11 +187,19 @@ export class ContractsScene extends Phaser.Scene {
     });
     availableContent.add(this.availableSummary);
 
-    this.availableTable = new DataTable(this, {
+    const availableTableFrame = new ScrollFrame(this, {
       x: contentInnerX,
       y: tableTop,
       width: contentInnerW,
       height: tableHeight,
+    });
+    availableContent.add(availableTableFrame);
+    this.availableTable = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: contentInnerW,
+      height: tableHeight,
+      contentSized: true,
       columns: [
         {
           key: "type",
@@ -244,7 +253,7 @@ export class ContractsScene extends Phaser.Scene {
         this.confirmAcceptContract();
       },
     });
-    availableContent.add(this.availableTable);
+    availableTableFrame.setContent(this.availableTable);
 
     // Accept button
     const availableBtnY = tableTop + tableHeight + 8;
@@ -270,11 +279,19 @@ export class ContractsScene extends Phaser.Scene {
     });
     activeContent.add(this.activeSummary);
 
-    this.activeTable = new DataTable(this, {
+    const activeTableFrame = new ScrollFrame(this, {
       x: contentInnerX,
       y: tableTop,
       width: contentInnerW,
       height: tableHeight,
+    });
+    activeContent.add(activeTableFrame);
+    this.activeTable = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: contentInnerW,
+      height: tableHeight,
+      contentSized: true,
       columns: [
         {
           key: "type",
@@ -332,7 +349,7 @@ export class ContractsScene extends Phaser.Scene {
         this.updateActivePortrait();
       },
     });
-    activeContent.add(this.activeTable);
+    activeTableFrame.setContent(this.activeTable);
 
     // Abandon button
     const activeBtnY = tableTop + tableHeight + 8;

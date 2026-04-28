@@ -5,6 +5,7 @@ import {
   getTheme,
   Button,
   DataTable,
+  ScrollFrame,
   Label,
   Panel,
   PortraitPanel,
@@ -122,11 +123,18 @@ export class EmpireScene extends Phaser.Scene {
 
     const tableY = absY + toolbarH + 4;
 
-    this.table = new DataTable(this, {
+    const tableFrame = new ScrollFrame(this, {
       x: absX,
       y: tableY,
       width: content.width,
       height: content.height - 20 - toolbarH - 4,
+    });
+    this.table = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: content.width,
+      height: content.height - 20 - toolbarH - 4,
+      contentSized: true,
       columns: [
         { key: "empireA", label: "Empire A", width: 120 },
         { key: "empireB", label: "Empire B", width: 120 },
@@ -139,6 +147,7 @@ export class EmpireScene extends Phaser.Scene {
         this.updatePortraitForEmpire(rowData["empireAId"] as string, empires);
       },
     });
+    tableFrame.setContent(this.table);
 
     // Position summary label to the right of the toggle button
     // (autoWidth button has variable width, so query after construction)

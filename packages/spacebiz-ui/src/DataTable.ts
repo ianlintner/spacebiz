@@ -38,6 +38,14 @@ export interface DataTableConfig {
   rowAlphaFn?: (row: Record<string, unknown>) => number;
   /** Return a tooltip string for a row, or null for no tooltip. */
   rowTooltipFn?: (row: Record<string, unknown>) => string | null;
+  /**
+   * When true, DataTable renders all rows at natural height with no internal
+   * scrolling, mask, or wheel handling — suitable for nesting inside a
+   * `ScrollFrame`. The table's `height` config is treated as a *maximum*
+   * for layout sizing only; actual rendered height comes from
+   * `contentHeight`. Defaults to false (legacy scrollable mode).
+   */
+  contentSized?: boolean;
 }
 
 export class DataTable extends Phaser.GameObjects.Container {
@@ -55,7 +63,7 @@ export class DataTable extends Phaser.GameObjects.Container {
   private selectedRowIndex = -1;
   private selectedRowIndicator: Phaser.GameObjects.Rectangle | null = null;
   private wheelHitArea: Phaser.GameObjects.Rectangle;
-  private maskShape: Phaser.GameObjects.Graphics;
+  private maskShape: Phaser.GameObjects.Graphics | null = null;
   private renderedRows: Record<string, unknown>[] = [];
   /**
    * Tracks per-row child GameObjects so we can manually hide/crop rows that
@@ -75,9 +83,16 @@ export class DataTable extends Phaser.GameObjects.Container {
   private hasKeyboardFocus = false;
   private readonly keyboardNavigationEnabled: boolean;
   private destroyed = false;
-  private scrollTrack: Phaser.GameObjects.Rectangle;
-  private scrollThumb: Phaser.GameObjects.Rectangle;
+  private readonly contentSized: boolean;
+  private scrollTrack: Phaser.GameObjects.Rectangle | null = null;
+  private scrollThumb: Phaser.GameObjects.Rectangle | null = null;
   private canvasWheelHandler: ((e: WheelEvent) => void) | null = null;
+  /**
+   * In contentSized mode, this is the natural height of the rendered table
+   * (header + body). ScrollFrame reads it via the `contentHeight` getter on
+   * the Container so it doesn't need a Phaser bounds traversal.
+   */
+  private _contentHeight = 0;
 
   // ── Inline row tooltip ──
   private rowTooltipContainer: Phaser.GameObjects.Container | null = null;
@@ -91,6 +106,7 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.tableConfig = config;
     this.columns = this.expandColumns(config.columns, config.width);
     this.keyboardNavigationEnabled = config.keyboardNavigation ?? false;
+    this.contentSized = config.contentSized ?? false;
 
     this.headerContainer = scene.add.container(0, 0);
     this.add(this.headerContainer);
@@ -111,49 +127,52 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.addAt(this.wheelHitArea, 0);
     this.wheelHitArea.setData("consumesWheel", true);
 
-    // Mask for body scrolling. Prefer Phaser 4's filter-based mask, but fall
-    // back to Phaser 3's setMask(createGeometryMask) when the filters API is
-    // unavailable (e.g. during dev when node_modules is still on Phaser 3.x).
-    // Without the fallback, optional chaining silently no-ops and rows render
-    // past the table frame into surrounding UI.
-    this.maskShape = scene.make.graphics({});
-    this.maskShape.fillStyle(0xffffff);
-    this.maskShape.fillRect(
-      0,
-      this.headerHeight,
-      config.width,
-      config.height - this.headerHeight,
-    );
-    this.maskShape.setPosition(config.x, config.y);
-    applyClippingMask(this.bodyContainer, this.maskShape);
-
-    // Scroll indicator (visual-only, not interactive)
-    const trackHeight = config.height - this.headerHeight;
-    const scrollBarWidth = 4;
-    const scrollTheme = getTheme();
-    this.scrollTrack = scene.add
-      .rectangle(
-        config.width - scrollBarWidth,
+    // Mask + scroll indicator + canvas wheel are skipped in contentSized
+    // mode — the parent ScrollFrame owns those concerns, and DataTable would
+    // otherwise create a competing mask layer that defeats the whole point
+    // of the refactor.
+    if (!this.contentSized) {
+      this.maskShape = scene.make.graphics({});
+      this.maskShape.fillStyle(0xffffff);
+      this.maskShape.fillRect(
+        0,
         this.headerHeight,
-        scrollBarWidth,
-        trackHeight,
-        scrollTheme.colors.panelBorder,
-      )
-      .setOrigin(0, 0)
-      .setAlpha(0);
-    this.add(this.scrollTrack);
+        config.width,
+        config.height - this.headerHeight,
+      );
+      this.maskShape.setPosition(config.x, config.y);
+      applyClippingMask(this.bodyContainer, this.maskShape);
 
-    this.scrollThumb = scene.add
-      .rectangle(
-        config.width - scrollBarWidth,
-        this.headerHeight,
-        scrollBarWidth,
-        40,
-        scrollTheme.colors.accent,
-      )
-      .setOrigin(0, 0)
-      .setAlpha(0);
-    this.add(this.scrollThumb);
+      const trackHeight = config.height - this.headerHeight;
+      const scrollBarWidth = 4;
+      const scrollTheme = getTheme();
+      this.scrollTrack = scene.add
+        .rectangle(
+          config.width - scrollBarWidth,
+          this.headerHeight,
+          scrollBarWidth,
+          trackHeight,
+          scrollTheme.colors.panelBorder,
+        )
+        .setOrigin(0, 0)
+        .setAlpha(0);
+      this.add(this.scrollTrack);
+
+      this.scrollThumb = scene.add
+        .rectangle(
+          config.width - scrollBarWidth,
+          this.headerHeight,
+          scrollBarWidth,
+          40,
+          scrollTheme.colors.accent,
+        )
+        .setOrigin(0, 0)
+        .setAlpha(0);
+      this.add(this.scrollThumb);
+
+      this.scene.events.on("preupdate", this.syncMaskPosition, this);
+      this.setupCanvasWheelListener();
+    }
 
     this.renderHeader();
 
@@ -163,14 +182,6 @@ export class DataTable extends Phaser.GameObjects.Container {
         this.focus();
       }
     }
-
-    // Sync geometry mask position when inside a parent Container
-    this.scene.events.on("preupdate", this.syncMaskPosition, this);
-
-    // DOM-level wheel listener: bypasses Phaser scene stacking and
-    // Container nesting issues that prevent wheel events from reaching
-    // DataTables inside TabGroup / nested containers.
-    this.setupCanvasWheelListener();
 
     scene.add.existing(this);
   }
@@ -230,6 +241,7 @@ export class DataTable extends Phaser.GameObjects.Container {
 
   /** Scroll handler shared by keyboard navigation and canvas wheel */
   private handleWheel(dz: number): void {
+    if (this.contentSized) return;
     this.scrollY = Phaser.Math.Clamp(
       this.scrollY + dz * 0.5,
       0,
@@ -255,6 +267,7 @@ export class DataTable extends Phaser.GameObjects.Container {
    * across repeated scroll frames.
    */
   private clipRowsToViewport(): void {
+    if (this.contentSized) return;
     const viewportH = this.tableConfig.height - this.headerHeight;
     const viewTop = this.scrollY;
     const viewBottom = this.scrollY + viewportH;
@@ -375,14 +388,19 @@ export class DataTable extends Phaser.GameObjects.Container {
     }
     this.selectedRowIndicator = null;
     this.renderBody();
-    // Force the clipping mask back to the current world position. setRows is
-    // typically called from a filter change or tab switch, both of which can
-    // leave the mask one frame stale (it's normally only resync'd on
-    // preupdate). The visible symptom: rows render correctly inside body
-    // space, but appear cropped to nothing because the mask rectangle is
-    // still aligned to the previous tab's transform.
-    this.syncMaskPosition();
-    this.clipRowsToViewport();
+    if (!this.contentSized) {
+      // Force the clipping mask back to the current world position. setRows
+      // is typically called from a filter change or tab switch, both of
+      // which can leave the mask one frame stale (it's normally only
+      // resync'd on preupdate). The visible symptom: rows render correctly
+      // inside body space, but appear cropped to nothing because the mask
+      // rectangle is still aligned to the previous tab's transform.
+      this.syncMaskPosition();
+      this.clipRowsToViewport();
+    } else {
+      // ScrollFrame listens for this and recomputes its scroll bounds.
+      this.emit("contentResize", { height: this._contentHeight });
+    }
   }
 
   private renderBody(): void {
@@ -442,6 +460,7 @@ export class DataTable extends Phaser.GameObjects.Container {
       }
 
       this.maxScroll = 0;
+      this._contentHeight = this.headerHeight + 96;
       return;
     }
 
@@ -613,8 +632,14 @@ export class DataTable extends Phaser.GameObjects.Container {
       0,
       yCursor - (this.tableConfig.height - this.headerHeight),
     );
+    this._contentHeight = this.headerHeight + yCursor;
     this.updateScrollIndicator();
     this.clipRowsToViewport();
+  }
+
+  /** Natural height of the rendered table (header + all rows). */
+  get contentHeight(): number {
+    return this._contentHeight;
   }
 
   private selectRow(
@@ -685,6 +710,16 @@ export class DataTable extends Phaser.GameObjects.Container {
 
   private ensureRowVisible(rowIndex: number, rowHeight: number): void {
     const rowTop = this.getRowTop(rowIndex);
+    if (this.contentSized) {
+      // ScrollFrame owns the viewport. Translate the row range into table-
+      // local coords (offset by header) and let the listener decide whether
+      // to scroll.
+      this.emit("scrollIntoView", {
+        top: this.headerHeight + rowTop,
+        height: rowHeight,
+      });
+      return;
+    }
     const rowBottom = rowTop + rowHeight;
     const visibleTop = this.scrollY;
     const visibleBottom =
@@ -829,6 +864,7 @@ export class DataTable extends Phaser.GameObjects.Container {
   }
 
   private updateScrollIndicator(): void {
+    if (!this.scrollTrack || !this.scrollThumb) return;
     if (this.maxScroll <= 0) {
       this.scrollTrack.setAlpha(0);
       this.scrollThumb.setAlpha(0);
@@ -852,7 +888,7 @@ export class DataTable extends Phaser.GameObjects.Container {
   }
 
   private syncMaskPosition(): void {
-    if (this.destroyed) return;
+    if (this.destroyed || !this.maskShape) return;
     const matrix = this.getWorldTransformMatrix();
     this.maskShape.setPosition(matrix.tx, matrix.ty);
   }
@@ -921,7 +957,7 @@ export class DataTable extends Phaser.GameObjects.Container {
     }
     this.rowTooltipTimer?.destroy();
     this.rowTooltipContainer?.destroy();
-    this.maskShape.destroy();
+    this.maskShape?.destroy();
     super.destroy(fromScene);
   }
 }

@@ -53,6 +53,9 @@ export type { TabGroupConfig, TabConfig } from "./TabGroup.ts";
 export { DataTable } from "./DataTable.ts";
 export type { DataTableConfig, ColumnDef } from "./DataTable.ts";
 
+export { ScrollFrame } from "./ScrollFrame.ts";
+export type { ScrollFrameConfig } from "./ScrollFrame.ts";
+
 export { applyClippingMask } from "./MaskUtils.ts";
 
 // Ambient / visual effects

@@ -7,6 +7,7 @@ import {
   getTheme,
   Label,
   DataTable,
+  ScrollFrame,
   Panel,
   PortraitPanel,
   createStarfield,
@@ -159,11 +160,18 @@ export class MarketScene extends Phaser.Scene {
       };
     });
 
-    const table = new DataTable(this, {
+    const tableFrame = new ScrollFrame(this, {
       x: absX,
       y: absY + 28,
       width: content.width,
       height: content.height - 32,
+    });
+    const table = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: content.width,
+      height: content.height - 32,
+      contentSized: true,
       columns: columnDefs,
       keyboardNavigation: true,
       autoFocus: true,
@@ -221,6 +229,7 @@ export class MarketScene extends Phaser.Scene {
       rows.push(row);
     }
 
+    tableFrame.setContent(table);
     table.setRows(rows);
   }
 }

@@ -5,6 +5,7 @@ import {
   Label,
   Panel,
   DataTable,
+  ScrollFrame,
   ScrollableList,
   ProgressBar,
   createStarfield,
@@ -242,14 +243,22 @@ export class AISandboxScene extends Phaser.Scene {
       },
     ];
 
-    this.rankingsTable = new DataTable(this, {
+    const rankingsFrame = new ScrollFrame(this, {
       x: padding,
       y: topBarH + 32,
       width: leftW - padding * 2,
       height: contentH - 130,
+    });
+    this.rankingsTable = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: leftW - padding * 2,
+      height: contentH - 130,
+      contentSized: true,
       columns: rankColumns,
       emptyStateText: "Waiting for simulation\u2026",
     });
+    rankingsFrame.setContent(this.rankingsTable);
 
     // ── Economy indicators below rankings ────────────────────
     const econY = topBarH + contentH - 90;

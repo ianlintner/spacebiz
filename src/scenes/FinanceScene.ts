@@ -11,6 +11,7 @@ import {
   Button,
   TabGroup,
   DataTable,
+  ScrollFrame,
   Modal,
   ScrollableList,
   Panel,
@@ -402,11 +403,18 @@ export class FinanceScene extends Phaser.Scene {
     const state = gameStore.getState();
 
     // Loans table — fits within main content area
-    const loanTable = new DataTable(this, {
+    const loanTableFrame = new ScrollFrame(this, {
       x: 0,
       y: 20,
       width: L.mainContentWidth - 20,
       height: 280,
+    });
+    const loanTable = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: L.mainContentWidth - 20,
+      height: 280,
+      contentSized: true,
       columns: [
         {
           key: "principal",
@@ -451,8 +459,9 @@ export class FinanceScene extends Phaser.Scene {
     }));
     loanTable.setRows(loanRows);
 
-    // Move the table into the container
-    container.add(loanTable);
+    // Move the frame into the container; ScrollFrame owns the table.
+    loanTableFrame.setContent(loanTable);
+    container.add(loanTableFrame);
 
     // "Take Loan" button
     const takeLoanBtn = new Button(this, {

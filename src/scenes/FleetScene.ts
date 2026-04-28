@@ -8,6 +8,7 @@ import {
   colorToString,
   Button,
   DataTable,
+  ScrollFrame,
   Modal,
   ScrollableList,
   Panel,
@@ -82,11 +83,18 @@ export class FleetScene extends Phaser.Scene {
     // Cash is already shown in the HUD top bar — no inline duplicate here.
 
     // Fleet table
-    this.fleetTable = new DataTable(this, {
+    const fleetTableFrame = new ScrollFrame(this, {
       x: absX,
       y: absY + 28,
       width: content.width,
       height: content.height - 80,
+    });
+    this.fleetTable = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: content.width,
+      height: content.height - 80,
+      contentSized: true,
       columns: [
         { key: "name", label: "Name", width: 110, sortable: true },
         {
@@ -175,6 +183,7 @@ export class FleetScene extends Phaser.Scene {
         }
       },
     });
+    fleetTableFrame.setContent(this.fleetTable);
 
     this.refreshTable();
 

@@ -9,6 +9,7 @@ import {
   colorToString,
   Button,
   DataTable,
+  ScrollFrame,
   Dropdown,
   MiniMap,
   Modal,
@@ -88,6 +89,7 @@ export class RoutesScene extends Phaser.Scene {
   // ── Active Routes tab state ──
   private selectedRouteId: string | null = null;
   private routeTable!: DataTable;
+  private routeScrollFrame!: ScrollFrame;
   private portrait!: PortraitPanel;
   private ui!: SceneUiDirector;
   private selectedRouteSummary!: Phaser.GameObjects.Text;
@@ -99,6 +101,7 @@ export class RoutesScene extends Phaser.Scene {
 
   // ── Route Finder tab state ──
   private finderTable!: DataTable;
+  private finderScrollFrame!: ScrollFrame;
   private finderSummary!: Phaser.GameObjects.Text;
   private opportunities: RouteOpportunity[] = [];
   private finderCargoFilter: CargoTypeValue | null = null;
@@ -344,11 +347,20 @@ export class RoutesScene extends Phaser.Scene {
     tableTop = activeTableTop;
     tableHeight = activeTableHeight;
 
-    this.finderTable = new DataTable(this, {
+    this.finderScrollFrame = new ScrollFrame(this, {
       x: contentInnerX,
       y: finderTableTop,
       width: contentInnerW,
       height: finderTableHeight,
+    });
+    finderContent.add(this.finderScrollFrame);
+
+    this.finderTable = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: contentInnerW,
+      height: finderTableHeight,
+      contentSized: true,
       rowAlphaFn: (row) => (row["_unavailableReason"] ? 0.4 : 0.95),
       rowTooltipFn: (row) =>
         (row["_unavailableReason"] as string | undefined) ?? null,
@@ -461,7 +473,7 @@ export class RoutesScene extends Phaser.Scene {
         this.createRouteFromOpportunityIndex(oppIdx);
       },
     });
-    finderContent.add(this.finderTable);
+    this.finderScrollFrame.setContent(this.finderTable);
 
     // Finder action buttons (laid out via flowButtonRow so they wrap if the
     // panel ever shrinks below the combined button width)
@@ -528,11 +540,19 @@ export class RoutesScene extends Phaser.Scene {
     );
     activeContent.add(this.selectedRouteHint);
 
-    this.routeTable = new DataTable(this, {
+    this.routeScrollFrame = new ScrollFrame(this, {
       x: contentInnerX,
       y: tableTop,
       width: contentInnerW,
       height: tableHeight,
+    });
+    activeContent.add(this.routeScrollFrame);
+    this.routeTable = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: contentInnerW,
+      height: tableHeight,
+      contentSized: true,
       columns: [
         { key: "origin", label: "Origin", width: 110, sortable: true },
         {
@@ -635,7 +655,7 @@ export class RoutesScene extends Phaser.Scene {
         this.updateSelectedRouteUi();
       },
     });
-    activeContent.add(this.routeTable);
+    this.routeScrollFrame.setContent(this.routeTable);
 
     // Active routes buttons
     const activeButtonY = tableTop + tableHeight + 8;
