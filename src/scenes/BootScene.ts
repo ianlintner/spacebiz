@@ -20,7 +20,7 @@ import {
   getRoomPortraitTextureKey,
   getRoomPortraitAssetUrls,
 } from "../data/roomPortraits.ts";
-import { generateAdviserSpritesheet } from "../ui/AdviserPortrait.ts";
+import { generateAdviserSpritesheet } from "@rogue-universe/shared";
 
 export class BootScene extends Phaser.Scene {
   constructor() {

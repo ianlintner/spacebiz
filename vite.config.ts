@@ -55,6 +55,10 @@ export default defineConfig({
         __dirname,
         "packages/spacebiz-ui/src/index.ts",
       ),
+      "@rogue-universe/shared": path.resolve(
+        __dirname,
+        "packages/rogue-universe-shared/src/index.ts",
+      ),
     },
   },
   define: {

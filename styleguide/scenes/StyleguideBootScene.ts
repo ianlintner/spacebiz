@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import type { ThemeConfig } from "@spacebiz/ui";
-import { getTheme, lerpColor, generateCargoIcons } from "@spacebiz/ui";
+import { getTheme, lerpColor } from "@spacebiz/ui";
+import { generateCargoIcons } from "@rogue-universe/shared";
 
 /**
  * Generates all procedural canvas textures that the @spacebiz/ui

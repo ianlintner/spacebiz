@@ -20,7 +20,6 @@ import {
   registerAmbientCleanup,
   flashScreen,
   FloatingText,
-  MilestoneOverlay,
   StatRow,
   InfoCard,
   IconButton,
@@ -54,16 +53,12 @@ import {
   getCargoIconKey,
   getCargoColor,
   getCargoLabel,
-} from "@spacebiz/ui";
-import {
+  MilestoneOverlay,
   drawRexPortrait,
   getMoodAccentColor,
-} from "../../src/ui/AdviserPortrait.ts";
-import { drawPortrait } from "../../src/ui/PortraitGenerator.ts";
-import type {
-  PortraitData,
-  AlienRole,
-} from "../../src/ui/PortraitGenerator.ts";
+  drawPortrait,
+} from "@rogue-universe/shared";
+import type { PortraitData, AlienRole } from "@rogue-universe/shared";
 import type { AdviserMood } from "../../src/data/types.ts";
 
 /**

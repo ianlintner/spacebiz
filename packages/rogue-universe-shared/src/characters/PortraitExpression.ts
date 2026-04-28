@@ -1,5 +1,5 @@
-import type { GameState } from "../data/types.ts";
-import { getLastTurnGrade } from "../game/reputation/ReputationEffects.ts";
+import type { GameState } from "../../../../src/data/types.ts";
+import { getLastTurnGrade } from "../../../../src/game/reputation/ReputationEffects.ts";
 
 // ── Portrait Expression types ───────────────────────────────────────────────
 

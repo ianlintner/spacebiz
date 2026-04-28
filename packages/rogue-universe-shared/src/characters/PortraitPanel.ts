@@ -1,5 +1,11 @@
 import * as Phaser from "phaser";
-import { Panel, Label, getTheme, getLayout } from "@spacebiz/ui";
+import {
+  Panel,
+  Label,
+  getTheme,
+  getLayout,
+  applyClippingMask,
+} from "@spacebiz/ui";
 import { drawPortrait } from "./PortraitGenerator.ts";
 import type {
   PortraitType,
@@ -13,13 +19,12 @@ import type {
   GameEvent,
   AICompany,
   Empire,
-} from "../data/types.ts";
-import { SHIP_TEMPLATES } from "../data/constants.ts";
-import { getPlanetPortraitTextureKey } from "../data/planetPortraits.ts";
-import { getPortraitTextureKey } from "../data/portraits.ts";
-import { getLeaderTextureKey } from "../data/empireLeaderPortraits.ts";
-import { portraitLoader } from "../game/PortraitLoader.ts";
-import { applyClippingMask } from "@spacebiz/ui";
+} from "../../../../src/data/types.ts";
+import { SHIP_TEMPLATES } from "../../../../src/data/constants.ts";
+import { getPlanetPortraitTextureKey } from "../../../../src/data/planetPortraits.ts";
+import { getPortraitTextureKey } from "../../../../src/data/portraits.ts";
+import { getLeaderTextureKey } from "../../../../src/data/empireLeaderPortraits.ts";
+import { portraitLoader } from "../../../../src/game/PortraitLoader.ts";
 
 function fitImageContain(
   image: Phaser.GameObjects.Image,

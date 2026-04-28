@@ -10,7 +10,7 @@ import {
   FloatingText,
   AdviserPanel,
 } from "../ui/index.ts";
-import { HorizontalNewsTicker } from "../ui/HorizontalNewsTicker.ts";
+import { HorizontalNewsTicker } from "@rogue-universe/shared";
 import { gameStore } from "../data/GameStore.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { checkTutorialAdvancement } from "../game/adviser/AdviserEngine.ts";

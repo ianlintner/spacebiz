@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { SeededRNG } from "../utils/SeededRNG.ts";
+import { SeededRNG } from "../../../../src/utils/SeededRNG.ts";
 
 /**
  * Procedural flag patterns for empires.

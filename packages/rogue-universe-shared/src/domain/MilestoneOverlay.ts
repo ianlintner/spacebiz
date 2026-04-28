@@ -12,8 +12,7 @@
  *   MilestoneOverlay.show(scene, "profit_streak", "🔥 4-Turn Streak!", "Keep it up!");
  */
 import * as Phaser from "phaser";
-import { getTheme, colorToString } from "./Theme.ts";
-import { fitFontSize } from "./TextMetrics.ts";
+import { getTheme, colorToString, fitFontSize } from "@spacebiz/ui";
 
 export type MilestoneType =
   | "big_profit"

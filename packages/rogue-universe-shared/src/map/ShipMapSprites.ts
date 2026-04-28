@@ -18,7 +18,7 @@
  * All sprites point RIGHT (→). Use `sprite.setRotation(angle)` to orient.
  */
 
-import { SHIP_CLASS_LIST } from "./index.ts";
+import { SHIP_CLASS_LIST } from "../domain/ShipIcons.ts";
 
 /** Pixel size of one animation frame (square). */
 export const SHIP_MAP_SIZE = 48;

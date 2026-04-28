@@ -1,0 +1,15 @@
+{
+  "name": "@rogue-universe/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared IP-bearing systems for Rogue Universe games (portraits, advisers, empire flags, news, etc.)",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "phaser": "^4.0.0",
+    "@spacebiz/ui": "^1.0.0"
+  }
+}

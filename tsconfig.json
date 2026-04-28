@@ -22,9 +22,15 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "paths": {
-      "@spacebiz/ui": ["packages/spacebiz-ui/src/index.ts"]
+      "@spacebiz/ui": ["packages/spacebiz-ui/src/index.ts"],
+      "@rogue-universe/shared": ["packages/rogue-universe-shared/src/index.ts"]
     },
     "baseUrl": "."
   },
-  "include": ["src", "packages/spacebiz-ui/src", "styleguide"]
+  "include": [
+    "src",
+    "packages/spacebiz-ui/src",
+    "packages/rogue-universe-shared/src",
+    "styleguide"
+  ]
 }

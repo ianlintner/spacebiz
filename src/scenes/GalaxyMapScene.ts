@@ -16,7 +16,7 @@ import {
   generateEmpireFlags,
   FLAG_WIDTH,
   FLAG_HEIGHT,
-} from "../ui/EmpireFlagGenerator.ts";
+} from "@rogue-universe/shared";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { isEmpireAccessible } from "../game/empire/EmpireAccessManager.ts";
 import {

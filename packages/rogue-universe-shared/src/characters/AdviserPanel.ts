@@ -8,7 +8,10 @@ import {
   generateAdviserSpritesheet,
   drawRexPortrait,
 } from "./AdviserPortrait.ts";
-import type { AdviserMessage, AdviserMood } from "../data/types.ts";
+import type {
+  AdviserMessage,
+  AdviserMood,
+} from "../../../../src/data/types.ts";
 
 export interface AdviserPanelConfig {
   x: number;

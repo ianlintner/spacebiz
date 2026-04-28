@@ -4,7 +4,7 @@ import type {
   Planet,
   ActiveRoute,
   PlanetType,
-} from "../data/types.ts";
+} from "../../../../src/data/types.ts";
 import { getTheme, colorToString } from "@spacebiz/ui";
 
 const PLANET_TYPE_COLORS: Record<PlanetType, number> = {

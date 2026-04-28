@@ -11,21 +11,12 @@ export {
   colorToString,
   lerpColor,
   DEFAULT_THEME,
-  darkTheme,
-  lightTheme,
-  highContrastTheme,
 } from "./Theme.ts";
-export type { ThemeConfig, SemanticColorTokens } from "./Theme.ts";
+export type { ThemeConfig } from "./Theme.ts";
 
 export * from "./Layout.ts";
 export * from "./DepthLayers.ts";
 export * from "./TextMetrics.ts";
-
-export { FocusManager } from "./foundation/FocusManager.ts";
-export type { Focusable } from "./foundation/FocusManager.ts";
-
-// Layout primitives (Sizer-style flex containers + resize contract)
-export * from "./layout/index.ts";
 
 // Sound registration (call once at game boot)
 export { registerUiSoundHandler } from "./UiSound.ts";
@@ -84,9 +75,6 @@ export type { PulseConfig, TwinkleConfig, FloatConfig } from "./AmbientFX.ts";
 export { FloatingText } from "./FloatingText.ts";
 export type { FloatingTextConfig } from "./FloatingText.ts";
 
-export { MilestoneOverlay } from "./MilestoneOverlay.ts";
-export type { MilestoneType } from "./MilestoneOverlay.ts";
-
 // Scene utilities
 export { SceneUiDirector, SceneUiLayer } from "./SceneUiDirector.ts";
 
@@ -102,40 +90,3 @@ export type { IconButtonConfig } from "./IconButton.ts";
 
 export { StatusBadge } from "./StatusBadge.ts";
 export type { StatusBadgeConfig, BadgeVariant } from "./StatusBadge.ts";
-
-// Form controls (Slider, Checkbox, Toggle, RadioGroup)
-export * from "./input/index.ts";
-
-// Misc widgets (Spinner, Accordion, ContextMenu, Toolbar)
-export * from "./misc/index.ts";
-
-// Cargo icon utilities
-export {
-  generateCargoIcons,
-  getCargoIconKey,
-  getCargoColor,
-  getCargoLabel,
-  getCargoShortLabel,
-  CARGO_COLORS,
-  CARGO_LABELS,
-  CARGO_SHORT_LABELS,
-  CARGO_ICON_PREFIX,
-  CARGO_TYPE_LIST,
-} from "./CargoIcons.ts";
-export type { CargoTypeValue } from "./CargoIcons.ts";
-
-// Notifications
-export * from "./notifications/index.ts";
-
-// Ship icon utilities
-export {
-  generateShipIcons,
-  getShipIconKey,
-  getShipColor,
-  getShipLabel,
-  SHIP_COLORS,
-  SHIP_LABELS,
-  SHIP_ICON_PREFIX,
-  SHIP_CLASS_LIST,
-} from "./ShipIcons.ts";
-export type { ShipClassValue } from "./ShipIcons.ts";

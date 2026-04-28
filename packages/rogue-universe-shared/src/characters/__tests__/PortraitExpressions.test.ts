@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getExpressionFromGameState } from "../PortraitExpression.ts";
-import type { GameState } from "../../data/types.ts";
-import { initAdviserState } from "../../game/adviser/AdviserEngine.ts";
+import type { GameState } from "../../../../../src/data/types.ts";
+import { initAdviserState } from "../../../../../src/game/adviser/AdviserEngine.ts";
 
 // ── Test helpers ─────────────────────────────────────────────────────────────
 
@@ -64,8 +64,9 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
       "routes",
       "fleet",
       "finance",
-    ] as import("../../data/types.ts").NavTabId[],
-    reputationTier: "unknown" as import("../../data/types.ts").ReputationTier,
+    ] as import("../../../../../src/data/types.ts").NavTabId[],
+    reputationTier:
+      "unknown" as import("../../../../../src/data/types.ts").ReputationTier,
     ...overrides,
   };
 }
@@ -90,7 +91,7 @@ function makeTurnResult(netProfit: number) {
       luxury: 0,
       hazmat: 0,
       medical: 0,
-    } as import("../../data/types.ts").TurnResult["cargoDelivered"],
+    } as import("../../../../../src/data/types.ts").TurnResult["cargoDelivered"],
     passengersTransported: 0,
     eventsOccurred: [],
     routePerformance: [],
