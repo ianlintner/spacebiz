@@ -16,6 +16,8 @@
     "test:tier2": "playwright test e2e/tier2.spec.ts",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "PWDEBUG=1 playwright test",
+    "test:visual": "playwright test --project=visual e2e/visual/",
+    "test:visual:update": "playwright test --project=visual e2e/visual/ --update-snapshots",
     "test:mcp": "npm run build --workspace @spacebiz/qa-mcp && node packages/spacebiz-qa-mcp/scripts/smoke.mjs",
     "build": "tsc && vite build",
     "lint": "eslint .",

@@ -18,4 +18,9 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const game = new Phaser.Game(config);
-(window as unknown as Record<string, unknown>).__PHASER_GAME__ = game;
+const win = window as unknown as Record<string, unknown>;
+win.__PHASER_GAME__ = game;
+// Visual-regression hook: e2e tests poll this flag before screenshotting.
+// Set by StyleguideScene once create() finishes and the section registry
+// (window.__styleguideSections) is populated.
+win.__styleguideReady = false;
