@@ -25,16 +25,11 @@ import {
   InfoCard,
   IconButton,
   StatusBadge,
-  Slider,
-  Checkbox,
-  Toggle,
-  RadioGroup,
-  ToastManager,
-  ConfirmDialog,
-  Spinner,
-  Accordion,
-  ContextMenu,
-  Toolbar,
+  HSizer,
+  VSizer,
+  GridSizer,
+  FixWidthSizer,
+  Anchor,
   // Layout constants
   SIDEBAR_WIDTH,
   CONTENT_GAP,
@@ -129,12 +124,7 @@ export class StyleguideScene extends Phaser.Scene {
     y = this.addInfoCardSection(y);
     y = this.addIconButtonSection(y);
     y = this.addStatusBadgeSection(y);
-<<<<<<< HEAD
-    y = this.addFormControlsSection(y);
-    y = this.addNotificationSection(y);
-=======
-    y = this.addMiscWidgetsSection(y);
->>>>>>> 23e3af0 (feat(ui-tier-1): add Spinner, Accordion, ContextMenu, Toolbar)
+    y = this.addLayoutPrimitivesSection(y);
     y += 60;
 
     this.maxScroll = Math.max(0, y - GAME_HEIGHT);
@@ -2166,495 +2156,165 @@ export class StyleguideScene extends Phaser.Scene {
     return y + 40;
   }
 
-<<<<<<< HEAD
-  /* ── Form controls (Slider, Checkbox, Toggle, RadioGroup) ─ */
+  /* ── Layout primitives (HSizer / VSizer / GridSizer / FixWidthSizer / Anchor) ─ */
 
-  private addFormControlsSection(y: number): number {
-    y = this.addSubheading(y, "FORM CONTROLS");
+  private addLayoutPrimitivesSection(y: number): number {
+    y = this.addSubheading(y, "LAYOUT PRIMITIVES");
 
-    // ── Slider ──
-    const sliderLabel = new Label(this, {
-      x: 60,
-      y,
-      text: "Slider (0–100, step=5, with value readout)",
-      style: "caption",
-      color: this.theme.colors.textDim,
-    });
-    this.scrollContainer.add(sliderLabel);
-    y += 22;
-
-    const slider = new Slider(this, {
-      x: 60,
-      y,
-      width: 320,
-      min: 0,
-      max: 100,
-      step: 5,
-      value: 40,
-      label: "Volume",
-      showValue: true,
-      formatValue: (v) => `${v}%`,
-    });
-    this.children.remove(slider);
-    this.scrollContainer.add(slider);
-
-    const disabledSlider = new Slider(this, {
-      x: 420,
-      y,
-      width: 220,
-      min: 0,
-      max: 10,
-      value: 7,
-      label: "Disabled",
-      showValue: true,
-    });
-    disabledSlider.setEnabled(false);
-    this.children.remove(disabledSlider);
-    this.scrollContainer.add(disabledSlider);
-
-    y += 70;
-
-    // ── Checkbox ──
-    const cbLabel = new Label(this, {
-      x: 60,
-      y,
-      text: "Checkbox",
-      style: "caption",
-      color: this.theme.colors.textDim,
-    });
-    this.scrollContainer.add(cbLabel);
-    y += 22;
-
-    const cbOn = new Checkbox(this, {
-      x: 60,
-      y,
-      checked: true,
-      label: "Auto-save after each turn",
-    });
-    this.children.remove(cbOn);
-    this.scrollContainer.add(cbOn);
-
-    const cbOff = new Checkbox(this, {
-      x: 320,
-      y,
-      checked: false,
-      label: "Show debug overlay",
-    });
-    this.children.remove(cbOff);
-    this.scrollContainer.add(cbOff);
-
-    const cbDisabled = new Checkbox(this, {
-      x: 560,
-      y,
-      checked: true,
-      label: "Disabled (locked)",
-    });
-    cbDisabled.setEnabled(false);
-    this.children.remove(cbDisabled);
-    this.scrollContainer.add(cbDisabled);
-
-    y += 40;
-
-    // ── Toggle ──
-    const tLabel = new Label(this, {
-      x: 60,
-      y,
-      text: "Toggle (iOS-style on/off switch)",
-      style: "caption",
-      color: this.theme.colors.textDim,
-    });
-    this.scrollContainer.add(tLabel);
-    y += 22;
-
-    const toggleOn = new Toggle(this, {
-      x: 60,
-      y,
-      on: true,
-      onLabel: "Sound: ON",
-      offLabel: "Sound: OFF",
-    });
-    this.children.remove(toggleOn);
-    this.scrollContainer.add(toggleOn);
-
-    const toggleOff = new Toggle(this, {
-      x: 240,
-      y,
-      on: false,
-      onLabel: "Music: ON",
-      offLabel: "Music: OFF",
-    });
-    this.children.remove(toggleOff);
-    this.scrollContainer.add(toggleOff);
-
-    const toggleDisabled = new Toggle(this, {
-      x: 420,
-      y,
-      on: true,
-      onLabel: "Locked",
-      offLabel: "Locked",
-    });
-    toggleDisabled.setEnabled(false);
-    this.children.remove(toggleDisabled);
-    this.scrollContainer.add(toggleDisabled);
-
-    y += 40;
-
-    // ── RadioGroup ──
-    const rLabel = new Label(this, {
-      x: 60,
-      y,
-      text: "RadioGroup (single-select)",
-      style: "caption",
-      color: this.theme.colors.textDim,
-    });
-    this.scrollContainer.add(rLabel);
-    y += 22;
-
-    const radio = new RadioGroup(this, {
-      x: 60,
-      y,
-      value: "balanced",
-      options: [
-        { value: "easy", label: "Easy — relaxed economy" },
-        { value: "balanced", label: "Balanced — default" },
-        { value: "hard", label: "Hard — punishing markets" },
-      ],
-    });
-    this.children.remove(radio);
-    this.scrollContainer.add(radio);
-
-    const radioDisabled = new RadioGroup(this, {
-      x: 360,
-      y,
-      value: "b",
-      options: [
-        { value: "a", label: "Option A" },
-        { value: "b", label: "Option B (locked)" },
-        { value: "c", label: "Option C" },
-      ],
-    });
-    radioDisabled.setEnabled(false);
-    this.children.remove(radioDisabled);
-    this.scrollContainer.add(radioDisabled);
-
-    y += 100;
-    return y;
-  }
-
-  /* ── 26. Notifications: Toasts + ConfirmDialog ────────────── */
-
-  private addNotificationSection(y: number): number {
-    y = this.addSubheading(y, "NOTIFICATIONS — TOASTS & CONFIRM DIALOG");
-
-    const kinds: Array<{
-      label: string;
-      kind: "info" | "success" | "warning" | "error";
-      message: string;
-    }> = [
-      {
-        label: "Info Toast",
-        kind: "info",
-        message: "Route plotted to Solara.",
-      },
-      {
-        label: "Success Toast",
-        kind: "success",
-        message: "Cargo delivered. +$12,400 profit.",
-      },
-      {
-        label: "Warning Toast",
-        kind: "warning",
-        message: "Fuel reserves below 25%.",
-      },
-      {
-        label: "Error Toast",
-        kind: "error",
-        message: "Ship lost in pirate ambush at Helix Ring.",
-      },
-    ];
-
-    let x = 60;
-    for (const { label, kind, message } of kinds) {
-      const btn = new Button(this, {
-        x,
-        y: y + 10,
-        autoWidth: true,
-        label,
-        onClick: () => {
-          ToastManager.show(this, { message, kind });
-        },
-      });
-      this.scrollContainer.add(btn);
-      x += btn.width + 12;
-    }
-
-    const dismissAllBtn = new Button(this, {
-      x,
-      y: y + 10,
-      autoWidth: true,
-      label: "Dismiss All",
-      onClick: () => ToastManager.dismissAll(this),
-    });
-    this.scrollContainer.add(dismissAllBtn);
-
-    y += 70;
-
-    // Confirm dialog buttons
-    const confirmBtn = new Button(this, {
-      x: 60,
-      y: y + 10,
-      autoWidth: true,
-      label: "Open Confirm Dialog",
-      onClick: () => {
-        void ConfirmDialog.show(this, {
-          title: "Plot Route",
-          message: "Commit this route plan and end the planning phase?",
-        }).then((ok) => {
-          ToastManager.show(this, {
-            message: ok ? "Route confirmed." : "Cancelled.",
-            kind: ok ? "success" : "info",
-          });
-        });
-      },
-    });
-    this.scrollContainer.add(confirmBtn);
-
-    const dangerBtn = new Button(this, {
-      x: 60 + confirmBtn.width + 16,
-      y: y + 10,
-      autoWidth: true,
-      label: "Open Danger Confirm",
-      onClick: () => {
-        void ConfirmDialog.show(this, {
-          title: "Sell Ship",
-          message: "Sell the Bulk Freighter Aurora?\nThis cannot be undone.",
-          confirmLabel: "Sell",
-          cancelLabel: "Keep",
-          kind: "danger",
-        }).then((ok) => {
-          ToastManager.show(this, {
-            message: ok ? "Ship sold." : "Sale cancelled.",
-            kind: ok ? "warning" : "info",
-          });
-        });
-      },
-    });
-    this.scrollContainer.add(dangerBtn);
-
-    return y + 80;
-=======
-  /* ── 26. Misc Widgets (Spinner, Accordion, ContextMenu, Toolbar) ── */
-
-  private addMiscWidgetsSection(y: number): number {
-    y = this.addSubheading(y, "MISC WIDGETS");
-
-    // Spinners — different sizes / colors.
-    const spinnerLbl = new Label(this, {
-      x: 60,
-      y,
-      text: "Spinners (size + color variants):",
-      style: "caption",
-      color: this.theme.colors.textDim,
-    });
-    this.scrollContainer.add(spinnerLbl);
-
-    const spinnerY = y + 30;
-    const spinners: Array<{ size: number; color?: number }> = [
-      { size: 16 },
-      { size: 24 },
-      { size: 32, color: this.theme.colors.profit },
-      { size: 40, color: this.theme.colors.warning },
-    ];
-    let sx = 80;
-    for (const cfg of spinners) {
-      const s = new Spinner(this, {
-        x: sx,
-        y: spinnerY,
-        size: cfg.size,
-        color: cfg.color,
-      });
-      this.children.remove(s);
-      this.scrollContainer.add(s);
-      sx += cfg.size + 28;
-    }
-    y += 80;
-
-    // Toolbar.
-    const toolbarLbl = new Label(this, {
-      x: 60,
-      y,
-      text: "Toolbar (grouped buttons + icons):",
-      style: "caption",
-      color: this.theme.colors.textDim,
-    });
-    this.scrollContainer.add(toolbarLbl);
-    y += 24;
-
-    const toolbar = new Toolbar(this, {
-      x: 60,
-      y,
-      groups: [
-        {
-          items: [
-            {
-              kind: "icon",
-              icon: "icon-map",
-              onClick: () => {},
-              active: true,
-            },
-            { kind: "icon", icon: "icon-fleet", onClick: () => {} },
-            { kind: "icon", icon: "icon-routes", onClick: () => {} },
-          ],
-        },
-        {
-          items: [
-            { kind: "button", label: "Save", onClick: () => {} },
-            { kind: "button", label: "Load", onClick: () => {} },
-          ],
-        },
-        {
-          items: [{ kind: "button", label: "End Turn", onClick: () => {} }],
-        },
-      ],
-    });
-    this.children.remove(toolbar);
-    this.scrollContainer.add(toolbar);
-    y += toolbar.height + 24;
-
-    // Accordion.
-    const accordionLbl = new Label(this, {
-      x: 60,
-      y,
-      text: "Accordion (click headers to expand):",
-      style: "caption",
-      color: this.theme.colors.textDim,
-    });
-    this.scrollContainer.add(accordionLbl);
-    y += 24;
-
-    const buildAccordionContent = (text: string, h = 70) => {
-      return () => {
-        const c = this.add.container(0, 0);
-        const bg = this.add
-          .rectangle(0, 0, 440, h, this.theme.colors.panelBg, 0.6)
-          .setOrigin(0, 0)
-          .setStrokeStyle(1, this.theme.colors.panelBorder, 0.3);
-        c.add(bg);
-        const lbl = new Label(this, {
-          x: 12,
-          y: 12,
-          text,
-          style: "body",
-          maxWidth: 410,
-        });
-        c.add(lbl);
-        // Make the container "tall enough" via setSize so Accordion auto-detects.
-        c.setSize(440, h);
-        return c;
-      };
+    const swatch = (
+      w: number,
+      h: number,
+      color = this.theme.colors.accent,
+    ): Phaser.GameObjects.Rectangle => {
+      const r = this.add.rectangle(0, 0, w, h, color, 0.85).setOrigin(0, 0);
+      r.setStrokeStyle(1, this.theme.colors.panelBorder, 0.8);
+      return r;
     };
 
-    const accordion = new Accordion(this, {
+    // ── HSizer ──
+    this.scrollContainer.add(
+      new Label(this, {
+        x: 60,
+        y,
+        text: "HSizer (gap=8, justify=space-between, align=center)",
+        style: "caption",
+        color: this.theme.colors.textDim,
+      }),
+    );
+    y += 22;
+    const hSizer = new HSizer(this, {
       x: 60,
       y,
-      width: 440,
-      defaultExpanded: [0],
-      sections: [
-        {
-          title: "Overview",
-          content: buildAccordionContent(
-            "Sections collapse and expand independently.",
-            60,
-          ),
-          contentHeight: 60,
-        },
-        {
-          title: "Details",
-          content: buildAccordionContent(
-            "Multiple lines of detail content can\nlive inside an accordion section.",
-            80,
-          ),
-          contentHeight: 80,
-        },
-        {
-          title: "Allow multiple? (default false)",
-          content: buildAccordionContent(
-            "Set { allowMultiple: true } to keep\nmore than one section open at once.",
-            70,
-          ),
-          contentHeight: 70,
-        },
-      ],
+      width: 600,
+      height: 40,
+      gap: 8,
+      justify: "space-between",
+      align: "center",
     });
-    this.children.remove(accordion);
-    this.scrollContainer.add(accordion);
-    y += accordion.getTotalHeight() + 200;
+    hSizer.add([swatch(80, 30), swatch(120, 30), swatch(60, 30)]);
+    this.children.remove(hSizer);
+    this.scrollContainer.add(hSizer);
+    y += 60;
 
-    // ContextMenu — attached to a "right-click me" target.
-    const ctxLbl = new Label(this, {
+    // ── VSizer with flex ──
+    this.scrollContainer.add(
+      new Label(this, {
+        x: 60,
+        y,
+        text: "VSizer (gap=6, align=stretch, child flex weights)",
+        style: "caption",
+        color: this.theme.colors.textDim,
+      }),
+    );
+    y += 22;
+    const vSizer = new VSizer(this, {
       x: 60,
       y,
-      text: "Context menu (right-click the target):",
-      style: "caption",
-      color: this.theme.colors.textDim,
+      width: 200,
+      height: 180,
+      gap: 6,
+      align: "stretch",
     });
-    this.scrollContainer.add(ctxLbl);
-    y += 24;
+    vSizer.add(swatch(0, 30), { flex: 0 });
+    vSizer.add(swatch(0, 30, this.theme.colors.profit), { flex: 1 });
+    vSizer.add(swatch(0, 30, this.theme.colors.warning), { flex: 2 });
+    this.children.remove(vSizer);
+    this.scrollContainer.add(vSizer);
 
-    const target = this.add
-      .rectangle(60, y, 220, 60, this.theme.colors.panelBg, 0.7)
-      .setOrigin(0, 0)
-      .setStrokeStyle(1, this.theme.colors.accent, 0.6);
-    target.setInteractive();
-    this.scrollContainer.add(target);
-    const targetLbl = new Label(this, {
-      x: 60 + 110,
-      y: y + 30,
-      text: "Right-click here",
-      style: "body",
-      color: this.theme.colors.text,
-    }).setOrigin(0.5);
-    this.scrollContainer.add(targetLbl);
+    // ── GridSizer beside the VSizer ──
+    this.scrollContainer.add(
+      new Label(this, {
+        x: 290,
+        y: y - 22,
+        text: "GridSizer (3 cols, colspan)",
+        style: "caption",
+        color: this.theme.colors.textDim,
+      }),
+    );
+    const grid = new GridSizer(this, {
+      x: 290,
+      y,
+      columns: 3,
+      columnGap: 6,
+      rowGap: 6,
+    });
+    grid.add(swatch(60, 40));
+    grid.add(swatch(60, 40));
+    grid.add(swatch(60, 40));
+    grid.add(swatch(126, 40), { colspan: 2 });
+    grid.add(swatch(60, 40));
+    this.children.remove(grid);
+    this.scrollContainer.add(grid);
 
-    ContextMenu.attach(target, [
-      {
-        label: "Inspect",
-        onClick: () =>
-          new FloatingText(
-            this,
-            300,
-            y - this.scrollY,
-            "Inspected",
-            this.theme.colors.accent,
-          ),
-      },
-      {
-        label: "Duplicate",
-        onClick: () =>
-          new FloatingText(
-            this,
-            300,
-            y - this.scrollY,
-            "Duplicated",
-            this.theme.colors.profit,
-          ),
-      },
-      { separator: true, label: "" },
-      { label: "Disabled action", disabled: true, onClick: () => {} },
-      {
-        label: "Delete",
-        onClick: () =>
-          new FloatingText(
-            this,
-            300,
-            y - this.scrollY,
-            "Deleted",
-            this.theme.colors.loss,
-          ),
-      },
-    ]);
+    y += 200;
 
-    return y + 90;
->>>>>>> 23e3af0 (feat(ui-tier-1): add Spinner, Accordion, ContextMenu, Toolbar)
+    // ── FixWidthSizer ──
+    this.scrollContainer.add(
+      new Label(this, {
+        x: 60,
+        y,
+        text: "FixWidthSizer (wraps when overflowing the container)",
+        style: "caption",
+        color: this.theme.colors.textDim,
+      }),
+    );
+    y += 22;
+    const fix = new FixWidthSizer(this, {
+      x: 60,
+      y,
+      width: 600,
+      columnGap: 6,
+      rowGap: 6,
+    });
+    for (let i = 0; i < 12; i++) {
+      const w = 60 + ((i * 17) % 80);
+      fix.add(
+        swatch(
+          w,
+          24,
+          i % 2 === 0
+            ? this.theme.colors.accent
+            : this.theme.colors.accentHover,
+        ),
+      );
+    }
+    this.children.remove(fix);
+    this.scrollContainer.add(fix);
+    y += fix.getContentSize().height + 20;
+
+    // ── Anchor ──
+    this.scrollContainer.add(
+      new Label(this, {
+        x: 60,
+        y,
+        text: "Anchor (pin a child to a corner of a 600x120 frame, fill=horizontal)",
+        style: "caption",
+        color: this.theme.colors.textDim,
+      }),
+    );
+    y += 22;
+
+    const frame = this.add
+      .rectangle(60, y, 600, 120, this.theme.colors.panelBg, 0.4)
+      .setOrigin(0, 0);
+    frame.setStrokeStyle(1, this.theme.colors.panelBorder, 0.7);
+    this.scrollContainer.add(frame);
+
+    const anchored = swatch(0, 24, this.theme.colors.profit);
+    const anchor = new Anchor(this, {
+      to: "bottom",
+      fill: "horizontal",
+      insets: 8,
+      parentWidth: 600,
+      parentHeight: 120,
+    });
+    anchor.x = 60;
+    anchor.y = y;
+    anchor.add(anchored);
+    this.children.remove(anchor);
+    this.scrollContainer.add(anchor);
+
+    y += 140;
+    return y;
   }
 }

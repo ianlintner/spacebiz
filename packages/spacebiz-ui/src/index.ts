@@ -24,6 +24,9 @@ export * from "./TextMetrics.ts";
 export { FocusManager } from "./foundation/FocusManager.ts";
 export type { Focusable } from "./foundation/FocusManager.ts";
 
+// Layout primitives (Sizer-style flex containers + resize contract)
+export * from "./layout/index.ts";
+
 // Sound registration (call once at game boot)
 export { registerUiSoundHandler } from "./UiSound.ts";
 export type { UiSoundHandler } from "./UiSound.ts";
