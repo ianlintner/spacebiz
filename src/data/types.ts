@@ -468,6 +468,27 @@ export interface Sector {
   color: number;
 }
 
+/**
+ * An empire's stance toward foreign trade — drives default pool sizes,
+ * how many slots open per turn, and how often turmoil events trigger
+ * auctions. Distinct from `EmpireDisposition`, which tracks personality.
+ */
+export type EmpirePolicyStance = "isolationist" | "regulated" | "open";
+
+/**
+ * Pool of route charters an empire offers. Domestic = routes wholly within
+ * the empire; foreign = routes that cross the empire's border. `*Total` is
+ * the absolute capacity; `*Open` is the count currently available for grant
+ * (decremented when leased, incremented on forfeiture).
+ */
+export interface EmpireRouteSlotPool {
+  domesticTotal: number;
+  foreignTotal: number;
+  domesticOpen: number;
+  foreignOpen: number;
+  policyStance: EmpirePolicyStance;
+}
+
 export interface Empire {
   id: string;
   name: string;
@@ -477,6 +498,12 @@ export interface Empire {
   homeSystemId: string;
   leaderName: string;
   leaderPortrait: CharacterPortrait;
+  /**
+   * Route charter pool offered by this empire. Optional for backwards
+   * compatibility with v6 saves and existing empire fixtures — callers
+   * should treat `undefined` as a default pool derived from disposition.
+   */
+  routeSlotPool?: EmpireRouteSlotPool;
 }
 
 export interface StarSystem {
@@ -569,6 +596,74 @@ export interface ActiveRoute {
    * older saves.
    */
   paused?: boolean;
+  /**
+   * The charter underwriting this route. Optional for backwards compatibility
+   * with v6 saves and pre-charter routes; new routes (post-Phase 2) will
+   * always have a charter id.
+   */
+  charterId?: string;
+}
+
+/**
+ * Term of a charter. Permanent charters carry recurring per-turn upkeep and
+ * are the reward for trust-building (contract grants, starter charters).
+ * Fixed-term charters carry no upkeep but expire on a specific turn — they
+ * are the reward for opportunism (turmoil-event auctions).
+ */
+export type CharterTerm =
+  | { kind: "permanent"; upkeepPerTurn: number }
+  | { kind: "fixedTerm"; expiresOnTurn: number };
+
+/**
+ * A bid submitted into an open charter auction. Cash is escrowed at submit
+ * time; losing bids are refunded when the auction resolves.
+ */
+export interface CharterBid {
+  bidderId: string;
+  amount: number;
+  /** True for AI-generated bids; helps the UI flag visible competition. */
+  ai: boolean;
+}
+
+/**
+ * A turmoil-event-spawned auction for one charter slot. Players + AI submit
+ * sealed bids during the planning phase of `startedTurn`; the auction
+ * resolves at the end of that turn (or after `durationTurns` if multi-turn).
+ * Highest bid wins; ties broken by per-empire reputation.
+ */
+export interface CharterAuction {
+  id: string;
+  empireId: string;
+  pool: "domestic" | "foreign";
+  startedTurn: number;
+  durationTurns: number;
+  termTurns: number;
+  bids: CharterBid[];
+  status: "open" | "resolved" | "cancelled";
+  /** Set when status === "resolved". */
+  winnerId?: string;
+  /** The narrative trigger — useful for UI copy. */
+  triggerReason?: string;
+}
+
+/**
+ * A lease on one slot from an empire's route slot pool. A holder must own
+ * a matching charter (empire + pool) to operate a route through that empire.
+ * Forfeited charters return their slot to the empire pool and forfeit any
+ * `ActiveRoute` linked via `charterId`.
+ */
+export interface Charter {
+  id: string;
+  empireId: string;
+  pool: "domestic" | "foreign";
+  /** Player company id ("player") or `AICompany.id`. */
+  holderId: string;
+  grantedTurn: number;
+  term: CharterTerm;
+  /** Set when granted via contract reward. */
+  sourceContractId?: string;
+  /** Set when won at a turmoil-event auction. */
+  sourceAuctionId?: string;
 }
 
 export interface GameEvent {
@@ -774,6 +869,8 @@ export interface AICompany {
   contractsCompleted?: number;
   /** Active storyteller-fired narrative effects (buffs/debuffs) ticking down each turn. */
   activeNarrativeEffects?: ActiveAINarrativeEffect[];
+  /** Charters held by this AI company. Optional for v6-save compat. */
+  charters?: Charter[];
 }
 
 // ── Contract types ─────────────────────────────────────────
@@ -810,8 +907,21 @@ export interface Contract {
    * Optional slot-pool bonus paid out on completion. Empire-unlock and
    * trade-alliance contracts grow the galactic pool; passenger-ferry grows the
    * empire pool. Older saves (v6) without this field treat it as null.
+   *
+   * @deprecated Phase 2/3: superseded by `rewardCharter`. Existing contracts
+   * still grant slot bonuses on completion until the legacy player-side slot
+   * fields are removed.
    */
   rewardSlotBonus?: ContractSlotReward | null;
+  /**
+   * Permanent charter granted on completion. The charter is held by whoever
+   * accepted the contract (player or `aiCompanyId`). Term is always permanent
+   * with upkeep computed from the empire and pool at grant time.
+   */
+  rewardCharter?: {
+    empireId: string;
+    pool: "domestic" | "foreign";
+  } | null;
   depositPaid: number;
   status: ContractStatus;
   linkedRouteId: string | null;
@@ -1040,4 +1150,26 @@ export interface GameState {
   unlockedNavTabs: NavTabId[];
   /** Derived reputation tier */
   reputationTier: ReputationTier;
+
+  /**
+   * Per-empire reputation, keyed by empireId. Foundation for the charter system —
+   * companies build standing within each empire independently. The legacy global
+   * `reputation` field is now treated as a derived "fame" reading (see
+   * `computeFameRep` in ReputationEffects). Missing entries default to 50.
+   * Optional for backwards compatibility with v6 saves.
+   */
+  empireReputation?: Record<string, number>;
+
+  /**
+   * Active charters held by the player (and historically). AI companies hold
+   * their own charters on `AICompany.charters`. Optional for v6-save compat.
+   */
+  charters?: Charter[];
+
+  /**
+   * Open and recently-resolved charter auctions. Resolved entries stay in
+   * the array for one turn so the turn report can reference them. Optional
+   * for v6-save compat.
+   */
+  activeAuctions?: CharterAuction[];
 }

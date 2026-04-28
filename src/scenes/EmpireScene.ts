@@ -228,12 +228,30 @@ export class EmpireScene extends Phaser.Scene {
       empireSystems.some((s) => s.id === p.systemId),
     );
 
+    // Charter standing in this empire — visible at-a-glance so the player
+    // sees both their footprint here and how much room is left to grow.
+    const playerCharters = (state.charters ?? []).filter(
+      (c) => c.empireId === empireId,
+    );
+    const playerDom = playerCharters.filter(
+      (c) => c.pool === "domestic",
+    ).length;
+    const playerFgn = playerCharters.filter((c) => c.pool === "foreign").length;
+    const pool = empire.routeSlotPool;
+    const repInThisEmpire = state.empireReputation?.[empireId] ?? 50;
+
     this.portrait.showEmpireLeader(empire, [
       { label: "Empire", value: empire.name },
       { label: "Systems", value: String(empireSystems.length) },
       { label: "Planets", value: String(empirePlanets.length) },
       { label: "Tariff", value: `${(empire.tariffRate * 100).toFixed(0)}%` },
       { label: "Disposition", value: empire.disposition },
+      { label: "Your rep", value: String(Math.round(repInThisEmpire)) },
+      { label: "Your charters", value: `${playerDom}D / ${playerFgn}F` },
+      {
+        label: "Open slots",
+        value: pool ? `${pool.domesticOpen}D / ${pool.foreignOpen}F` : "—",
+      },
     ]);
   }
 }

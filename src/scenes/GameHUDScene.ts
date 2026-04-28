@@ -20,38 +20,37 @@ import type {
   NavTabId,
 } from "../data/types.ts";
 import { TUTORIAL_STEPS } from "../game/adviser/TutorialDefinitions.ts";
-import {
-  getAvailableRouteSlots,
-  getUsedRouteSlots,
-  getAvailableLocalRouteSlots,
-  getUsedLocalRouteSlots,
-  getAvailableGalacticRouteSlots,
-  getUsedGalacticRouteSlots,
-} from "../game/routes/RouteManager.ts";
 import type { GameState } from "../data/types.ts";
 import { generateTickerFeed } from "../generation/news/tickerFeed.ts";
 
 /**
- * Compact "Sys 1/2 · Emp 2/4 · Gal 0/2" string for the HUD route-slot
- * indicator. Three pools displayed inline so the player sees at-a-glance
- * which tier is saturated.
+ * Compact "Charters: 3 (2P/1F) · Upkeep: §2,400" string for the HUD.
+ * Replaces the legacy three-tier slot indicator now that empires own slot
+ * pools and players hold charters. The P/F suffix splits permanent vs
+ * fixed-term so an upcoming auction expiry is easy to spot.
  */
 function formatSlotSummary(state: GameState): {
   text: string;
   anySaturated: boolean;
 } {
-  const sysUsed = getUsedLocalRouteSlots(state);
-  const sysTot = getAvailableLocalRouteSlots(state);
-  const empUsed = getUsedRouteSlots(state);
-  const empTot = getAvailableRouteSlots(state);
-  const galUsed = getUsedGalacticRouteSlots(state);
-  const galTot = getAvailableGalacticRouteSlots(state);
-  const anySaturated =
-    sysUsed >= sysTot || empUsed >= empTot || galUsed >= galTot;
-  return {
-    text: `Sys ${sysUsed}/${sysTot} · Emp ${empUsed}/${empTot} · Gal ${galUsed}/${galTot}`,
-    anySaturated,
-  };
+  const charters = state.charters ?? [];
+  const permanent = charters.filter((c) => c.term.kind === "permanent").length;
+  const fixedTerm = charters.filter((c) => c.term.kind === "fixedTerm").length;
+  const upkeep = charters.reduce(
+    (sum, c) => sum + (c.term.kind === "permanent" ? c.term.upkeepPerTurn : 0),
+    0,
+  );
+  // Saturation = upcoming upkeep exceeds current cash, or a fixed-term
+  // charter expires within 2 turns.
+  const cantPay = upkeep > state.cash;
+  const expiringSoon = charters.some(
+    (c) =>
+      c.term.kind === "fixedTerm" && c.term.expiresOnTurn - state.turn <= 2,
+  );
+  const text = `Charters: ${charters.length} (${permanent}P/${fixedTerm}F) · Upkeep: §${Math.round(
+    upkeep,
+  ).toLocaleString("en-US")}`;
+  return { text, anySaturated: cantPay || expiringSoon };
 }
 import { getPortraitTextureKey } from "../data/portraits.ts";
 import {

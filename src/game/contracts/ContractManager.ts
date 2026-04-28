@@ -1,13 +1,15 @@
-import type { GameState, Contract } from "../../data/types.ts";
+import type { GameState, Contract, Charter, Empire } from "../../data/types.ts";
 import { ContractType, ContractStatus, RouteScope } from "../../data/types.ts";
 import {
   CONTRACT_FAILURE_REP_PENALTY,
   CONTRACT_UNASSIGNED_SHIP_LIMIT,
   BASE_GALACTIC_ROUTE_SLOTS,
   BASE_SYSTEM_ROUTE_SLOTS,
+  PLAYER_COMPANY_ID,
 } from "../../data/constants.ts";
 import { createRoute } from "../routes/RouteManager.ts";
 import { calculateDistance } from "../routes/RouteManager.ts";
+import { calculateUpkeep, grantCharter } from "../charters/CharterManager.ts";
 import type { NegotiationChoice } from "./ContractNegotiation.ts";
 import { applyNegotiation } from "./ContractNegotiation.ts";
 import {
@@ -95,6 +97,11 @@ export function processContracts(state: GameState): Partial<GameState> {
     state.galacticRouteSlots ?? BASE_GALACTIC_ROUTE_SLOTS;
   let unlockedEmpireIds = [...state.unlockedEmpireIds];
   let activeRoutes = [...state.activeRoutes];
+  // Charter grants need a rolling state view so back-to-back grants on the
+  // same contract pass see each other's pool decrements.
+  let chartersAcc: Charter[] = state.charters ? [...state.charters] : [];
+  let aiCompaniesAcc = state.aiCompanies;
+  let empiresAcc: Empire[] = state.galaxy.empires;
 
   for (let i = 0; i < updatedContracts.length; i++) {
     const c = updatedContracts[i];
@@ -160,6 +167,44 @@ export function processContracts(state: GameState): Partial<GameState> {
         }
       }
 
+      // Charter grant — Phase 3. Permanent term with upkeep priced from the
+      // empire's tariff and the holder's per-empire reputation. Pool may be
+      // exhausted by the time the contract resolves; in that case we silently
+      // skip the grant (matches design — empires don't owe charters they no
+      // longer have capacity for).
+      if (c.rewardCharter) {
+        const holderId = c.aiCompanyId ?? PLAYER_COMPANY_ID;
+        const empire = empiresAcc.find(
+          (e) => e.id === c.rewardCharter!.empireId,
+        );
+        if (empire) {
+          const upkeep = calculateUpkeep(
+            { ...state, galaxy: { ...state.galaxy, empires: empiresAcc } },
+            empire,
+            c.rewardCharter.pool,
+            holderId,
+          );
+          const grantState: GameState = {
+            ...state,
+            galaxy: { ...state.galaxy, empires: empiresAcc },
+            charters: chartersAcc,
+            aiCompanies: aiCompaniesAcc,
+          };
+          const result = grantCharter(grantState, {
+            empireId: c.rewardCharter.empireId,
+            pool: c.rewardCharter.pool,
+            holderId,
+            term: { kind: "permanent", upkeepPerTurn: upkeep },
+            source: { contractId: c.id },
+          });
+          if (result.error === null) {
+            chartersAcc = result.playerCharters;
+            aiCompaniesAcc = result.aiCompanies;
+            empiresAcc = result.empires;
+          }
+        }
+      }
+
       updatedContracts[i] = {
         ...c,
         turnsRemaining: 0,
@@ -181,6 +226,9 @@ export function processContracts(state: GameState): Partial<GameState> {
     unlockedEmpireIds,
     activeRoutes,
     tech: { ...state.tech, researchPoints },
+    charters: chartersAcc,
+    aiCompanies: aiCompaniesAcc,
+    galaxy: { ...state.galaxy, empires: empiresAcc },
   };
 }
 

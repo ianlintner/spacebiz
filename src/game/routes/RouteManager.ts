@@ -643,6 +643,7 @@ export function createRoute(
   destId: string,
   distance: number,
   cargoType: CargoType | null,
+  charterId?: string,
 ): ActiveRoute {
   return {
     id: `route-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -651,6 +652,7 @@ export function createRoute(
     distance,
     assignedShipIds: [],
     cargoType,
+    charterId,
   };
 }
 

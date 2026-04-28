@@ -5,8 +5,12 @@ import {
   getReputationTariffMultiplier,
   hasPremiumContractAccess,
   makePremiumContract,
+  getEmpireRep,
+  adjustEmpireRep,
+  computeFameRep,
+  DEFAULT_EMPIRE_REPUTATION,
 } from "../ReputationEffects.ts";
-import type { Contract } from "../../../data/types.ts";
+import type { Contract, GameState } from "../../../data/types.ts";
 import { ContractStatus } from "../../../data/types.ts";
 
 // ── computeReputationTier ────────────────────────────────────────────────────
@@ -206,5 +210,103 @@ describe("makePremiumContract", () => {
     };
     const premium = makePremiumContract(shortContract);
     expect(premium.durationTurns).toBe(1);
+  });
+});
+
+// ── Per-Empire Reputation ────────────────────────────────────────────────────
+
+function makeState(overrides: Partial<GameState> = {}): GameState {
+  return {
+    reputation: 50,
+    empireReputation: {},
+    ...overrides,
+  } as GameState;
+}
+
+describe("getEmpireRep", () => {
+  it("returns the stored value when present", () => {
+    const state = makeState({ empireReputation: { solaris: 72 } });
+    expect(getEmpireRep(state, "solaris")).toBe(72);
+  });
+
+  it("returns the default when empire is missing", () => {
+    const state = makeState({ empireReputation: {} });
+    expect(getEmpireRep(state, "solaris")).toBe(DEFAULT_EMPIRE_REPUTATION);
+  });
+
+  it("returns the default when empireReputation map is undefined (v6 saves)", () => {
+    const state = makeState();
+    delete (state as Partial<GameState>).empireReputation;
+    expect(getEmpireRep(state, "solaris")).toBe(50);
+  });
+});
+
+describe("adjustEmpireRep", () => {
+  it("adds delta to existing reputation", () => {
+    const state = makeState({ empireReputation: { solaris: 60 } });
+    expect(adjustEmpireRep(state, "solaris", 5).solaris).toBe(65);
+  });
+
+  it("starts from default for an empire with no record", () => {
+    const state = makeState({ empireReputation: {} });
+    expect(adjustEmpireRep(state, "vex", 10).vex).toBe(60);
+  });
+
+  it("clamps to [0, 100]", () => {
+    const state = makeState({ empireReputation: { a: 5, b: 95 } });
+    expect(adjustEmpireRep(state, "a", -50).a).toBe(0);
+    expect(adjustEmpireRep(state, "b", 50).b).toBe(100);
+  });
+
+  it("does not mutate the input map", () => {
+    const map = { solaris: 50 };
+    const state = makeState({ empireReputation: map });
+    adjustEmpireRep(state, "solaris", 10);
+    expect(map.solaris).toBe(50);
+  });
+
+  it("preserves other empires' reputation", () => {
+    const state = makeState({
+      empireReputation: { solaris: 50, vex: 30, krell: 80 },
+    });
+    const next = adjustEmpireRep(state, "solaris", 10);
+    expect(next).toEqual({ solaris: 60, vex: 30, krell: 80 });
+  });
+});
+
+describe("computeFameRep", () => {
+  it("falls back to legacy state.reputation when map is empty", () => {
+    const state = makeState({ reputation: 73, empireReputation: {} });
+    expect(computeFameRep(state)).toBe(73);
+  });
+
+  it("falls back to legacy state.reputation when map is undefined", () => {
+    const state = makeState({ reputation: 42 });
+    delete (state as Partial<GameState>).empireReputation;
+    expect(computeFameRep(state)).toBe(42);
+  });
+
+  it("blends mean and max (0.6 mean + 0.4 max)", () => {
+    const state = makeState({
+      reputation: 99, // ignored when map present
+      empireReputation: { a: 50, b: 50, c: 80 },
+    });
+    // mean = 60, max = 80 -> 0.6*60 + 0.4*80 = 36 + 32 = 68
+    expect(computeFameRep(state)).toBe(68);
+  });
+
+  it("collapses to the single value when only one empire is recorded", () => {
+    const state = makeState({
+      empireReputation: { solo: 70 },
+    });
+    expect(computeFameRep(state)).toBe(70);
+  });
+
+  it("rewards a single legendary standing without ignoring weak rest", () => {
+    const lopsided = makeState({
+      empireReputation: { home: 95, a: 10, b: 10, c: 10 },
+    });
+    // mean = 31.25, max = 95 -> 0.6*31.25 + 0.4*95 = 18.75 + 38 = 56.75 -> 57
+    expect(computeFameRep(lopsided)).toBe(57);
   });
 });

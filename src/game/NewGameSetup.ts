@@ -9,6 +9,8 @@ import type {
   StorytellerState,
   AICompany,
   ActiveRoute,
+  Charter,
+  Empire,
   GalaxyShape as GalaxyShapeT,
   TechState,
 } from "../data/types.ts";
@@ -23,6 +25,8 @@ import {
   ACTION_POINTS_PER_TURN,
   LOCAL_ROUTE_SLOTS,
   BASE_GALACTIC_ROUTE_SLOTS,
+  STARTER_CHARTERS_AT_HOME,
+  PLAYER_COMPANY_ID,
 } from "../data/constants.ts";
 import type { GamePreset } from "../data/constants.ts";
 import { findAdjacentEmpires } from "./empire/EmpireAccessManager.ts";
@@ -352,6 +356,33 @@ export function createNewGame(
     diplomacyRng,
   );
 
+  // Phase 7: Grant the player's starter charters in their home empire.
+  // These are permanent, free (zero upkeep) — training-wheel slots that
+  // can never be forfeited for non-payment. Seeded so saves are reproducible.
+  const charterRng = new SeededRNG(seed + 7);
+  const homeEmpire = galaxyData.empires.find((e) => e.id === playerEmpireId);
+  const playerCharters: Charter[] = [];
+  if (homeEmpire?.routeSlotPool) {
+    const granted = Math.min(
+      STARTER_CHARTERS_AT_HOME,
+      homeEmpire.routeSlotPool.domesticOpen,
+    );
+    for (let i = 0; i < granted; i++) {
+      playerCharters.push({
+        id: `charter-starter-${i}-${charterRng.nextInt(0, 1_000_000)}`,
+        empireId: playerEmpireId,
+        pool: "domestic",
+        holderId: PLAYER_COMPANY_ID,
+        grantedTurn: 1,
+        term: { kind: "permanent", upkeepPerTurn: 0 },
+      });
+    }
+    homeEmpire.routeSlotPool = {
+      ...homeEmpire.routeSlotPool,
+      domesticOpen: homeEmpire.routeSlotPool.domesticOpen - granted,
+    };
+  }
+
   // Phase 5: Initialize station hub at the default starting system
   const hubRng = new SeededRNG(seed + 4);
   const availableRoomTypes = selectRunRoomTypes(hubRng);
@@ -424,6 +455,10 @@ export function createNewGame(
     researchEvents: [],
     unlockedNavTabs: ["map", "routes", "fleet", "finance"],
     reputationTier: "unknown",
+    empireReputation: Object.fromEntries(
+      galaxyData.empires.map((e: Empire) => [e.id, 50]),
+    ),
+    charters: playerCharters,
   };
 
   return { state, startingSystemOptions };

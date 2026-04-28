@@ -30,6 +30,7 @@ import {
   HYPERLANE_DENSITY_CONFIGS,
   HYPERLANE_SHAPE_BIAS,
   HYPERLANE_MIN_CONNECTIONS,
+  DEFAULT_EMPIRE_POOL_BY_STANCE,
 } from "../data/constants.ts";
 import type { GamePreset } from "../data/constants.ts";
 
@@ -666,6 +667,18 @@ export function generateGalaxy(
       }
     }
 
+    // Charter pool stance is loosely correlated with disposition:
+    //   friendly  → open       (more foreign charters, fewer domestic)
+    //   hostile   → isolationist (mostly domestic, almost no foreign)
+    //   else      → regulated   (balanced)
+    const policyStance: "isolationist" | "regulated" | "open" =
+      disposition === "friendly"
+        ? "open"
+        : disposition === "hostile"
+          ? "isolationist"
+          : "regulated";
+    const poolSizes = DEFAULT_EMPIRE_POOL_BY_STANCE[policyStance];
+
     const empire: Empire = {
       id: empireId,
       name: empireName,
@@ -675,6 +688,13 @@ export function generateGalaxy(
       homeSystemId,
       leaderName: generateLeaderName(rng),
       leaderPortrait: pickRandomLeaderPortrait(rng),
+      routeSlotPool: {
+        policyStance,
+        domesticTotal: poolSizes.domesticTotal,
+        foreignTotal: poolSizes.foreignTotal,
+        domesticOpen: poolSizes.domesticTotal,
+        foreignOpen: poolSizes.foreignTotal,
+      },
     };
     empires.push(empire);
   }

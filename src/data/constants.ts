@@ -14,7 +14,7 @@ import {
 
 // ── Save Version ───────────────────────────────────────────────
 /** Increment when GameState shape changes in a save-incompatible way */
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 // ── Action Points ──────────────────────────────────────────────
 export const ACTION_POINTS_PER_TURN = 2;
@@ -89,6 +89,36 @@ export const BASE_EMPIRE_ROUTE_SLOTS = 3;
  * Each subsequent empire unlock adds another slot here (see ContractManager).
  */
 export const BASE_GALACTIC_ROUTE_SLOTS = 3;
+
+// ── Charter system (Phase 2) ─────────────────────────────────────────
+//
+// Empires own pools of route charters that companies (player + AI) lease
+// to operate routes. The legacy player-side slot caps above are no longer
+// the gating resource; charters are. Pool sizes per empire are derived
+// from `EmpirePolicyStance` (open/regulated/isolationist).
+
+/** Default route slot pool sizes by empire policy stance. */
+export const DEFAULT_EMPIRE_POOL_BY_STANCE: Record<
+  "isolationist" | "regulated" | "open",
+  { domesticTotal: number; foreignTotal: number }
+> = {
+  isolationist: { domesticTotal: 8, foreignTotal: 1 },
+  regulated: { domesticTotal: 6, foreignTotal: 2 },
+  open: { domesticTotal: 4, foreignTotal: 4 },
+};
+
+/** Player's free starter charters granted at game start (intra-system, in home empire). */
+export const STARTER_CHARTERS_AT_HOME = 2;
+
+/** Per-turn upkeep paid by holders of permanent charters. */
+export const BASE_DOMESTIC_UPKEEP = 800;
+export const BASE_FOREIGN_UPKEEP = 2500;
+
+/** Default lease length for fixed-term (auction-won) charters. */
+export const DEFAULT_AUCTION_TERM_TURNS = 8;
+
+/** Player company id used by charter holderId fields. */
+export const PLAYER_COMPANY_ID = "player";
 
 // ── Future seam: Ship-Class × Scope haul-band system ───────────
 //
