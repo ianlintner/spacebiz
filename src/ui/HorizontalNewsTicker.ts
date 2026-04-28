@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { getTheme, colorToString } from "./index.ts";
+import { applyClippingMask } from "@spacebiz/ui";
 import type { TickerItem } from "../generation/news/types.ts";
 import { CATEGORY_META } from "../generation/news/categories.ts";
 
@@ -20,7 +21,12 @@ function buildMarqueeString(items: TickerItem[]): string {
 
 /**
  * Persistent horizontal news crawl rendered in GameHUDScene's ticker strip.
- * Items scroll right-to-left at a constant speed, looping continuously.
+ * Items scroll right-to-left at a constant speed.
+ *
+ * `updateItems` does NOT interrupt the in-flight scroll. Incoming items become
+ * the "pending" payload — replacing any earlier pending payload that has not
+ * yet been shown — and take over only after the current pass completes
+ * off-screen. If nothing is pending when a pass ends, the same items re-loop.
  */
 export class HorizontalNewsTicker {
   private readonly scene: Phaser.Scene;
@@ -32,6 +38,9 @@ export class HorizontalNewsTicker {
   private maskShape: Phaser.GameObjects.Graphics | null = null;
   private marqueeText: Phaser.GameObjects.Text | null = null;
   private scrollTween: Phaser.Tweens.Tween | null = null;
+  private currentItems: TickerItem[] = [];
+  private pendingItems: TickerItem[] | null = null;
+  private destroyed = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -57,10 +66,19 @@ export class HorizontalNewsTicker {
   }
 
   updateItems(items: TickerItem[]): void {
-    this.scrollTween?.stop();
-    this.scrollTween = null;
-    this.marqueeText?.destroy();
-    this.marqueeText = null;
+    if (this.scrollTween) {
+      // Currently scrolling — queue this payload, replacing any earlier
+      // pending payload that has not yet been displayed.
+      this.pendingItems = items;
+      return;
+    }
+    this.currentItems = items;
+    this.pendingItems = null;
+    this.startScrollPass(items);
+  }
+
+  private startScrollPass(items: TickerItem[]): void {
+    if (this.destroyed) return;
 
     const theme = getTheme();
     const text = buildMarqueeString(items);
@@ -83,36 +101,44 @@ export class HorizontalNewsTicker {
 
     // Apply mask so text doesn't bleed outside the strip.
     if (this.maskShape) {
-      const geomMask = this.maskShape.createGeometryMask();
-      this.marqueeText.setMask(geomMask);
+      applyClippingMask(this.marqueeText, this.maskShape);
     }
 
     const textWidth = this.marqueeText.width;
     const totalTravel = this.width + textWidth;
     const duration = (totalTravel / SCROLL_SPEED) * 1000;
 
-    // Scroll from right edge to fully off-screen left, then repeat.
+    // Single-pass tween from right edge to fully off-screen left. When the
+    // pass finishes, drain the pending queue (or re-loop the same items).
     this.scrollTween = this.scene.tweens.add({
       targets: this.marqueeText,
       x: this.x - textWidth,
       duration,
       ease: "Linear",
-      repeat: -1,
-      onRepeat: () => {
-        // Reset to right edge for next cycle.
-        if (this.marqueeText) {
-          this.marqueeText.setX(this.x + this.width);
-        }
-      },
+      onComplete: () => this.onPassComplete(),
     });
   }
 
+  private onPassComplete(): void {
+    this.marqueeText?.destroy();
+    this.marqueeText = null;
+    this.scrollTween = null;
+    if (this.destroyed) return;
+
+    const next = this.pendingItems ?? this.currentItems;
+    this.pendingItems = null;
+    this.currentItems = next;
+    this.startScrollPass(next);
+  }
+
   destroy(): void {
+    this.destroyed = true;
     this.scrollTween?.stop();
     this.scrollTween = null;
     this.marqueeText?.destroy();
     this.marqueeText = null;
     this.maskShape?.destroy();
     this.maskShape = null;
+    this.pendingItems = null;
   }
 }
