@@ -18,6 +18,9 @@ export * from "./Layout.ts";
 export * from "./DepthLayers.ts";
 export * from "./TextMetrics.ts";
 
+// Layout primitives (Sizer-style flex containers + resize contract)
+export * from "./layout/index.ts";
+
 // Sound registration (call once at game boot)
 export { registerUiSoundHandler } from "./UiSound.ts";
 export type { UiSoundHandler } from "./UiSound.ts";

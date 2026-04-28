@@ -25,6 +25,11 @@ import {
   InfoCard,
   IconButton,
   StatusBadge,
+  HSizer,
+  VSizer,
+  GridSizer,
+  FixWidthSizer,
+  Anchor,
   // Layout constants
   SIDEBAR_WIDTH,
   CONTENT_GAP,
@@ -119,6 +124,7 @@ export class StyleguideScene extends Phaser.Scene {
     y = this.addInfoCardSection(y);
     y = this.addIconButtonSection(y);
     y = this.addStatusBadgeSection(y);
+    y = this.addLayoutPrimitivesSection(y);
     y += 60;
 
     this.maxScroll = Math.max(0, y - GAME_HEIGHT);
@@ -2148,5 +2154,167 @@ export class StyleguideScene extends Phaser.Scene {
     }
 
     return y + 40;
+  }
+
+  /* ── Layout primitives (HSizer / VSizer / GridSizer / FixWidthSizer / Anchor) ─ */
+
+  private addLayoutPrimitivesSection(y: number): number {
+    y = this.addSubheading(y, "LAYOUT PRIMITIVES");
+
+    const swatch = (
+      w: number,
+      h: number,
+      color = this.theme.colors.accent,
+    ): Phaser.GameObjects.Rectangle => {
+      const r = this.add.rectangle(0, 0, w, h, color, 0.85).setOrigin(0, 0);
+      r.setStrokeStyle(1, this.theme.colors.panelBorder, 0.8);
+      return r;
+    };
+
+    // ── HSizer ──
+    this.scrollContainer.add(
+      new Label(this, {
+        x: 60,
+        y,
+        text: "HSizer (gap=8, justify=space-between, align=center)",
+        style: "caption",
+        color: this.theme.colors.textDim,
+      }),
+    );
+    y += 22;
+    const hSizer = new HSizer(this, {
+      x: 60,
+      y,
+      width: 600,
+      height: 40,
+      gap: 8,
+      justify: "space-between",
+      align: "center",
+    });
+    hSizer.add([swatch(80, 30), swatch(120, 30), swatch(60, 30)]);
+    this.children.remove(hSizer);
+    this.scrollContainer.add(hSizer);
+    y += 60;
+
+    // ── VSizer with flex ──
+    this.scrollContainer.add(
+      new Label(this, {
+        x: 60,
+        y,
+        text: "VSizer (gap=6, align=stretch, child flex weights)",
+        style: "caption",
+        color: this.theme.colors.textDim,
+      }),
+    );
+    y += 22;
+    const vSizer = new VSizer(this, {
+      x: 60,
+      y,
+      width: 200,
+      height: 180,
+      gap: 6,
+      align: "stretch",
+    });
+    vSizer.add(swatch(0, 30), { flex: 0 });
+    vSizer.add(swatch(0, 30, this.theme.colors.profit), { flex: 1 });
+    vSizer.add(swatch(0, 30, this.theme.colors.warning), { flex: 2 });
+    this.children.remove(vSizer);
+    this.scrollContainer.add(vSizer);
+
+    // ── GridSizer beside the VSizer ──
+    this.scrollContainer.add(
+      new Label(this, {
+        x: 290,
+        y: y - 22,
+        text: "GridSizer (3 cols, colspan)",
+        style: "caption",
+        color: this.theme.colors.textDim,
+      }),
+    );
+    const grid = new GridSizer(this, {
+      x: 290,
+      y,
+      columns: 3,
+      columnGap: 6,
+      rowGap: 6,
+    });
+    grid.add(swatch(60, 40));
+    grid.add(swatch(60, 40));
+    grid.add(swatch(60, 40));
+    grid.add(swatch(126, 40), { colspan: 2 });
+    grid.add(swatch(60, 40));
+    this.children.remove(grid);
+    this.scrollContainer.add(grid);
+
+    y += 200;
+
+    // ── FixWidthSizer ──
+    this.scrollContainer.add(
+      new Label(this, {
+        x: 60,
+        y,
+        text: "FixWidthSizer (wraps when overflowing the container)",
+        style: "caption",
+        color: this.theme.colors.textDim,
+      }),
+    );
+    y += 22;
+    const fix = new FixWidthSizer(this, {
+      x: 60,
+      y,
+      width: 600,
+      columnGap: 6,
+      rowGap: 6,
+    });
+    for (let i = 0; i < 12; i++) {
+      const w = 60 + ((i * 17) % 80);
+      fix.add(
+        swatch(
+          w,
+          24,
+          i % 2 === 0
+            ? this.theme.colors.accent
+            : this.theme.colors.accentHover,
+        ),
+      );
+    }
+    this.children.remove(fix);
+    this.scrollContainer.add(fix);
+    y += fix.getContentSize().height + 20;
+
+    // ── Anchor ──
+    this.scrollContainer.add(
+      new Label(this, {
+        x: 60,
+        y,
+        text: "Anchor (pin a child to a corner of a 600x120 frame, fill=horizontal)",
+        style: "caption",
+        color: this.theme.colors.textDim,
+      }),
+    );
+    y += 22;
+
+    const frame = this.add
+      .rectangle(60, y, 600, 120, this.theme.colors.panelBg, 0.4)
+      .setOrigin(0, 0);
+    frame.setStrokeStyle(1, this.theme.colors.panelBorder, 0.7);
+    this.scrollContainer.add(frame);
+
+    const anchored = swatch(0, 24, this.theme.colors.profit);
+    const anchor = new Anchor(this, {
+      to: "bottom",
+      fill: "horizontal",
+      insets: 8,
+      parentWidth: 600,
+      parentHeight: 120,
+    });
+    anchor.x = 60;
+    anchor.y = y;
+    anchor.add(anchored);
+    this.children.remove(anchor);
+    this.scrollContainer.add(anchor);
+
+    y += 140;
+    return y;
   }
 }
