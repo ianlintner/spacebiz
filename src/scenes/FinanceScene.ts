@@ -13,10 +13,10 @@ import {
   DataTable,
   ScrollFrame,
   Modal,
-  ScrollableList,
   Panel,
   PortraitPanel,
   SceneUiDirector,
+  Slider,
   createStarfield,
   getLayout,
 } from "../ui/index.ts";
@@ -489,10 +489,11 @@ export class FinanceScene extends Phaser.Scene {
   private showTakeLoan(loanTable: DataTable): void {
     const L = getLayout();
     const theme = getTheme();
-    const loanAmounts = [50000, 100000, 200000];
     const rate =
       LOAN_INTEREST_RATE_MIN +
       Math.random() * (LOAN_INTEREST_RATE_MAX - LOAN_INTEREST_RATE_MIN);
+
+    let selectedLoanAmount: number = 100000; // Default to middle value
 
     const layer = this.ui.openLayer({ key: "finance-take-loan" });
     layer.createOverlay({
@@ -518,28 +519,66 @@ export class FinanceScene extends Phaser.Scene {
 
     const content = loanPanel.getContentArea();
 
-    const list = layer.track(
-      new ScrollableList(this, {
-        x: panelX + content.x,
-        y: panelY + content.y,
-        width: content.width,
-        height: content.height - 50,
-        itemHeight: 48,
-        onSelect: (index: number) => {
-          const amount = loanAmounts[index];
-          if (amount === undefined) return;
+    // Create loan amount slider
+    const loanSlider = layer.track(
+      new Slider(this, {
+        x: panelX + content.x + 20,
+        y: panelY + content.y + 30,
+        width: content.width - 40,
+        min: 50000,
+        max: 200000,
+        step: 10000,
+        value: selectedLoanAmount,
+        label: "Loan Amount",
+        showValue: true,
+        formatValue: (v) => `$${(v / 1000).toFixed(0)}k`,
+      }),
+    );
 
+    loanSlider.on("change", (value: number) => {
+      selectedLoanAmount = value;
+    });
+
+    // Display interest cost info
+    const interestDisplay = this.add.text(
+      panelX + content.x + 20,
+      panelY + content.y + 100,
+      `Interest per turn: ${formatCash(Math.round(selectedLoanAmount * rate))}`,
+      {
+        fontSize: `${theme.fonts.body.size}px`,
+        fontFamily: theme.fonts.body.family,
+        color: colorToString(theme.colors.textDim),
+      },
+    );
+    layer.track(interestDisplay);
+
+    // Update interest display when slider changes
+    loanSlider.on("change", (value: number) => {
+      selectedLoanAmount = value;
+      interestDisplay.setText(
+        `Interest per turn: ${formatCash(Math.round(value * rate))}`,
+      );
+    });
+
+    // Accept button
+    layer.track(
+      new Button(this, {
+        x: panelX + panelW - content.x - 210,
+        y: panelY + panelH - 50,
+        width: 100,
+        label: "Accept",
+        onClick: () => {
           const freshState = gameStore.getState();
           const loan: Loan = {
             id: `loan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            principal: amount,
+            principal: selectedLoanAmount,
             interestRate: rate,
-            remainingBalance: amount,
+            remainingBalance: selectedLoanAmount,
             turnTaken: freshState.turn,
           };
 
           gameStore.update({
-            cash: freshState.cash + amount,
+            cash: freshState.cash + selectedLoanAmount,
             loans: [...freshState.loans, loan],
           });
 
@@ -560,27 +599,7 @@ export class FinanceScene extends Phaser.Scene {
       }),
     );
 
-    for (const amount of loanAmounts) {
-      const itemContainer = this.add.container(0, 0);
-      const amountText = this.add.text(10, 8, formatCash(amount), {
-        fontSize: `${theme.fonts.value.size}px`,
-        fontFamily: theme.fonts.value.family,
-        color: colorToString(theme.colors.accent),
-      });
-      const detailText = this.add.text(
-        10,
-        28,
-        `Interest: ${formatCash(Math.round(amount * rate))}/turn`,
-        {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.textDim),
-        },
-      );
-      itemContainer.add([amountText, detailText]);
-      list.addItem(itemContainer);
-    }
-
+    // Close button
     layer.track(
       new Button(this, {
         x: panelX + panelW - content.x - 100,
