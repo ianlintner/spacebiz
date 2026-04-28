@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:tier2": "playwright test e2e/tier2.spec.ts",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "PWDEBUG=1 playwright test",
     "test:mcp": "npm run build --workspace @spacebiz/qa-mcp && node packages/spacebiz-qa-mcp/scripts/smoke.mjs",

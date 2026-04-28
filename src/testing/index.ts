@@ -9,6 +9,12 @@ import { logs } from "./log.ts";
 declare global {
   interface Window {
     __sft?: SftTestAPI;
+    /**
+     * Backdoor to the active Phaser.Game for e2e specs that need to peek at
+     * subsystems the QA façade doesn't expose (Phaser TextureManager, etc.).
+     * Set in `installTestAPI`. Not for production use.
+     */
+    __SFT_GAME?: Phaser.Game;
   }
 }
 
@@ -28,6 +34,7 @@ export function installTestAPI(
   const api = createTestAPI(game);
   if (typeof window !== "undefined") {
     window.__sft = api;
+    window.__SFT_GAME = game;
   }
   if (mode === "debug") {
     console.warn(

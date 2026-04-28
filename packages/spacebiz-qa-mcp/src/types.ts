@@ -73,6 +73,49 @@ export interface InvariantViolation {
   turn: number;
 }
 
+// ── Tier-2 inspection shapes (mirrored from src/testing/tier2.ts) ────────
+
+export interface PortraitStatus {
+  ceoId: string;
+  textureKey: string;
+  loaded: boolean;
+  category: string | null;
+  isPlayer: boolean;
+}
+
+export interface AdviserMessage {
+  id: string;
+  text: string;
+  mood: string;
+  priority: number;
+  context: string;
+  turnGenerated: number;
+}
+
+export interface AdviserStateShape {
+  tutorialStepIndex: number;
+  tutorialComplete: boolean;
+  tutorialSkipped: boolean;
+  pendingMessages: AdviserMessage[];
+  shownMessageIds: string[];
+  secretRevealed: boolean;
+  statsAdviserSaved: number;
+  statsAdviserHindered: number;
+}
+
+export interface AdviserSnapshot {
+  state: AdviserStateShape;
+  pending: number;
+  current: AdviserMessage | null;
+}
+
+export interface TickerItem {
+  category: string;
+  text: string;
+  priority: number;
+  color?: number;
+}
+
 /**
  * Structured shape thrown by the in-browser façade. We only see plain error
  * objects across `page.evaluate`, so we detect this by shape, not `instanceof`.

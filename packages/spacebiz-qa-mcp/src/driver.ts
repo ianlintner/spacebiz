@@ -1,11 +1,14 @@
 import type { Page } from "playwright";
 import type {
+  AdviserSnapshot,
   ClickResult,
   GameStateSnapshot,
   InvariantViolation,
   LogEntry,
+  PortraitStatus,
   SceneInfo,
   TestIdEntry,
+  TickerItem,
 } from "./types.js";
 
 /**
@@ -98,6 +101,25 @@ export class SftDriver {
   invariantViolations(): Promise<InvariantViolation[]> {
     return this.page.evaluate(
       () => (window as any).__sft.invariants.recent() as InvariantViolation[],
+    );
+  }
+
+  getPortrait(ceoId?: string): Promise<PortraitStatus> {
+    return this.page.evaluate(
+      (id) => (window as any).__sft.getPortrait(id) as PortraitStatus,
+      ceoId,
+    );
+  }
+
+  getNewsItems(): Promise<TickerItem[]> {
+    return this.page.evaluate(
+      () => (window as any).__sft.getNewsItems() as TickerItem[],
+    );
+  }
+
+  getAdviserState(): Promise<AdviserSnapshot> {
+    return this.page.evaluate(
+      () => (window as any).__sft.getAdviserState() as AdviserSnapshot,
     );
   }
 

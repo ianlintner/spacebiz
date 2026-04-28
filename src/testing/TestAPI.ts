@@ -21,8 +21,16 @@ import { invariants } from "./Invariants.ts";
 import type { InvariantController } from "./Invariants.ts";
 import { snapshot as takeSnapshot, getSceneInfo } from "./snapshot.ts";
 import { gameStore } from "../data/GameStore.ts";
+import {
+  getPortrait,
+  getNewsItems,
+  getAdviserState,
+  seedFakeTurnResult,
+} from "./tier2.ts";
+import type { PortraitStatus, AdviserSnapshot } from "./tier2.ts";
+import type { TickerItem } from "../generation/news/types.ts";
 
-export const TEST_API_VERSION = "0.1.0";
+export const TEST_API_VERSION = "0.2.0";
 
 export interface SftTestAPI {
   readonly version: string;
@@ -40,6 +48,14 @@ export interface SftTestAPI {
   invariants: InvariantController;
   seed: (n: number) => void;
   getSeed: () => number;
+  /** Tier-2 inspection: portrait load status (defaults to player CEO). */
+  getPortrait: (ceoId?: string) => PortraitStatus;
+  /** Tier-2 inspection: current galactic news ticker items. */
+  getNewsItems: () => TickerItem[];
+  /** Tier-2 inspection: adviser subsystem state + current message. */
+  getAdviserState: () => AdviserSnapshot;
+  /** Test-only: append a synthetic TurnResult so news pipeline has data. */
+  _seedFakeTurnResult: () => number;
 }
 
 export function createTestAPI(game: Phaser.Game): SftTestAPI {
@@ -81,6 +97,11 @@ export function createTestAPI(game: Phaser.Game): SftTestAPI {
         "Determinism:",
         "  __sft.seed(n)  /  __sft.getSeed()",
         "",
+        "Tier-2 inspection:",
+        "  __sft.getPortrait(ceoId?)  → { ceoId, textureKey, loaded, ... }",
+        "  __sft.getNewsItems()       → TickerItem[]",
+        "  __sft.getAdviserState()    → { state, pending, current }",
+        "",
         "Docs: docs/qa/console-api.md",
       ];
       const text = lines.join("\n");
@@ -100,5 +121,9 @@ export function createTestAPI(game: Phaser.Game): SftTestAPI {
     invariants,
     seed: (n) => actions.seed(n),
     getSeed: () => actions.getSeed(),
+    getPortrait,
+    getNewsItems,
+    getAdviserState,
+    _seedFakeTurnResult: seedFakeTurnResult,
   };
 }
