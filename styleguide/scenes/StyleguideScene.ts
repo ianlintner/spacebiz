@@ -75,13 +75,24 @@ export class StyleguideScene extends Phaser.Scene {
   private scrollY = 0;
   private maxScroll = 0;
   private theme!: ThemeConfig;
+  private sections: Array<{ id: string; y: number; height: number }> = [];
 
   constructor() {
     super({ key: "StyleguideScene" });
   }
 
+  /**
+   * Records a section's y/height so visual-regression e2e tests
+   * (and future jump-to-section UI) can scroll precisely to it.
+   */
+  private trackSection(id: string, startY: number, endY: number): number {
+    this.sections.push({ id, y: startY, height: endY - startY });
+    return endY;
+  }
+
   create(): void {
     this.theme = getTheme();
+    this.sections = [];
 
     // ── Starfield background ──
     createStarfield(this, { count: 80, twinkle: true, shimmer: true });
@@ -91,37 +102,61 @@ export class StyleguideScene extends Phaser.Scene {
 
     let y = 30;
     y = this.addSectionTitle(y, "◆ STAR FREIGHT TYCOON — UI STYLE GUIDE");
-    y = this.addColorPaletteSection(y);
-    y = this.addTypographySection(y);
-    y = this.addButtonSection(y);
-    y = this.addPanelSection(y);
-    y = this.addProgressBarSection(y);
-    y = this.addScrollableListSection(y);
-    y = this.addTabGroupSection(y);
-    y = this.addDataTableSection(y);
-    y = this.addTooltipSection(y);
-    y = this.addFloatingTextSection(y);
-    y = this.addAmbientFxSection(y);
-    y = this.addMilestoneSection(y);
-    y = this.addModalSection(y);
+    y = this.trackSection("colors", y, this.addColorPaletteSection(y));
+    y = this.trackSection("typography", y, this.addTypographySection(y));
+    y = this.trackSection("buttons", y, this.addButtonSection(y));
+    y = this.trackSection("panels", y, this.addPanelSection(y));
+    y = this.trackSection("progress-bars", y, this.addProgressBarSection(y));
+    y = this.trackSection(
+      "scrollable-lists",
+      y,
+      this.addScrollableListSection(y),
+    );
+    y = this.trackSection("tab-groups", y, this.addTabGroupSection(y));
+    y = this.trackSection("data-table", y, this.addDataTableSection(y));
+    y = this.trackSection("tooltips", y, this.addTooltipSection(y));
+    y = this.trackSection("floating-text", y, this.addFloatingTextSection(y));
+    y = this.trackSection("ambient-fx", y, this.addAmbientFxSection(y));
+    y = this.trackSection("milestones", y, this.addMilestoneSection(y));
+    y = this.trackSection("modals", y, this.addModalSection(y));
 
     // ── Game-specific & extended sections ──
-    y = this.addIconGallerySection(y);
-    y = this.addCargoIconSection(y);
-    y = this.addHudBarSection(y);
-    y = this.addAdviserPortraitSection(y);
-    y = this.addPortraitGallerySection(y);
-    y = this.addSpacingLayoutSection(y);
-    y = this.addDepthLayersSection(y);
-    y = this.addGlassEffectSection(y);
-    y = this.addAnimationTimingSection(y);
-    y = this.addStatRowSection(y);
-    y = this.addInfoCardSection(y);
-    y = this.addIconButtonSection(y);
-    y = this.addStatusBadgeSection(y);
+    y = this.trackSection("icon-gallery", y, this.addIconGallerySection(y));
+    y = this.trackSection("cargo-icons", y, this.addCargoIconSection(y));
+    y = this.trackSection("hud-bar", y, this.addHudBarSection(y));
+    y = this.trackSection("portraits", y, this.addAdviserPortraitSection(y));
+    y = this.trackSection(
+      "portrait-gallery",
+      y,
+      this.addPortraitGallerySection(y),
+    );
+    y = this.trackSection("spacing", y, this.addSpacingLayoutSection(y));
+    y = this.trackSection("depth-layers", y, this.addDepthLayersSection(y));
+    y = this.trackSection("glass-effect", y, this.addGlassEffectSection(y));
+    y = this.trackSection(
+      "animation-timing",
+      y,
+      this.addAnimationTimingSection(y),
+    );
+    y = this.trackSection("stat-row", y, this.addStatRowSection(y));
+    y = this.trackSection("info-card", y, this.addInfoCardSection(y));
+    y = this.trackSection("icon-button", y, this.addIconButtonSection(y));
+    y = this.trackSection("status-badge", y, this.addStatusBadgeSection(y));
     y += 60;
 
     this.maxScroll = Math.max(0, y - GAME_HEIGHT);
+
+    // ── Expose section registry + ready flag for visual-regression e2e ──
+    const win = window as unknown as Record<string, unknown>;
+    win.__styleguideSections = this.sections;
+    win.__styleguideScrollTo = (id: string): boolean => {
+      const section = this.sections.find((s) => s.id === id);
+      if (!section) return false;
+      this.scrollY = Phaser.Math.Clamp(section.y - 20, 0, this.maxScroll);
+      this.scrollContainer.y = -this.scrollY;
+      return true;
+    };
+    win.__styleguideReady = true;
 
     // ── Mouse wheel scrolling ──
     this.input.on(
