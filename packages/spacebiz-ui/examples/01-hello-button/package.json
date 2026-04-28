@@ -1,0 +1,19 @@
+{
+  "name": "@spacebiz/ui-example-hello-button",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@spacebiz/ui": "*",
+    "phaser": "^4.0.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^8.0.0"
+  }
+}

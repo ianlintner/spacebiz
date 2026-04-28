@@ -2,11 +2,49 @@
   "name": "@spacebiz/ui",
   "version": "1.0.0",
   "private": true,
-  "description": "Reusable Phaser UI component library for Space Freight Tycoon",
+  "description": "Theme-driven Phaser 4 UI component library written in TypeScript.",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./src/*": "./src/*"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "phaser",
+    "phaser4",
+    "ui",
+    "components",
+    "game-ui",
+    "typescript"
+  ],
+  "author": "Ian Lintner <lintner.ian@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/ianlintner/space-tycoon/tree/main/packages/spacebiz-ui#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ianlintner/space-tycoon.git",
+    "directory": "packages/spacebiz-ui"
+  },
+  "bugs": {
+    "url": "https://github.com/ianlintner/space-tycoon/issues"
   },
   "peerDependencies": {
     "phaser": "^4.0.0"
