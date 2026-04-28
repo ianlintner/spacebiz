@@ -25,6 +25,10 @@ import {
   InfoCard,
   IconButton,
   StatusBadge,
+  Slider,
+  Checkbox,
+  Toggle,
+  RadioGroup,
   // Layout constants
   SIDEBAR_WIDTH,
   CONTENT_GAP,
@@ -119,6 +123,7 @@ export class StyleguideScene extends Phaser.Scene {
     y = this.addInfoCardSection(y);
     y = this.addIconButtonSection(y);
     y = this.addStatusBadgeSection(y);
+    y = this.addFormControlsSection(y);
     y += 60;
 
     this.maxScroll = Math.max(0, y - GAME_HEIGHT);
@@ -2148,5 +2153,179 @@ export class StyleguideScene extends Phaser.Scene {
     }
 
     return y + 40;
+  }
+
+  /* ── Form controls (Slider, Checkbox, Toggle, RadioGroup) ─ */
+
+  private addFormControlsSection(y: number): number {
+    y = this.addSubheading(y, "FORM CONTROLS");
+
+    // ── Slider ──
+    const sliderLabel = new Label(this, {
+      x: 60,
+      y,
+      text: "Slider (0–100, step=5, with value readout)",
+      style: "caption",
+      color: this.theme.colors.textDim,
+    });
+    this.scrollContainer.add(sliderLabel);
+    y += 22;
+
+    const slider = new Slider(this, {
+      x: 60,
+      y,
+      width: 320,
+      min: 0,
+      max: 100,
+      step: 5,
+      value: 40,
+      label: "Volume",
+      showValue: true,
+      formatValue: (v) => `${v}%`,
+    });
+    this.children.remove(slider);
+    this.scrollContainer.add(slider);
+
+    const disabledSlider = new Slider(this, {
+      x: 420,
+      y,
+      width: 220,
+      min: 0,
+      max: 10,
+      value: 7,
+      label: "Disabled",
+      showValue: true,
+    });
+    disabledSlider.setEnabled(false);
+    this.children.remove(disabledSlider);
+    this.scrollContainer.add(disabledSlider);
+
+    y += 70;
+
+    // ── Checkbox ──
+    const cbLabel = new Label(this, {
+      x: 60,
+      y,
+      text: "Checkbox",
+      style: "caption",
+      color: this.theme.colors.textDim,
+    });
+    this.scrollContainer.add(cbLabel);
+    y += 22;
+
+    const cbOn = new Checkbox(this, {
+      x: 60,
+      y,
+      checked: true,
+      label: "Auto-save after each turn",
+    });
+    this.children.remove(cbOn);
+    this.scrollContainer.add(cbOn);
+
+    const cbOff = new Checkbox(this, {
+      x: 320,
+      y,
+      checked: false,
+      label: "Show debug overlay",
+    });
+    this.children.remove(cbOff);
+    this.scrollContainer.add(cbOff);
+
+    const cbDisabled = new Checkbox(this, {
+      x: 560,
+      y,
+      checked: true,
+      label: "Disabled (locked)",
+    });
+    cbDisabled.setEnabled(false);
+    this.children.remove(cbDisabled);
+    this.scrollContainer.add(cbDisabled);
+
+    y += 40;
+
+    // ── Toggle ──
+    const tLabel = new Label(this, {
+      x: 60,
+      y,
+      text: "Toggle (iOS-style on/off switch)",
+      style: "caption",
+      color: this.theme.colors.textDim,
+    });
+    this.scrollContainer.add(tLabel);
+    y += 22;
+
+    const toggleOn = new Toggle(this, {
+      x: 60,
+      y,
+      on: true,
+      onLabel: "Sound: ON",
+      offLabel: "Sound: OFF",
+    });
+    this.children.remove(toggleOn);
+    this.scrollContainer.add(toggleOn);
+
+    const toggleOff = new Toggle(this, {
+      x: 240,
+      y,
+      on: false,
+      onLabel: "Music: ON",
+      offLabel: "Music: OFF",
+    });
+    this.children.remove(toggleOff);
+    this.scrollContainer.add(toggleOff);
+
+    const toggleDisabled = new Toggle(this, {
+      x: 420,
+      y,
+      on: true,
+      onLabel: "Locked",
+      offLabel: "Locked",
+    });
+    toggleDisabled.setEnabled(false);
+    this.children.remove(toggleDisabled);
+    this.scrollContainer.add(toggleDisabled);
+
+    y += 40;
+
+    // ── RadioGroup ──
+    const rLabel = new Label(this, {
+      x: 60,
+      y,
+      text: "RadioGroup (single-select)",
+      style: "caption",
+      color: this.theme.colors.textDim,
+    });
+    this.scrollContainer.add(rLabel);
+    y += 22;
+
+    const radio = new RadioGroup(this, {
+      x: 60,
+      y,
+      value: "balanced",
+      options: [
+        { value: "easy", label: "Easy — relaxed economy" },
+        { value: "balanced", label: "Balanced — default" },
+        { value: "hard", label: "Hard — punishing markets" },
+      ],
+    });
+    this.children.remove(radio);
+    this.scrollContainer.add(radio);
+
+    const radioDisabled = new RadioGroup(this, {
+      x: 360,
+      y,
+      value: "b",
+      options: [
+        { value: "a", label: "Option A" },
+        { value: "b", label: "Option B (locked)" },
+        { value: "c", label: "Option C" },
+      ],
+    });
+    radioDisabled.setEnabled(false);
+    this.children.remove(radioDisabled);
+    this.scrollContainer.add(radioDisabled);
+
+    y += 100;
+    return y;
   }
 }

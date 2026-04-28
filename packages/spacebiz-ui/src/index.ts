@@ -94,6 +94,9 @@ export type { IconButtonConfig } from "./IconButton.ts";
 export { StatusBadge } from "./StatusBadge.ts";
 export type { StatusBadgeConfig, BadgeVariant } from "./StatusBadge.ts";
 
+// Form controls (Slider, Checkbox, Toggle, RadioGroup)
+export * from "./input/index.ts";
+
 // Cargo icon utilities
 export {
   generateCargoIcons,
