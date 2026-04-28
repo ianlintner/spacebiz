@@ -103,6 +103,9 @@ export type { StatusBadgeConfig, BadgeVariant } from "./StatusBadge.ts";
 // Form controls (Slider, Checkbox, Toggle, RadioGroup)
 export * from "./input/index.ts";
 
+// Misc widgets (Spinner, Accordion, ContextMenu, Toolbar)
+export * from "./misc/index.ts";
+
 // Cargo icon utilities
 export {
   generateCargoIcons,
@@ -133,6 +136,3 @@ export {
   SHIP_CLASS_LIST,
 } from "./ShipIcons.ts";
 export type { ShipClassValue } from "./ShipIcons.ts";
-
-// Form input controls
-export * from "./input/index.ts";
