@@ -11,8 +11,11 @@ export {
   colorToString,
   lerpColor,
   DEFAULT_THEME,
+  darkTheme,
+  lightTheme,
+  highContrastTheme,
 } from "./Theme.ts";
-export type { ThemeConfig } from "./Theme.ts";
+export type { ThemeConfig, SemanticColorTokens } from "./Theme.ts";
 
 export * from "./Layout.ts";
 export * from "./DepthLayers.ts";

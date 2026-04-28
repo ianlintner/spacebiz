@@ -115,8 +115,8 @@ export class Button extends Phaser.GameObjects.Container {
         : config.label;
 
     const textColor = this.isDisabled
-      ? colorToString(theme.colors.textDim)
-      : colorToString(theme.colors.text);
+      ? colorToString(theme.color.text.muted)
+      : colorToString(theme.color.text.primary);
     this.label = scene.add
       .text(width / 2, height / 2, displayLabel, {
         fontSize: `${fontSize}px`,
@@ -127,7 +127,7 @@ export class Button extends Phaser.GameObjects.Container {
 
     // Bottom accent line
     this.accentLine = scene.add
-      .rectangle(2, height - 1, width - 4, 1, theme.colors.accent)
+      .rectangle(2, height - 1, width - 4, 1, theme.color.accent.primary)
       .setOrigin(0, 0)
       .setAlpha(this.isDisabled ? 0.25 : 0.4);
 
@@ -238,12 +238,12 @@ export class Button extends Phaser.GameObjects.Container {
       }
       this.bg.setTexture("btn-disabled");
       this.hitZone.disableInteractive();
-      this.label.setColor(colorToString(theme.colors.textDim));
+      this.label.setColor(colorToString(theme.color.text.muted));
       this.accentLine.setAlpha(0.25);
     } else {
       this.bg.setTexture("btn-normal");
       this.setupInteractive();
-      this.label.setColor(colorToString(theme.colors.text));
+      this.label.setColor(colorToString(theme.color.text.primary));
       this.accentLine.setAlpha(0.4);
     }
   }
@@ -274,13 +274,13 @@ export class Button extends Phaser.GameObjects.Container {
       }
       this.bg.setTexture("btn-hover");
       this.accentLine.setAlpha(1);
-      this.accentLine.setFillStyle(theme.colors.accent);
-      this.label.setColor(colorToString(theme.colors.accent));
+      this.accentLine.setFillStyle(theme.color.accent.primary);
+      this.label.setColor(colorToString(theme.color.accent.primary));
     } else {
       this.bg.setTexture("btn-normal");
       this.accentLine.setAlpha(0.4);
-      this.accentLine.setFillStyle(theme.colors.accent);
-      this.label.setColor(colorToString(theme.colors.text));
+      this.accentLine.setFillStyle(theme.color.accent.primary);
+      this.label.setColor(colorToString(theme.color.text.primary));
       this.startIdleShimmer();
     }
     return this;

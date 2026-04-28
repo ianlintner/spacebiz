@@ -76,7 +76,7 @@ export class Panel extends Phaser.GameObjects.Container {
           0,
           config.width,
           theme.panel.titleHeight,
-          theme.colors.headerBg,
+          theme.color.surface.raised,
         )
         .setOrigin(0, 0);
 
@@ -87,7 +87,7 @@ export class Panel extends Phaser.GameObjects.Container {
           theme.panel.titleHeight - 1,
           config.width,
           1,
-          theme.colors.accent,
+          theme.color.accent.primary,
         )
         .setOrigin(0, 0)
         .setAlpha(0.7);
@@ -99,7 +99,7 @@ export class Panel extends Phaser.GameObjects.Container {
         {
           fontSize: `${theme.fonts.heading.size}px`,
           fontFamily: theme.fonts.heading.family,
-          color: colorToString(theme.colors.accent),
+          color: colorToString(theme.color.accent.primary),
           wordWrap: { width: config.width - theme.spacing.md * 3 },
         },
       );
