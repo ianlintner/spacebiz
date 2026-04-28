@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { Panel, getTheme, colorToString } from "./index.ts";
+import { applyClippingMask } from "@spacebiz/ui";
 import type { TickerItem } from "../generation/news/types.ts";
 import { CATEGORY_META } from "../generation/news/categories.ts";
 
@@ -24,7 +25,6 @@ export interface GalacticNewsPanelConfig {
  */
 export class GalacticNewsPanel extends Panel {
   private inner: Phaser.GameObjects.Container;
-  private geometryMask: Phaser.Display.Masks.GeometryMask | null = null;
   private maskShape: Phaser.GameObjects.Graphics | null = null;
   private scrollTween: Phaser.Tweens.Tween | null = null;
   private isHovered = false;
@@ -57,19 +57,7 @@ export class GalacticNewsPanel extends Panel {
     maskShape.setVisible(false);
     this.maskShape = maskShape;
 
-    // Phaser 4: prefer the filter API; fall back to setMask if filters absent
-    // (defensive — current Phaser 4 RC supports both).
-    const innerWithFilters = this.inner as unknown as {
-      filters?: {
-        internal: { addMask(shape: Phaser.GameObjects.Graphics): void };
-      };
-    };
-    if (innerWithFilters.filters?.internal?.addMask) {
-      innerWithFilters.filters.internal.addMask(maskShape);
-    } else {
-      this.geometryMask = maskShape.createGeometryMask();
-      this.inner.setMask(this.geometryMask);
-    }
+    applyClippingMask(this.inner, maskShape);
 
     // Render the lines stacked vertically.
     const lineHeight = theme.fonts.body.size + 6;
@@ -152,10 +140,6 @@ export class GalacticNewsPanel extends Panel {
   private cleanup(): void {
     this.scrollTween?.stop();
     this.scrollTween = null;
-    if (this.geometryMask) {
-      this.geometryMask.destroy();
-      this.geometryMask = null;
-    }
     this.maskShape?.destroy();
     this.maskShape = null;
   }
