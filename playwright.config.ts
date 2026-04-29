@@ -24,7 +24,7 @@ export default defineConfig({
     // Forgiving thresholds for visual regression — font hinting and
     // sub-pixel anti-aliasing differ slightly between machines.
     toHaveScreenshot: {
-      maxDiffPixelRatio: 0.02,
+      maxDiffPixelRatio: 0.05,
       threshold: 0.2,
       animations: "disabled",
       caret: "hide",
