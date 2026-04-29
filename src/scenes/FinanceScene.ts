@@ -493,6 +493,11 @@ export class FinanceScene extends Phaser.Scene {
       LOAN_INTEREST_RATE_MIN +
       Math.random() * (LOAN_INTEREST_RATE_MAX - LOAN_INTEREST_RATE_MIN);
 
+    // Slider UI range (narrower than MAX_LOAN_AMOUNT for UX)
+    const LOAN_SLIDER_MIN = 50000;
+    const LOAN_SLIDER_MAX = 200000;
+    const LOAN_SLIDER_STEP = 10000;
+
     let selectedLoanAmount: number = 100000; // Default to middle value
 
     const layer = this.ui.openLayer({ key: "finance-take-loan" });
@@ -525,19 +530,15 @@ export class FinanceScene extends Phaser.Scene {
         x: panelX + content.x + 20,
         y: panelY + content.y + 30,
         width: content.width - 40,
-        min: 50000,
-        max: 200000,
-        step: 10000,
+        min: LOAN_SLIDER_MIN,
+        max: LOAN_SLIDER_MAX,
+        step: LOAN_SLIDER_STEP,
         value: selectedLoanAmount,
         label: "Loan Amount",
         showValue: true,
         formatValue: (v) => `$${(v / 1000).toFixed(0)}k`,
       }),
     );
-
-    loanSlider.on("change", (value: number) => {
-      selectedLoanAmount = value;
-    });
 
     // Display interest cost info
     const interestDisplay = this.add.text(
@@ -552,7 +553,7 @@ export class FinanceScene extends Phaser.Scene {
     );
     layer.track(interestDisplay);
 
-    // Update interest display when slider changes
+    // Update selectedLoanAmount and interest display when slider changes
     loanSlider.on("change", (value: number) => {
       selectedLoanAmount = value;
       interestDisplay.setText(
