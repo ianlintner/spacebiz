@@ -23,7 +23,7 @@ export interface ScrollFrameConfig {
  *
  * Mask handling mirrors the path established in PR #213: filter mask via
  * `filters.internal.addMask(maskShape, false, undefined, "world")`, with the
- * mask shape repositioned each preupdate to the content layer's world
+ * mask shape repositioned each preupdate to the frame viewport's world
  * transform. No Phaser-3 `setMask`/`createGeometryMask` fallback needed since
  * we target Phaser 4 only.
  */
@@ -79,6 +79,7 @@ export class ScrollFrame extends Phaser.GameObjects.Container {
       this.viewportHeight - this.padding * 2,
     );
     applyClippingMask(this.contentLayer, this.maskShape);
+    this.syncMaskPosition();
 
     this.maskSyncBound = () => this.syncMaskPosition();
     this.scene.events.on("preupdate", this.maskSyncBound, this);
@@ -136,12 +137,16 @@ export class ScrollFrame extends Phaser.GameObjects.Container {
     if (this.scrollY > this.maxScroll) {
       this.scrollTo(this.maxScroll);
     }
+    this.syncContentScrollOffset();
+    this.syncMaskPosition();
   }
 
   /** Set scroll offset (clamped to [0, maxScroll]). */
   scrollTo(y: number): void {
     this.scrollY = Phaser.Math.Clamp(y, 0, this.maxScroll);
     this.contentLayer.y = this.padding - this.scrollY;
+    this.syncContentScrollOffset();
+    this.syncMaskPosition();
   }
 
   /**
@@ -183,10 +188,20 @@ export class ScrollFrame extends Phaser.GameObjects.Container {
     return bounds.height;
   }
 
+  private syncContentScrollOffset(): void {
+    const child = this.contentChild as unknown as {
+      setViewportScrollY?: (scrollY: number) => void;
+    } | null;
+    child?.setViewportScrollY?.(this.scrollY);
+  }
+
   private syncMaskPosition(): void {
     if (this.destroyed) return;
-    const matrix = this.contentLayer.getWorldTransformMatrix();
-    this.maskShape.setPosition(matrix.tx, matrix.ty);
+    const matrix = this.getWorldTransformMatrix();
+    this.maskShape.setPosition(
+      matrix.tx + this.padding,
+      matrix.ty + this.padding,
+    );
   }
 
   private isVisibleInWorld(): boolean {

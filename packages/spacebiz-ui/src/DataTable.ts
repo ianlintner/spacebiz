@@ -108,11 +108,11 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.keyboardNavigationEnabled = config.keyboardNavigation ?? false;
     this.contentSized = config.contentSized ?? false;
 
-    this.headerContainer = scene.add.container(0, 0);
-    this.add(this.headerContainer);
-
     this.bodyContainer = scene.add.container(0, this.headerHeight);
     this.add(this.bodyContainer);
+
+    this.headerContainer = scene.add.container(0, 0);
+    this.add(this.headerContainer);
 
     this.wheelHitArea = scene.add
       .rectangle(0, 0, config.width, config.height, 0x000000, 0)
@@ -640,6 +640,16 @@ export class DataTable extends Phaser.GameObjects.Container {
   /** Natural height of the rendered table (header + all rows). */
   get contentHeight(): number {
     return this._contentHeight;
+  }
+
+  /**
+   * Called by ScrollFrame in contentSized mode. The body scrolls with the
+   * frame, but the column header counter-scrolls so it remains pinned to the
+   * top of the viewport.
+   */
+  setViewportScrollY(scrollY: number): void {
+    if (!this.contentSized) return;
+    this.headerContainer.setY(scrollY);
   }
 
   private selectRow(

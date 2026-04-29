@@ -5,6 +5,7 @@ import {
   rectangles,
   allTextStrings,
   asMock,
+  type MockContainerLike,
   type MockRectLike,
 } from "../_harness/inspect.ts";
 
@@ -93,7 +94,7 @@ describe("DataTable", () => {
       { name: "Bob", value: 20 },
     ]);
 
-    const headerContainer = containers(table)[0];
+    const headerContainer = getHeaderContainer(table);
     const hitAreas = rectangles(headerContainer).filter(
       (r) => r.getData?.("consumesWheel") === true,
     );
@@ -181,6 +182,24 @@ describe("DataTable", () => {
     expect(payload.height).toBeGreaterThan(0);
   });
 
+  it("contentSized mode counter-scrolls the header for fixed viewport headers", () => {
+    const table = new DataTable(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 400,
+      columns: COLUMNS,
+      contentSized: true,
+    });
+
+    table.setViewportScrollY(96);
+
+    expect(getHeaderContainer(table).y).toBe(96);
+    expect(getBodyContainer(table).y).toBe(36);
+    const tableContainers = containers(table);
+    expect(tableContainers.at(-1)).toBe(getHeaderContainer(table));
+  });
+
   it("keyboard navigation moves selection with ArrowDown when focused", () => {
     const onRowSelect = vi.fn();
     const table = new DataTable(scene as never, {
@@ -249,13 +268,13 @@ describe("DataTable", () => {
 function findRowBackgrounds(table: DataTable): MockRectLike[] {
   const tableWidth = asMock<{ tableConfig?: { width: number } }>(table)
     .tableConfig?.width;
-  const body = containers(table)[1];
+  const body = getBodyContainer(table);
   return rectangles(body).filter((r) => r.width === tableWidth);
 }
 
 function collectRowTexts(table: DataTable): string[] {
   // Group same-Y texts into a single pipe-joined row signature.
-  const body = containers(table)[1];
+  const body = getBodyContainer(table);
   const out: string[] = [];
   let acc = "";
   let lastY = -Infinity;
@@ -271,4 +290,12 @@ function collectRowTexts(table: DataTable): string[] {
   }
   if (acc) out.push(acc);
   return out;
+}
+
+function getHeaderContainer(table: DataTable) {
+  return asMock<{ headerContainer: MockContainerLike }>(table).headerContainer;
+}
+
+function getBodyContainer(table: DataTable) {
+  return asMock<{ bodyContainer: MockContainerLike }>(table).bodyContainer;
 }
