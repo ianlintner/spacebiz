@@ -14,12 +14,12 @@ import {
   ScrollFrame,
   Modal,
   Panel,
-  PortraitPanel,
   SceneUiDirector,
-  Slider,
   createStarfield,
   getLayout,
-} from "../ui/index.ts";
+  Slider,
+} from "@spacebiz/ui";
+import { PortraitPanel } from "@rogue-universe/shared";
 import { calculateShipValue } from "../game/fleet/FleetManager.ts";
 import { getHubUpkeep } from "../game/hub/HubManager.ts";
 import { getRevenueMultiplier } from "../game/hub/HubBonusCalculator.ts";
@@ -536,7 +536,7 @@ export class FinanceScene extends Phaser.Scene {
         value: selectedLoanAmount,
         label: "Loan Amount",
         showValue: true,
-        formatValue: (v) => `$${(v / 1000).toFixed(0)}k`,
+        formatValue: (v: number) => `$${(v / 1000).toFixed(0)}k`,
       }),
     );
 
