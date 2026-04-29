@@ -5,6 +5,7 @@ import {
   rectangles,
   allTextStrings,
   asMock,
+  type MockContainerLike,
   type MockRectLike,
 } from "../_harness/inspect.ts";
 
@@ -292,14 +293,9 @@ function collectRowTexts(table: DataTable): string[] {
 }
 
 function getHeaderContainer(table: DataTable) {
-  return containers(table).find((container) =>
-    rectangles(container).some((r) => r.getData?.("consumesWheel") === true),
-  )!;
+  return asMock<{ headerContainer: MockContainerLike }>(table).headerContainer;
 }
 
 function getBodyContainer(table: DataTable) {
-  return containers(table).find(
-    (container) =>
-      !rectangles(container).some((r) => r.getData?.("consumesWheel") === true),
-  )!;
+  return asMock<{ bodyContainer: MockContainerLike }>(table).bodyContainer;
 }
