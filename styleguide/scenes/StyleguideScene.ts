@@ -25,6 +25,10 @@ import {
   InfoCard,
   IconButton,
   StatusBadge,
+  Slider,
+  Checkbox,
+  Toggle,
+  RadioGroup,
   ToastManager,
   ConfirmDialog,
   // Layout constants
@@ -57,7 +61,6 @@ import {
   getCargoColor,
   getCargoLabel,
 } from "@spacebiz/ui";
-import { Stepper, TextInput, ColorSwatch } from "@spacebiz/ui";
 import {
   drawRexPortrait,
   getMoodAccentColor,
@@ -122,7 +125,7 @@ export class StyleguideScene extends Phaser.Scene {
     y = this.addInfoCardSection(y);
     y = this.addIconButtonSection(y);
     y = this.addStatusBadgeSection(y);
-    y = this.addFormControlsBSection(y);
+    y = this.addFormControlsSection(y);
     y = this.addNotificationSection(y);
     y += 60;
 
@@ -2155,165 +2158,181 @@ export class StyleguideScene extends Phaser.Scene {
     return y + 40;
   }
 
-  /* ── 26. Form Controls B (Stepper / TextInput / ColorSwatch) ─ */
+  /* ── Form controls (Slider, Checkbox, Toggle, RadioGroup) ─ */
 
-  private addFormControlsBSection(y: number): number {
-    y = this.addSubheading(
-      y,
-      "FORM CONTROLS B — STEPPER, TEXT INPUT, COLOR SWATCH",
-    );
+  private addFormControlsSection(y: number): number {
+    y = this.addSubheading(y, "FORM CONTROLS");
 
-    // ── Stepper ──
-    const stepperLabel = new Label(this, {
+    // ── Slider ──
+    const sliderLabel = new Label(this, {
       x: 60,
       y,
-      text: "Stepper (range 0–10, hold + or − to repeat with acceleration)",
+      text: "Slider (0–100, step=5, with value readout)",
       style: "caption",
       color: this.theme.colors.textDim,
     });
-    this.scrollContainer.add(stepperLabel);
-    y += 24;
+    this.scrollContainer.add(sliderLabel);
+    y += 22;
 
-    const stepperReadout = new Label(this, {
-      x: 230,
-      y: y + 12,
-      text: "value: 5",
-      style: "body",
-    });
-    this.scrollContainer.add(stepperReadout);
-
-    const stepper = new Stepper(this, {
+    const slider = new Slider(this, {
       x: 60,
       y,
-      value: 5,
+      width: 320,
+      min: 0,
+      max: 100,
+      step: 5,
+      value: 40,
+      label: "Volume",
+      showValue: true,
+      formatValue: (v) => `${v}%`,
+    });
+    this.children.remove(slider);
+    this.scrollContainer.add(slider);
+
+    const disabledSlider = new Slider(this, {
+      x: 420,
+      y,
+      width: 220,
       min: 0,
       max: 10,
-      step: 1,
-      onChange: (v) => stepperReadout.setText(`value: ${v}`),
+      value: 7,
+      label: "Disabled",
+      showValue: true,
     });
-    this.children.remove(stepper);
-    this.scrollContainer.add(stepper);
+    disabledSlider.setEnabled(false);
+    this.children.remove(disabledSlider);
+    this.scrollContainer.add(disabledSlider);
 
-    // Stepper with formatter (currency)
-    const moneyReadout = new Label(this, {
-      x: 230,
-      y: y + 64,
-      text: "price: $1,000",
-      style: "body",
-    });
-    this.scrollContainer.add(moneyReadout);
+    y += 70;
 
-    const moneyStepper = new Stepper(this, {
-      x: 60,
-      y: y + 52,
-      value: 1000,
-      min: 0,
-      max: 100000,
-      step: 250,
-      width: 160,
-      formatValue: (v) => `$${v.toLocaleString()}`,
-      onChange: (v) => moneyReadout.setText(`price: $${v.toLocaleString()}`),
-    });
-    this.children.remove(moneyStepper);
-    this.scrollContainer.add(moneyStepper);
-
-    y += 120;
-
-    // ── TextInput ──
-    const inputLabel = new Label(this, {
+    // ── Checkbox ──
+    const cbLabel = new Label(this, {
       x: 60,
       y,
-      text: "TextInput (DOM overlay positioned over Phaser canvas)",
+      text: "Checkbox",
       style: "caption",
       color: this.theme.colors.textDim,
     });
-    this.scrollContainer.add(inputLabel);
-    y += 24;
+    this.scrollContainer.add(cbLabel);
+    y += 22;
 
-    const inputReadout = new Label(this, {
-      x: 380,
-      y: y + 12,
-      text: "value: (empty)",
-      style: "body",
-    });
-    this.scrollContainer.add(inputReadout);
-
-    const textInput = new TextInput(this, {
+    const cbOn = new Checkbox(this, {
       x: 60,
       y,
-      width: 300,
-      height: 40,
-      placeholder: "Type a captain's name…",
-      onChange: (v) =>
-        inputReadout.setText(`value: ${v.length === 0 ? "(empty)" : v}`),
+      checked: true,
+      label: "Auto-save after each turn",
     });
-    this.children.remove(textInput);
-    this.scrollContainer.add(textInput);
+    this.children.remove(cbOn);
+    this.scrollContainer.add(cbOn);
 
-    y += 56;
+    const cbOff = new Checkbox(this, {
+      x: 320,
+      y,
+      checked: false,
+      label: "Show debug overlay",
+    });
+    this.children.remove(cbOff);
+    this.scrollContainer.add(cbOff);
 
-    const passwordInput = new TextInput(this, {
+    const cbDisabled = new Checkbox(this, {
+      x: 560,
+      y,
+      checked: true,
+      label: "Disabled (locked)",
+    });
+    cbDisabled.setEnabled(false);
+    this.children.remove(cbDisabled);
+    this.scrollContainer.add(cbDisabled);
+
+    y += 40;
+
+    // ── Toggle ──
+    const tLabel = new Label(this, {
       x: 60,
       y,
-      width: 300,
-      height: 40,
-      type: "password",
-      placeholder: "Password (type=password)",
-    });
-    this.children.remove(passwordInput);
-    this.scrollContainer.add(passwordInput);
-
-    y += 60;
-
-    // ── ColorSwatch ──
-    const swatchLabel = new Label(this, {
-      x: 60,
-      y,
-      text: "ColorSwatch (click to pick — building block for ColorPicker)",
+      text: "Toggle (iOS-style on/off switch)",
       style: "caption",
       color: this.theme.colors.textDim,
     });
-    this.scrollContainer.add(swatchLabel);
-    y += 24;
+    this.scrollContainer.add(tLabel);
+    y += 22;
 
-    const palette = [
-      0xff5566, 0xffaa33, 0xffee66, 0x66dd66, 0x44aaff, 0x9966ff, 0xff66cc,
-      0xffffff,
-    ];
-    const swatchSize = 36;
-    const swatchGap = 8;
-
-    const selectedReadout = new Label(this, {
-      x: 60 + (swatchSize + swatchGap) * palette.length + 16,
-      y: y + (swatchSize - 16) / 2,
-      text: `selected: ${colorToString(palette[0])}`,
-      style: "body",
+    const toggleOn = new Toggle(this, {
+      x: 60,
+      y,
+      on: true,
+      onLabel: "Sound: ON",
+      offLabel: "Sound: OFF",
     });
-    this.scrollContainer.add(selectedReadout);
+    this.children.remove(toggleOn);
+    this.scrollContainer.add(toggleOn);
 
-    const swatches: ColorSwatch[] = [];
-    palette.forEach((color, idx) => {
-      const swatch = new ColorSwatch(this, {
-        x: 60 + idx * (swatchSize + swatchGap),
-        y,
-        size: swatchSize,
-        color,
-        selected: idx === 0,
-        onClick: (c) => {
-          swatches.forEach((s) => s.setSelected(false));
-          swatch.setSelected(true);
-          selectedReadout.setText(`selected: ${colorToString(c)}`);
-        },
-      });
-      this.children.remove(swatch);
-      this.scrollContainer.add(swatch);
-      swatches.push(swatch);
+    const toggleOff = new Toggle(this, {
+      x: 240,
+      y,
+      on: false,
+      onLabel: "Music: ON",
+      offLabel: "Music: OFF",
     });
+    this.children.remove(toggleOff);
+    this.scrollContainer.add(toggleOff);
 
-    return y + swatchSize + 30;
+    const toggleDisabled = new Toggle(this, {
+      x: 420,
+      y,
+      on: true,
+      onLabel: "Locked",
+      offLabel: "Locked",
+    });
+    toggleDisabled.setEnabled(false);
+    this.children.remove(toggleDisabled);
+    this.scrollContainer.add(toggleDisabled);
+
+    y += 40;
+
+    // ── RadioGroup ──
+    const rLabel = new Label(this, {
+      x: 60,
+      y,
+      text: "RadioGroup (single-select)",
+      style: "caption",
+      color: this.theme.colors.textDim,
+    });
+    this.scrollContainer.add(rLabel);
+    y += 22;
+
+    const radio = new RadioGroup(this, {
+      x: 60,
+      y,
+      value: "balanced",
+      options: [
+        { value: "easy", label: "Easy — relaxed economy" },
+        { value: "balanced", label: "Balanced — default" },
+        { value: "hard", label: "Hard — punishing markets" },
+      ],
+    });
+    this.children.remove(radio);
+    this.scrollContainer.add(radio);
+
+    const radioDisabled = new RadioGroup(this, {
+      x: 360,
+      y,
+      value: "b",
+      options: [
+        { value: "a", label: "Option A" },
+        { value: "b", label: "Option B (locked)" },
+        { value: "c", label: "Option C" },
+      ],
+    });
+    radioDisabled.setEnabled(false);
+    this.children.remove(radioDisabled);
+    this.scrollContainer.add(radioDisabled);
+
+    y += 100;
+    return y;
   }
 
-  /* ── 27. Notifications: Toasts + ConfirmDialog ────────────── */
+  /* ── 26. Notifications: Toasts + ConfirmDialog ────────────── */
 
   private addNotificationSection(y: number): number {
     y = this.addSubheading(y, "NOTIFICATIONS — TOASTS & CONFIRM DIALOG");

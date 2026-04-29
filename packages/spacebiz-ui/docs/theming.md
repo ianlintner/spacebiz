@@ -9,12 +9,12 @@ swapping themes is a single `setTheme(nextTheme)` call.
 
 Three built-in variants are exported:
 
-| Export                | Description                                              |
-| --------------------- | -------------------------------------------------------- |
-| `darkTheme`           | Sci-fi dark palette. The historical look of the project. |
-| `lightTheme`          | Bright neutral surfaces with a blue accent.              |
-| `highContrastTheme`   | Pure black/white with a yellow focus accent.             |
-| `DEFAULT_THEME`       | Alias of `darkTheme` (preserves existing visuals).       |
+| Export              | Description                                              |
+| ------------------- | -------------------------------------------------------- |
+| `darkTheme`         | Sci-fi dark palette. The historical look of the project. |
+| `lightTheme`        | Bright neutral surfaces with a blue accent.              |
+| `highContrastTheme` | Pure black/white with a yellow focus accent.             |
+| `DEFAULT_THEME`     | Alias of `darkTheme` (preserves existing visuals).       |
 
 All three share an identical `ThemeConfig` shape — a unit test enforces this so
 that switching variants never produces a runtime "missing token" surprise.
@@ -74,20 +74,20 @@ color
 
 When updating an existing component to use semantic tokens:
 
-| Legacy                     | Semantic equivalent                 |
-| -------------------------- | ----------------------------------- |
-| `theme.colors.text`        | `theme.color.text.primary`          |
-| `theme.colors.textDim`     | `theme.color.text.muted`            |
-| `theme.colors.accent`      | `theme.color.accent.primary`        |
-| `theme.colors.accentHover` | `theme.color.accent.secondary`      |
-| `theme.colors.headerBg`    | `theme.color.surface.raised`        |
-| `theme.colors.panelBg`     | `theme.color.surface.default`       |
-| `theme.colors.rowEven`     | `theme.color.surface.sunken`        |
-| `theme.colors.rowHover`    | `theme.color.surface.hover`         |
+| Legacy                     | Semantic equivalent                           |
+| -------------------------- | --------------------------------------------- |
+| `theme.colors.text`        | `theme.color.text.primary`                    |
+| `theme.colors.textDim`     | `theme.color.text.muted`                      |
+| `theme.colors.accent`      | `theme.color.accent.primary`                  |
+| `theme.colors.accentHover` | `theme.color.accent.secondary`                |
+| `theme.colors.headerBg`    | `theme.color.surface.raised`                  |
+| `theme.colors.panelBg`     | `theme.color.surface.default`                 |
+| `theme.colors.rowEven`     | `theme.color.surface.sunken`                  |
+| `theme.colors.rowHover`    | `theme.color.surface.hover`                   |
 | `theme.colors.profit`      | `theme.color.text.success` / `accent.success` |
-| `theme.colors.loss`        | `theme.color.text.danger`  / `accent.danger`  |
+| `theme.colors.loss`        | `theme.color.text.danger` / `accent.danger`   |
 | `theme.colors.warning`     | `theme.color.text.warning` / `accent.warning` |
-| `theme.colors.panelBorder` | `theme.color.border.default`        |
+| `theme.colors.panelBorder` | `theme.color.border.default`                  |
 
 The `darkTheme` variant maps every semantic token to the matching legacy
 color, so migrating a component is a no-op for the dark theme but
@@ -116,7 +116,7 @@ migrated incrementally.
      color: MY_SEMANTIC_COLORS,
      colors: { ...MY_LEGACY_COLORS },
      ...SHARED_TYPOGRAPHY, // optional — copy from Theme.ts if you want
-                            // different fonts/spacing/ambient timings
+     // different fonts/spacing/ambient timings
    };
    ```
 4. Add a unit test that mounts the theme via `setTheme(myTheme)` and renders

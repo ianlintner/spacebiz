@@ -87,7 +87,9 @@ describe("Theme variants", () => {
     expect(lightTheme.color.surface.default).not.toBe(
       darkTheme.color.surface.default,
     );
-    expect(lightTheme.color.text.primary).not.toBe(darkTheme.color.text.primary);
+    expect(lightTheme.color.text.primary).not.toBe(
+      darkTheme.color.text.primary,
+    );
   });
 
   it("high-contrast theme uses pure black background and white text", () => {
