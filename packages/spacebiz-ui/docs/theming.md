@@ -1,159 +1,132 @@
 # Theming
 
-`@spacebiz/ui` is fully theme-driven. A single `ThemeConfig` object holds every color, font, spacing, and animation timing constant. Components read from `getTheme()` at render time, so changing the theme propagates to newly created components.
+`@spacebiz/ui` ships a small, runtime-swappable theme system. A theme is a
+plain `ThemeConfig` object covering colors, typography, spacing and ambient
+animation timings. Components read from the active theme via `getTheme()`;
+swapping themes is a single `setTheme(nextTheme)` call.
 
-## API
+## Variants
 
-```ts
-import {
-  getTheme,
-  setTheme,
-  DEFAULT_THEME,
-  colorToString,
-  lerpColor,
-} from "@spacebiz/ui";
-import type { ThemeConfig } from "@spacebiz/ui";
+Three built-in variants are exported:
 
-// Read the current theme.
-const theme = getTheme();
+| Export                | Description                                              |
+| --------------------- | -------------------------------------------------------- |
+| `darkTheme`           | Sci-fi dark palette. The historical look of the project. |
+| `lightTheme`          | Bright neutral surfaces with a blue accent.              |
+| `highContrastTheme`   | Pure black/white with a yellow focus accent.             |
+| `DEFAULT_THEME`       | Alias of `darkTheme` (preserves existing visuals).       |
 
-// Replace the theme entirely.
-setTheme(myCustomTheme);
-```
-
-| Function        | Signature                                       | Description                                        |
-| --------------- | ----------------------------------------------- | -------------------------------------------------- |
-| `getTheme`      | `() => ThemeConfig`                             | Returns the current theme.                         |
-| `setTheme`      | `(theme: ThemeConfig) => void`                  | Replaces the global theme.                         |
-| `colorToString` | `(color: number) => string`                     | Convert a `0xRRGGBB` number to a `#rrggbb` string. |
-| `lerpColor`     | `(c1: number, c2: number, t: number) => number` | Linear-interpolate two colors.                     |
-| `DEFAULT_THEME` | `ThemeConfig`                                   | The library's built-in dark sci-fi theme.          |
-
-Existing component instances do not auto-rebuild on theme changes; reposition or recreate them if you swap the theme mid-game.
-
-## Defining a custom theme
-
-The simplest pattern is to spread `DEFAULT_THEME` and override the fields you care about:
+All three share an identical `ThemeConfig` shape — a unit test enforces this so
+that switching variants never produces a runtime "missing token" surprise.
 
 ```ts
-import { setTheme, DEFAULT_THEME } from "@spacebiz/ui";
+import { setTheme, lightTheme } from "@spacebiz/ui";
 
-setTheme({
-  ...DEFAULT_THEME,
-  colors: {
-    ...DEFAULT_THEME.colors,
-    accent: 0xff66cc,
-    accentHover: 0xff99dd,
-  },
-  fonts: {
-    ...DEFAULT_THEME.fonts,
-    heading: { size: 28, family: "'Press Start 2P', monospace" },
-  },
-});
+setTheme(lightTheme);
 ```
 
-## `ThemeConfig` shape
+## Semantic color tokens
 
-All colors are `number` (`0xRRGGBB`); all sizes are pixels; all durations are milliseconds.
+Theme colors are exposed two ways:
 
-### `colors`
+1. **Semantic tokens** under `theme.color.*` — intent-bearing names
+   (`surface.default`, `text.primary`, `border.focus`, `accent.danger`, etc.).
+   **New components and migrations should prefer these.**
+2. **Legacy flat palette** under `theme.colors.*` — the original field names
+   (`text`, `textDim`, `accent`, `panelBg`, `headerBg`, …). Retained while the
+   rest of the codebase migrates; do not delete.
 
-| Field            | Description                                   |
-| ---------------- | --------------------------------------------- |
-| `background`     | Scene clear color.                            |
-| `panelBg`        | Panel and modal fill.                         |
-| `panelBorder`    | Border / scrollbar track.                     |
-| `text`           | Primary text color.                           |
-| `textDim`        | Secondary / disabled text.                    |
-| `accent`         | Accent (titles, indicators, primary buttons). |
-| `accentHover`    | Accent hover state.                           |
-| `profit`         | Positive / success.                           |
-| `loss`           | Negative / danger.                            |
-| `warning`        | Warning state.                                |
-| `buttonBg`       | Button rest fill.                             |
-| `buttonHover`    | Button hover fill.                            |
-| `buttonPressed`  | Button pressed fill.                          |
-| `buttonDisabled` | Button disabled fill.                         |
-| `scrollbarTrack` | Scrollbar track.                              |
-| `scrollbarThumb` | Scrollbar thumb.                              |
-| `headerBg`       | Table header / title bar background.          |
-| `rowEven`        | Even-row background in tables/lists.          |
-| `rowOdd`         | Odd-row background in tables/lists.           |
-| `rowHover`       | Hovered/selected row background.              |
-| `modalOverlay`   | Modal backdrop color.                         |
+### Token tree
 
-### `fonts`
-
-Each entry has `{ size: number; family: string }`. The four entries are `heading`, `body`, `caption`, and `value`.
-
-### `spacing`
-
-Tokens `xs` (4), `sm` (8), `md` (16), `lg` (24), `xl` (32) by default. Use these in custom layouts to stay consistent with library components.
-
-### `panel`
-
-| Field          | Description                                 |
-| -------------- | ------------------------------------------- |
-| `borderWidth`  | Pixel width of inner panel border.          |
-| `cornerRadius` | Logical corner radius of nine-slice frames. |
-| `titleHeight`  | Pixel height of the title bar.              |
-
-### `button`
-
-| Field         | Description                           |
-| ------------- | ------------------------------------- |
-| `height`      | Default button height.                |
-| `minWidth`    | Minimum button width.                 |
-| `borderWidth` | Pixel width of button border accents. |
-
-### `glow`
-
-| Field         | Description                                              |
-| ------------- | -------------------------------------------------------- |
-| `width`       | Pixel inset for glow nine-slice halos.                   |
-| `alpha`       | Idle glow alpha.                                         |
-| `activeAlpha` | Glow alpha while a panel is in the active/focused state. |
-| `pulseMin`    | Min alpha during ambient breathing.                      |
-| `pulseMax`    | Max alpha during ambient breathing.                      |
-
-### `glass`
-
-| Field              | Description                                 |
-| ------------------ | ------------------------------------------- |
-| `bgAlpha`          | Glass panel base alpha.                     |
-| `gradientSteps`    | Number of vertical gradient bands rendered. |
-| `topTint`          | Top tint color of the glass gradient.       |
-| `bottomTint`       | Bottom tint color.                          |
-| `innerBorderAlpha` | Inner highlight border alpha.               |
-
-### `chamfer`
-
-| Field  | Description                                  |
-| ------ | -------------------------------------------- |
-| `size` | Pixel size of corner chamfer cuts on frames. |
-
-### `ambient`
-
-Animation timings shared by ambient FX. All values are milliseconds unless noted.
-
-| Field                       | Description                                |
-| --------------------------- | ------------------------------------------ |
-| `starTwinkleDurationMin`    | Fastest star twinkle half-cycle.           |
-| `starTwinkleDurationMax`    | Slowest star twinkle half-cycle.           |
-| `starShimmerDuration`       | Slow tint-shift half-cycle on white stars. |
-| `routePulseDuration`        | Route line breathing half-cycle.           |
-| `routePulseAlphaMin`        | Route line minimum alpha.                  |
-| `routePulseAlphaMax`        | Route line maximum alpha.                  |
-| `routeFlowDuration`         | Route flow-pip travel time.                |
-| `panelIdlePulseDuration`    | Panel idle glow half-cycle.                |
-| `buttonIdleShimmerDuration` | Button accent shimmer half-cycle.          |
-| `orbitalRotationDuration`   | Orbital decoration full rotation duration. |
-
-## Helper functions
-
-```ts
-import { colorToString, lerpColor } from "@spacebiz/ui";
-
-colorToString(0x00ffcc); // "#00ffcc"
-lerpColor(0x000000, 0xffffff, 0.5); // 0x808080
+```text
+color
+├── surface
+│   ├── default     // panel / scene background
+│   ├── raised      // header bars, cards
+│   ├── sunken      // table even rows, scrollbar tracks
+│   ├── hover       // row / button hover
+│   ├── active      // pressed state
+│   └── disabled    // disabled controls
+├── text
+│   ├── primary     // body copy
+│   ├── secondary   // supporting copy
+│   ├── muted       // captions, placeholder
+│   ├── inverse     // text on accented surface
+│   ├── link        // hyperlink-style
+│   ├── danger      // loss / error
+│   ├── success     // profit / confirm
+│   └── warning     // caution
+├── border
+│   ├── default     // standard divider
+│   ├── strong      // modal frame, emphasized card
+│   ├── subtle      // faint divider
+│   └── focus       // keyboard focus ring
+└── accent
+    ├── primary     // brand accent
+    ├── secondary   // hover / alt accent
+    ├── success
+    ├── warning
+    ├── danger
+    └── info
 ```
+
+### Migration guidance
+
+When updating an existing component to use semantic tokens:
+
+| Legacy                     | Semantic equivalent                 |
+| -------------------------- | ----------------------------------- |
+| `theme.colors.text`        | `theme.color.text.primary`          |
+| `theme.colors.textDim`     | `theme.color.text.muted`            |
+| `theme.colors.accent`      | `theme.color.accent.primary`        |
+| `theme.colors.accentHover` | `theme.color.accent.secondary`      |
+| `theme.colors.headerBg`    | `theme.color.surface.raised`        |
+| `theme.colors.panelBg`     | `theme.color.surface.default`       |
+| `theme.colors.rowEven`     | `theme.color.surface.sunken`        |
+| `theme.colors.rowHover`    | `theme.color.surface.hover`         |
+| `theme.colors.profit`      | `theme.color.text.success` / `accent.success` |
+| `theme.colors.loss`        | `theme.color.text.danger`  / `accent.danger`  |
+| `theme.colors.warning`     | `theme.color.text.warning` / `accent.warning` |
+| `theme.colors.panelBorder` | `theme.color.border.default`        |
+
+The `darkTheme` variant maps every semantic token to the matching legacy
+color, so migrating a component is a no-op for the dark theme but
+automatically picks up correct values for `lightTheme` /
+`highContrastTheme`.
+
+### Pilot migrations
+
+The semantic token API is currently used by:
+
+- `Button.ts`
+- `Panel.ts`
+- `Modal.ts`
+
+Other components still read from the legacy `colors` map and will be
+migrated incrementally.
+
+## Adding a new variant
+
+1. Build a `legacyColors` map covering every field of `ThemeConfig['colors']`.
+2. Build a `SemanticColorTokens` value covering every group in
+   `ThemeConfig['color']`.
+3. Compose the variant:
+   ```ts
+   export const myTheme: ThemeConfig = {
+     color: MY_SEMANTIC_COLORS,
+     colors: { ...MY_LEGACY_COLORS },
+     ...SHARED_TYPOGRAPHY, // optional — copy from Theme.ts if you want
+                            // different fonts/spacing/ambient timings
+   };
+   ```
+4. Add a unit test that mounts the theme via `setTheme(myTheme)` and renders
+   the components you care about, or extend `ThemeVariants.test.ts` to cover
+   it.
+
+## Future work
+
+- Migrate remaining components (`DataTable`, `Dropdown`, `ScrollableList`,
+  `TabGroup`, `Label`, `ProgressBar`, etc.) off the legacy `colors` map.
+- Add an `overlay` semantic group (currently `colors.modalOverlay` is read
+  directly because no semantic equivalent exists yet).
+- Once all callers are migrated, drop the legacy `colors` map.
