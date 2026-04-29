@@ -251,4 +251,44 @@ describe("ScrollFrame", () => {
     expect(layer.x).toBe(8);
     expect(layer.y).toBe(8);
   });
+
+  it("keeps the mask anchored to the viewport when content scrolls", () => {
+    const frame = new ScrollFrame(scene as never, {
+      x: 20,
+      y: 30,
+      width: 300,
+      height: 200,
+      padding: 8,
+    });
+    frame.setContent(makeChildOfHeight(scene, 500) as unknown as never);
+
+    const mask = (frame as unknown as { maskShape: { x: number; y: number } })
+      .maskShape;
+
+    expect(mask.x).toBe(28);
+    expect(mask.y).toBe(38);
+
+    frame.scrollTo(100);
+
+    expect(mask.x).toBe(28);
+    expect(mask.y).toBe(38);
+  });
+
+  it("notifies content when the viewport scroll offset changes", () => {
+    const frame = new ScrollFrame(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+    });
+    const child = makeChildOfHeight(scene, 500) as MockContainer & {
+      setViewportScrollY: ReturnType<typeof vi.fn>;
+    };
+    child.setViewportScrollY = vi.fn();
+
+    frame.setContent(child as unknown as never);
+    frame.scrollTo(100);
+
+    expect(child.setViewportScrollY).toHaveBeenLastCalledWith(100);
+  });
 });
