@@ -17,7 +17,6 @@ import {
   registerAmbientCleanup,
   flashScreen,
   FloatingText,
-  MilestoneOverlay,
   StatRow,
   InfoCard,
   IconButton,
@@ -44,23 +43,21 @@ import {
   DEPTH_UI,
   DEPTH_MODAL,
   DEPTH_HUD,
+} from "@spacebiz/ui";
+import type { ColumnDef, BadgeVariant } from "@spacebiz/ui";
+import {
+  MilestoneOverlay,
   CARGO_TYPE_LIST,
   getCargoIconKey,
   getCargoColor,
   getCargoLabel,
-} from "@spacebiz/ui";
-import type { ColumnDef, BadgeVariant } from "@spacebiz/ui";
-import type { StyleguideSection } from "../sectionGrouping.ts";
-import type { KnobValues } from "../knobs/index.ts";
-import {
   drawRexPortrait,
   getMoodAccentColor,
-} from "../../src/ui/AdviserPortrait.ts";
-import { drawPortrait } from "../../src/ui/PortraitGenerator.ts";
-import type {
-  PortraitData,
-  AlienRole,
-} from "../../src/ui/PortraitGenerator.ts";
+  drawPortrait,
+} from "@rogue-universe/shared";
+import type { PortraitData, AlienRole } from "@rogue-universe/shared";
+import type { StyleguideSection } from "../sectionGrouping.ts";
+import type { KnobValues } from "../knobs/index.ts";
 import type { AdviserMood } from "../../src/data/types.ts";
 
 /* ------------------------------------------------------------------ */

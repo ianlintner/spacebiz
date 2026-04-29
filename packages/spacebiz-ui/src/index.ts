@@ -90,3 +90,19 @@ export type { IconButtonConfig } from "./IconButton.ts";
 
 export { StatusBadge } from "./StatusBadge.ts";
 export type { StatusBadgeConfig, BadgeVariant } from "./StatusBadge.ts";
+
+// Form controls (Slider, Checkbox, Toggle, RadioGroup)
+export * from "./input/index.ts";
+
+// Misc widgets (Spinner, Accordion, ContextMenu, Toolbar)
+export * from "./misc/index.ts";
+
+// Layout primitives (Sizer-style flex containers + resize contract)
+export * from "./layout/index.ts";
+
+// Notifications
+export * from "./notifications/index.ts";
+
+// Focus management
+export { FocusManager } from "./foundation/FocusManager.ts";
+export type { Focusable } from "./foundation/FocusManager.ts";

@@ -8,7 +8,7 @@ import {
   getLayout,
   ScrollableList,
   Slider,
-} from "../ui/index.ts";
+} from "@spacebiz/ui";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import {
   listSandboxSaves,
@@ -222,7 +222,7 @@ export class SandboxSetupScene extends Phaser.Scene {
       value: this.selectedCompanyCount,
       label: "AI Companies",
       showValue: true,
-      formatValue: (v) => `${v} companies`,
+      formatValue: (v: number) => `${v} companies`,
       onChange: (value: number) => {
         this.selectedCompanyCount = value;
       },

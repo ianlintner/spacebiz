@@ -25,16 +25,17 @@ import {
 } from "../game/empire/EmpireAccessManager.ts";
 import { findChartersForRoute } from "../game/charters/CharterManager.ts";
 import { PLAYER_COMPANY_ID } from "../data/constants.ts";
-import { getLayout } from "./Layout.ts";
-import { Button } from "./Button.ts";
-import { Label } from "./Label.ts";
+import {
+  getLayout,
+  Button,
+  Label,
+  Modal,
+  Panel,
+  DEPTH_MODAL,
+  getTheme,
+} from "@spacebiz/ui";
+import type { SceneUiDirector, SceneUiLayer } from "@spacebiz/ui";
 import { RoutePickerMap } from "./RoutePickerMap.ts";
-import { Modal } from "./Modal.ts";
-import { Panel } from "./Panel.ts";
-import { DEPTH_MODAL } from "./DepthLayers.ts";
-import type { SceneUiDirector } from "./SceneUiDirector.ts";
-import type { SceneUiLayer } from "./SceneUiDirector.ts";
-import { getTheme } from "./Theme.ts";
 import { getCargoIconKey, getCargoColor } from "@rogue-universe/shared";
 import {
   CARGO_VALUES,
