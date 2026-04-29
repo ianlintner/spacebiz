@@ -7,6 +7,11 @@ import type {
   LogEntry,
   InvariantViolation,
 } from "../../src/testing/types.ts";
+import type {
+  PortraitStatus,
+  AdviserSnapshot,
+} from "../../src/testing/tier2.ts";
+import type { TickerItem } from "../../src/generation/news/types.ts";
 
 /**
  * Typed wrapper around `window.__sft` exposed over `page.evaluate`. The browser
@@ -98,6 +103,18 @@ export class SftDriver {
 
   invariantViolations(): Promise<InvariantViolation[]> {
     return this.page.evaluate(() => window.__sft!.invariants.recent());
+  }
+
+  getPortrait(ceoId?: string): Promise<PortraitStatus> {
+    return this.page.evaluate((id) => window.__sft!.getPortrait(id), ceoId);
+  }
+
+  getNewsItems(): Promise<TickerItem[]> {
+    return this.page.evaluate(() => window.__sft!.getNewsItems());
+  }
+
+  getAdviserState(): Promise<AdviserSnapshot> {
+    return this.page.evaluate(() => window.__sft!.getAdviserState());
   }
 
   /** Typed proxy for `__sft.actions.*`. */

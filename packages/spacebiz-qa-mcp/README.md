@@ -88,6 +88,9 @@ Or run the built binary directly:
 | `sft_log_tail`            | Tail the last N log entries.                                    |
 | `sft_log_clear`           | Clear the log ring buffer.                                      |
 | `sft_invariantViolations` | Recent invariant violations (last 200).                         |
+| `sft_getPortrait`         | Tier-2: portrait load status for a CEO id (player by default).  |
+| `sft_getNewsItems`        | Tier-2: current galactic news ticker items.                     |
+| `sft_getAdviserState`     | Tier-2: adviser state + currently-displayed message.            |
 
 ## Error handling
 

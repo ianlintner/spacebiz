@@ -17,6 +17,9 @@ const REQUIRED_TOOLS = [
   "sft_actions_endTurn",
   "sft_seed",
   "sft_log_tail",
+  "sft_getPortrait",
+  "sft_getNewsItems",
+  "sft_getAdviserState",
 ];
 
 const child = spawn(process.execPath, [entry], {
