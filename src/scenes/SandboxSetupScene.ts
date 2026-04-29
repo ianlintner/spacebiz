@@ -7,6 +7,7 @@ import {
   getTheme,
   getLayout,
   ScrollableList,
+  Slider,
 } from "../ui/index.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import {
@@ -31,7 +32,6 @@ export class SandboxSetupScene extends Phaser.Scene {
   private seedLabel!: Label;
   private sizeButtons: Button[] = [];
   private shapeButtons: Button[] = [];
-  private companyButtons: Button[] = [];
   private speedButtons: Button[] = [];
   private logButtons: Button[] = [];
 
@@ -53,7 +53,6 @@ export class SandboxSetupScene extends Phaser.Scene {
     this.selectedLogLevel = "standard";
     this.sizeButtons = [];
     this.shapeButtons = [];
-    this.companyButtons = [];
     this.speedButtons = [];
     this.logButtons = [];
 
@@ -213,40 +212,23 @@ export class SandboxSetupScene extends Phaser.Scene {
     rowY += 38 + sectionGap;
 
     // ── AI Companies ──
-    new Label(this, {
+    new Slider(this, {
       x: innerX,
       y: rowY,
-      text: "AI Companies",
-      style: "caption",
-      color: theme.colors.accent,
+      width: 200,
+      min: 4,
+      max: 10,
+      step: 1,
+      value: this.selectedCompanyCount,
+      label: "AI Companies",
+      showValue: true,
+      formatValue: (v) => `${v} companies`,
+      onChange: (value: number) => {
+        this.selectedCompanyCount = value;
+      },
     });
 
-    rowY += 24;
-    const companyCounts = [4, 6, 8, 10];
-    const compBtnW = 60;
-    let compBtnX =
-      innerCx -
-      (companyCounts.length * compBtnW + (companyCounts.length - 1) * btnGap) /
-        2;
-    for (const count of companyCounts) {
-      const btn = new Button(this, {
-        x: compBtnX,
-        y: rowY,
-        width: compBtnW,
-        height: 38,
-        label: String(count),
-        onClick: () => {
-          this.selectedCompanyCount = count;
-          for (const b of this.companyButtons) b.setActive(false);
-          btn.setActive(true);
-        },
-      });
-      if (count === this.selectedCompanyCount) btn.setActive(true);
-      this.companyButtons.push(btn);
-      compBtnX += compBtnW + btnGap;
-    }
-
-    rowY += 38 + sectionGap;
+    rowY += 60 + sectionGap;
 
     // ── Playback Speed ──
     new Label(this, {
