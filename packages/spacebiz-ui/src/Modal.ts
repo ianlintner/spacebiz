@@ -52,6 +52,8 @@ export class Modal extends Phaser.GameObjects.Container {
       .rectangle(0, 0, gameWidth, gameHeight, theme.colors.modalOverlay, 0.7)
       .setOrigin(0, 0)
       .setInteractive();
+    // (modalOverlay intentionally retained from legacy palette — semantic
+    // tokens don't yet model a dedicated overlay scrim; tracked for follow-up.)
     this.overlay.on("pointerup", () => {
       if (!this.closable) return;
       if (config.onCancel) {
@@ -92,7 +94,7 @@ export class Modal extends Phaser.GameObjects.Container {
         0,
         modalWidth,
         theme.panel.titleHeight,
-        theme.colors.headerBg,
+        theme.color.surface.raised,
       )
       .setOrigin(0, 0);
     this.panel.add(titleBg);
@@ -104,7 +106,7 @@ export class Modal extends Phaser.GameObjects.Container {
         theme.panel.titleHeight - 1,
         modalWidth,
         1,
-        theme.colors.accent,
+        theme.color.accent.primary,
       )
       .setOrigin(0, 0)
       .setAlpha(0.5);
@@ -117,7 +119,7 @@ export class Modal extends Phaser.GameObjects.Container {
       {
         fontSize: `${theme.fonts.heading.size}px`,
         fontFamily: theme.fonts.heading.family,
-        color: colorToString(theme.colors.accent),
+        color: colorToString(theme.color.accent.primary),
         wordWrap: {
           width:
             modalWidth - theme.spacing.md * 3 - (theme.fonts.heading.size + 4),
@@ -130,16 +132,16 @@ export class Modal extends Phaser.GameObjects.Container {
       .text(modalWidth - theme.spacing.md, theme.spacing.xs, "×", {
         fontSize: `${theme.fonts.heading.size + 4}px`,
         fontFamily: theme.fonts.heading.family,
-        color: colorToString(theme.colors.textDim),
+        color: colorToString(theme.color.text.muted),
       })
       .setOrigin(1, 0);
     if (this.closable) {
       closeText.setInteractive({ useHandCursor: true });
       closeText.on("pointerover", () => {
-        closeText.setColor(colorToString(theme.colors.accent));
+        closeText.setColor(colorToString(theme.color.accent.primary));
       });
       closeText.on("pointerout", () => {
-        closeText.setColor(colorToString(theme.colors.textDim));
+        closeText.setColor(colorToString(theme.color.text.muted));
       });
       closeText.on("pointerup", () => {
         this.cancel();
@@ -175,7 +177,7 @@ export class Modal extends Phaser.GameObjects.Container {
       {
         fontSize: `${theme.fonts.body.size}px`,
         fontFamily: theme.fonts.body.family,
-        color: colorToString(theme.colors.text),
+        color: colorToString(theme.color.text.primary),
         wordWrap: { width: modalWidth - theme.spacing.md * 2 },
       },
     );
@@ -240,17 +242,17 @@ export class Modal extends Phaser.GameObjects.Container {
       .text(okX + buttonWidth / 2, buttonY + buttonHeight / 2, okText, {
         fontSize: `${theme.fonts.body.size}px`,
         fontFamily: theme.fonts.body.family,
-        color: colorToString(theme.colors.text),
+        color: colorToString(theme.color.text.primary),
       })
       .setOrigin(0.5);
 
     okBg.on("pointerover", () => {
       okBg.setTexture("btn-hover");
-      okLabel.setColor(colorToString(theme.colors.accent));
+      okLabel.setColor(colorToString(theme.color.accent.primary));
     });
     okBg.on("pointerout", () => {
       okBg.setTexture("btn-normal");
-      okLabel.setColor(colorToString(theme.colors.text));
+      okLabel.setColor(colorToString(theme.color.text.primary));
     });
     okBg.on("pointerdown", () => okBg.setTexture("btn-pressed"));
     okBg.on("pointerup", () => {
@@ -261,7 +263,7 @@ export class Modal extends Phaser.GameObjects.Container {
     });
     okBg.on("pointerupoutside", () => {
       okBg.setTexture("btn-normal");
-      okLabel.setColor(colorToString(theme.colors.text));
+      okLabel.setColor(colorToString(theme.color.text.primary));
     });
 
     const okRing = createFocusRing(
@@ -310,18 +312,18 @@ export class Modal extends Phaser.GameObjects.Container {
           {
             fontSize: `${theme.fonts.body.size}px`,
             fontFamily: theme.fonts.body.family,
-            color: colorToString(theme.colors.text),
+            color: colorToString(theme.color.text.primary),
           },
         )
         .setOrigin(0.5);
 
       cancelBg.on("pointerover", () => {
         cancelBg.setTexture("btn-hover");
-        cancelLabel.setColor(colorToString(theme.colors.text));
+        cancelLabel.setColor(colorToString(theme.color.text.primary));
       });
       cancelBg.on("pointerout", () => {
         cancelBg.setTexture("btn-normal");
-        cancelLabel.setColor(colorToString(theme.colors.textDim));
+        cancelLabel.setColor(colorToString(theme.color.text.muted));
       });
       cancelBg.on("pointerdown", () => cancelBg.setTexture("btn-pressed"));
       cancelBg.on("pointerup", () => {
@@ -332,7 +334,7 @@ export class Modal extends Phaser.GameObjects.Container {
       });
       cancelBg.on("pointerupoutside", () => {
         cancelBg.setTexture("btn-normal");
-        cancelLabel.setColor(colorToString(theme.colors.textDim));
+        cancelLabel.setColor(colorToString(theme.color.text.muted));
       });
 
       const cancelRing = createFocusRing(
