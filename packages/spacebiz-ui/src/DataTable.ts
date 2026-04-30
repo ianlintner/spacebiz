@@ -62,7 +62,6 @@ export class DataTable extends Phaser.GameObjects.Container {
   private sortAsc = true;
   private selectedRowIndex = -1;
   private selectedRowIndicator: Phaser.GameObjects.Rectangle | null = null;
-  private wheelHitArea: Phaser.GameObjects.Rectangle;
   private maskShape: Phaser.GameObjects.Graphics | null = null;
   private renderedRows: Record<string, unknown>[] = [];
   /**
@@ -73,12 +72,18 @@ export class DataTable extends Phaser.GameObjects.Container {
    * descendants in Phaser 4 (transform staleness across multiple parent
    * Containers, RT cache invalidation lag, etc.). Manual clipping is
    * unconditional and guarantees rows never render outside the table frame.
+   *
+   * In contentSized mode, `viewportActive` tracks whether the row's
+   * interactive hit area is currently enabled. Rows that have scrolled
+   * above/below the ScrollFrame viewport are disabled so their invisible
+   * rectangles can't block pointer events on UI elements outside the table.
    */
   private rowEntries: {
     top: number;
     height: number;
     bg: Phaser.GameObjects.Rectangle;
     children: Phaser.GameObjects.GameObject[];
+    viewportActive: boolean;
   }[] = [];
   private hasKeyboardFocus = false;
   private readonly keyboardNavigationEnabled: boolean;
@@ -114,18 +119,25 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.headerContainer = scene.add.container(0, 0);
     this.add(this.headerContainer);
 
-    this.wheelHitArea = scene.add
-      .rectangle(0, 0, config.width, config.height, 0x000000, 0)
-      .setOrigin(0, 0)
-      .setInteractive(
-        new Phaser.Geom.Rectangle(0, 0, config.width, config.height),
-        Phaser.Geom.Rectangle.Contains,
-      );
-    this.wheelHitArea.on("pointerdown", () => {
-      this.focus();
-    });
-    this.addAt(this.wheelHitArea, 0);
-    this.wheelHitArea.setData("consumesWheel", true);
+    // In contentSized mode the parent ScrollFrame owns scrolling and the
+    // DataTable moves in world space as the frame scrolls. Creating an
+    // interactive hit-area here would let it drift above the table viewport
+    // and silently block pointer events on UI outside (e.g. dropdown filters).
+    // Row pointerdown handlers already call focus(), so we need no fallback.
+    if (!this.contentSized) {
+      const wheelHitArea = scene.add
+        .rectangle(0, 0, config.width, config.height, 0x000000, 0)
+        .setOrigin(0, 0)
+        .setInteractive(
+          new Phaser.Geom.Rectangle(0, 0, config.width, config.height),
+          Phaser.Geom.Rectangle.Contains,
+        );
+      wheelHitArea.on("pointerdown", () => {
+        this.focus();
+      });
+      this.addAt(wheelHitArea, 0);
+      wheelHitArea.setData("consumesWheel", true);
+    }
 
     // Mask + scroll indicator + canvas wheel are skipped in contentSized
     // mode — the parent ScrollFrame owns those concerns, and DataTable would
@@ -619,6 +631,7 @@ export class DataTable extends Phaser.GameObjects.Container {
         height: rowHeightPx,
         bg: rowBg,
         children: childList,
+        viewportActive: true,
       });
 
       yCursor += rowHeightPx;
@@ -650,6 +663,28 @@ export class DataTable extends Phaser.GameObjects.Container {
   setViewportScrollY(scrollY: number): void {
     if (!this.contentSized) return;
     this.headerContainer.setY(scrollY);
+
+    // Enable/disable each row's interactive hit area depending on whether it
+    // falls inside the visible body region [scrollY, scrollY + viewportBodyH].
+    // Rows outside the viewport move in world-space (the whole DataTable
+    // shifts as ScrollFrame scrolls) and their invisible rectangles would
+    // otherwise block pointer events on UI elements above or below the frame.
+    const viewportBodyH = this.tableConfig.height - this.headerHeight;
+    for (const entry of this.rowEntries) {
+      const inViewport =
+        entry.top + entry.height > scrollY &&
+        entry.top < scrollY + viewportBodyH;
+      if (inViewport && !entry.viewportActive) {
+        entry.bg.setInteractive(
+          new Phaser.Geom.Rectangle(0, 0, this.tableConfig.width, entry.height),
+          Phaser.Geom.Rectangle.Contains,
+        );
+        entry.viewportActive = true;
+      } else if (!inViewport && entry.viewportActive) {
+        entry.bg.disableInteractive();
+        entry.viewportActive = false;
+      }
+    }
   }
 
   private selectRow(
