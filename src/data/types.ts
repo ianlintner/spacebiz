@@ -702,6 +702,7 @@ export interface EventEffect {
   value: number;
   empireId?: string;
   empireId2?: string;
+  surface?: "modal" | "digest";
 }
 
 export interface EventChoice {
@@ -1071,6 +1072,74 @@ export interface CharacterPortrait {
   category: PortraitCategory;
 }
 
+// ────────────────────────────── Diplomacy ──────────────────────────────────
+
+export type StandingTag =
+  | { kind: "OweFavor"; expiresOnTurn: number }
+  | { kind: "RecentlyGifted"; expiresOnTurn: number }
+  | {
+      kind: "SuspectedSpy";
+      suspectId: "player" | string;
+      expiresOnTurn: number;
+    }
+  | {
+      kind: "NonCompete";
+      protectedEmpireIds: readonly string[];
+      expiresOnTurn: number;
+    }
+  | {
+      kind: "LeakedIntel";
+      lens: "cash" | "topContractByValue" | "topEmpireStanding";
+      value: string;
+      expiresOnTurn: number;
+    };
+
+export type AmbassadorPersonality =
+  | "formal"
+  | "mercenary"
+  | "suspicious"
+  | "warm";
+
+export interface Ambassador {
+  name: string;
+  portrait: CharacterPortrait;
+  personality: AmbassadorPersonality;
+}
+
+export type DiplomacyActionKind =
+  | "giftEmpire"
+  | "giftRival"
+  | "lobbyFor"
+  | "lobbyAgainst"
+  | "proposeNonCompete"
+  | "surveil";
+
+export type SurveilLens = "cash" | "topContractByValue" | "topEmpireStanding";
+
+export interface QueuedDiplomacyAction {
+  id: string;
+  kind: DiplomacyActionKind;
+  targetId: string;
+  subjectId?: string;
+  subjectIdSecondary?: string;
+  surveilLens?: SurveilLens;
+  cashCost: number;
+}
+
+export interface DiplomacyState {
+  empireStanding: Record<string, number>;
+  rivalStanding: Record<string, number>;
+  /** Per-empire view of each rival (for lobby targeting). */
+  crossEmpireRivalStanding: Record<string, Record<string, number>>;
+  empireTags: Record<string, readonly StandingTag[]>;
+  rivalTags: Record<string, readonly StandingTag[]>;
+  empireAmbassadors: Record<string, Ambassador>;
+  rivalLiaisons: Record<string, Ambassador>;
+  cooldowns: Record<string, number>;
+  queuedActions: readonly QueuedDiplomacyAction[];
+  actionsResolvedThisTurn: number;
+}
+
 export interface GameState {
   seed: number;
   turn: number;
@@ -1152,15 +1221,6 @@ export interface GameState {
   reputationTier: ReputationTier;
 
   /**
-   * Per-empire reputation, keyed by empireId. Foundation for the charter system —
-   * companies build standing within each empire independently. The legacy global
-   * `reputation` field is now treated as a derived "fame" reading (see
-   * `computeFameRep` in ReputationEffects). Missing entries default to 50.
-   * Optional for backwards compatibility with v6 saves.
-   */
-  empireReputation?: Record<string, number>;
-
-  /**
    * Active charters held by the player (and historically). AI companies hold
    * their own charters on `AICompany.charters`. Optional for v6-save compat.
    */
@@ -1172,4 +1232,6 @@ export interface GameState {
    * for v6-save compat.
    */
   activeAuctions?: CharterAuction[];
+
+  diplomacy: DiplomacyState;
 }
