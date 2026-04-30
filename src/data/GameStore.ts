@@ -1,4 +1,5 @@
 import type { GameState } from "./types";
+import { EMPTY_DIPLOMACY_STATE } from "./types";
 import { GameEventEmitter } from "../utils/EventEmitter";
 import {
   STARTING_CASH,
@@ -75,18 +76,8 @@ function createDefaultState(): GameState {
     researchEvents: [],
     unlockedNavTabs: ["map", "routes", "fleet", "finance"],
     reputationTier: "unknown",
-    diplomacy: {
-      empireStanding: {},
-      rivalStanding: {},
-      crossEmpireRivalStanding: {},
-      empireTags: {},
-      rivalTags: {},
-      empireAmbassadors: {},
-      rivalLiaisons: {},
-      cooldowns: {},
-      queuedActions: [],
-      actionsResolvedThisTurn: 0,
-    },
+    empireReputation: {},
+    diplomacy: { ...EMPTY_DIPLOMACY_STATE },
   };
 }
 
