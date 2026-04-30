@@ -8,6 +8,21 @@
 
 **Tech Stack:** Phaser 4 + TypeScript (strict, `verbatimModuleSyntax`, `erasableSyntaxOnly`), Vite 8, Vitest 4, Node 22. Path alias `@spacebiz/ui` for shared UI primitives.
 
+## Plan Revision (2026-04-30, post-Task-1 finding)
+
+The original spec assumed `GameState.empireReputation` was a stubbed-but-unwired field. **It is not.** It is wired into `src/game/reputation/ReputationEffects.ts`, `src/scenes/EmpireScene.ts`, the charter system, and the contract system, plus referenced by ~30 test fixtures. Removing it broke typecheck across the project.
+
+**Revised data-model rule (applies globally to all tasks below):**
+
+1. **Keep `empireReputation` on `GameState`** as the canonical empire-side standing field. Diplomacy code reads/writes empire standing via `state.empireReputation[empireId]`. Do NOT mirror it into `diplomacy.empireStanding`.
+2. **Drop `empireStanding` from `DiplomacyState`.** Empire-side standing is `empireReputation`; diplomacy adds _only the new state_: rival standing, tags (per empire and per rival), ambassadors, cooldowns, queue, cross-empire view, and the per-turn counter.
+3. **Make `diplomacy` optional** on `GameState` (`diplomacy?: DiplomacyState`) to avoid touching the ~30 inline-`GameState` test fixtures. Production diplomacy code reads `state.diplomacy ?? EMPTY_DIPLOMACY_STATE` via a single helper. New gameplay always populates the field; legacy fixtures don't have to.
+4. **Provide `EMPTY_DIPLOMACY_STATE`** as an exported constant (in `src/data/types.ts` or a sibling) for fixtures + the helper to spread.
+
+The code blocks for Tasks 1, 2, and 7 in this document have been updated to reflect this. Tasks 8–17 reference empire standing via `state.empireReputation[id]` (not `state.diplomacy.empireStanding[id]`) — implementer subagents must apply this rule when porting code from the test snippets shown.
+
+---
+
 **Conventions:**
 
 - All new modules use `import * as Phaser from "phaser"` for Phaser imports.
@@ -120,7 +135,7 @@ export interface QueuedDiplomacyAction {
 }
 
 export interface DiplomacyState {
-  empireStanding: Record<string, number>;
+  /** Per-rival standing 0..100. Empire-side standing lives on `GameState.empireReputation`. */
   rivalStanding: Record<string, number>;
   /** Per-empire view of each rival (for lobby targeting). */
   crossEmpireRivalStanding: Record<string, Record<string, number>>;
@@ -132,6 +147,18 @@ export interface DiplomacyState {
   queuedActions: readonly QueuedDiplomacyAction[];
   actionsResolvedThisTurn: number;
 }
+
+export const EMPTY_DIPLOMACY_STATE: DiplomacyState = {
+  rivalStanding: {},
+  crossEmpireRivalStanding: {},
+  empireTags: {},
+  rivalTags: {},
+  empireAmbassadors: {},
+  rivalLiaisons: {},
+  cooldowns: {},
+  queuedActions: [],
+  actionsResolvedThisTurn: 0,
+};
 ```
 
 - [ ] **Step 2: Extend `EventEffect` with surface**
@@ -152,18 +179,18 @@ export interface EventEffect {
 
 - [ ] **Step 3: Add `diplomacy` to `GameState`**
 
-Find the `GameState` interface around line 1074. Replace the existing line `empireReputation?: Record<string, number>;` (around line 1156) with nothing (deleting it) and add at the bottom of the interface (just before the closing `}` around line 1169):
+Find the `GameState` interface around line 1074. **Leave `empireReputation` as-is.** Add at the bottom of the interface (just before the closing `}` around line 1169):
 
 ```ts
-diplomacy: DiplomacyState;
+diplomacy?: DiplomacyState;
 ```
 
-Make `diplomacy` required (no `?`) — the initial state always seeds an empty one.
+Make `diplomacy` **optional** (`?`). This matches the pattern of `empireReputation` and avoids breaking the ~30 test fixtures that build `GameState` literals without it. New gameplay populates `diplomacy`; legacy fixtures and saves don't have to.
 
 - [ ] **Step 4: Run typecheck**
 
 Run: `npm run typecheck`
-Expected: errors about `empireReputation` being missing in `createDefaultState` (we fix that in Task 2). Other unrelated TS errors should not appear.
+Expected: clean (no errors). The `EMPTY_DIPLOMACY_STATE` constant is exported but not yet used anywhere — that's fine.
 
 - [ ] **Step 5: Commit**
 
@@ -194,16 +221,15 @@ describe("GameStore.createDefaultState", () => {
     gameStore.reset();
     const s = gameStore.getState();
     expect(s.diplomacy).toBeDefined();
-    expect(s.diplomacy.empireStanding).toEqual({});
-    expect(s.diplomacy.rivalStanding).toEqual({});
-    expect(s.diplomacy.crossEmpireRivalStanding).toEqual({});
-    expect(s.diplomacy.empireTags).toEqual({});
-    expect(s.diplomacy.rivalTags).toEqual({});
-    expect(s.diplomacy.empireAmbassadors).toEqual({});
-    expect(s.diplomacy.rivalLiaisons).toEqual({});
-    expect(s.diplomacy.cooldowns).toEqual({});
-    expect(s.diplomacy.queuedActions).toEqual([]);
-    expect(s.diplomacy.actionsResolvedThisTurn).toBe(0);
+    expect(s.diplomacy!.rivalStanding).toEqual({});
+    expect(s.diplomacy!.crossEmpireRivalStanding).toEqual({});
+    expect(s.diplomacy!.empireTags).toEqual({});
+    expect(s.diplomacy!.rivalTags).toEqual({});
+    expect(s.diplomacy!.empireAmbassadors).toEqual({});
+    expect(s.diplomacy!.rivalLiaisons).toEqual({});
+    expect(s.diplomacy!.cooldowns).toEqual({});
+    expect(s.diplomacy!.queuedActions).toEqual([]);
+    expect(s.diplomacy!.actionsResolvedThisTurn).toBe(0);
   });
 });
 ```
@@ -217,22 +243,17 @@ Expected: FAIL — `s.diplomacy` is undefined.
 
 - [ ] **Step 3: Update `createDefaultState()`**
 
-In `src/data/GameStore.ts`, locate `createDefaultState()` (around line 13). Find the line `empireReputation: {},` (around line 78) and **replace it** with:
+In `src/data/GameStore.ts`, locate `createDefaultState()` (around line 13). **Keep the existing `empireReputation: {},` line**. Add a new line below it (or anywhere appropriate within the returned object) using the imported `EMPTY_DIPLOMACY_STATE`:
 
 ```ts
-diplomacy: {
-  empireStanding: {},
-  rivalStanding: {},
-  crossEmpireRivalStanding: {},
-  empireTags: {},
-  rivalTags: {},
-  empireAmbassadors: {},
-  rivalLiaisons: {},
-  cooldowns: {},
-  queuedActions: [],
-  actionsResolvedThisTurn: 0,
-},
+import { EMPTY_DIPLOMACY_STATE } from "./types.ts";
+
+// ... inside createDefaultState():
+empireReputation: {},   // unchanged
+diplomacy: { ...EMPTY_DIPLOMACY_STATE },
 ```
+
+The spread keeps each `gameStore.reset()` call producing a fresh, independent diplomacy object (not the shared singleton).
 
 - [ ] **Step 4: Run test + typecheck + full suite**
 
@@ -242,13 +263,13 @@ npm run typecheck
 npm run test
 ```
 
-Expected: target test passes; typecheck clean; full suite passes (no test depended on `empireReputation`).
+Expected: target test passes; typecheck clean; full suite passes.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/data/GameStore.ts src/data/__tests__/GameStore.test.ts
-git commit -m "feat(state): seed empty DiplomacyState; remove empireReputation stub"
+git commit -m "feat(state): seed empty DiplomacyState alongside empireReputation"
 ```
 
 ---
