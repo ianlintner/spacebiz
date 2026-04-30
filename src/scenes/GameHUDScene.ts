@@ -3,13 +3,14 @@ import {
   Button,
   Label,
   Modal,
-  Panel,
   getTheme,
   getLayout,
   Tooltip,
   FloatingText,
   AdviserPanel,
 } from "../ui/index.ts";
+import { SettingsPanel } from "../ui/SettingsPanel.ts";
+import { formatTurnShort, formatTurnLong } from "../utils/turnFormat.ts";
 import { HorizontalNewsTicker } from "@rogue-universe/shared";
 import { gameStore } from "../data/GameStore.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
@@ -113,14 +114,7 @@ export class GameHUDScene extends Phaser.Scene {
   private navTooltip!: Tooltip;
   /** Tracks the tabs that were visible last time we updated, for unlock animation. */
   private knownUnlockedNavTabs: NavTabId[] = [];
-  private audioPanelObjects: Phaser.GameObjects.GameObject[] = [];
-  private audioPanelOpen = false;
-  private musicVolumeValueLabel: Label | null = null;
-  private sfxVolumeValueLabel: Label | null = null;
-  private reducedUiSfxValueLabel: Label | null = null;
-  private musicStyleValueLabel: Label | null = null;
-  private musicTrackValueLabel: Label | null = null;
-  private muteValueLabel: Label | null = null;
+  private settingsPanel: SettingsPanel | null = null;
   private adviserPanel!: AdviserPanel;
   private actionPromptLabel!: Label;
   private routeSlotLabel!: Label;
@@ -290,12 +284,10 @@ export class GameHUDScene extends Phaser.Scene {
     });
 
     // Turn display (centered)
-    const quarter = ((state.turn - 1) % 4) + 1;
-    const year = Math.ceil(state.turn / 4);
     this.turnLabel = new Label(this, {
       x: L.gameWidth / 2,
       y: L.hudTopBarHeight / 2,
-      text: `Q${quarter} Year ${year}`,
+      text: formatTurnLong(state.turn),
       style: "value",
     });
     this.turnLabel.setOrigin(0.5, 0.5);
@@ -526,56 +518,26 @@ export class GameHUDScene extends Phaser.Scene {
 
     // (Adviser tab is now integrated into the AdviserPanel drawer — see below)
 
-    // ── Audio button at bottom of nav sidebar ──
-    const audioBtnY = navSidebarTop + navSidebarH - iconBtnSize / 2 - 12;
-    const audioContainer = this.add.container(navCenterX, audioBtnY);
+    // ── Settings buttons (Audio + Save) at bottom of nav sidebar ──
+    // Two icon buttons stacked vertically. Audio opens the Audio tab,
+    // Save opens the Save/Load tab of the same panel.
+    const bottomCluster = navSidebarTop + navSidebarH - 12;
+    const audioBtnY = bottomCluster - iconBtnSize / 2 - (iconBtnSize + 6);
+    const saveBtnY = bottomCluster - iconBtnSize / 2;
 
-    const audioHit = this.add
-      .rectangle(
-        0,
-        0,
-        L.navSidebarWidth,
-        iconBtnSize + iconSpacing,
-        0x000000,
-        0,
-      )
-      .setOrigin(0.5, 0.5)
-      .setInteractive(
-        new Phaser.Geom.Rectangle(
-          0,
-          0,
-          L.navSidebarWidth,
-          iconBtnSize + iconSpacing,
-        ),
-        Phaser.Geom.Rectangle.Contains,
-      );
-    if (audioHit.input) {
-      audioHit.input.cursor = "pointer";
-    }
-
-    const audioBg = this.add
-      .rectangle(0, 0, iconBtnSize, iconBtnSize, theme.colors.buttonBg, 0.0)
-      .setOrigin(0.5, 0.5);
-
-    const audioIcon = this.add
-      .image(0, 0, "icon-audio")
-      .setOrigin(0.5, 0.5)
-      .setTint(theme.colors.textDim);
-
-    audioContainer.add([audioHit, audioBg, audioIcon]);
-    this.navTooltip.attachTo(audioHit, "Audio Settings");
-
-    audioHit.on("pointerover", () => {
-      getAudioDirector().sfx("ui_hover");
-      audioBg.setAlpha(0.2);
-      audioIcon.setTint(theme.colors.text);
+    this.createSettingsIconButton({
+      x: navCenterX,
+      y: audioBtnY,
+      iconKey: "icon-audio",
+      tooltip: "Audio Settings",
+      onClick: () => this.toggleSettingsPanel("audio"),
     });
-    audioHit.on("pointerout", () => {
-      audioBg.setAlpha(0.0);
-      audioIcon.setTint(theme.colors.textDim);
-    });
-    audioHit.on("pointerup", () => {
-      this.toggleAudioPanel();
+    this.createSettingsIconButton({
+      x: navCenterX,
+      y: saveBtnY,
+      iconKey: "icon-save",
+      tooltip: "Save / Load",
+      onClick: () => this.toggleSettingsPanel("save"),
     });
 
     // ── Bottom Bar ───────────────────────────────────────────
@@ -655,12 +617,10 @@ export class GameHUDScene extends Phaser.Scene {
     const endTurnX = L.gameWidth - endTurnSize - 12;
     // Turn info display — sits to the LEFT of the ▶ button with a 12px gap,
     // not stacked above it (previous placement collided with the button).
-    const currentQuarter = ((state.turn - 1) % 4) + 1;
-    const currentYear = Math.ceil(state.turn / 4);
     this.bottomTurnInfoLabel = new Label(this, {
       x: endTurnX - 12,
       y: bottomBarY + endTurnSize / 2,
-      text: `Q${currentQuarter} Y${currentYear}`,
+      text: formatTurnShort(state.turn),
       style: "caption",
     });
     this.bottomTurnInfoLabel.setOrigin(1, 0.5);
@@ -759,7 +719,8 @@ export class GameHUDScene extends Phaser.Scene {
     this.events.once("shutdown", () => {
       this.scale.off("resize", onResize);
       gameStore.off("stateChanged", this.stateListener);
-      this.destroyAudioPanel();
+      this.settingsPanel?.destroy();
+      this.settingsPanel = null;
       this.newsTicker?.destroy();
       this.newsTicker = null;
     });
@@ -791,10 +752,8 @@ export class GameHUDScene extends Phaser.Scene {
 
     this.companyLabel.setText(state.companyName);
 
-    const quarter = ((state.turn - 1) % 4) + 1;
-    const year = Math.ceil(state.turn / 4);
-    this.turnLabel.setText(`Q${quarter} Year ${year}`);
-    this.bottomTurnInfoLabel.setText(`Q${quarter} Y${year}`);
+    this.turnLabel.setText(formatTurnLong(state.turn));
+    this.bottomTurnInfoLabel.setText(formatTurnShort(state.turn));
 
     // AP badge update
     const apCurrent = state.actionPoints?.current ?? 0;
@@ -908,8 +867,8 @@ export class GameHUDScene extends Phaser.Scene {
     const audio = getAudioDirector();
     const theme = getTheme();
 
-    if (this.audioPanelOpen) {
-      this.destroyAudioPanel();
+    if (this.settingsPanel?.isVisible()) {
+      this.settingsPanel.close();
     }
 
     // Stop overlay scenes that might be stacked on top.
@@ -1016,398 +975,71 @@ export class GameHUDScene extends Phaser.Scene {
     }
   }
 
-  private toggleAudioPanel(): void {
-    if (this.audioPanelOpen) {
-      this.destroyAudioPanel();
+  private createSettingsIconButton(opts: {
+    x: number;
+    y: number;
+    iconKey: string;
+    tooltip: string;
+    onClick: () => void;
+  }): void {
+    const L = getLayout();
+    const theme = getTheme();
+    const iconBtnSize = this.navIconButtonSize;
+
+    const container = this.add.container(opts.x, opts.y);
+
+    const hit = this.add
+      .rectangle(0, 0, L.navSidebarWidth, iconBtnSize + 6, 0x000000, 0)
+      .setOrigin(0.5, 0.5)
+      .setInteractive(
+        new Phaser.Geom.Rectangle(0, 0, L.navSidebarWidth, iconBtnSize + 6),
+        Phaser.Geom.Rectangle.Contains,
+      );
+    if (hit.input) {
+      hit.input.cursor = "pointer";
+    }
+
+    const bg = this.add
+      .rectangle(0, 0, iconBtnSize, iconBtnSize, theme.colors.buttonBg, 0.0)
+      .setOrigin(0.5, 0.5);
+
+    const icon = this.add
+      .image(0, 0, opts.iconKey)
+      .setOrigin(0.5, 0.5)
+      .setTint(theme.colors.textDim);
+
+    container.add([hit, bg, icon]);
+    this.navTooltip.attachTo(hit, opts.tooltip);
+
+    hit.on("pointerover", () => {
+      getAudioDirector().sfx("ui_hover");
+      bg.setAlpha(0.2);
+      icon.setTint(theme.colors.text);
+    });
+    hit.on("pointerout", () => {
+      bg.setAlpha(0.0);
+      icon.setTint(theme.colors.textDim);
+    });
+    hit.on("pointerup", () => {
+      opts.onClick();
+    });
+  }
+
+  private toggleSettingsPanel(initialTab: "audio" | "save"): void {
+    if (!this.settingsPanel) {
+      this.settingsPanel = new SettingsPanel(this);
+    }
+    if (this.settingsPanel.isVisible()) {
+      // If the panel is already open on a different tab, switch tabs;
+      // if it's already on this tab, close it.
+      if (this.settingsPanel.getActiveTabId() === initialTab) {
+        this.settingsPanel.close();
+      } else {
+        this.settingsPanel.open({ initialTab });
+      }
       return;
     }
-
-    this.openAudioPanel();
-  }
-
-  private openAudioPanel(): void {
-    if (this.audioPanelOpen) return;
-
-    const L = getLayout();
-    const audio = getAudioDirector();
-    const settings = audio.getSettings();
-
-    const theme = getTheme();
-    const overlay = this.add
-      .rectangle(
-        0,
-        0,
-        L.gameWidth,
-        L.gameHeight,
-        theme.colors.modalOverlay,
-        0.35,
-      )
-      .setOrigin(0, 0)
-      .setInteractive();
-    overlay.on("pointerup", () => {
-      this.destroyAudioPanel();
-      audio.sfx("ui_modal_close");
-    });
-
-    const panelW = 420;
-    const panelH = 456;
-    const panelX = Math.floor((L.gameWidth - panelW) / 2);
-    const panelY = Math.floor((L.gameHeight - panelH) / 2);
-    const panel = new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
-      title: "Audio Settings",
-    });
-
-    const content = panel.getContentArea();
-    const row1Y = panelY + content.y + 8;
-    const row2Y = row1Y + 62;
-    const row3Y = row2Y + 62;
-    const row4Y = row3Y + 62;
-    const row5Y = row4Y + 62;
-    const row6Y = row5Y + 62;
-
-    const musicLabel = new Label(this, {
-      x: panelX + content.x,
-      y: row1Y,
-      text: "Music Volume",
-      style: "body",
-    });
-
-    this.musicVolumeValueLabel = new Label(this, {
-      x: panelX + panelW - content.x,
-      y: row1Y,
-      text: `${Math.round(settings.musicVolume * 100)}%`,
-      style: "value",
-    });
-    this.musicVolumeValueLabel.setOrigin(1, 0);
-
-    const decMusicBtn = new Button(this, {
-      x: panelX + content.x,
-      y: row1Y + 26,
-      width: 46,
-      height: 32,
-      label: "-",
-      onClick: () => {
-        const current = audio.getSettings().musicVolume;
-        audio.setMusicVolume(current - 0.1);
-        this.refreshAudioPanelValues();
-      },
-    });
-
-    const incMusicBtn = new Button(this, {
-      x: panelX + content.x + 54,
-      y: row1Y + 26,
-      width: 46,
-      height: 32,
-      label: "+",
-      onClick: () => {
-        const current = audio.getSettings().musicVolume;
-        audio.setMusicVolume(current + 0.1);
-        this.refreshAudioPanelValues();
-      },
-    });
-
-    const sfxLabel = new Label(this, {
-      x: panelX + content.x,
-      y: row2Y,
-      text: "SFX Volume",
-      style: "body",
-    });
-
-    this.sfxVolumeValueLabel = new Label(this, {
-      x: panelX + panelW - content.x,
-      y: row2Y,
-      text: `${Math.round(settings.sfxVolume * 100)}%`,
-      style: "value",
-    });
-    this.sfxVolumeValueLabel.setOrigin(1, 0);
-
-    const decSfxBtn = new Button(this, {
-      x: panelX + content.x,
-      y: row2Y + 26,
-      width: 46,
-      height: 32,
-      label: "-",
-      onClick: () => {
-        const current = audio.getSettings().sfxVolume;
-        audio.setSfxVolume(current - 0.1);
-        this.refreshAudioPanelValues();
-        audio.sfx("ui_click_secondary");
-      },
-    });
-
-    const incSfxBtn = new Button(this, {
-      x: panelX + content.x + 54,
-      y: row2Y + 26,
-      width: 46,
-      height: 32,
-      label: "+",
-      onClick: () => {
-        const current = audio.getSettings().sfxVolume;
-        audio.setSfxVolume(current + 0.1);
-        this.refreshAudioPanelValues();
-        audio.sfx("ui_click_secondary");
-      },
-    });
-
-    const reducedLabel = new Label(this, {
-      x: panelX + content.x,
-      y: row3Y,
-      text: "Reduced UI SFX",
-      style: "body",
-    });
-
-    this.reducedUiSfxValueLabel = new Label(this, {
-      x: panelX + panelW - content.x,
-      y: row3Y,
-      text: settings.reducedUiSfx ? "On" : "Off",
-      style: "value",
-    });
-    this.reducedUiSfxValueLabel.setOrigin(1, 0);
-
-    const toggleReducedBtn = new Button(this, {
-      x: panelX + content.x,
-      y: row3Y + 26,
-      width: 100,
-      height: 32,
-      label: "Toggle",
-      onClick: () => {
-        const current = audio.getSettings().reducedUiSfx;
-        audio.setReducedUiSfx(!current);
-        this.refreshAudioPanelValues();
-        audio.sfx("ui_confirm");
-      },
-    });
-
-    const styleLabel = new Label(this, {
-      x: panelX + content.x,
-      y: row4Y,
-      text: "Music Style",
-      style: "body",
-    });
-
-    const prettyStyle = (
-      style: "ambient" | "ftl" | "score" | "retro",
-    ): string => {
-      switch (style) {
-        case "ftl":
-          return "FTL";
-        case "score":
-          return "Score";
-        case "retro":
-          return "Retro";
-        default:
-          return "Ambient";
-      }
-    };
-
-    this.musicStyleValueLabel = new Label(this, {
-      x: panelX + panelW - content.x,
-      y: row4Y,
-      text: prettyStyle(settings.musicStyle),
-      style: "value",
-    });
-    this.musicStyleValueLabel.setOrigin(1, 0);
-
-    const cycleStyleBtn = new Button(this, {
-      x: panelX + content.x,
-      y: row4Y + 26,
-      width: 120,
-      height: 32,
-      label: "Cycle",
-      onClick: () => {
-        const current = audio.getSettings().musicStyle;
-        const next =
-          current === "ambient"
-            ? "ftl"
-            : current === "ftl"
-              ? "score"
-              : current === "score"
-                ? "retro"
-                : "ambient";
-        audio.setMusicStyle(next);
-        this.refreshAudioPanelValues();
-        audio.sfx("ui_tab_switch");
-      },
-    });
-
-    const muteLabel = new Label(this, {
-      x: panelX + content.x,
-      y: row6Y,
-      text: "Mute All",
-      style: "body",
-    });
-
-    const trackLabel = new Label(this, {
-      x: panelX + content.x,
-      y: row5Y,
-      text: "Now Playing",
-      style: "body",
-    });
-
-    this.musicTrackValueLabel = new Label(this, {
-      x: panelX + panelW - content.x,
-      y: row5Y,
-      text: audio.getCurrentTrackLabel(),
-      style: "value",
-    });
-    this.musicTrackValueLabel.setOrigin(1, 0);
-
-    const prevTrackBtn = new Button(this, {
-      x: panelX + content.x,
-      y: row5Y + 26,
-      width: 80,
-      height: 32,
-      label: "Back",
-      onClick: () => {
-        audio.previousTrack();
-        this.refreshAudioPanelValues();
-        audio.sfx("ui_tab_switch");
-      },
-    });
-
-    const nextTrackBtn = new Button(this, {
-      x: panelX + content.x + 88,
-      y: row5Y + 26,
-      width: 80,
-      height: 32,
-      label: "Next",
-      onClick: () => {
-        audio.nextTrack();
-        this.refreshAudioPanelValues();
-        audio.sfx("ui_tab_switch");
-      },
-    });
-
-    this.muteValueLabel = new Label(this, {
-      x: panelX + panelW - content.x,
-      y: row6Y,
-      text:
-        settings.musicVolume === 0 && settings.sfxVolume === 0 ? "Muted" : "On",
-      style: "value",
-    });
-    this.muteValueLabel.setOrigin(1, 0);
-
-    const muteBtn = new Button(this, {
-      x: panelX + content.x,
-      y: row6Y + 26,
-      width: 120,
-      height: 32,
-      label: "Toggle Mute",
-      onClick: () => {
-        const s = audio.getSettings();
-        if (s.musicVolume > 0 || s.sfxVolume > 0) {
-          audio.setMusicVolume(0);
-          audio.setSfxVolume(0);
-        } else {
-          audio.setMusicVolume(0.7);
-          audio.setSfxVolume(0.8);
-        }
-        this.refreshAudioPanelValues();
-      },
-    });
-
-    const closeBtn = new Button(this, {
-      x: panelX + panelW - content.x - 110,
-      y: panelY + panelH - 44,
-      width: 110,
-      height: 32,
-      label: "Close",
-      onClick: () => {
-        this.destroyAudioPanel();
-        audio.sfx("ui_modal_close");
-      },
-    });
-
-    this.audioPanelObjects = [
-      overlay,
-      panel,
-      musicLabel,
-      decMusicBtn,
-      incMusicBtn,
-      sfxLabel,
-      decSfxBtn,
-      incSfxBtn,
-      reducedLabel,
-      toggleReducedBtn,
-      styleLabel,
-      cycleStyleBtn,
-      trackLabel,
-      prevTrackBtn,
-      nextTrackBtn,
-      muteLabel,
-      muteBtn,
-      closeBtn,
-    ];
-
-    if (this.musicVolumeValueLabel) {
-      this.audioPanelObjects.push(this.musicVolumeValueLabel);
-    }
-    if (this.sfxVolumeValueLabel) {
-      this.audioPanelObjects.push(this.sfxVolumeValueLabel);
-    }
-    if (this.reducedUiSfxValueLabel) {
-      this.audioPanelObjects.push(this.reducedUiSfxValueLabel);
-    }
-    if (this.musicStyleValueLabel) {
-      this.audioPanelObjects.push(this.musicStyleValueLabel);
-    }
-    if (this.musicTrackValueLabel) {
-      this.audioPanelObjects.push(this.musicTrackValueLabel);
-    }
-    if (this.muteValueLabel) {
-      this.audioPanelObjects.push(this.muteValueLabel);
-    }
-
-    this.audioPanelOpen = true;
-    audio.sfx("ui_modal_open");
-  }
-
-  private refreshAudioPanelValues(): void {
-    if (!this.audioPanelOpen) return;
-    const settings = getAudioDirector().getSettings();
-
-    this.musicVolumeValueLabel?.setText(
-      `${Math.round(settings.musicVolume * 100)}%`,
-    );
-    this.sfxVolumeValueLabel?.setText(
-      `${Math.round(settings.sfxVolume * 100)}%`,
-    );
-    this.reducedUiSfxValueLabel?.setText(settings.reducedUiSfx ? "On" : "Off");
-    this.musicStyleValueLabel?.setText(
-      settings.musicStyle === "ftl"
-        ? "FTL"
-        : settings.musicStyle === "score"
-          ? "Score"
-          : settings.musicStyle === "retro"
-            ? "Retro"
-            : "Ambient",
-    );
-    this.musicTrackValueLabel?.setText(
-      getAudioDirector().getCurrentTrackLabel(),
-    );
-    this.muteValueLabel?.setText(
-      settings.musicVolume === 0 && settings.sfxVolume === 0 ? "Muted" : "On",
-    );
-  }
-
-  private destroyAudioPanel(): void {
-    for (const obj of this.audioPanelObjects) {
-      if (obj.active) {
-        obj.destroy();
-      }
-    }
-    this.audioPanelObjects = [];
-    this.musicVolumeValueLabel = null;
-    this.sfxVolumeValueLabel = null;
-    this.reducedUiSfxValueLabel = null;
-    this.musicStyleValueLabel = null;
-    this.musicTrackValueLabel = null;
-    this.muteValueLabel = null;
-    this.audioPanelOpen = false;
+    this.settingsPanel.open({ initialTab });
   }
 
   // ── Adviser integration ──────────────────────────────────
@@ -1475,17 +1107,15 @@ export class GameHUDScene extends Phaser.Scene {
     const state = gameStore.getState();
 
     if (state.phase === "simulation") {
-      const q = ((state.turn - 1) % 4) + 1;
-      const y = Math.ceil(state.turn / 4);
-      this.actionPromptLabel.setText(`▶ Simulating Q${q} Y${y}...`);
+      this.actionPromptLabel.setText(
+        `▶ Simulating ${formatTurnShort(state.turn)}...`,
+      );
       this.actionPromptLabel.setLabelColor(theme.colors.accent);
       return;
     }
     if (state.phase === "review") {
-      const q = ((state.turn - 1) % 4) + 1;
-      const y = Math.ceil(state.turn / 4);
       this.actionPromptLabel.setText(
-        `✅ Quarter complete (Q${q} Y${y}) — review results`,
+        `✅ Quarter complete (${formatTurnShort(state.turn)}) — review results`,
       );
       this.actionPromptLabel.setLabelColor(theme.colors.textDim);
       return;

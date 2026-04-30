@@ -578,6 +578,33 @@ export class BootScene extends Phaser.Scene {
       tex.refresh();
     }
 
+    // ── icon-save: Floppy disk silhouette ──
+    {
+      const { tex, ctx } = this.makeCanvas("icon-save", s, s);
+      ctx.fillStyle = col;
+      ctx.strokeStyle = col;
+      // Outer disk body (rounded-corner-ish square)
+      ctx.fillRect(3, 3, 18, 18);
+      // Punch a hole for label area (drawn over with negative space later)
+      ctx.save();
+      ctx.globalCompositeOperation = "destination-out";
+      // Label panel (lower portion, lighter)
+      ctx.fillRect(6, 13, 12, 7);
+      // Metal shutter (upper portion, slot)
+      ctx.fillRect(8, 4, 8, 6);
+      ctx.restore();
+      // Re-draw label rim and shutter slot strokes for definition
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(6, 13, 12, 7);
+      ctx.strokeRect(8, 4, 8, 6);
+      // Slot indicator inside the shutter
+      ctx.fillRect(13, 5, 2, 4);
+      // Label lines (writing on the label area)
+      ctx.fillRect(8, 15, 8, 1);
+      ctx.fillRect(8, 17, 6, 1);
+      tex.refresh();
+    }
+
     // ── icon-audio: Speaker with sound wave ──
     {
       const { tex, ctx } = this.makeCanvas("icon-audio", s, s);

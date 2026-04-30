@@ -36,6 +36,10 @@ export function createGameConfig(
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     scene: scenes,
+    // Enable preserveDrawingBuffer in dev so canvas.toDataURL() works for
+    // PR-screenshot capture from the Claude Preview MCP. Costs an extra
+    // buffer copy per frame, so we keep it off in production builds.
+    render: import.meta.env.DEV ? { preserveDrawingBuffer: true } : undefined,
     ...({ resolution: dpr } as unknown as Phaser.Types.Core.GameConfig),
   };
 }

@@ -94,6 +94,37 @@ Textures survive scene transitions (live in Phaser's global TextureManager). Alw
 `PortraitLoader` does this internally, but callers can use `portraitLoader.isLoaded(key)`
 for a synchronous pre-check.
 
+## Pull Requests
+
+When opening a PR for a UI-observable change, attach screenshots that prove
+the feature works. Skip this for non-UI changes (data layer, types, internal
+refactors, tests-only diffs) — the PR description is enough there.
+
+**Workflow for UI changes:**
+
+1. Start the dev server with the Claude Preview MCP (`preview_start` against
+   the `spacebiz-dev` config in [.claude/launch.json](.claude/launch.json)).
+   Playwright is also fine if it's already wired up for the change you're
+   making, but preview is the default — no extra deps needed.
+2. Navigate to the affected screen. The QA console at `window.__sft` is
+   available in dev — use `__sft.goToScene("GameHUDScene")` to jump straight
+   into the HUD without playing through the menu, and `__sft.click(...)` /
+   direct scene-method invocation for interactions Phaser doesn't expose to
+   CSS selectors.
+3. Capture one screenshot per meaningful state. For a tabbed/multi-state
+   widget, capture each tab or state — a single shot of the default state
+   hides regressions in the others.
+4. Save under `docs/pr-screenshots/pr-<NUMBER>/<state>.png` and commit them
+   on the PR branch. They render inline in the PR body via relative path
+   (`![Audio tab](docs/pr-screenshots/pr-252/audio-tab.png)`).
+5. In the PR body, place screenshots under a `## Screenshots` section just
+   below the Test plan, with a one-line caption per image.
+
+If a change can't be exercised in the browser preview (e.g. work behind a
+feature flag, or a code path that needs a real save file), say so explicitly
+in the PR body instead of skipping verification — "screenshots not
+applicable: <reason>" is better than silence.
+
 ## Conventions
 
 - Phaser scenes extend `Phaser.Scene`
