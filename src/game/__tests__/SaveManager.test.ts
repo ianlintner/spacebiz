@@ -8,6 +8,7 @@ import {
   loadAutoSave,
   deleteAutoSave,
   loadGameIntoStore,
+  migrateSave,
 } from "../SaveManager.ts";
 import { gameStore } from "../../data/GameStore.ts";
 import type { GameState } from "../../data/types.ts";
@@ -304,6 +305,59 @@ describe("SaveManager", () => {
 
       expect(loadAutoSave()).toBeNull();
       expect(loadGame()!.companyName).toBe("Manual");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // migrateSave — diplomacy
+  // -------------------------------------------------------------------------
+  describe("migrateSave — diplomacy", () => {
+    it("adds an empty DiplomacyState to legacy saves missing it", () => {
+      const legacy = createTestState();
+      // Legacy saves predate diplomacy entirely.
+      delete (legacy as Partial<GameState>).diplomacy;
+
+      const migrated = migrateSave(legacy);
+
+      expect(migrated.diplomacy).toBeDefined();
+      expect(migrated.diplomacy!.rivalStanding).toEqual({});
+      expect(migrated.diplomacy!.crossEmpireRivalStanding).toEqual({});
+      expect(migrated.diplomacy!.empireTags).toEqual({});
+      expect(migrated.diplomacy!.rivalTags).toEqual({});
+      expect(migrated.diplomacy!.empireAmbassadors).toEqual({});
+      expect(migrated.diplomacy!.rivalLiaisons).toEqual({});
+      expect(migrated.diplomacy!.cooldowns).toEqual({});
+      expect(migrated.diplomacy!.queuedActions).toEqual([]);
+      expect(migrated.diplomacy!.actionsResolvedThisTurn).toBe(0);
+    });
+
+    it("preserves diplomacy state when present", () => {
+      const fresh = createTestState({
+        diplomacy: {
+          rivalStanding: { chen: 60 },
+          crossEmpireRivalStanding: {},
+          empireTags: {},
+          rivalTags: {},
+          empireAmbassadors: {},
+          rivalLiaisons: {},
+          cooldowns: {},
+          queuedActions: [],
+          actionsResolvedThisTurn: 0,
+        },
+      });
+
+      const migrated = migrateSave(fresh);
+
+      expect(migrated.diplomacy?.rivalStanding.chen).toBe(60);
+    });
+
+    it("legacy saves round-trip through saveGame/loadGame with empty diplomacy", () => {
+      const legacy = createTestState();
+      delete (legacy as Partial<GameState>).diplomacy;
+      saveGame(legacy);
+      const loaded = loadGame();
+      expect(loaded?.diplomacy).toBeDefined();
+      expect(loaded?.diplomacy?.queuedActions).toEqual([]);
     });
   });
 

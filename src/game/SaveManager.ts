@@ -1,5 +1,6 @@
 import { gameStore } from "../data/GameStore.ts";
 import type { GameState } from "../data/types.ts";
+import { EMPTY_DIPLOMACY_STATE } from "../data/types.ts";
 import { initAdviserState } from "./adviser/AdviserEngine.ts";
 
 const SAVE_KEY = "sft_save";
@@ -43,13 +44,16 @@ function readSave(key: string): GameState | null {
 }
 
 /** Migrate older saves that lack newer fields. */
-function migrateSave(state: GameState): GameState {
+export function migrateSave(state: GameState): GameState {
   let migrated = state;
   if (!migrated.adviser) {
     migrated = { ...migrated, adviser: initAdviserState() };
   }
   if (migrated.stationHub === undefined) {
     migrated = { ...migrated, stationHub: null };
+  }
+  if (!migrated.diplomacy) {
+    migrated = { ...migrated, diplomacy: { ...EMPTY_DIPLOMACY_STATE } };
   }
   return migrated;
 }
