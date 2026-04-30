@@ -362,3 +362,102 @@ export function resolveNonCompete(
     success: accept,
   };
 }
+
+const SURVEIL_BASE_SUCCESS = 0.65;
+const SURVEIL_INTEL_TTL = 3;
+const SURVEIL_SPY_TTL = 5;
+const SURVEIL_COOLDOWN = 6;
+
+function readSurveilValue(
+  state: GameState,
+  rivalId: string,
+  lens: "cash" | "topContractByValue" | "topEmpireStanding",
+): string {
+  const rival = state.aiCompanies?.find((r) => r.id === rivalId);
+  if (!rival) return "unknown";
+  switch (lens) {
+    case "cash":
+      return String(rival.cash ?? 0);
+    case "topContractByValue": {
+      const top = (rival.activeRoutes ?? [])
+        .map((r: { value?: number }) => r.value ?? 0)
+        .sort((a: number, b: number) => b - a)[0];
+      return top !== undefined ? String(top) : "none";
+    }
+    case "topEmpireStanding": {
+      const cross = dip(state).crossEmpireRivalStanding;
+      let bestId = "none";
+      let bestVal = -1;
+      for (const [empireId, map] of Object.entries(cross)) {
+        const v = map[rivalId];
+        if (v !== undefined && v > bestVal) {
+          bestVal = v;
+          bestId = empireId;
+        }
+      }
+      return bestId;
+    }
+  }
+}
+
+export function resolveSurveil(
+  state: GameState,
+  action: QueuedDiplomacyAction,
+  rng: SeededRNG,
+): ResolutionOutcome {
+  const rivalId = action.targetId;
+  const lens = action.surveilLens ?? "cash";
+  const success = rng.chance(SURVEIL_BASE_SUCCESS);
+
+  const d = dip(state);
+  const tagsBefore = d.rivalTags[rivalId] ?? [];
+  let tagsAfter = tagsBefore;
+  const modal: ModalEntry[] = [];
+  const digest: DigestEntry[] = [];
+  const cashAfter = state.cash - action.cashCost;
+
+  if (success) {
+    const value = readSurveilValue(state, rivalId, lens);
+    tagsAfter = addTag(tagsBefore, {
+      kind: "LeakedIntel",
+      lens,
+      value,
+      expiresOnTurn: state.turn + SURVEIL_INTEL_TTL,
+    });
+    digest.push({
+      text: `Surveillance of ${rivalId}: leaked ${lens} = ${value} (${SURVEIL_INTEL_TTL} turns).`,
+    });
+  } else {
+    tagsAfter = addTag(tagsBefore, {
+      kind: "SuspectedSpy",
+      suspectId: "player",
+      expiresOnTurn: state.turn + SURVEIL_SPY_TTL,
+    });
+    modal.push({
+      speakerKind: "rivalLiaison",
+      targetId: rivalId,
+      headline: "Surveillance exposed",
+      flavor: "Their counter-intel team has flagged you.",
+    });
+  }
+
+  return {
+    nextState: {
+      ...state,
+      cash: cashAfter,
+      diplomacy: {
+        ...d,
+        rivalTags: { ...d.rivalTags, [rivalId]: tagsAfter },
+        cooldowns: setCooldown(
+          d.cooldowns,
+          cooldownKey("surveil", rivalId),
+          state.turn + SURVEIL_COOLDOWN,
+        ),
+        actionsResolvedThisTurn: d.actionsResolvedThisTurn + 1,
+      },
+    },
+    modalEntries: modal,
+    digestEntries: digest,
+    success,
+  };
+}
