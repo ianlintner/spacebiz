@@ -3,7 +3,7 @@ import {
   cooldownKey,
   isOnCooldown,
   setCooldown,
-  decrementCooldowns,
+  pruneExpiredCooldowns,
 } from "../Cooldowns.ts";
 
 describe("Cooldowns", () => {
@@ -30,9 +30,9 @@ describe("Cooldowns", () => {
     expect(cd).toEqual({});
   });
 
-  it("decrementCooldowns drops keys that reach <= currentTurn", () => {
+  it("pruneExpiredCooldowns drops keys whose deadline has passed", () => {
     const cd = { a: 5, b: 10, c: 3 };
-    const next = decrementCooldowns(cd, 5);
+    const next = pruneExpiredCooldowns(cd, 5);
     expect(next).toEqual({ b: 10 });
   });
 });

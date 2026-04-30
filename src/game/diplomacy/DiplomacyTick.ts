@@ -1,7 +1,7 @@
 import type { GameState, StandingTag } from "../../data/types.ts";
 import { EMPTY_DIPLOMACY_STATE } from "../../data/types.ts";
 import { expireTags } from "./StandingTags.ts";
-import { decrementCooldowns } from "./Cooldowns.ts";
+import { pruneExpiredCooldowns } from "./Cooldowns.ts";
 
 const HOSTILE_DRIFT_FLOOR = 30;
 
@@ -53,7 +53,7 @@ export function tickDiplomacyState(state: GameState): GameState {
       rivalStanding: driftMap(d.rivalStanding),
       empireTags: expireAllTags(d.empireTags, t),
       rivalTags: expireAllTags(d.rivalTags, t),
-      cooldowns: decrementCooldowns(d.cooldowns, t),
+      cooldowns: pruneExpiredCooldowns(d.cooldowns, t),
       actionsResolvedThisTurn: 0,
     },
   };

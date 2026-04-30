@@ -54,4 +54,13 @@ describe("AmbassadorGenerator", () => {
     const b = generateAmbassadors(new SeededRNG(42), [empire], [rival]);
     expect(a).toEqual(b);
   });
+
+  it("inherits portrait category from the source faction", () => {
+    const rng = new SeededRNG(123);
+    const out = generateAmbassadors(rng, [empire], [rival]);
+    // empire is "alien" → ambassador is alien
+    expect(out.empireAmbassadors["vex"]!.portrait.category).toBe("alien");
+    // rival CEO is "human" → liaison is human
+    expect(out.rivalLiaisons["chen"]!.portrait.category).toBe("human");
+  });
 });

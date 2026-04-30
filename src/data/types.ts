@@ -1140,7 +1140,7 @@ export interface DiplomacyState {
   actionsResolvedThisTurn: number;
 }
 
-export const EMPTY_DIPLOMACY_STATE: DiplomacyState = {
+export const EMPTY_DIPLOMACY_STATE: DiplomacyState = Object.freeze({
   rivalStanding: {},
   crossEmpireRivalStanding: {},
   empireTags: {},
@@ -1148,9 +1148,9 @@ export const EMPTY_DIPLOMACY_STATE: DiplomacyState = {
   empireAmbassadors: {},
   rivalLiaisons: {},
   cooldowns: {},
-  queuedActions: [],
+  queuedActions: Object.freeze([]) as readonly QueuedDiplomacyAction[],
   actionsResolvedThisTurn: 0,
-};
+}) as DiplomacyState;
 
 export interface GameState {
   seed: number;

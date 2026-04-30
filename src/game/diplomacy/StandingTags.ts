@@ -7,6 +7,22 @@ export function addTag(
   return [...tags, tag];
 }
 
+/**
+ * Replace any existing tag of the same kind with the new one. Use this for
+ * singleton tags (RecentlyGifted, OweFavor, NonCompete, SuspectedSpy) where
+ * stacking is meaningless and would just produce ghost tags that linger
+ * past the intended expiry.
+ *
+ * `LeakedIntel` is the one tag where stacking is sometimes desirable
+ * (multiple lenses surveilled in parallel) — use plain `addTag` for it.
+ */
+export function replaceTag(
+  tags: readonly StandingTag[],
+  tag: StandingTag,
+): readonly StandingTag[] {
+  return [...tags.filter((t) => t.kind !== tag.kind), tag];
+}
+
 export function removeTagsByKind(
   tags: readonly StandingTag[],
   kind: StandingTag["kind"],

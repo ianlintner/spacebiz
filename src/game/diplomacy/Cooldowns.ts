@@ -25,7 +25,11 @@ export function setCooldown(
   return { ...cooldowns, [key]: nextAvailableTurn };
 }
 
-export function decrementCooldowns(
+/**
+ * Cooldown values are absolute turn deadlines, not countdowns. This removes
+ * entries whose deadline has passed; nothing is decremented.
+ */
+export function pruneExpiredCooldowns(
   cooldowns: Record<string, number>,
   currentTurn: number,
 ): Record<string, number> {

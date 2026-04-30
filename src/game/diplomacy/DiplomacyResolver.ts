@@ -6,7 +6,7 @@ import type {
   StandingTag,
 } from "../../data/types.ts";
 import { EMPTY_DIPLOMACY_STATE } from "../../data/types.ts";
-import { addTag, hasTagOfKind } from "./StandingTags.ts";
+import { addTag, hasTagOfKind, replaceTag } from "./StandingTags.ts";
 import { setCooldown, cooldownKey } from "./Cooldowns.ts";
 import { isTierTransition } from "./StandingTiers.ts";
 
@@ -100,12 +100,12 @@ export function resolveGiftEmpire(
   if (success) {
     const delta = Math.floor(GIFT_EMPIRE_BASE_DELTA * dampener);
     nextStanding = applyStandingDelta(beforeStanding, delta);
-    tagsAfter = addTag(tagsAfter, {
+    tagsAfter = replaceTag(tagsAfter, {
       kind: "RecentlyGifted",
       expiresOnTurn: state.turn + GIFT_RECENTLY_GIFTED_TTL,
     });
     if (rng.chance(GIFT_OWE_FAVOR_CHANCE)) {
-      tagsAfter = addTag(tagsAfter, {
+      tagsAfter = replaceTag(tagsAfter, {
         kind: "OweFavor",
         expiresOnTurn: state.turn + GIFT_OWE_FAVOR_TTL,
       });
@@ -183,10 +183,14 @@ export function resolveGiftRival(
   if (success) {
     const delta = Math.floor(GIFT_RIVAL_BASE_DELTA * dampener);
     next = applyStandingDelta(before, delta);
-    tagsAfter = addTag(tagsAfter, {
+    tagsAfter = replaceTag(tagsAfter, {
       kind: "RecentlyGifted",
       expiresOnTurn: state.turn + GIFT_RECENTLY_GIFTED_TTL,
     });
+    // Wave-1 asymmetry: rival gifts do not produce OweFavor tags. The favor
+    // mechanic is a diplomatic-tier signal that reads as "an empire owes
+    // you political capital" — corporate rivals model that differently
+    // (non-compete, IOU contracts) which is wave-2.
     digest.push({ text: `Gift to ${targetId} accepted: +${delta} standing.` });
     if (isTierTransition(before, next)) {
       modal.push({
@@ -493,6 +497,38 @@ export interface QueueProcessingResult {
   readonly digestEntries: readonly DigestEntry[];
 }
 
+function buildDisplayNameMap(state: GameState): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const e of state.galaxy?.empires ?? []) {
+    if (e.id && e.name) out[e.id] = e.name;
+  }
+  for (const r of state.aiCompanies ?? []) {
+    if (r.id && r.name) out[r.id] = r.name;
+  }
+  return out;
+}
+
+function substituteIds(text: string, names: Record<string, string>): string {
+  let result = text;
+  for (const [id, name] of Object.entries(names)) {
+    // word-boundary so "vex" doesn't replace inside "vexHegemony"
+    const safe = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(new RegExp(`\\b${safe}\\b`, "g"), name);
+  }
+  return result;
+}
+
+/**
+ * Drains `state.diplomacy.queuedActions` and applies effects for up to the
+ * per-turn cap (2 normally, 3 at reputation tier renowned+). Actions queued
+ * beyond the cap surface as "deferred" digest lines.
+ *
+ * The cap is enforced here via `slice(0, cap)` — individual resolvers do
+ * not enforce it, so callers MUST go through this dispatcher rather than
+ * calling resolvers directly. Each resolver also increments
+ * `actionsResolvedThisTurn`, but that counter is metadata only — it is
+ * reset to 0 every turn by `tickDiplomacyState`.
+ */
 export function processQueuedDiplomacyActions(
   state: GameState,
   rng: SeededRNG,
@@ -511,17 +547,27 @@ export function processQueuedDiplomacyActions(
   };
   const allModal: ModalEntry[] = [];
   const allDigest: DigestEntry[] = [];
+  const names = buildDisplayNameMap(state);
 
   for (const action of toResolve) {
     const out = resolveDiplomacyAction(cur, action, rng);
     cur = out.nextState;
-    allModal.push(...out.modalEntries);
-    allDigest.push(...out.digestEntries);
+    allModal.push(
+      ...out.modalEntries.map((m) => ({
+        ...m,
+        flavor: substituteIds(m.flavor, names),
+        headline: substituteIds(m.headline, names),
+      })),
+    );
+    allDigest.push(
+      ...out.digestEntries.map((d) => ({ text: substituteIds(d.text, names) })),
+    );
   }
 
   for (const action of deferred) {
+    const target = names[action.targetId] ?? action.targetId;
     allDigest.push({
-      text: `Diplomatic action ${action.kind} on ${action.targetId} deferred (turn cap reached).`,
+      text: `Diplomatic action ${action.kind} on ${target} deferred (turn cap reached).`,
     });
   }
 

@@ -4,6 +4,7 @@ import type {
   AmbassadorPersonality,
   AICompany,
   Empire,
+  PortraitCategory,
 } from "../../data/types.ts";
 
 const FIRST_NAMES = [
@@ -57,12 +58,15 @@ const PORTRAIT_IDS = [
   "amb-08",
 ];
 
-function makeAmbassador(rng: SeededRNG): Ambassador {
+function makeAmbassador(
+  rng: SeededRNG,
+  category: PortraitCategory,
+): Ambassador {
   const first = rng.pick([...FIRST_NAMES]);
   const last = rng.pick([...SURNAMES]);
   return {
     name: `${first} ${last}`,
-    portrait: { portraitId: rng.pick([...PORTRAIT_IDS]), category: "human" },
+    portrait: { portraitId: rng.pick([...PORTRAIT_IDS]), category },
     personality: rng.pick([...PERSONALITIES]),
   };
 }
@@ -77,11 +81,15 @@ export function generateAmbassadors(
 } {
   const empireAmbassadors: Record<string, Ambassador> = {};
   const rivalLiaisons: Record<string, Ambassador> = {};
+  // Ambassadors share the empire's leader portrait category (alien empires
+  // get alien-presenting ambassadors, etc). The portrait *id* is sampled
+  // from a separate pool so the ambassador is visually distinct from the
+  // ruler — only the species/category lineage is inherited.
   for (const e of empires) {
-    empireAmbassadors[e.id] = makeAmbassador(rng);
+    empireAmbassadors[e.id] = makeAmbassador(rng, e.leaderPortrait.category);
   }
   for (const r of rivals) {
-    rivalLiaisons[r.id] = makeAmbassador(rng);
+    rivalLiaisons[r.id] = makeAmbassador(rng, r.ceoPortrait.category);
   }
   return { empireAmbassadors, rivalLiaisons };
 }
