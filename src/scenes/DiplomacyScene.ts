@@ -19,8 +19,10 @@ import {
   getLayout,
   getTheme,
 } from "../ui/index.ts";
+import type { StandingTierName } from "../game/diplomacy/StandingTiers.ts";
 import {
   buildQueuedAction,
+  detectTierShifts,
   evaluateActionState,
   getActionsForEmpire,
   getActionsForRival,
@@ -28,6 +30,7 @@ import {
   getPerTurnCap,
   getSubjectCandidates,
   getTierColorName,
+  snapshotTiers,
   type HubActionDescriptor,
   type TierColorName,
 } from "./diplomacyHubHelpers.ts";
@@ -116,6 +119,14 @@ export class DiplomacyScene extends Phaser.Scene {
   private selection: Selection = null;
   private mode: PanelMode = { kind: "list" };
   private storeUnsub: (() => void) | null = null;
+  /**
+   * Tier-by-id snapshot from the previous render. The next render diffs
+   * against this to surface ↑/↓ arrows on shifted tier cells. `null` on
+   * first render — no shifts to surface yet.
+   */
+  private lastTierSnapshot: Record<string, StandingTierName> | null = null;
+  /** Per-target shift direction surfaced in the current render. */
+  private currentShifts: Record<string, "up" | "down"> = {};
 
   constructor() {
     super({ key: "DiplomacyScene" });
@@ -185,15 +196,15 @@ export class DiplomacyScene extends Phaser.Scene {
       height: content.height - 16,
       contentSized: true,
       columns: [
-        { key: "type", label: "Type", width: 56 },
-        { key: "name", label: "Name", width: 150 },
+        { key: "type", label: "Type", width: 50 },
+        { key: "name", label: "Name", width: 140 },
         {
           key: "tier",
           label: "Tier",
-          width: 68,
+          width: 90,
           colorFn: (value) => tierColorForCell(String(value ?? "")),
         },
-        { key: "standing", label: "#", width: 36, align: "right" },
+        { key: "standing", label: "#", width: 30, align: "right" },
         { key: "tags", label: "Tags", width: 140 },
       ],
       onRowSelect: (_idx, row) => {
@@ -268,6 +279,21 @@ export class DiplomacyScene extends Phaser.Scene {
     const playerId = state.playerEmpireId;
     const d = state.diplomacy ?? EMPTY_DIPLOMACY_STATE;
 
+    // Detect tier shifts since the last render. On first render
+    // (`lastTierSnapshot === null`) there's nothing to compare against, so
+    // no arrows surface — they only appear after the first state mutation.
+    const currentSnap = snapshotTiers(state);
+    if (this.lastTierSnapshot !== null) {
+      const shifts = detectTierShifts(this.lastTierSnapshot, currentSnap);
+      // Merge into the persistent shift map. Shifts persist visually
+      // across re-renders within this scene session — only cleared when
+      // a target's tier flips back or the scene is destroyed/recreated.
+      for (const s of shifts) {
+        this.currentShifts[s.id] = s.direction;
+      }
+    }
+    this.lastTierSnapshot = currentSnap;
+
     const turn = state.turn;
     const empireRows: TargetRow[] = empires
       .filter((e) => e.id !== playerId)
@@ -278,7 +304,10 @@ export class DiplomacyScene extends Phaser.Scene {
           rowKind: "empire",
           id: e.id,
           name: e.name,
-          tier: getStandingTier(standing),
+          tier: tierWithShiftArrow(
+            getStandingTier(standing),
+            this.currentShifts[e.id],
+          ),
           standing,
           tags: badges.map((b) => b.label).join(" · "),
         };
@@ -292,7 +321,10 @@ export class DiplomacyScene extends Phaser.Scene {
           rowKind: "rival",
           id: r.id,
           name: r.name,
-          tier: getStandingTier(standing),
+          tier: tierWithShiftArrow(
+            getStandingTier(standing),
+            this.currentShifts[r.id],
+          ),
           standing,
           tags: badges.map((b) => b.label).join(" · "),
         };
@@ -668,9 +700,26 @@ function formatCash(n: number): string {
 }
 
 /**
+ * Append a ↑/↓ arrow to a tier label when the row's tier shifted since the
+ * last render. The arrow lives inside the cell value so the existing
+ * `colorFn` keeps coloring by tier — `tierColorForCell` strips the arrow
+ * before doing the tier match.
+ */
+function tierWithShiftArrow(
+  tier: StandingTierName,
+  shift: "up" | "down" | undefined,
+): string {
+  if (shift === "up") return `${tier} ↑`;
+  if (shift === "down") return `${tier} ↓`;
+  return tier;
+}
+
+/**
  * Map a tier label (rendered in the Tier column) to the live theme color
- * the cell should use. Returns null for unknown values so the column falls
- * back to the default text color rather than turning white-on-white.
+ * the cell should use. Strips any ↑/↓ shift arrow before matching so the
+ * coloring stays consistent regardless of whether a shift indicator is
+ * present. Returns null for unknown values so the column falls back to
+ * the default text color rather than turning white-on-white.
  */
 function tierColorForCell(tierLabel: string): number | null {
   const theme = getTheme();
@@ -681,7 +730,9 @@ function tierColorForCell(tierLabel: string): number | null {
     accent: theme.colors.accent,
     highlight: theme.colors.profit,
   };
-  switch (tierLabel) {
+  // Strip the optional " ↑" / " ↓" shift suffix so the switch matches.
+  const base = tierLabel.replace(/\s*[↑↓]\s*$/, "").trim();
+  switch (base) {
     case "Hostile":
       return colorByName[getTierColorName("Hostile")];
     case "Cold":

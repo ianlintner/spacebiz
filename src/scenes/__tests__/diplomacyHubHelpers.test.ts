@@ -10,6 +10,8 @@ import {
   getActiveTagBadges,
   getTierColorName,
   describeTag,
+  detectTierShifts,
+  snapshotTiers,
 } from "../diplomacyHubHelpers.ts";
 import { EMPTY_DIPLOMACY_STATE } from "../../data/types.ts";
 import type {
@@ -415,5 +417,77 @@ describe("evaluateActionState — affordance hints", () => {
     expect(r.enabled).toBe(false);
     expect(r.reasonIfDisabled).toBe("cap");
     expect(r.affordanceHint).toBeUndefined();
+  });
+});
+
+describe("detectTierShifts", () => {
+  it("returns empty array when nothing changed", () => {
+    expect(
+      detectTierShifts(
+        { vex: "Neutral", sol: "Cold" },
+        { vex: "Neutral", sol: "Cold" },
+      ),
+    ).toEqual([]);
+  });
+
+  it("flags upward shift", () => {
+    const shifts = detectTierShifts({ vex: "Neutral" }, { vex: "Warm" });
+    expect(shifts).toEqual([
+      { id: "vex", from: "Neutral", to: "Warm", direction: "up" },
+    ]);
+  });
+
+  it("flags downward shift", () => {
+    const shifts = detectTierShifts({ vex: "Warm" }, { vex: "Cold" });
+    expect(shifts).toEqual([
+      { id: "vex", from: "Warm", to: "Cold", direction: "down" },
+    ]);
+  });
+
+  it("flags multiple targets in one diff", () => {
+    const shifts = detectTierShifts(
+      { vex: "Hostile", sol: "Neutral" },
+      { vex: "Cold", sol: "Hostile" },
+    );
+    expect(shifts).toHaveLength(2);
+    expect(shifts.find((s) => s.id === "vex")?.direction).toBe("up");
+    expect(shifts.find((s) => s.id === "sol")?.direction).toBe("down");
+  });
+
+  it("ignores ids missing from prev (newly added targets)", () => {
+    const shifts = detectTierShifts({}, { vex: "Allied" });
+    expect(shifts).toEqual([]);
+  });
+
+  it("ignores ids missing from current (removed targets)", () => {
+    const shifts = detectTierShifts({ vex: "Allied" }, {});
+    expect(shifts).toEqual([]);
+  });
+});
+
+describe("snapshotTiers", () => {
+  it("captures empire and rival tiers from the active state", () => {
+    const s = makeState();
+    s.empireReputation = { vex: 70, sol: 25 };
+    s.diplomacy = {
+      ...s.diplomacy!,
+      rivalStanding: { chen: 50, kade: 85 },
+    };
+    expect(snapshotTiers(s)).toEqual({
+      vex: "Warm",
+      sol: "Cold",
+      chen: "Neutral",
+      kade: "Allied",
+    });
+  });
+
+  it("treats missing fields as empty (no tiers)", () => {
+    const s = {
+      seed: 1,
+      turn: 1,
+      galaxy: { empires: [], systems: [] },
+      aiCompanies: [],
+    } as unknown as GameState;
+    expect(snapshotTiers(s)).toEqual({});
   });
 });

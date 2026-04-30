@@ -344,6 +344,72 @@ export function getTierForRival(
   return getStandingTier(d.rivalStanding[rivalId] ?? 50);
 }
 
+export type TierShiftDirection = "up" | "down";
+
+export interface TierShift {
+  readonly id: string;
+  readonly direction: TierShiftDirection;
+  readonly from: StandingTierName;
+  readonly to: StandingTierName;
+}
+
+const TIER_ORDER: readonly StandingTierName[] = [
+  "Hostile",
+  "Cold",
+  "Neutral",
+  "Warm",
+  "Allied",
+];
+
+/**
+ * Compares two snapshots of (id → tier) maps and returns the set of ids
+ * whose tier name changed. The scene snapshots tiers between renders and
+ * uses this to highlight changed rows.
+ *
+ * Targets present only in `prev` (target removed) or only in `current`
+ * (target added) are skipped — they're not "shifts" in the conventional
+ * sense. If we ever need to surface those, add separate predicates.
+ */
+export function detectTierShifts(
+  prev: Record<string, StandingTierName>,
+  current: Record<string, StandingTierName>,
+): readonly TierShift[] {
+  const out: TierShift[] = [];
+  for (const [id, tier] of Object.entries(current)) {
+    const before = prev[id];
+    if (before === undefined || before === tier) continue;
+    const beforeIdx = TIER_ORDER.indexOf(before);
+    const afterIdx = TIER_ORDER.indexOf(tier);
+    out.push({
+      id,
+      from: before,
+      to: tier,
+      direction: afterIdx > beforeIdx ? "up" : "down",
+    });
+  }
+  return out;
+}
+
+/**
+ * Builds a snapshot of (target id → current tier) for both empires and
+ * rivals. Used by the scene to record state-at-render-time so the next
+ * render can diff against it.
+ */
+export function snapshotTiers(
+  state: GameState,
+): Record<string, StandingTierName> {
+  const out: Record<string, StandingTierName> = {};
+  const empireRep = state.empireReputation ?? {};
+  for (const id of Object.keys(empireRep)) {
+    out[id] = getStandingTier(empireRep[id] ?? 50);
+  }
+  const d = state.diplomacy ?? EMPTY_DIPLOMACY_STATE;
+  for (const id of Object.keys(d.rivalStanding)) {
+    out[id] = getStandingTier(d.rivalStanding[id] ?? 50);
+  }
+  return out;
+}
+
 export function buildQueuedAction(
   action: HubActionDescriptor,
   targetId: string,
