@@ -24,9 +24,12 @@ import {
   evaluateActionState,
   getActionsForEmpire,
   getActionsForRival,
+  getActiveTagBadges,
   getPerTurnCap,
   getSubjectCandidates,
+  getTierColorName,
   type HubActionDescriptor,
+  type TierColorName,
 } from "./diplomacyHubHelpers.ts";
 
 const REPUTATION_THROTTLE_THRESHOLD = 75;
@@ -85,6 +88,7 @@ interface TargetRow {
   name: string;
   tier: string;
   standing: number;
+  tags: string;
   empireRef?: string;
 }
 
@@ -180,10 +184,16 @@ export class DiplomacyScene extends Phaser.Scene {
       height: content.height - 16,
       contentSized: true,
       columns: [
-        { key: "type", label: "Type", width: 60 },
-        { key: "name", label: "Name", width: 180 },
-        { key: "tier", label: "Tier", width: 80 },
-        { key: "standing", label: "Standing", width: 80, align: "right" },
+        { key: "type", label: "Type", width: 56 },
+        { key: "name", label: "Name", width: 150 },
+        {
+          key: "tier",
+          label: "Tier",
+          width: 68,
+          colorFn: (value) => tierColorForCell(String(value ?? "")),
+        },
+        { key: "standing", label: "#", width: 36, align: "right" },
+        { key: "tags", label: "Tags", width: 140 },
       ],
       onRowSelect: (_idx, row) => {
         const kind = row["rowKind"] as "empire" | "rival";
@@ -257,28 +267,33 @@ export class DiplomacyScene extends Phaser.Scene {
     const playerId = state.playerEmpireId;
     const d = state.diplomacy ?? EMPTY_DIPLOMACY_STATE;
 
+    const turn = state.turn;
     const empireRows: TargetRow[] = empires
       .filter((e) => e.id !== playerId)
       .map((e: Empire) => {
         const standing = state.empireReputation?.[e.id] ?? 50;
+        const badges = getActiveTagBadges(d.empireTags[e.id] ?? [], turn);
         return {
           rowKind: "empire",
           id: e.id,
           name: e.name,
           tier: getStandingTier(standing),
           standing,
+          tags: badges.map((b) => b.label).join(" · "),
         };
       });
     const rivalRows: TargetRow[] = rivals
       .filter((r) => !r.bankrupt)
       .map((r: AICompany) => {
         const standing = d.rivalStanding[r.id] ?? 50;
+        const badges = getActiveTagBadges(d.rivalTags[r.id] ?? [], turn);
         return {
           rowKind: "rival",
           id: r.id,
           name: r.name,
           tier: getStandingTier(standing),
           standing,
+          tags: badges.map((b) => b.label).join(" · "),
         };
       });
 
@@ -317,28 +332,40 @@ export class DiplomacyScene extends Phaser.Scene {
     const sel = this.selection;
     if (!sel) return;
     const { kind, id } = sel;
+    const d = state.diplomacy ?? EMPTY_DIPLOMACY_STATE;
     let actions: readonly HubActionDescriptor[];
     let header: string;
+    let activeTags: ReturnType<typeof getActiveTagBadges>;
     if (kind === "empire") {
       const empire = state.galaxy?.empires.find((e) => e.id === id);
       if (!empire) return;
       actions = getActionsForEmpire(empire, state);
       header = empire.name;
+      activeTags = getActiveTagBadges(d.empireTags[id] ?? [], state.turn);
     } else {
       const rival = state.aiCompanies?.find((r) => r.id === id);
       if (!rival) return;
       actions = getActionsForRival(rival);
       header = rival.name;
+      activeTags = getActiveTagBadges(d.rivalTags[id] ?? [], state.turn);
     }
-    this.actionStatusLabel.setText(header);
+
+    const headerWithTags =
+      activeTags.length > 0
+        ? `${header}\nTags: ${activeTags.map((t) => t.label).join(" · ")}`
+        : header;
+    this.actionStatusLabel.setText(headerWithTags);
 
     const { absX, absY, contentWidth } = this.getActionPanelGeometry();
     const btnH = 36;
     const btnGap = 6;
+    // When tags are shown, push the action buttons down by one line so they
+    // don't collide with the wrapped header.
+    const yOffset = activeTags.length > 0 ? 18 : 0;
 
     actions.forEach((action, i) => {
       const evalState = evaluateActionState(action, id, state);
-      const suffix = !evalState.enabled
+      const disabledSuffix = !evalState.enabled
         ? evalState.reasonIfDisabled === "cooldown"
           ? ` (cd ${evalState.cooldownTurnsRemaining ?? "?"}t)`
           : evalState.reasonIfDisabled === "cap"
@@ -347,12 +374,16 @@ export class DiplomacyScene extends Phaser.Scene {
               ? " (low cash)"
               : ""
         : "";
+      const affordanceSuffix =
+        evalState.enabled && evalState.affordanceHint
+          ? ` · ${evalState.affordanceHint}`
+          : "";
       const costText =
         action.cashCost > 0 ? ` — $${formatCash(action.cashCost)}` : "";
-      const label = `${action.label}${costText}${suffix}`;
+      const label = `${action.label}${costText}${disabledSuffix}${affordanceSuffix}`;
       const btn = new Button(this, {
         x: absX,
-        y: absY + i * (btnH + btnGap),
+        y: absY + yOffset + i * (btnH + btnGap),
         width: contentWidth - 16,
         height: btnH,
         label,
@@ -590,4 +621,34 @@ function colorToHex(color: number): string {
 function formatCash(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`;
   return String(n);
+}
+
+/**
+ * Map a tier label (rendered in the Tier column) to the live theme color
+ * the cell should use. Returns null for unknown values so the column falls
+ * back to the default text color rather than turning white-on-white.
+ */
+function tierColorForCell(tierLabel: string): number | null {
+  const theme = getTheme();
+  const colorByName: Record<TierColorName, number> = {
+    danger: theme.colors.loss,
+    warning: theme.colors.warning,
+    muted: theme.colors.textDim,
+    accent: theme.colors.accent,
+    highlight: theme.colors.profit,
+  };
+  switch (tierLabel) {
+    case "Hostile":
+      return colorByName[getTierColorName("Hostile")];
+    case "Cold":
+      return colorByName[getTierColorName("Cold")];
+    case "Neutral":
+      return colorByName[getTierColorName("Neutral")];
+    case "Warm":
+      return colorByName[getTierColorName("Warm")];
+    case "Allied":
+      return colorByName[getTierColorName("Allied")];
+    default:
+      return null;
+  }
 }

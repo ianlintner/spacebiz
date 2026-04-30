@@ -4,10 +4,16 @@ import type {
   Empire,
   GameState,
   QueuedDiplomacyAction,
+  StandingTag,
   SurveilLens,
 } from "../data/types.ts";
 import { EMPTY_DIPLOMACY_STATE } from "../data/types.ts";
 import { cooldownKey, isOnCooldown } from "../game/diplomacy/Cooldowns.ts";
+import { hasTagOfKind } from "../game/diplomacy/StandingTags.ts";
+import {
+  getStandingTier,
+  type StandingTierName,
+} from "../game/diplomacy/StandingTiers.ts";
 
 export const HUB_THROTTLE_BASE = 2;
 export const HUB_THROTTLE_HIGH = 3;
@@ -43,6 +49,12 @@ export interface HubActionState {
   readonly enabled: boolean;
   readonly reasonIfDisabled?: "cooldown" | "cap" | "cash";
   readonly cooldownTurnsRemaining?: number;
+  /**
+   * Short hint surfaced on enabled buttons describing applicable bonuses or
+   * penalties (e.g. "+15% favor", "-50% dampener"). Undefined when neither
+   * applies; presence does NOT change `enabled`.
+   */
+  readonly affordanceHint?: string;
 }
 
 export function getPerTurnCap(state: GameState): number {
@@ -172,6 +184,31 @@ export function getSubjectCandidates(
   return [];
 }
 
+function computeAffordanceHint(
+  action: HubActionDescriptor,
+  targetId: string,
+  state: GameState,
+): string | undefined {
+  const d = state.diplomacy ?? EMPTY_DIPLOMACY_STATE;
+  if (action.kind === "lobbyFor" || action.kind === "lobbyAgainst") {
+    const tags = d.empireTags[targetId] ?? [];
+    if (hasTagOfKind(tags, "OweFavor")) return "+15% favor";
+  }
+  if (action.kind === "giftEmpire") {
+    const anyRecent = Object.values(d.empireTags).some((tags) =>
+      hasTagOfKind(tags, "RecentlyGifted"),
+    );
+    if (anyRecent) return "-50% dampener";
+  }
+  if (action.kind === "giftRival") {
+    const anyRecent = Object.values(d.rivalTags).some((tags) =>
+      hasTagOfKind(tags, "RecentlyGifted"),
+    );
+    if (anyRecent) return "-50% dampener";
+  }
+  return undefined;
+}
+
 export function evaluateActionState(
   action: HubActionDescriptor,
   targetId: string,
@@ -200,7 +237,111 @@ export function evaluateActionState(
     return { enabled: false, reasonIfDisabled: "cash" };
   }
 
-  return { enabled: true };
+  const affordanceHint = computeAffordanceHint(action, targetId, state);
+  return affordanceHint ? { enabled: true, affordanceHint } : { enabled: true };
+}
+
+/**
+ * Player-facing badge label and intent color for an active tag. The label is
+ * kept terse (4-7 chars) so multiple badges can fit a narrow table column.
+ *
+ * Intents:
+ *  - "good"     → friendly to the player (their relationship is favorable)
+ *  - "bad"      → adverse (rival has flagged the player as a spy, etc.)
+ *  - "neutral"  → informational, no value judgement
+ */
+export interface TagBadge {
+  readonly label: string;
+  readonly intent: "good" | "bad" | "neutral";
+  readonly tooltip: string;
+}
+
+export function describeTag(tag: StandingTag): TagBadge {
+  switch (tag.kind) {
+    case "OweFavor":
+      return {
+        label: "Favor",
+        intent: "good",
+        tooltip: "Owes you a favor — boosts next eligible action's success.",
+      };
+    case "RecentlyGifted":
+      return {
+        label: "Gifted",
+        intent: "neutral",
+        tooltip: "Recently received a gift — cross-target dampener active.",
+      };
+    case "SuspectedSpy":
+      return {
+        label: "Spied!",
+        intent: "bad",
+        tooltip: "They suspect you of espionage — expect retaliation events.",
+      };
+    case "NonCompete":
+      return {
+        label: "NC",
+        intent: "neutral",
+        tooltip: `Non-Compete pact protecting empires: ${tag.protectedEmpireIds.join(", ")}.`,
+      };
+    case "LeakedIntel":
+      return {
+        label: `Intel:${tag.lens === "topContractByValue" ? "contract" : tag.lens}`,
+        intent: "good",
+        tooltip: `Surveillance leaked their ${tag.lens}: ${tag.value}`,
+      };
+  }
+}
+
+/**
+ * Returns badges for tags that haven't expired yet. Reads from
+ * `expiresOnTurn > currentTurn`, matching the resolver's expiry semantic.
+ */
+export function getActiveTagBadges(
+  tags: readonly StandingTag[],
+  currentTurn: number,
+): readonly TagBadge[] {
+  return tags.filter((t) => t.expiresOnTurn > currentTurn).map(describeTag);
+}
+
+/**
+ * Per-tier color name. The scene maps these onto the active theme; helpers
+ * stay theme-agnostic so they're testable and the same names render in both
+ * dark and light themes.
+ */
+export type TierColorName =
+  | "danger"
+  | "warning"
+  | "muted"
+  | "accent"
+  | "highlight";
+
+export function getTierColorName(tier: StandingTierName): TierColorName {
+  switch (tier) {
+    case "Hostile":
+      return "danger";
+    case "Cold":
+      return "warning";
+    case "Neutral":
+      return "muted";
+    case "Warm":
+      return "accent";
+    case "Allied":
+      return "highlight";
+  }
+}
+
+export function getTierForEmpire(
+  empireId: string,
+  state: GameState,
+): StandingTierName {
+  return getStandingTier(state.empireReputation?.[empireId] ?? 50);
+}
+
+export function getTierForRival(
+  rivalId: string,
+  state: GameState,
+): StandingTierName {
+  const d = state.diplomacy ?? EMPTY_DIPLOMACY_STATE;
+  return getStandingTier(d.rivalStanding[rivalId] ?? 50);
 }
 
 export function buildQueuedAction(

@@ -7,6 +7,9 @@ import {
   evaluateActionState,
   buildQueuedAction,
   getPerTurnCap,
+  getActiveTagBadges,
+  getTierColorName,
+  describeTag,
 } from "../diplomacyHubHelpers.ts";
 import { EMPTY_DIPLOMACY_STATE } from "../../data/types.ts";
 import type {
@@ -286,5 +289,131 @@ describe("buildQueuedAction", () => {
     expect(q.kind).toBe("proposeNonCompete");
     expect(q.subjectId).toBe("vex");
     expect(q.subjectIdSecondary).toBe("sol");
+  });
+});
+
+describe("getActiveTagBadges", () => {
+  it("filters out expired tags", () => {
+    const badges = getActiveTagBadges(
+      [
+        { kind: "OweFavor", expiresOnTurn: 5 },
+        { kind: "RecentlyGifted", expiresOnTurn: 10 },
+      ],
+      5, // currentTurn — OweFavor expires at 5, so should drop
+    );
+    expect(badges.map((b) => b.label)).toEqual(["Gifted"]);
+  });
+
+  it("returns empty array when all tags expired", () => {
+    expect(
+      getActiveTagBadges([{ kind: "OweFavor", expiresOnTurn: 1 }], 5),
+    ).toEqual([]);
+  });
+
+  it("describes each tag kind with intent", () => {
+    expect(describeTag({ kind: "OweFavor", expiresOnTurn: 99 }).intent).toBe(
+      "good",
+    );
+    expect(
+      describeTag({ kind: "RecentlyGifted", expiresOnTurn: 99 }).intent,
+    ).toBe("neutral");
+    expect(
+      describeTag({
+        kind: "SuspectedSpy",
+        suspectId: "player",
+        expiresOnTurn: 99,
+      }).intent,
+    ).toBe("bad");
+    expect(
+      describeTag({
+        kind: "NonCompete",
+        protectedEmpireIds: ["vex", "sol"],
+        expiresOnTurn: 99,
+      }).intent,
+    ).toBe("neutral");
+    expect(
+      describeTag({
+        kind: "LeakedIntel",
+        lens: "cash",
+        value: "1000",
+        expiresOnTurn: 99,
+      }).intent,
+    ).toBe("good");
+  });
+
+  it("non-compete tooltip lists protected empires", () => {
+    const t = describeTag({
+      kind: "NonCompete",
+      protectedEmpireIds: ["vex", "sol"],
+      expiresOnTurn: 99,
+    });
+    expect(t.tooltip).toContain("vex");
+    expect(t.tooltip).toContain("sol");
+  });
+});
+
+describe("getTierColorName", () => {
+  it("maps each tier to a stable color-name", () => {
+    expect(getTierColorName("Hostile")).toBe("danger");
+    expect(getTierColorName("Cold")).toBe("warning");
+    expect(getTierColorName("Neutral")).toBe("muted");
+    expect(getTierColorName("Warm")).toBe("accent");
+    expect(getTierColorName("Allied")).toBe("highlight");
+  });
+});
+
+describe("evaluateActionState — affordance hints", () => {
+  it("surfaces +15% favor on lobby when target empire has OweFavor", () => {
+    const action = getActionsForEmpire(empire, makeState({ systems: 0 })).find(
+      (a) => a.kind === "lobbyFor",
+    )!;
+    const s = makeState();
+    s.diplomacy = {
+      ...s.diplomacy!,
+      empireTags: { vex: [{ kind: "OweFavor", expiresOnTurn: 99 }] },
+    };
+    const r = evaluateActionState(action, "vex", s);
+    expect(r.enabled).toBe(true);
+    expect(r.affordanceHint).toBe("+15% favor");
+  });
+
+  it("surfaces -50% dampener on giftEmpire when ANY empire has RecentlyGifted", () => {
+    const action = getActionsForEmpire(empire, makeState({ systems: 0 }))[0]!;
+    const s = makeState();
+    s.diplomacy = {
+      ...s.diplomacy!,
+      empireTags: {
+        sol: [{ kind: "RecentlyGifted", expiresOnTurn: 99 }],
+      },
+    };
+    const r = evaluateActionState(action, "vex", s);
+    expect(r.enabled).toBe(true);
+    expect(r.affordanceHint).toBe("-50% dampener");
+  });
+
+  it("no hint on a fresh empire/rival", () => {
+    const action = getActionsForEmpire(empire, makeState({ systems: 0 }))[0]!;
+    const r = evaluateActionState(action, "vex", makeState());
+    expect(r.enabled).toBe(true);
+    expect(r.affordanceHint).toBeUndefined();
+  });
+
+  it("no hint surfaced on disabled actions (cap-blocked stays cap-blocked)", () => {
+    const action = getActionsForEmpire(empire, makeState({ systems: 0 })).find(
+      (a) => a.kind === "lobbyFor",
+    )!;
+    const s = makeState({ queuedCount: 2 });
+    s.diplomacy = {
+      ...s.diplomacy!,
+      queuedActions: [
+        { id: "x", kind: "giftEmpire", targetId: "vex", cashCost: 0 },
+        { id: "y", kind: "giftEmpire", targetId: "sol", cashCost: 0 },
+      ],
+      empireTags: { vex: [{ kind: "OweFavor", expiresOnTurn: 99 }] },
+    };
+    const r = evaluateActionState(action, "vex", s);
+    expect(r.enabled).toBe(false);
+    expect(r.reasonIfDisabled).toBe("cap");
+    expect(r.affordanceHint).toBeUndefined();
   });
 });
