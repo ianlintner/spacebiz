@@ -27,6 +27,7 @@ import {
   getActionsForEmpire,
   getActionsForRival,
   getActiveTagBadges,
+  getAmbientGreeting,
   getPerTurnCap,
   getSubjectCandidates,
   getTierColorName,
@@ -372,28 +373,54 @@ export class DiplomacyScene extends Phaser.Scene {
     let actions: readonly HubActionDescriptor[];
     let header: string;
     let activeTags: ReturnType<typeof getActiveTagBadges>;
+    let ambassadorLine: string | null = null;
+    let greetingLine: string | null = null;
     if (kind === "empire") {
       const empire = state.galaxy?.empires.find((e) => e.id === id);
       if (!empire) return;
       actions = getActionsForEmpire(empire, state);
       header = empire.name;
       activeTags = getActiveTagBadges(d.empireTags[id] ?? [], state.turn);
+      const amb = d.empireAmbassadors[id];
+      if (amb) {
+        ambassadorLine = `Ambassador ${amb.name} · ${amb.personality}`;
+        const tier = getStandingTier(state.empireReputation?.[id] ?? 50);
+        greetingLine = getAmbientGreeting(amb.personality, tier);
+      }
     } else {
       const rival = state.aiCompanies?.find((r) => r.id === id);
       if (!rival) return;
       actions = getActionsForRival(rival);
       header = rival.name;
       activeTags = getActiveTagBadges(d.rivalTags[id] ?? [], state.turn);
+      const liaison = d.rivalLiaisons[id];
+      if (liaison) {
+        ambassadorLine = `Liaison ${liaison.name} · ${liaison.personality}`;
+        const tier = getStandingTier(d.rivalStanding[id] ?? 50);
+        greetingLine = getAmbientGreeting(liaison.personality, tier);
+      }
     }
 
     this.actionStatusLabel.setText(header);
 
     const { absX, absY, contentWidth } = this.getActionPanelGeometry();
+    // Ambassador name + ambient greeting render between the header and the
+    // tag detail rows. We reuse `tagDetailLabels` for lifecycle management
+    // since the cleanup loop in refreshActionPanel destroys all of them on
+    // each pass.
+    const ambassadorBottom = this.renderAmbassadorRows(
+      ambassadorLine,
+      greetingLine,
+      absX,
+      absY,
+      contentWidth - 16,
+    );
     const tagRowGap = 18;
+    const tagsStartY = ambassadorBottom > absY ? ambassadorBottom + 6 : absY;
     const tagRowsBottom = this.renderTagDetailRows(
       activeTags,
       absX,
-      absY,
+      tagsStartY,
       contentWidth - 16,
       tagRowGap,
     );
@@ -538,6 +565,47 @@ export class DiplomacyScene extends Phaser.Scene {
    * coordinate of the bottom of the last rendered row, so the caller can
    * push subsequent UI (action buttons) down beneath.
    */
+  /**
+   * Renders two text rows below the action header: the ambassador's name
+   * and personality, then a single ambient greeting line keyed to their
+   * `(personality, tier)`. Returns the y-coordinate of the bottom of the
+   * last rendered row so subsequent UI can stack beneath. If both inputs
+   * are null (no ambassador on this target — e.g. the player's own empire
+   * before that case is filtered), returns `yStart` unchanged.
+   */
+  private renderAmbassadorRows(
+    ambassadorLine: string | null,
+    greetingLine: string | null,
+    x: number,
+    yStart: number,
+    maxWidth: number,
+  ): number {
+    if (!ambassadorLine && !greetingLine) return yStart;
+    const theme = getTheme();
+    let y = yStart;
+    if (ambassadorLine) {
+      const lbl = this.add.text(x, y, ambassadorLine, {
+        fontFamily: "sans-serif",
+        fontSize: "12px",
+        color: colorToHex(theme.colors.text),
+        fontStyle: "italic",
+      });
+      this.tagDetailLabels.push(lbl);
+      y += lbl.height + 2;
+    }
+    if (greetingLine) {
+      const lbl = this.add.text(x, y, greetingLine, {
+        fontFamily: "sans-serif",
+        fontSize: "11px",
+        color: colorToHex(theme.colors.textDim),
+        wordWrap: { width: maxWidth },
+      });
+      this.tagDetailLabels.push(lbl);
+      y += lbl.height + 2;
+    }
+    return y;
+  }
+
   private renderTagDetailRows(
     tags: ReturnType<typeof getActiveTagBadges>,
     x: number,

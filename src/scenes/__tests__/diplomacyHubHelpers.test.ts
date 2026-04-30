@@ -12,6 +12,7 @@ import {
   describeTag,
   detectTierShifts,
   snapshotTiers,
+  getAmbientGreeting,
 } from "../diplomacyHubHelpers.ts";
 import { EMPTY_DIPLOMACY_STATE } from "../../data/types.ts";
 import type {
@@ -489,5 +490,37 @@ describe("snapshotTiers", () => {
       aiCompanies: [],
     } as unknown as GameState;
     expect(snapshotTiers(s)).toEqual({});
+  });
+});
+
+describe("getAmbientGreeting", () => {
+  it("returns a non-empty string for every (personality, tier) pair", () => {
+    const personalities = [
+      "formal",
+      "mercenary",
+      "suspicious",
+      "warm",
+    ] as const;
+    const tiers = ["Hostile", "Cold", "Neutral", "Warm", "Allied"] as const;
+    for (const p of personalities) {
+      for (const t of tiers) {
+        const line = getAmbientGreeting(p, t);
+        expect(typeof line).toBe("string");
+        expect(line.length).toBeGreaterThan(5);
+      }
+    }
+  });
+
+  it("varies across personalities for the same tier", () => {
+    const formal = getAmbientGreeting("formal", "Neutral");
+    const mercenary = getAmbientGreeting("mercenary", "Neutral");
+    const warm = getAmbientGreeting("warm", "Neutral");
+    expect(new Set([formal, mercenary, warm]).size).toBe(3);
+  });
+
+  it("varies across tiers for the same personality", () => {
+    const hostile = getAmbientGreeting("warm", "Hostile");
+    const allied = getAmbientGreeting("warm", "Allied");
+    expect(hostile).not.toBe(allied);
   });
 });

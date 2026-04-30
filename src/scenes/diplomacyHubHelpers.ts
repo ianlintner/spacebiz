@@ -1,5 +1,6 @@
 import type {
   AICompany,
+  AmbassadorPersonality,
   DiplomacyActionKind,
   Empire,
   GameState,
@@ -342,6 +343,57 @@ export function getTierForRival(
 ): StandingTierName {
   const d = state.diplomacy ?? EMPTY_DIPLOMACY_STATE;
   return getStandingTier(d.rivalStanding[rivalId] ?? 50);
+}
+
+/**
+ * Ambient greeting line for an ambassador/liaison shown when the player
+ * selects their target in the hub. The pool is 4 personalities × 5 tiers =
+ * 20 lines; we intentionally keep them short so the right pane stays
+ * scannable rather than turning into a wall of flavor text.
+ *
+ * Distinct from `CopyTemplates.getFlavor` — that fires on event outcomes
+ * (gift accepted, lobby succeeded, etc.). This is the *idle* line: how
+ * does the ambassador receive you when you walk in.
+ */
+const AMBIENT_GREETINGS: Record<
+  AmbassadorPersonality,
+  Record<StandingTierName, string>
+> = {
+  formal: {
+    Hostile: "The aide refuses to look up from their ledger when you enter.",
+    Cold: "An aide receives you, citing protocol you didn't ask about.",
+    Neutral: "The ambassador greets you with measured precision.",
+    Warm: "The ambassador rises and offers a courteous bow.",
+    Allied: "The ambassador welcomes you with the warmth of long protocol.",
+  },
+  mercenary: {
+    Hostile: "They turn their back. 'Nothing for you here.'",
+    Cold: "They eye your purse. 'Make it worthwhile.'",
+    Neutral: "They tilt an eyebrow. 'What do you want?'",
+    Warm: "They smile, calculating. 'Always good to see a paying friend.'",
+    Allied: "They clasp your hand. 'My favorite line item.'",
+  },
+  suspicious: {
+    Hostile: "They squint at your envoy and motion for a body scan.",
+    Cold: "They watch your hands while you speak.",
+    Neutral: "They listen, weighing every word for hidden meaning.",
+    Warm: "Their guard slackens — barely.",
+    Allied: "They nod, almost trusting. 'You've earned a chair at this table.'",
+  },
+  warm: {
+    Hostile: "They look stricken — disappointed in you, more than angry.",
+    Cold: "They greet you with a smile that doesn't quite reach the eyes.",
+    Neutral: "They greet you genuinely, asking after the journey.",
+    Warm: "They embrace your envoy at the door.",
+    Allied: "They beam — 'It's been too long, my friend.'",
+  },
+};
+
+export function getAmbientGreeting(
+  personality: AmbassadorPersonality,
+  tier: StandingTierName,
+): string {
+  return AMBIENT_GREETINGS[personality][tier];
 }
 
 export type TierShiftDirection = "up" | "down";
