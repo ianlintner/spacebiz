@@ -3,6 +3,7 @@ import {
   computeGiftCostForEmpire,
   getActionsForEmpire,
   getActionsForRival,
+  getSubjectCandidates,
   evaluateActionState,
   buildQueuedAction,
   getPerTurnCap,
@@ -94,29 +95,100 @@ describe("computeGiftCostForEmpire", () => {
 });
 
 describe("getActionsForEmpire", () => {
-  it("returns a single Send Gift action", () => {
+  it("returns gift + lobbyFor + lobbyAgainst", () => {
     const actions = getActionsForEmpire(empire, makeState({ systems: 2 }));
-    expect(actions).toHaveLength(1);
-    expect(actions[0]!.kind).toBe("giftEmpire");
+    expect(actions.map((a) => a.kind)).toEqual([
+      "giftEmpire",
+      "lobbyFor",
+      "lobbyAgainst",
+    ]);
     expect(actions[0]!.cashCost).toBe(8_000);
+  });
+
+  it("marks gift as single-category and lobby as subject-category", () => {
+    const actions = getActionsForEmpire(empire, makeState({ systems: 0 }));
+    expect(actions[0]!.category).toBe("single");
+    expect(actions[1]!.category).toBe("subject");
+    expect(actions[2]!.category).toBe("subject");
+  });
+
+  it("lobby actions carry a subjectPrompt referencing the empire", () => {
+    const actions = getActionsForEmpire(empire, makeState({ systems: 0 }));
+    expect(actions[1]!.subjectPrompt).toContain("Vex Hegemony");
+    expect(actions[2]!.subjectPrompt).toContain("Vex Hegemony");
   });
 });
 
 describe("getActionsForRival", () => {
-  it("returns gift + three surveil lenses", () => {
+  it("returns gift + three surveil lenses + propose-non-compete", () => {
     const actions = getActionsForRival(rival);
     expect(actions.map((a) => a.kind)).toEqual([
       "giftRival",
       "surveil",
       "surveil",
       "surveil",
+      "proposeNonCompete",
     ]);
     expect(actions.map((a) => a.surveilLens)).toEqual([
       undefined,
       "cash",
       "topContractByValue",
       "topEmpireStanding",
+      undefined,
     ]);
+  });
+
+  it("non-compete is pair-category with subjectPrompt", () => {
+    const actions = getActionsForRival(rival);
+    const nc = actions.find((a) => a.kind === "proposeNonCompete")!;
+    expect(nc.category).toBe("pair");
+    expect(nc.subjectPrompt).toContain("Chen Logistics");
+  });
+});
+
+describe("getSubjectCandidates", () => {
+  it("returns rivals for lobbyFor", () => {
+    const action = getActionsForEmpire(empire, makeState({ systems: 0 })).find(
+      (a) => a.kind === "lobbyFor",
+    )!;
+    const cands = getSubjectCandidates(action, makeState());
+    expect(cands).toEqual([{ id: "chen", name: "Chen Logistics" }]);
+  });
+
+  it("excludes bankrupt rivals from lobby candidates", () => {
+    const action = getActionsForEmpire(empire, makeState({ systems: 0 })).find(
+      (a) => a.kind === "lobbyFor",
+    )!;
+    const s = makeState();
+    s.aiCompanies = [{ ...rival, bankrupt: true }];
+    const cands = getSubjectCandidates(action, s);
+    expect(cands).toEqual([]);
+  });
+
+  it("returns all non-player empires for proposeNonCompete", () => {
+    const action = getActionsForRival(rival).find(
+      (a) => a.kind === "proposeNonCompete",
+    )!;
+    const s = makeState();
+    s.galaxy = {
+      ...s.galaxy,
+      empires: [
+        empire,
+        { ...empire, id: "sol", name: "Sol Federation" },
+        { ...empire, id: "kade", name: "Kade Reach" },
+      ],
+    };
+    s.playerEmpireId = "sol";
+    const cands = getSubjectCandidates(action, s);
+    expect(cands.map((c) => c.id)).toEqual(["vex", "kade"]);
+  });
+
+  it("returns empty for single-category actions", () => {
+    const giftAction = getActionsForEmpire(
+      empire,
+      makeState({ systems: 0 }),
+    )[0]!;
+    expect(getSubjectCandidates(giftAction, makeState())).toEqual([]);
   });
 });
 
@@ -190,5 +262,29 @@ describe("buildQueuedAction", () => {
     const q = buildQueuedAction(action, "chen", 7);
     expect(q.kind).toBe("surveil");
     expect(q.surveilLens).toBe("cash");
+  });
+
+  it("constructs lobby action with single subjectId", () => {
+    const action = getActionsForEmpire(empire, makeState({ systems: 0 })).find(
+      (a) => a.kind === "lobbyFor",
+    )!;
+    const q = buildQueuedAction(action, "vex", 7, { subjectId: "chen" });
+    expect(q.kind).toBe("lobbyFor");
+    expect(q.targetId).toBe("vex");
+    expect(q.subjectId).toBe("chen");
+    expect(q.subjectIdSecondary).toBeUndefined();
+  });
+
+  it("constructs non-compete with two subject ids", () => {
+    const action = getActionsForRival(rival).find(
+      (a) => a.kind === "proposeNonCompete",
+    )!;
+    const q = buildQueuedAction(action, "chen", 7, {
+      subjectId: "vex",
+      subjectIdSecondary: "sol",
+    });
+    expect(q.kind).toBe("proposeNonCompete");
+    expect(q.subjectId).toBe("vex");
+    expect(q.subjectIdSecondary).toBe("sol");
   });
 });

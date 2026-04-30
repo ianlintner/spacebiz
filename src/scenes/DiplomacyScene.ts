@@ -25,6 +25,7 @@ import {
   getActionsForEmpire,
   getActionsForRival,
   getPerTurnCap,
+  getSubjectCandidates,
   type HubActionDescriptor,
 } from "./diplomacyHubHelpers.ts";
 
@@ -36,6 +37,20 @@ type Selection =
   | { kind: "empire"; id: string }
   | { kind: "rival"; id: string }
   | null;
+
+type PanelMode =
+  | { kind: "list" }
+  | {
+      kind: "subjectPicker";
+      action: HubActionDescriptor;
+      targetId: string;
+    }
+  | {
+      kind: "pairPicker";
+      action: HubActionDescriptor;
+      targetId: string;
+      selected: readonly string[];
+    };
 
 /**
  * Pure helper: queue a diplomacy action onto the game state. Throws if the
@@ -94,6 +109,7 @@ export class DiplomacyScene extends Phaser.Scene {
   private headerCounter!: Label;
   private queuedSummary!: Label;
   private selection: Selection = null;
+  private mode: PanelMode = { kind: "list" };
   private storeUnsub: (() => void) | null = null;
 
   constructor() {
@@ -173,6 +189,8 @@ export class DiplomacyScene extends Phaser.Scene {
         const kind = row["rowKind"] as "empire" | "rival";
         const id = row["id"] as string;
         this.selection = { kind, id };
+        // Switching targets always exits any picker.
+        this.mode = { kind: "list" };
         this.refreshActionPanel();
       },
     });
@@ -284,7 +302,21 @@ export class DiplomacyScene extends Phaser.Scene {
       return;
     }
 
-    const { kind, id } = this.selection;
+    if (this.mode.kind === "subjectPicker") {
+      this.renderSubjectPicker(state, this.mode);
+      return;
+    }
+    if (this.mode.kind === "pairPicker") {
+      this.renderPairPicker(state, this.mode);
+      return;
+    }
+    this.renderActionList(state);
+  }
+
+  private renderActionList(state: GameState): void {
+    const sel = this.selection;
+    if (!sel) return;
+    const { kind, id } = sel;
     let actions: readonly HubActionDescriptor[];
     let header: string;
     if (kind === "empire") {
@@ -298,17 +330,11 @@ export class DiplomacyScene extends Phaser.Scene {
       actions = getActionsForRival(rival);
       header = rival.name;
     }
-
     this.actionStatusLabel.setText(header);
 
-    const L = getLayout();
-    const panelX =
-      L.mainContentLeft + Math.floor(L.mainContentWidth * 0.55) + 8;
-    const content = this.actionPanel.getContentArea();
-    const absX = panelX + content.x;
-    const absY = L.contentTop + content.y + 28;
+    const { absX, absY, contentWidth } = this.getActionPanelGeometry();
     const btnH = 36;
-    const btnGap = 8;
+    const btnGap = 6;
 
     actions.forEach((action, i) => {
       const evalState = evaluateActionState(action, id, state);
@@ -321,18 +347,135 @@ export class DiplomacyScene extends Phaser.Scene {
               ? " (low cash)"
               : ""
         : "";
-      const label = `${action.label} — $${formatCash(action.cashCost)}${suffix}`;
+      const costText =
+        action.cashCost > 0 ? ` — $${formatCash(action.cashCost)}` : "";
+      const label = `${action.label}${costText}${suffix}`;
       const btn = new Button(this, {
         x: absX,
         y: absY + i * (btnH + btnGap),
-        width: content.width - 16,
+        width: contentWidth - 16,
         height: btnH,
         label,
         disabled: !evalState.enabled,
-        onClick: () => this.handleQueue(action, id),
+        onClick: () => this.handleActionClick(action, id),
       });
       this.actionButtons.push(btn);
     });
+  }
+
+  private renderSubjectPicker(
+    state: GameState,
+    mode: { action: HubActionDescriptor; targetId: string },
+  ): void {
+    this.actionStatusLabel.setText(
+      mode.action.subjectPrompt ?? "Pick a subject:",
+    );
+    const candidates = getSubjectCandidates(mode.action, state);
+    const { absX, absY, contentWidth } = this.getActionPanelGeometry();
+    const btnH = 32;
+    const btnGap = 4;
+
+    candidates.forEach((cand, i) => {
+      const btn = new Button(this, {
+        x: absX,
+        y: absY + i * (btnH + btnGap),
+        width: contentWidth - 16,
+        height: btnH,
+        label: cand.name,
+        onClick: () =>
+          this.handleSubjectChosen(mode.action, mode.targetId, cand.id),
+      });
+      this.actionButtons.push(btn);
+    });
+
+    const cancelBtn = new Button(this, {
+      x: absX,
+      y: absY + candidates.length * (btnH + btnGap) + 8,
+      width: contentWidth - 16,
+      height: btnH,
+      label: "Cancel",
+      onClick: () => {
+        this.mode = { kind: "list" };
+        this.refreshActionPanel();
+      },
+    });
+    this.actionButtons.push(cancelBtn);
+  }
+
+  private renderPairPicker(
+    state: GameState,
+    mode: {
+      action: HubActionDescriptor;
+      targetId: string;
+      selected: readonly string[];
+    },
+  ): void {
+    const need = 2;
+    const have = mode.selected.length;
+    const promptBase = mode.action.subjectPrompt ?? "Pick two subjects:";
+    this.actionStatusLabel.setText(`${promptBase} (${have}/${need} chosen)`);
+    const candidates = getSubjectCandidates(mode.action, state);
+    const { absX, absY, contentWidth } = this.getActionPanelGeometry();
+    const btnH = 30;
+    const btnGap = 3;
+
+    candidates.forEach((cand, i) => {
+      const isSelected = mode.selected.includes(cand.id);
+      const isMaxed = !isSelected && have >= need;
+      const label = isSelected ? `[x] ${cand.name}` : `[ ] ${cand.name}`;
+      const btn = new Button(this, {
+        x: absX,
+        y: absY + i * (btnH + btnGap),
+        width: contentWidth - 16,
+        height: btnH,
+        label,
+        disabled: isMaxed,
+        onClick: () => this.togglePairSelection(cand.id),
+      });
+      this.actionButtons.push(btn);
+    });
+
+    const baseY = absY + candidates.length * (btnH + btnGap) + 8;
+    const confirmBtn = new Button(this, {
+      x: absX,
+      y: baseY,
+      width: Math.floor((contentWidth - 24) / 2),
+      height: btnH,
+      label: have === need ? "Confirm" : `Confirm (${have}/${need})`,
+      disabled: have !== need,
+      onClick: () =>
+        this.handlePairConfirmed(mode.action, mode.targetId, mode.selected),
+    });
+    this.actionButtons.push(confirmBtn);
+
+    const cancelBtn = new Button(this, {
+      x: absX + Math.floor((contentWidth - 24) / 2) + 8,
+      y: baseY,
+      width: Math.floor((contentWidth - 24) / 2),
+      height: btnH,
+      label: "Cancel",
+      onClick: () => {
+        this.mode = { kind: "list" };
+        this.refreshActionPanel();
+      },
+    });
+    this.actionButtons.push(cancelBtn);
+  }
+
+  private getActionPanelGeometry(): {
+    absX: number;
+    absY: number;
+    contentWidth: number;
+  } {
+    const L = getLayout();
+    const panelX =
+      L.mainContentLeft + Math.floor(L.mainContentWidth * 0.55) + 8;
+    const content = this.actionPanel.getContentArea();
+    return {
+      absX: panelX + content.x,
+      absY: L.contentTop + content.y + 28,
+      contentWidth: content.width,
+    };
   }
 
   private refreshQueuedSummary(state: GameState): void {
@@ -362,12 +505,74 @@ export class DiplomacyScene extends Phaser.Scene {
     this.queuedSummary.setText(`Queued this turn:\n${lines}`);
   }
 
-  // ─── Action handler ─────────────────────────────────────────────────────
+  // ─── Action handlers ────────────────────────────────────────────────────
 
-  private handleQueue(action: HubActionDescriptor, targetId: string): void {
+  private handleActionClick(
+    action: HubActionDescriptor,
+    targetId: string,
+  ): void {
+    if (action.category === "single") {
+      this.queueAction(action, targetId);
+      return;
+    }
+    if (action.category === "subject") {
+      this.mode = { kind: "subjectPicker", action, targetId };
+      this.refreshActionPanel();
+      return;
+    }
+    if (action.category === "pair") {
+      this.mode = { kind: "pairPicker", action, targetId, selected: [] };
+      this.refreshActionPanel();
+      return;
+    }
+  }
+
+  private handleSubjectChosen(
+    action: HubActionDescriptor,
+    targetId: string,
+    subjectId: string,
+  ): void {
+    this.queueAction(action, targetId, { subjectId });
+    this.mode = { kind: "list" };
+    // refresh handled by gameStore.stateChanged subscription
+  }
+
+  private togglePairSelection(candidateId: string): void {
+    if (this.mode.kind !== "pairPicker") return;
+    const cur = this.mode.selected;
+    let next: string[];
+    if (cur.includes(candidateId)) {
+      next = cur.filter((id) => id !== candidateId);
+    } else if (cur.length < 2) {
+      next = [...cur, candidateId];
+    } else {
+      next = [...cur]; // already at max — buttons should already be disabled
+    }
+    this.mode = { ...this.mode, selected: next };
+    this.refreshActionPanel();
+  }
+
+  private handlePairConfirmed(
+    action: HubActionDescriptor,
+    targetId: string,
+    selected: readonly string[],
+  ): void {
+    if (selected.length !== 2) return;
+    this.queueAction(action, targetId, {
+      subjectId: selected[0],
+      subjectIdSecondary: selected[1],
+    });
+    this.mode = { kind: "list" };
+  }
+
+  private queueAction(
+    action: HubActionDescriptor,
+    targetId: string,
+    subjects: { subjectId?: string; subjectIdSecondary?: string } = {},
+  ): void {
     const state = gameStore.getState();
     try {
-      const queued = buildQueuedAction(action, targetId, state.turn);
+      const queued = buildQueuedAction(action, targetId, state.turn, subjects);
       gameStore.setState(queueDiplomacyAction(state, queued));
     } catch (err) {
       // Disabled-state UI should normally prevent reaching here; keep a

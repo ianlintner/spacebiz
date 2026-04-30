@@ -18,13 +18,25 @@ const GIFT_EMPIRE_PER_SYSTEM = 1_500;
 const GIFT_EMPIRE_CAP = 20_000;
 const GIFT_RIVAL_COST = 5_000;
 const SURVEIL_COST = 15_000;
+const LOBBY_COST = 18_000;
+const NON_COMPETE_COST = 0; // proposal is free; the agreement itself binds both sides
+
+/**
+ * The picker shape an action requires before it can be queued:
+ *  - "single"   → no extra picks needed (gift, surveil)
+ *  - "subject"  → one extra subject id (lobby targets a third-party rival)
+ *  - "pair"     → two extra subject ids (non-compete picks two empires to segregate)
+ */
+export type HubActionCategory = "single" | "subject" | "pair";
 
 export interface HubActionDescriptor {
   readonly id: string;
   readonly kind: DiplomacyActionKind;
   readonly label: string;
   readonly cashCost: number;
+  readonly category: HubActionCategory;
   readonly surveilLens?: SurveilLens;
+  readonly subjectPrompt?: string; // shown above the picker (e.g. "Lobby Vex against…")
 }
 
 export interface HubActionState {
@@ -62,6 +74,23 @@ export function getActionsForEmpire(
       kind: "giftEmpire",
       label: "Send Gift",
       cashCost: computeGiftCostForEmpire(empire, state),
+      category: "single",
+    },
+    {
+      id: `lobby-for-${empire.id}`,
+      kind: "lobbyFor",
+      label: "Lobby For…",
+      cashCost: LOBBY_COST,
+      category: "subject",
+      subjectPrompt: `Lobby ${empire.name} for which rival?`,
+    },
+    {
+      id: `lobby-against-${empire.id}`,
+      kind: "lobbyAgainst",
+      label: "Lobby Against…",
+      cashCost: LOBBY_COST,
+      category: "subject",
+      subjectPrompt: `Lobby ${empire.name} against which rival?`,
     },
   ];
 }
@@ -75,12 +104,14 @@ export function getActionsForRival(
       kind: "giftRival",
       label: "Send Gift",
       cashCost: GIFT_RIVAL_COST,
+      category: "single",
     },
     {
       id: `surveil-cash-${rival.id}`,
       kind: "surveil",
       label: "Surveil: Cash",
       cashCost: SURVEIL_COST,
+      category: "single",
       surveilLens: "cash",
     },
     {
@@ -88,6 +119,7 @@ export function getActionsForRival(
       kind: "surveil",
       label: "Surveil: Top Contract",
       cashCost: SURVEIL_COST,
+      category: "single",
       surveilLens: "topContractByValue",
     },
     {
@@ -95,9 +127,49 @@ export function getActionsForRival(
       kind: "surveil",
       label: "Surveil: Best Ally",
       cashCost: SURVEIL_COST,
+      category: "single",
       surveilLens: "topEmpireStanding",
     },
+    {
+      id: `non-compete-${rival.id}`,
+      kind: "proposeNonCompete",
+      label: "Propose Non-Compete…",
+      cashCost: NON_COMPETE_COST,
+      category: "pair",
+      subjectPrompt: `Pick two empires for ${rival.name} to stay out of.`,
+    },
   ];
+}
+
+export interface SubjectCandidate {
+  readonly id: string;
+  readonly name: string;
+}
+
+/**
+ * Returns the subject pool for a multi-target action:
+ *  - lobbyFor / lobbyAgainst → all non-bankrupt rivals (excluding the
+ *    selected empire's own owned rivals would be a wave-3 polish)
+ *  - proposeNonCompete → all empires except the player's own
+ *
+ * For "single"-category actions the result is empty.
+ */
+export function getSubjectCandidates(
+  action: HubActionDescriptor,
+  state: GameState,
+): readonly SubjectCandidate[] {
+  if (action.kind === "lobbyFor" || action.kind === "lobbyAgainst") {
+    return (state.aiCompanies ?? [])
+      .filter((r) => !r.bankrupt)
+      .map((r) => ({ id: r.id, name: r.name }));
+  }
+  if (action.kind === "proposeNonCompete") {
+    const playerId = state.playerEmpireId;
+    return (state.galaxy?.empires ?? [])
+      .filter((e) => e.id !== playerId)
+      .map((e) => ({ id: e.id, name: e.name }));
+  }
+  return [];
 }
 
 export function evaluateActionState(
@@ -135,6 +207,7 @@ export function buildQueuedAction(
   action: HubActionDescriptor,
   targetId: string,
   turn: number,
+  subjects: { subjectId?: string; subjectIdSecondary?: string } = {},
 ): QueuedDiplomacyAction {
   return {
     id: `${action.id}-${turn}`,
@@ -142,5 +215,9 @@ export function buildQueuedAction(
     targetId,
     cashCost: action.cashCost,
     ...(action.surveilLens ? { surveilLens: action.surveilLens } : {}),
+    ...(subjects.subjectId ? { subjectId: subjects.subjectId } : {}),
+    ...(subjects.subjectIdSecondary
+      ? { subjectIdSecondary: subjects.subjectIdSecondary }
+      : {}),
   };
 }
