@@ -300,3 +300,65 @@ export function resolveLobby(
     success,
   };
 }
+
+const NON_COMPETE_TTL = 10;
+const NON_COMPETE_COOLDOWN = 5;
+const NON_COMPETE_MIN_STANDING = 20; // Cold tier or above
+
+export function resolveNonCompete(
+  state: GameState,
+  action: QueuedDiplomacyAction,
+  rng: SeededRNG,
+): ResolutionOutcome {
+  const rivalId = action.targetId;
+  const empireA = action.subjectId;
+  const empireB = action.subjectIdSecondary;
+  if (!empireA || !empireB) {
+    throw new Error(
+      "resolveNonCompete requires subjectId and subjectIdSecondary (empire pair)",
+    );
+  }
+
+  const d = dip(state);
+  const standing = d.rivalStanding[rivalId] ?? 50;
+  const accept = standing >= NON_COMPETE_MIN_STANDING && rng.chance(0.7);
+
+  const tagsBefore = d.rivalTags[rivalId] ?? [];
+  const tagsAfter = accept
+    ? addTag(tagsBefore, {
+        kind: "NonCompete",
+        protectedEmpireIds: [empireA, empireB],
+        expiresOnTurn: state.turn + NON_COMPETE_TTL,
+      })
+    : tagsBefore;
+
+  const modal: ModalEntry[] = [
+    {
+      speakerKind: "rivalCEO",
+      targetId: rivalId,
+      headline: accept ? "Non-Compete signed" : "Non-Compete refused",
+      flavor: accept
+        ? `${empireA} and ${empireB} markets are now segregated.`
+        : "Their CEO declines the proposal.",
+    },
+  ];
+
+  return {
+    nextState: {
+      ...state,
+      diplomacy: {
+        ...d,
+        rivalTags: { ...d.rivalTags, [rivalId]: tagsAfter },
+        cooldowns: setCooldown(
+          d.cooldowns,
+          cooldownKey("proposeNonCompete", rivalId),
+          state.turn + NON_COMPETE_COOLDOWN,
+        ),
+        actionsResolvedThisTurn: d.actionsResolvedThisTurn + 1,
+      },
+    },
+    modalEntries: modal,
+    digestEntries: [],
+    success: accept,
+  };
+}
