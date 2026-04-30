@@ -25,6 +25,7 @@ import { SimSummaryScene } from "./scenes/SimSummaryScene.ts";
 import { EmpireScene } from "./scenes/EmpireScene.ts";
 import { CompetitionScene } from "./scenes/CompetitionScene.ts";
 import { StationBuilderScene } from "./scenes/StationBuilderScene.ts";
+import { DiplomacyScene } from "./scenes/DiplomacyScene.ts";
 import {
   CARGO_CHEAT_SHEET,
   DISCLOSURE_CARDS,
@@ -775,6 +776,7 @@ function mountGame(): void {
     EmpireScene,
     CompetitionScene,
     StationBuilderScene,
+    DiplomacyScene,
   ]);
 
   activeGame = new Phaser.Game(config);

@@ -137,6 +137,7 @@ export class GameHUDScene extends Phaser.Scene {
     RoutesScene: "Route Command — create and optimize trade routes",
     FleetScene: "Fleet Ops — assign ships and monitor condition",
     ContractsScene: "Contracts — accept mission cargo for bonus income",
+    DiplomacyScene: "Foreign Relations — empires, rivals, and standing",
     MarketScene: "Market Intel — compare prices and demand across worlds",
     TechTreeScene: "Research — choose technologies and track progress",
     FinanceScene: "Finance — review cashflow, loans, and net worth",
@@ -152,6 +153,7 @@ export class GameHUDScene extends Phaser.Scene {
     "FleetScene",
     "RoutesScene",
     "ContractsScene",
+    "DiplomacyScene",
     "TechTreeScene",
     "FinanceScene",
     "MarketScene",
@@ -364,6 +366,11 @@ export class GameHUDScene extends Phaser.Scene {
       { label: "Contracts", scene: "ContractsScene", icon: "icon-contracts" },
       // Market nav removed (Track 2.6): market intel is now embedded in RouteBuilderPanel.
       // MarketScene file is retained for potential future use.
+      {
+        label: "Foreign Relations",
+        scene: "DiplomacyScene",
+        icon: "icon-contracts", // TODO: dedicated icon
+      },
       { label: "Research", scene: "TechTreeScene", icon: "icon-research" },
       { label: "Finance", scene: "FinanceScene", icon: "icon-finance" },
       { label: "Empires", scene: "EmpireScene", icon: "icon-empire" },
