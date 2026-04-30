@@ -10,10 +10,12 @@ import type {
   AICompany,
   ActiveRoute,
   Charter,
+  DiplomacyState,
   Empire,
   GalaxyShape as GalaxyShapeT,
   TechState,
 } from "../data/types.ts";
+import { EMPTY_DIPLOMACY_STATE } from "../data/types.ts";
 import { initAdviserState } from "./adviser/AdviserEngine.ts";
 import {
   SHIP_TEMPLATES,
@@ -41,6 +43,7 @@ import {
   selectRunRoomTypes,
   initializeHubWithTerminal,
 } from "./hub/HubManager.ts";
+import { generateAmbassadors } from "./diplomacy/AmbassadorGenerator.ts";
 
 export interface NewGameResult {
   state: GameState;
@@ -397,6 +400,25 @@ export function createNewGame(
       )
     : null;
 
+  // Wave 1 diplomacy: seed ambassadors per empire and liaisons per AI rival,
+  // plus neutral (50) per-rival standing. Empire-side standing continues to
+  // live on `state.empireReputation` and is not duplicated here.
+  const diplomacyAmbassadorRng = new SeededRNG(seed + 5);
+  const { empireAmbassadors, rivalLiaisons } = generateAmbassadors(
+    diplomacyAmbassadorRng,
+    galaxyData.empires,
+    aiCompanies,
+  );
+  const rivalStanding: Record<string, number> = Object.fromEntries(
+    aiCompanies.map((c) => [c.id, 50]),
+  );
+  const diplomacy: DiplomacyState = {
+    ...EMPTY_DIPLOMACY_STATE,
+    rivalStanding,
+    empireAmbassadors,
+    rivalLiaisons,
+  };
+
   const state: GameState = {
     seed,
     turn: 1,
@@ -459,6 +481,7 @@ export function createNewGame(
       galaxyData.empires.map((e: Empire) => [e.id, 50]),
     ),
     charters: playerCharters,
+    diplomacy,
   };
 
   return { state, startingSystemOptions };

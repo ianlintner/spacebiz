@@ -165,3 +165,23 @@ describe("NewGameSetup", () => {
     expect(storyteller.consecutiveProfitTurns).toBe(0);
   });
 });
+
+describe("createNewGame — diplomacy", () => {
+  it("seeds an ambassador for every empire and a liaison for every rival", () => {
+    const { state } = createNewGame(42);
+    expect(state.diplomacy).toBeDefined();
+    for (const e of state.galaxy.empires) {
+      expect(state.diplomacy!.empireAmbassadors[e.id]).toBeDefined();
+    }
+    for (const r of state.aiCompanies) {
+      expect(state.diplomacy!.rivalLiaisons[r.id]).toBeDefined();
+    }
+  });
+
+  it("seeds neutral standing (50) for all rivals", () => {
+    const { state } = createNewGame(42);
+    for (const r of state.aiCompanies) {
+      expect(state.diplomacy!.rivalStanding[r.id]).toBe(50);
+    }
+  });
+});
