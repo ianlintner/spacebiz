@@ -27,6 +27,7 @@ const GIFT_RIVAL_COST = 5_000;
 const SURVEIL_COST = 15_000;
 const LOBBY_COST = 18_000;
 const NON_COMPETE_COST = 0; // proposal is free; the agreement itself binds both sides
+const SABOTAGE_COST = 30_000;
 
 /**
  * The picker shape an action requires before it can be queued:
@@ -150,6 +151,13 @@ export function getActionsForRival(
       cashCost: NON_COMPETE_COST,
       category: "pair",
       subjectPrompt: `Pick two empires for ${rival.name} to stay out of.`,
+    },
+    {
+      id: `sabotage-${rival.id}`,
+      kind: "sabotage",
+      label: "Sabotage Operation",
+      cashCost: SABOTAGE_COST,
+      category: "single",
     },
   ];
 }
@@ -288,6 +296,13 @@ export function describeTag(tag: StandingTag): TagBadge {
         label: `Intel:${tag.lens === "topContractByValue" ? "contract" : tag.lens}`,
         intent: "good",
         tooltip: `Surveillance leaked their ${tag.lens}: ${tag.value}`,
+      };
+    case "Sabotaged":
+      return {
+        label: "Sabotaged",
+        intent: "good",
+        tooltip:
+          "Your operation disrupted their cash flow — expect retaliation events.",
       };
   }
 }
