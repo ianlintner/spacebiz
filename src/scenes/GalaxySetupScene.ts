@@ -7,6 +7,7 @@ import {
   Label,
   getTheme,
   getLayout,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import { gameStore } from "../data/GameStore.ts";
 import { createNewGame } from "../game/NewGameSetup.ts";
@@ -70,14 +71,29 @@ export class GalaxySetupScene extends Phaser.Scene {
   private portraitImage: Phaser.GameObjects.Image | null = null;
   private portraitLabel: Label | null = null;
   private portraitMask: Phaser.GameObjects.Graphics | null = null;
+  private portraitBorder!: Phaser.GameObjects.Arc;
   private portraitDiameter = 0;
   /** Preset picker buttons — tracked so we can re-highlight on click */
   private presetButtons: Button[] = [];
-  /** Layout values needed by buildSystemCards, set in create() */
+  /** Layout values needed by buildSystemCards, set in relayout() */
   private configX = 0;
   private configW = 0;
   private cardsTopY = 0;
   private cardsBottomY = 0;
+
+  // ── Layout-dependent fields kept for reflow ──
+  private mainPanel!: Panel;
+  private prevPortraitButton!: Button;
+  private nextPortraitButton!: Button;
+  private companyFieldLabel!: Label;
+  private seedFieldLabel!: Label;
+  private randomizeButton!: Button;
+  private lengthFieldLabel!: Label;
+  private presetDescriptions: Label[] = [];
+  private shapeFieldLabel!: Label;
+  private shapeDropdown!: Dropdown;
+  private selectStartingLabel!: Label;
+  private launchButton!: Button;
 
   constructor() {
     super({ key: "GalaxySetupScene" });
@@ -85,7 +101,6 @@ export class GalaxySetupScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
-    const L = getLayout();
     this.cameras.main.setBackgroundColor(theme.colors.background);
     getAudioDirector().setMusicState("setup");
 
@@ -108,41 +123,25 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.cardObjects = [];
     this.systemCards = [];
     this.presetButtons = [];
+    this.presetDescriptions = [];
 
     // 1. Starfield background
     createStarfield(this);
 
-    // 2. Centered setup panel
-    const panelW = Math.min(780, L.gameWidth - 60);
-    const panelH = Math.min(640, L.gameHeight - 60);
-    const panelX = Math.floor((L.gameWidth - panelW) / 2);
-    const panelY = Math.floor((L.gameHeight - panelH) / 2);
-    new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
+    // 2. Centered setup panel — initial geometry; relayout() repositions/resizes.
+    this.mainPanel = new Panel(this, {
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
       title: "NEW GALAXY",
     });
-
-    const pad = theme.spacing.lg;
-    const contentTop = panelY + theme.panel.titleHeight + pad;
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Top area: Two-column layout — LEFT = CEO portrait, RIGHT = config
-    // ═══════════════════════════════════════════════════════════════════
-    const portraitSize = 120;
-    this.portraitDiameter = portraitSize;
-    const portraitAreaW = portraitSize + pad * 2;
-    const portraitCenterX = panelX + pad + portraitSize / 2;
-    const portraitCenterY = contentTop + portraitSize / 2;
 
     // ── CEO Portrait (large, circular) ──
     // Start with placeholder; swap when first portrait loads
     this.portraitImage = this.add
-      .image(portraitCenterX, portraitCenterY, PORTRAIT_PLACEHOLDER_KEY)
+      .image(0, 0, PORTRAIT_PLACEHOLDER_KEY)
       .setOrigin(0.5, 0.5);
-    this.fitPortraitInCircle(this.portraitImage, portraitSize);
     // Load CEO portrait (restored or first) on-demand and swap in
     const initialPortraitId = CEO_PORTRAITS[this.portraitIndex].id;
     portraitLoader
@@ -158,41 +157,32 @@ export class GalaxySetupScene extends Phaser.Scene {
       });
 
     this.portraitMask = this.add.graphics();
-    this.portraitMask.fillStyle(0xffffff);
-    this.portraitMask.fillCircle(
-      portraitCenterX,
-      portraitCenterY,
-      portraitSize / 2,
-    );
     this.portraitMask.setVisible(false);
     this.portraitImage.filters?.internal.addMask(this.portraitMask);
 
     // Accent border ring
-    this.add
-      .circle(portraitCenterX, portraitCenterY, portraitSize / 2 + 2)
+    this.portraitBorder = this.add
+      .circle(0, 0, 1)
       .setStrokeStyle(2, theme.colors.accent)
       .setFillStyle(0x000000, 0);
 
     // Portrait label (name) below portrait
     this.portraitLabel = new Label(this, {
-      x: portraitCenterX,
-      y: portraitCenterY + portraitSize / 2 + theme.spacing.sm,
+      x: 0,
+      y: 0,
       text: CEO_PORTRAITS[this.portraitIndex].label,
       style: "caption",
       color: theme.colors.accent,
     });
     this.portraitLabel.setOrigin(0.5, 0);
 
-    // Prev/Next buttons below label
-    const navY = portraitCenterY + portraitSize / 2 + theme.spacing.sm + 20;
-    const navBtnW = 36;
-    const navGap = 8;
-    new Button(this, {
-      x: portraitCenterX - navBtnW - navGap / 2,
-      y: navY,
-      width: navBtnW,
+    // Prev/Next portrait buttons
+    this.prevPortraitButton = new Button(this, {
+      x: 0,
+      y: 0,
+      width: 36,
       height: 28,
-      label: "\u25C0",
+      label: "◀",
       onClick: () => {
         this.portraitIndex =
           (this.portraitIndex - 1 + CEO_PORTRAITS.length) %
@@ -201,12 +191,12 @@ export class GalaxySetupScene extends Phaser.Scene {
         this.saveChoice();
       },
     });
-    new Button(this, {
-      x: portraitCenterX + navGap / 2,
-      y: navY,
-      width: navBtnW,
+    this.nextPortraitButton = new Button(this, {
+      x: 0,
+      y: 0,
+      width: 36,
       height: 28,
-      label: "\u25B6",
+      label: "▶",
       onClick: () => {
         this.portraitIndex = (this.portraitIndex + 1) % CEO_PORTRAITS.length;
         this.updatePortraitPreview();
@@ -215,24 +205,16 @@ export class GalaxySetupScene extends Phaser.Scene {
     });
 
     // ── Right column: Configuration fields ──
-    const rightX = panelX + portraitAreaW + pad;
-    const rightW = panelW - portraitAreaW - pad * 2;
-    const labelW = 90;
-    const fieldX = rightX + labelW;
-    const fieldW = Math.min(200, rightW - labelW);
-    const rowH = 44;
-    let rowY = contentTop;
-
     // Company name
-    new Label(this, {
-      x: rightX,
-      y: rowY + 8,
+    this.companyFieldLabel = new Label(this, {
+      x: 0,
+      y: 0,
       text: "Company:",
       style: "body",
     });
     this.nameLabel = new Label(this, {
-      x: fieldX,
-      y: rowY + 8,
+      x: 0,
+      y: 0,
       text: PRESET_NAMES[this.nameIndex],
       style: "value",
       color: theme.colors.accent,
@@ -244,20 +226,23 @@ export class GalaxySetupScene extends Phaser.Scene {
       this.saveChoice();
     });
 
-    rowY += rowH;
-
     // Seed
-    new Label(this, { x: rightX, y: rowY + 8, text: "Seed:", style: "body" });
+    this.seedFieldLabel = new Label(this, {
+      x: 0,
+      y: 0,
+      text: "Seed:",
+      style: "body",
+    });
     this.seedLabel = new Label(this, {
-      x: fieldX,
-      y: rowY + 8,
+      x: 0,
+      y: 0,
       text: String(this.seed),
       style: "value",
       color: theme.colors.accent,
     });
-    new Button(this, {
-      x: fieldX + 120,
-      y: rowY + 4,
+    this.randomizeButton = new Button(this, {
+      x: 0,
+      y: 0,
       autoWidth: true,
       height: 30,
       label: "Randomize",
@@ -268,27 +253,20 @@ export class GalaxySetupScene extends Phaser.Scene {
       },
     });
 
-    rowY += rowH;
-
     // ── Game Length preset picker ──
-    new Label(this, { x: rightX, y: rowY + 6, text: "Length:", style: "body" });
+    this.lengthFieldLabel = new Label(this, {
+      x: 0,
+      y: 0,
+      text: "Length:",
+      style: "body",
+    });
 
-    const presetBtnH = 32;
-    const presetBtnCount = PRESET_OPTIONS.length;
-    // Fit buttons into the available width to the right of the label
-    const totalPresetW = rightW - labelW;
-    const presetGap = 6;
-    const presetBtnW = Math.floor(
-      (totalPresetW - presetGap * (presetBtnCount - 1)) / presetBtnCount,
-    );
-
-    PRESET_OPTIONS.forEach(({ preset, label, description }, idx) => {
-      const btnX = fieldX + idx * (presetBtnW + presetGap);
+    PRESET_OPTIONS.forEach(({ preset, label, description }) => {
       const btn = new Button(this, {
-        x: btnX,
-        y: rowY + 2,
-        width: presetBtnW,
-        height: presetBtnH,
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 32,
         label,
         onClick: () => {
           this.gamePreset = preset;
@@ -299,21 +277,26 @@ export class GalaxySetupScene extends Phaser.Scene {
       this.presetButtons.push(btn);
 
       // Description sub-label below each button
-      new Label(this, {
-        x: btnX + presetBtnW / 2,
-        y: rowY + presetBtnH + 6,
+      const descLabel = new Label(this, {
+        x: 0,
+        y: 0,
         text: description,
         style: "caption",
         color: theme.colors.textDim,
-      }).setOrigin(0.5, 0);
+      });
+      descLabel.setOrigin(0.5, 0);
+      this.presetDescriptions.push(descLabel);
     });
 
     this.updatePresetHighlight();
 
-    rowY += rowH + 20; // extra space for descriptions
-
     // Shape dropdown
-    new Label(this, { x: rightX, y: rowY + 6, text: "Shape:", style: "body" });
+    this.shapeFieldLabel = new Label(this, {
+      x: 0,
+      y: 0,
+      text: "Shape:",
+      style: "body",
+    });
     const shapeOptions: Array<{ label: string; value: GalaxyShape }> = [
       { label: "Spiral", value: "spiral" },
       { label: "Elliptical", value: "elliptical" },
@@ -324,10 +307,10 @@ export class GalaxySetupScene extends Phaser.Scene {
       0,
       shapeOptions.findIndex((o) => o.value === this.galaxyShape),
     );
-    new Dropdown(this, {
-      x: fieldX,
-      y: rowY + 2,
-      width: fieldW,
+    this.shapeDropdown = new Dropdown(this, {
+      x: 0,
+      y: 0,
+      width: 100,
       height: 32,
       options: shapeOptions,
       defaultIndex: shapeDefaultIndex,
@@ -337,32 +320,20 @@ export class GalaxySetupScene extends Phaser.Scene {
       },
     });
 
-    rowY += rowH + theme.spacing.md;
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Bottom area: Starting system cards
-    // ═══════════════════════════════════════════════════════════════════
-    new Label(this, {
-      x: panelX + pad,
-      y: rowY,
+    // ── Starting system header ──
+    this.selectStartingLabel = new Label(this, {
+      x: 0,
+      y: 0,
       text: "Select Starting System:",
       style: "body",
       color: theme.colors.accent,
     });
 
-    this.configX = panelX;
-    this.configW = panelW;
-    this.cardsTopY = rowY + 28;
-    this.cardsBottomY = panelY + panelH - 76;
-
-    this.regenerate();
-
     // ── Launch button ──
-    const launchW = 220;
-    new Button(this, {
-      x: panelX + (panelW - launchW) / 2,
-      y: panelY + panelH - 62,
-      width: launchW,
+    this.launchButton = new Button(this, {
+      x: 0,
+      y: 0,
+      width: 220,
       height: 44,
       label: "Launch",
       onClick: () => {
@@ -388,14 +359,149 @@ export class GalaxySetupScene extends Phaser.Scene {
       },
     });
 
-    // Restart scene on resize so layout recalculates
-    const onResize = () => {
-      this.scene.restart();
-    };
-    this.scale.on("resize", onResize);
-    this.events.once("shutdown", () => {
-      this.scale.off("resize", onResize);
+    this.relayout();
+    // Generate the initial galaxy state + starting-system cards. Layout
+    // fields (configX/configW/cardsTopY/cardsBottomY) are populated by the
+    // relayout() call above, so buildSystemCards() inside regenerate() has
+    // valid geometry.
+    this.regenerate();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const theme = getTheme();
+    const L = getLayout();
+
+    // Centered setup panel — recompute geometry from current viewport.
+    const panelW = Math.min(780, L.gameWidth - 60);
+    const panelH = Math.min(640, L.gameHeight - 60);
+    const panelX = Math.floor((L.gameWidth - panelW) / 2);
+    const panelY = Math.floor((L.gameHeight - panelH) / 2);
+    this.mainPanel.setPosition(panelX, panelY);
+    this.mainPanel.setSize(panelW, panelH);
+
+    const pad = theme.spacing.lg;
+    const contentTop = panelY + theme.panel.titleHeight + pad;
+
+    // ── CEO portrait geometry ──
+    const portraitSize = 120;
+    this.portraitDiameter = portraitSize;
+    const portraitAreaW = portraitSize + pad * 2;
+    const portraitCenterX = panelX + pad + portraitSize / 2;
+    const portraitCenterY = contentTop + portraitSize / 2;
+
+    if (this.portraitImage) {
+      this.portraitImage.setPosition(portraitCenterX, portraitCenterY);
+      this.fitPortraitInCircle(this.portraitImage, portraitSize);
+    }
+
+    if (this.portraitMask) {
+      this.portraitMask.clear();
+      this.portraitMask.fillStyle(0xffffff);
+      this.portraitMask.fillCircle(
+        portraitCenterX,
+        portraitCenterY,
+        portraitSize / 2,
+      );
+    }
+
+    this.portraitBorder.setPosition(portraitCenterX, portraitCenterY);
+    this.portraitBorder.setRadius(portraitSize / 2 + 2);
+
+    if (this.portraitLabel) {
+      // TODO(setSize): Label has no setSize; reposition only.
+      this.portraitLabel.setPosition(
+        portraitCenterX,
+        portraitCenterY + portraitSize / 2 + theme.spacing.sm,
+      );
+    }
+
+    // Prev/Next buttons below label
+    const navY = portraitCenterY + portraitSize / 2 + theme.spacing.sm + 20;
+    const navBtnW = 36;
+    const navGap = 8;
+    this.prevPortraitButton.setPosition(
+      portraitCenterX - navBtnW - navGap / 2,
+      navY,
+    );
+    this.nextPortraitButton.setPosition(portraitCenterX + navGap / 2, navY);
+
+    // ── Right column geometry ──
+    const rightX = panelX + portraitAreaW + pad;
+    const rightW = panelW - portraitAreaW - pad * 2;
+    const labelW = 90;
+    const fieldX = rightX + labelW;
+    const fieldW = Math.min(200, rightW - labelW);
+    const rowH = 44;
+    let rowY = contentTop;
+
+    // Company row.
+    // TODO(setSize): Label has no setSize; reposition only.
+    this.companyFieldLabel.setPosition(rightX, rowY + 8);
+    this.nameLabel.setPosition(fieldX, rowY + 8);
+    rowY += rowH;
+
+    // Seed row.
+    // TODO(setSize): Label has no setSize; reposition only.
+    this.seedFieldLabel.setPosition(rightX, rowY + 8);
+    this.seedLabel.setPosition(fieldX, rowY + 8);
+    this.randomizeButton.setPosition(fieldX + 120, rowY + 4);
+    rowY += rowH;
+
+    // Length row.
+    // TODO(setSize): Label has no setSize; reposition only.
+    this.lengthFieldLabel.setPosition(rightX, rowY + 6);
+    const presetBtnH = 32;
+    const presetBtnCount = PRESET_OPTIONS.length;
+    const totalPresetW = rightW - labelW;
+    const presetGap = 6;
+    const presetBtnW = Math.floor(
+      (totalPresetW - presetGap * (presetBtnCount - 1)) / presetBtnCount,
+    );
+
+    PRESET_OPTIONS.forEach((_, idx) => {
+      const btnX = fieldX + idx * (presetBtnW + presetGap);
+      const btn = this.presetButtons[idx];
+      if (btn) {
+        btn.setPosition(btnX, rowY + 2);
+        btn.setSize(presetBtnW, presetBtnH);
+      }
+      const desc = this.presetDescriptions[idx];
+      if (desc) {
+        // TODO(setSize): Label has no setSize; reposition only.
+        desc.setPosition(btnX + presetBtnW / 2, rowY + presetBtnH + 6);
+      }
     });
+
+    rowY += rowH + 20; // extra space for descriptions
+
+    // Shape row.
+    // TODO(setSize): Label has no setSize; reposition only.
+    this.shapeFieldLabel.setPosition(rightX, rowY + 6);
+    this.shapeDropdown.setPosition(fieldX, rowY + 2);
+    this.shapeDropdown.setSize(fieldW, 32);
+
+    rowY += rowH + theme.spacing.md;
+
+    // ── Starting system header ──
+    // TODO(setSize): Label has no setSize; reposition only.
+    this.selectStartingLabel.setPosition(panelX + pad, rowY);
+
+    this.configX = panelX;
+    this.configW = panelW;
+    this.cardsTopY = rowY + 28;
+    this.cardsBottomY = panelY + panelH - 76;
+
+    // Rebuild starting-system cards at the new geometry.
+    this.buildSystemCards();
+
+    // ── Launch button ──
+    const launchW = 220;
+    this.launchButton.setPosition(
+      panelX + (panelW - launchW) / 2,
+      panelY + panelH - 62,
+    );
+    this.launchButton.setSize(launchW, 44);
   }
 
   private regenerate(): void {
@@ -551,7 +657,7 @@ export class GalaxySetupScene extends Phaser.Scene {
         const approxCharW = 6.5; // caption font ~6.5px per char
         const maxChars = Math.floor(nameMaxW / approxCharW);
         if (displayName.length > maxChars) {
-          displayName = displayName.slice(0, maxChars - 1) + "\u2026";
+          displayName = displayName.slice(0, maxChars - 1) + "…";
         }
         const pLabel = new Label(this, {
           x: infoX + theme.spacing.sm,
