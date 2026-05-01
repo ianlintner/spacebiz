@@ -12,14 +12,15 @@ import {
   Label,
   Modal,
   attachReflowHandler,
+  StationBuilderGrid,
+  ROOM_COLORS,
 } from "../ui/index.ts";
+import type { CellEventPayload } from "../ui/StationBuilderGrid.ts";
 import {
   HUB_ROOM_DEFINITIONS,
   HUB_UPGRADE_COSTS,
   HUB_LEVEL_SLOTS,
   HUB_MAX_LEVEL,
-  HUB_GRID_DECKS,
-  HUB_GRID_SLOTS_PER_DECK,
   HUB_DEMOLISH_REFUND_RATIO,
   HUB_UPGRADE_ONLY_ROOMS,
 } from "../data/constants.ts";
@@ -41,28 +42,6 @@ function formatCash(n: number): string {
   const abs = Math.abs(Math.round(n));
   return sign + "\u00A7" + abs.toLocaleString("en-US");
 }
-
-/** Color each room type consistently */
-const ROOM_COLORS: Record<string, number> = {
-  simpleTerminal: 0x00eeff,
-  improvedTerminal: 0x00ccff,
-  advancedTerminal: 0x00aaff,
-  tradeOffice: 0x00ccaa,
-  passengerLounge: 0xaa66ff,
-  oreProcessing: 0xcc8844,
-  foodTerminal: 0x66cc44,
-  techTerminal: 0x44ddff,
-  luxuryTerminal: 0xffcc00,
-  hazmatTerminal: 0xff6644,
-  medicalTerminal: 0xff66aa,
-  fuelDepot: 0x44aaff,
-  marketExchange: 0xffcc00,
-  customsBureau: 0x88cc44,
-  repairBay: 0xff4488,
-  researchLab: 0x44ddff,
-  cargoWarehouse: 0xcc8844,
-  securityOffice: 0xdd4444,
-};
 
 /** Deterministic seed for procedural portraits per room type */
 function roomPortraitSeed(roomType: string): number {
@@ -115,7 +94,6 @@ export class StationBuilderScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
   private selectedRoomType: HubRoomType | null = null;
   private selectedRoomId: string | null = null;
-  private gridCells: Phaser.GameObjects.Rectangle[][] = [];
   private roomCardWidth = 110;
   private roomCardHeight = 50;
   private gridPanel!: Panel;
@@ -125,12 +103,7 @@ export class StationBuilderScene extends Phaser.Scene {
   private infoElements: Phaser.GameObjects.GameObject[] = [];
   private dragGhost: Phaser.GameObjects.Container | null = null;
   private dragRoomType: HubRoomType | null = null;
-  private gridSlotBounds: Array<{
-    gx: number;
-    gy: number;
-    bounds: Phaser.Geom.Rectangle;
-    valid: boolean;
-  }> = [];
+  private grid!: StationBuilderGrid;
   private handlePointerMove = (p: Phaser.Input.Pointer): void => {
     this.onDragMove(p);
   };
@@ -150,7 +123,6 @@ export class StationBuilderScene extends Phaser.Scene {
     this.infoElements = [];
     this.dragGhost = null;
     this.dragRoomType = null;
-    this.gridSlotBounds = [];
 
     createStarfield(this);
 
@@ -173,18 +145,26 @@ export class StationBuilderScene extends Phaser.Scene {
       y: L.contentTop,
       width: L.mainContentWidth,
       height: gridH,
-      title: hub
-        ? `Station Grid — Level ${hub.level} (${hub.rooms.length}/${HUB_LEVEL_SLOTS[hub.level]} slots)`
-        : "No Hub Station",
+      title: this.gridTitle(hub),
     });
 
-    const gridMetrics = this.getGridMetrics();
-    this.roomCardWidth = Math.floor(gridMetrics.cellW);
-    this.roomCardHeight = Math.floor(gridMetrics.cellH);
+    // ── Placement grid widget (overlays the panel content area) ──
+    const gridArea = this.getGridArea();
+    this.grid = new StationBuilderGrid(this, {
+      x: gridArea.x,
+      y: gridArea.y,
+      width: gridArea.width,
+      height: gridArea.height,
+    });
+    this.grid.setRooms({
+      rooms: hub ? hub.rooms : [],
+      maxSlots: hub ? HUB_LEVEL_SLOTS[hub.level] : 0,
+    });
+    this.grid.on("cell:click", (e: CellEventPayload) => this.onCellClick(e));
 
-    if (hub) {
-      this.buildGrid(hub);
-    }
+    const cellSize = this.grid.getCellSize();
+    this.roomCardWidth = Math.floor(cellSize.cellW);
+    this.roomCardHeight = Math.floor(cellSize.cellH);
 
     // ── Room Palette / Build Panel (middle) ──
     const paletteY = L.contentTop + gridH + PANEL_GAP;
@@ -296,17 +276,12 @@ export class StationBuilderScene extends Phaser.Scene {
   /**
    * Reflow panel positions/sizes on resize.
    *
-   * The grid cells, palette cards, and info-panel children are built procedurally
-   * inside the panels and don't have a `setSize` path — we resize the outer
-   * panels here, but the inner content stays at its initial layout until the
-   * scene is restarted (e.g. after a build/demolish/upgrade action).
-   *
-   * Lifting the grid/palette/info contents into a reusable widget with
-   * setSize requires extracting ~400 lines of cell/card/info-row state
-   * (placement validation, hover preview, build/demolish handlers). The
-   * initial layout already covers all current viewport sizes; resizing
-   * mid-session leaves the inner cells frozen until the next user action
-   * triggers a scene restart. Deferred — flagged as future work.
+   * The placement grid is now driven by `StationBuilderGrid.setSize` so it
+   * reflows in place — no scene restart needed. Palette cards and info-panel
+   * children are still rebuilt only on user action (build/demolish/upgrade);
+   * the outer panels are sized here so the inner content keeps its initial
+   * layout until the next action. That's a known limitation tracked
+   * separately from the grid lift.
    */
   private relayout(): void {
     const L = getLayout();
@@ -315,9 +290,12 @@ export class StationBuilderScene extends Phaser.Scene {
     this.portrait.setPosition(L.sidebarLeft, L.contentTop);
     this.portrait.setSize(L.sidebarWidth, L.contentHeight);
 
-    // Grid panel.
+    // Grid panel + grid widget.
     this.gridPanel.setPosition(L.mainContentLeft, L.contentTop);
     this.gridPanel.setSize(L.mainContentWidth, GRID_PANEL_HEIGHT);
+    const gridArea = this.getGridArea();
+    this.grid.setPosition(gridArea.x, gridArea.y);
+    this.grid.setSize(gridArea.width, gridArea.height);
 
     // Palette panel.
     const paletteY = L.contentTop + GRID_PANEL_HEIGHT + PANEL_GAP;
@@ -338,116 +316,80 @@ export class StationBuilderScene extends Phaser.Scene {
     this.infoContent = this.infoPanel.getContentArea();
   }
 
-  // ── Grid rendering ──
+  /**
+   * Title text for the grid panel. Reflects current hub level + slot usage,
+   * or a "no hub" placeholder when the player hasn't established a station.
+   */
+  private gridTitle(hub: StationHub | null): string {
+    return hub
+      ? `Station Grid — Level ${hub.level} (${hub.rooms.length}/${HUB_LEVEL_SLOTS[hub.level]} slots)`
+      : "No Hub Station";
+  }
 
-  private buildGrid(hub: StationHub): void {
-    const theme = getTheme();
-    const { content, cellW, cellH } = this.getGridMetrics();
-    const maxSlots = HUB_LEVEL_SLOTS[hub.level];
+  /**
+   * World-space rectangle the placement grid widget should occupy. Derived
+   * from the grid panel's content area so the widget stays inside the panel
+   * border at every viewport size.
+   */
+  private getGridArea(): {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } {
+    const c = this.gridPanel.getContentArea();
+    return {
+      x: this.gridPanel.x + c.x,
+      y: this.gridPanel.y + c.y,
+      width: c.width,
+      height: c.height,
+    };
+  }
 
-    this.gridCells = [];
-    let slotIndex = 0;
-    for (let gy = 0; gy < HUB_GRID_DECKS; gy++) {
-      this.gridCells[gy] = [];
-      for (let gx = 0; gx < HUB_GRID_SLOTS_PER_DECK; gx++) {
-        const cx = content.x + gx * (cellW + 4) + cellW / 2;
-        const cy = content.y + gy * (cellH + 4) + cellH / 2;
-        const locked = slotIndex >= maxSlots;
-        const room = hub.rooms.find((r) => r.gridX === gx && r.gridY === gy);
+  /**
+   * Refresh the grid widget + panel title after a state change (build /
+   * demolish / upgrade) — replaces the previous `scene.restart()` path for
+   * the grid view. The palette + info panels are still updated by their own
+   * code paths.
+   */
+  private refreshGrid(): void {
+    const hub = gameStore.getState().stationHub;
+    this.gridPanel.setTitle(this.gridTitle(hub));
+    this.grid.setRooms({
+      rooms: hub ? hub.rooms : [],
+      maxSlots: hub ? HUB_LEVEL_SLOTS[hub.level] : 0,
+    });
+  }
 
-        let fillColor = theme.colors.panelBg;
-        let fillAlpha = 0.4;
-        if (locked) {
-          fillColor = 0x222222;
-          fillAlpha = 0.6;
-        } else if (room) {
-          fillColor = ROOM_COLORS[room.type] ?? 0x555555;
-          fillAlpha = 0.26;
-        }
+  /**
+   * Common post-action refresh: grid + sidebar portrait + default info panel.
+   * Read state once so all three observers see the same snapshot.
+   */
+  private refreshAfterAction(): void {
+    this.refreshGrid();
+    const next = gameStore.getState();
+    this.showHubPortrait(next.stationHub);
+    this.showDefaultInfo(next.stationHub, next.cash);
+  }
 
-        const cell = this.add
-          .rectangle(cx, cy, cellW, cellH, fillColor, fillAlpha)
-          .setStrokeStyle(1, locked ? 0x333333 : theme.colors.panelBorder);
-        this.gridPanel.add(cell);
-        this.gridCells[gy][gx] = cell;
-
-        if (room) {
-          const card = this.createRoomCardVisual({
-            x: cx,
-            y: cy,
-            width: cellW,
-            height: cellH,
-            roomType: room.type,
-            enabled: true,
-            showCost: false,
-            selected: false,
-          });
-          this.gridPanel.add(card.bg);
-          this.gridPanel.add(card.iconText);
-          this.gridPanel.add(card.nameText);
-
-          cell.setInteractive({ useHandCursor: true });
-          cell.on("pointerup", () => {
-            if (this.dragGhost) return;
-            this.selectedRoomType = null;
-            this.selectedRoomId = room.id;
-            this.showBuiltRoomInfo(hub, room);
-          });
-
-          cell.on("pointerover", () => {
-            cell.setStrokeStyle(
-              2,
-              ROOM_COLORS[room.type] ?? theme.colors.accent,
-            );
-          });
-          cell.on("pointerout", () => {
-            cell.setStrokeStyle(1, theme.colors.panelBorder);
-          });
-        } else if (!locked) {
-          cell.setInteractive({ useHandCursor: true });
-          cell.on("pointerup", () => {
-            if (this.dragGhost) return;
-            this.handleGridClick(gx, gy);
-          });
-          cell.on("pointerover", () => {
-            if (this.selectedRoomType) {
-              cell.setStrokeStyle(2, theme.colors.accent);
-            }
-          });
-          cell.on("pointerout", () => {
-            cell.setStrokeStyle(1, theme.colors.panelBorder);
-          });
-        }
-
-        // Locked overlay text
-        if (locked) {
-          const lockText = this.add
-            .text(cx, cy, "🔒", {
-              fontSize: "12px",
-              align: "center",
-            })
-            .setOrigin(0.5, 0.5)
-            .setAlpha(0.5);
-          this.gridPanel.add(lockText);
-        }
-
-        // Store world bounds for drag-drop hit testing
-        this.gridSlotBounds.push({
-          gx,
-          gy,
-          bounds: new Phaser.Geom.Rectangle(
-            this.gridPanel.x + cx - cellW / 2,
-            this.gridPanel.y + cy - cellH / 2,
-            cellW,
-            cellH,
-          ),
-          valid: !locked && !room,
-        });
-
-        slotIndex++;
-      }
+  /**
+   * Translate a `cell:click` event from the grid widget into the scene's
+   * existing select / build / demolish flows.
+   */
+  private onCellClick(e: CellEventPayload): void {
+    if (this.dragGhost) return;
+    const hub = gameStore.getState().stationHub;
+    if (!hub) return;
+    if (e.room) {
+      this.selectedRoomType = null;
+      this.selectedRoomId = e.room.id;
+      this.showBuiltRoomInfo(hub, e.room);
+    } else {
+      this.handleGridClick(e.gx, e.gy);
     }
   }
+
+  // ── Grid interaction (widget owns rendering / hit testing) ──
 
   private handleGridClick(gx: number, gy: number): void {
     if (this.selectedRoomId) {
@@ -478,7 +420,7 @@ export class StationBuilderScene extends Phaser.Scene {
         cash: state.cash - result.cost,
       });
       this.selectedRoomType = null;
-      this.scene.restart();
+      this.refreshAfterAction();
     }
   }
 
@@ -510,31 +452,19 @@ export class StationBuilderScene extends Phaser.Scene {
     ghost.setDepth(1000);
     this.dragGhost = ghost;
     this.dragRoomType = rt;
+    this.grid.setSelectedTool(rt);
   }
 
   private onDragMove(pointer: Phaser.Input.Pointer): void {
     if (!this.dragGhost) return;
     this.dragGhost.setPosition(pointer.worldX, pointer.worldY);
-
-    // Highlight valid drop target
-    const target = this.getDropCell(pointer.worldX, pointer.worldY);
-    const theme = getTheme();
-    for (const slot of this.gridSlotBounds) {
-      if (!slot.valid) continue;
-      const cell = this.gridCells[slot.gy]?.[slot.gx];
-      if (!cell) continue;
-      if (target && target.gx === slot.gx && target.gy === slot.gy) {
-        cell.setStrokeStyle(2, theme.colors.accent);
-      } else {
-        cell.setStrokeStyle(1, theme.colors.panelBorder);
-      }
-    }
+    this.grid.updateDragHighlight(pointer.worldX, pointer.worldY);
   }
 
   private onDragEnd(pointer: Phaser.Input.Pointer): void {
     if (!this.dragGhost || !this.dragRoomType) return;
 
-    const target = this.getDropCell(pointer.worldX, pointer.worldY);
+    const target = this.grid.getDropCell(pointer.worldX, pointer.worldY);
 
     if (target) {
       const state = gameStore.getState();
@@ -556,7 +486,8 @@ export class StationBuilderScene extends Phaser.Scene {
           this.dragGhost.destroy();
           this.dragGhost = null;
           this.dragRoomType = null;
-          this.scene.restart();
+          this.grid.setSelectedTool(null);
+          this.refreshAfterAction();
           return;
         }
       }
@@ -566,40 +497,8 @@ export class StationBuilderScene extends Phaser.Scene {
     this.dragGhost.destroy();
     this.dragGhost = null;
     this.dragRoomType = null;
-    const theme = getTheme();
-    for (const slot of this.gridSlotBounds) {
-      if (!slot.valid) continue;
-      const cell = this.gridCells[slot.gy]?.[slot.gx];
-      if (cell) {
-        cell.setStrokeStyle(1, theme.colors.panelBorder);
-      }
-    }
-  }
-
-  private getDropCell(
-    worldX: number,
-    worldY: number,
-  ): { gx: number; gy: number } | null {
-    for (const slot of this.gridSlotBounds) {
-      if (!slot.valid) continue;
-      if (slot.bounds.contains(worldX, worldY)) {
-        return { gx: slot.gx, gy: slot.gy };
-      }
-    }
-    return null;
-  }
-
-  private getGridMetrics(): {
-    content: { x: number; y: number; width: number; height: number };
-    cellW: number;
-    cellH: number;
-  } {
-    const content = this.gridPanel.getContentArea();
-    const cellW =
-      (content.width - (HUB_GRID_SLOTS_PER_DECK - 1) * 4) /
-      HUB_GRID_SLOTS_PER_DECK;
-    const cellH = (content.height - (HUB_GRID_DECKS - 1) * 4) / HUB_GRID_DECKS;
-    return { content, cellW, cellH };
+    this.grid.setSelectedTool(null);
+    this.grid.clearDragHighlight();
   }
 
   private createRoomCardVisual(params: {
@@ -725,7 +624,8 @@ export class StationBuilderScene extends Phaser.Scene {
             cash: state.cash + result.refund,
           });
         }
-        this.scene.restart();
+        this.selectedRoomId = null;
+        this.refreshAfterAction();
       },
       onCancel: () => {},
     });
@@ -749,7 +649,7 @@ export class StationBuilderScene extends Phaser.Scene {
             cash: state.cash - result.cost,
           });
         }
-        this.scene.restart();
+        this.refreshAfterAction();
       },
       onCancel: () => {},
     });
@@ -1010,7 +910,8 @@ export class StationBuilderScene extends Phaser.Scene {
             cash: state.cash - result.cost,
           });
         }
-        this.scene.restart();
+        this.selectedRoomId = null;
+        this.refreshAfterAction();
       },
       onCancel: () => {},
     });
