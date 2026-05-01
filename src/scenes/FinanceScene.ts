@@ -19,6 +19,7 @@ import {
   getLayout,
   Slider,
 } from "@spacebiz/ui";
+import { attachReflowHandler } from "../ui/index.ts";
 import { PortraitPanel } from "@rogue-universe/shared";
 import { calculateShipValue } from "../game/fleet/FleetManager.ts";
 import { getHubUpkeep } from "../game/hub/HubManager.ts";
@@ -51,13 +52,24 @@ export class FinanceScene extends Phaser.Scene {
   private selectedLoanId: string | null = null;
   private ui!: SceneUiDirector;
 
+  // ── Layout-dependent fields ──
+  private portrait!: PortraitPanel;
+  private mainPanel!: Panel;
+  private tabGroup!: TabGroup;
+  // CEO portrait overlay — raw Phaser GameObjects, no setSize(); rebuilt on resize.
+  private ceoImg!: Phaser.GameObjects.Image;
+  private ceoMaskCircle!: Phaser.GameObjects.Arc;
+  private ceoBorderCircle!: Phaser.GameObjects.Arc;
+  // Loans tab scroll frame + table — sized to mainContentWidth, rebuilt on resize.
+  private loanTableFrame!: ScrollFrame;
+  private loanTable!: DataTable;
+
   constructor() {
     super({ key: "FinanceScene" });
   }
 
   create(): void {
     const L = getLayout();
-    const theme = getTheme();
     this.selectedLoanId = null;
     this.ui = new SceneUiDirector(this);
 
@@ -77,13 +89,13 @@ export class FinanceScene extends Phaser.Scene {
     );
     const netWorth = state.cash + fleetValue - totalLoans;
 
-    const portrait = new PortraitPanel(this, {
+    this.portrait = new PortraitPanel(this, {
       x: L.sidebarLeft,
       y: L.contentTop,
       width: L.sidebarWidth,
       height: L.contentHeight,
     });
-    portrait.updatePortrait(
+    this.portrait.updatePortrait(
       "event",
       state.turn,
       "Company Health",
@@ -96,38 +108,17 @@ export class FinanceScene extends Phaser.Scene {
       { eventCategory: "market" },
     );
 
-    // Overlay CEO portrait image on the sidebar panel
+    // CEO portrait overlay is built by relayout() below.
+    // Fetch the texture on-demand now so it is ready when relayout fires.
     const ceoPortraitKey = getPortraitTextureKey(state.ceoPortrait.portraitId);
-    const pSize = Math.min(L.sidebarWidth - 24, 120);
-    const pX = L.sidebarLeft + L.sidebarWidth / 2;
-    const pY = L.contentTop + 16 + pSize / 2;
-    const initialPortraitKey = this.textures.exists(ceoPortraitKey)
-      ? ceoPortraitKey
-      : PORTRAIT_PLACEHOLDER_KEY;
-    const ceoImg = this.add
-      .image(pX, pY, initialPortraitKey)
-      .setOrigin(0.5, 0.5)
-      .setDepth(10);
-    fitImageCover(ceoImg, pSize, pSize);
-    // Round mask (Phaser 4 Mask filter)
-    const ceoMask = this.add
-      .circle(pX, pY, pSize / 2, 0xffffff)
-      .setVisible(false);
-    ceoImg.filters?.internal.addMask(ceoMask);
-    // Border
-    this.add
-      .circle(pX, pY, pSize / 2 + 1)
-      .setStrokeStyle(2, theme.colors.accent)
-      .setFillStyle(0x000000, 0)
-      .setDepth(11);
-    // Fetch on-demand if not already loaded
     if (!this.textures.exists(ceoPortraitKey)) {
       portraitLoader
         .ensureCeoPortrait(this, state.ceoPortrait.portraitId)
         .then((key) => {
-          if (ceoImg.active) {
-            ceoImg.setTexture(key);
-            fitImageCover(ceoImg, pSize, pSize);
+          if (this.ceoImg?.active) {
+            this.ceoImg.setTexture(key);
+            const pSize = Math.min(L.sidebarWidth - 24, 120);
+            fitImageCover(this.ceoImg, pSize, pSize);
           }
         })
         .catch(() => {
@@ -136,7 +127,7 @@ export class FinanceScene extends Phaser.Scene {
     }
 
     // --- Main content panel with title ---
-    const mainPanel = new Panel(this, {
+    this.mainPanel = new Panel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,
@@ -144,7 +135,7 @@ export class FinanceScene extends Phaser.Scene {
       title: "Finance",
     });
 
-    const contentArea = mainPanel.getContentArea();
+    const contentArea = this.mainPanel.getContentArea();
 
     // Build tab contents
     const plContent = this.buildPLTab();
@@ -152,7 +143,7 @@ export class FinanceScene extends Phaser.Scene {
     const loansContent = this.buildLoansTab();
 
     // Tab group positioned inside the main content panel
-    new TabGroup(this, {
+    this.tabGroup = new TabGroup(this, {
       x: L.mainContentLeft + contentArea.x,
       y: L.contentTop + contentArea.y,
       width: contentArea.width,
@@ -162,6 +153,83 @@ export class FinanceScene extends Phaser.Scene {
         { label: "Loans", content: loansContent },
       ],
     });
+
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  /**
+   * Build (or rebuild) the CEO portrait image + mask + border circles.
+   * Raw Phaser GameObjects have no setSize(), so we destroy the previous
+   * objects and construct new ones at the updated geometry on each resize.
+   */
+  private buildCeoOverlay(
+    sidebarLeft: number,
+    sidebarWidth: number,
+    contentTop: number,
+    theme: ReturnType<typeof getTheme>,
+  ): void {
+    const state = gameStore.getState();
+    const ceoPortraitKey = getPortraitTextureKey(state.ceoPortrait.portraitId);
+
+    // Destroy previous overlay objects if they exist.
+    if (this.ceoImg?.active) this.ceoImg.destroy();
+    if (this.ceoMaskCircle?.active) this.ceoMaskCircle.destroy();
+    if (this.ceoBorderCircle?.active) this.ceoBorderCircle.destroy();
+
+    const pSize = Math.min(sidebarWidth - 24, 120);
+    const pX = sidebarLeft + sidebarWidth / 2;
+    const pY = contentTop + 16 + pSize / 2;
+    const initialPortraitKey = this.textures.exists(ceoPortraitKey)
+      ? ceoPortraitKey
+      : PORTRAIT_PLACEHOLDER_KEY;
+
+    this.ceoImg = this.add
+      .image(pX, pY, initialPortraitKey)
+      .setOrigin(0.5, 0.5)
+      .setDepth(10);
+    fitImageCover(this.ceoImg, pSize, pSize);
+
+    // Round mask (Phaser 4 Mask filter)
+    this.ceoMaskCircle = this.add
+      .circle(pX, pY, pSize / 2, 0xffffff)
+      .setVisible(false);
+    this.ceoImg.filters?.internal.addMask(this.ceoMaskCircle);
+
+    // Border
+    this.ceoBorderCircle = this.add
+      .circle(pX, pY, pSize / 2 + 1)
+      .setStrokeStyle(2, theme.colors.accent)
+      .setFillStyle(0x000000, 0)
+      .setDepth(11);
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+    const theme = getTheme();
+
+    // Sidebar portrait panel.
+    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
+    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+
+    // CEO portrait overlay — destroy and rebuild at updated geometry.
+    this.buildCeoOverlay(L.sidebarLeft, L.sidebarWidth, L.contentTop, theme);
+
+    // Main content panel.
+    this.mainPanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.mainPanel.setSize(L.mainContentWidth, L.contentHeight);
+
+    // Tab group — reposition to match the content area inside the panel.
+    const contentArea = this.mainPanel.getContentArea();
+    this.tabGroup.setPosition(
+      L.mainContentLeft + contentArea.x,
+      L.contentTop + contentArea.y,
+    );
+    this.tabGroup.setSize(contentArea.width, this.tabGroup.height);
+
+    // Loans tab: resize the scroll frame and data table to the new width.
+    this.loanTableFrame.setSize(L.mainContentWidth - 20, 280);
+    this.loanTable.setSize(L.mainContentWidth - 20, 280);
   }
 
   private buildPLTab(): Phaser.GameObjects.Container {
@@ -403,13 +471,13 @@ export class FinanceScene extends Phaser.Scene {
     const state = gameStore.getState();
 
     // Loans table — fits within main content area
-    const loanTableFrame = new ScrollFrame(this, {
+    this.loanTableFrame = new ScrollFrame(this, {
       x: 0,
       y: 20,
       width: L.mainContentWidth - 20,
       height: 280,
     });
-    const loanTable = new DataTable(this, {
+    this.loanTable = new DataTable(this, {
       x: 0,
       y: 0,
       width: L.mainContentWidth - 20,
@@ -457,11 +525,11 @@ export class FinanceScene extends Phaser.Scene {
       remaining: loan.remainingBalance,
       turnTaken: loan.turnTaken,
     }));
-    loanTable.setRows(loanRows);
+    this.loanTable.setRows(loanRows);
 
     // Move the frame into the container; ScrollFrame owns the table.
-    loanTableFrame.setContent(loanTable);
-    container.add(loanTableFrame);
+    this.loanTableFrame.setContent(this.loanTable);
+    container.add(this.loanTableFrame);
 
     // "Take Loan" button
     const takeLoanBtn = new Button(this, {
@@ -469,7 +537,7 @@ export class FinanceScene extends Phaser.Scene {
       y: 320,
       width: 140,
       label: "Take Loan",
-      onClick: () => this.showTakeLoan(loanTable),
+      onClick: () => this.showTakeLoan(this.loanTable),
     });
     container.add(takeLoanBtn);
 
@@ -479,7 +547,7 @@ export class FinanceScene extends Phaser.Scene {
       y: 320,
       width: 140,
       label: "Repay Loan",
-      onClick: () => this.repaySelectedLoan(loanTable),
+      onClick: () => this.repaySelectedLoan(this.loanTable),
     });
     container.add(repayBtn);
 

@@ -14,21 +14,21 @@ import {
   getLayout,
   getCargoIconKey,
   getCargoColor,
-  getCargoLabel,
   getCargoShortLabel,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import type { ColumnDef } from "../ui/index.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(Math.round(n));
-  return sign + "\u00A7" + abs.toLocaleString("en-US");
+  return sign + "§" + abs.toLocaleString("en-US");
 }
 
 function trendArrow(trend: string): string {
-  if (trend === "rising") return "\u25B2";
-  if (trend === "falling") return "\u25BC";
-  return "\u2500";
+  if (trend === "rising") return "▲";
+  if (trend === "falling") return "▼";
+  return "─";
 }
 
 const CARGO_TYPE_VALUES = Object.values(CargoType) as CargoTypeValue[];
@@ -49,6 +49,10 @@ function planetTypeLabel(type: string): string {
 
 export class MarketScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
+  private contentPanel!: Panel;
+  private fuelLabel!: Label;
+  private tableFrame!: ScrollFrame;
+  private table!: DataTable;
 
   constructor() {
     super({ key: "MarketScene" });
@@ -75,20 +79,20 @@ export class MarketScene extends Phaser.Scene {
     });
 
     // --- Main content panel ---
-    const contentPanel = new Panel(this, {
+    this.contentPanel = new Panel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,
       height: L.contentHeight,
       title: "Galaxy Market Overview",
     });
-    const content = contentPanel.getContentArea();
+    const content = this.contentPanel.getContentArea();
     const absX = L.mainContentLeft + content.x;
     const absY = L.contentTop + content.y;
 
     // Fuel price display inside content panel
     const fuelTrendStr = trendArrow(state.market.fuelTrend);
-    new Label(this, {
+    this.fuelLabel = new Label(this, {
       x: absX,
       y: absY + 2,
       text: `Fuel Price: ${formatCash(state.market.fuelPrice)} ${fuelTrendStr}`,
@@ -148,7 +152,7 @@ export class MarketScene extends Phaser.Scene {
         ...col,
         align: "right" as const,
         format: (v: unknown) => {
-          if (v == null) return "\u2014";
+          if (v == null) return "—";
           return formatCash(v as number);
         },
         colorFn: (v: unknown) => {
@@ -160,13 +164,13 @@ export class MarketScene extends Phaser.Scene {
       };
     });
 
-    const tableFrame = new ScrollFrame(this, {
+    this.tableFrame = new ScrollFrame(this, {
       x: absX,
       y: absY + 28,
       width: content.width,
       height: content.height - 32,
     });
-    const table = new DataTable(this, {
+    this.table = new DataTable(this, {
       x: 0,
       y: 0,
       width: content.width,
@@ -180,29 +184,11 @@ export class MarketScene extends Phaser.Scene {
         "Generate a galaxy to inspect local and galaxy-wide prices.",
       onRowSelect: (_rowIndex, rowData) => {
         const planetName = rowData["planet"] as string;
-        const planetType = rowData["type"] as string;
         const currentState = gameStore.getState();
         const planet = currentState.galaxy.planets.find(
           (p) => p.name === planetName,
         );
         if (planet) {
-          // Build a cargo summary for the sidebar stats
-          const planetMarket = currentState.market.planetMarkets[planet.id];
-          const stats: Array<{ label: string; value: string }> = [
-            { label: "Type", value: planetType },
-          ];
-          if (planetMarket) {
-            // Show top cargo prices as summary
-            for (const ct of CARGO_TYPE_VALUES) {
-              const entry = planetMarket[ct];
-              if (entry) {
-                stats.push({
-                  label: getCargoLabel(ct),
-                  value: formatCash(entry.currentPrice),
-                });
-              }
-            }
-          }
           this.portrait.showPlanet(planet);
         }
       },
@@ -229,7 +215,30 @@ export class MarketScene extends Phaser.Scene {
       rows.push(row);
     }
 
-    tableFrame.setContent(table);
-    table.setRows(rows);
+    this.tableFrame.setContent(this.table);
+    this.table.setRows(rows);
+
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+
+    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
+    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+
+    this.contentPanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.contentPanel.setSize(L.mainContentWidth, L.contentHeight);
+
+    const content = this.contentPanel.getContentArea();
+    const absX = L.mainContentLeft + content.x;
+    const absY = L.contentTop + content.y;
+
+    this.fuelLabel.setPosition(absX, absY + 2);
+
+    this.tableFrame.setPosition(absX, absY + 28);
+    this.tableFrame.setSize(content.width, content.height - 32);
+
+    this.table.setSize(content.width, content.height - 32);
   }
 }
