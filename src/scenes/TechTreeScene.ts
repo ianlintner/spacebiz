@@ -17,6 +17,7 @@ import {
   getLayout,
   ProgressBar,
   Modal,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import {
   isTechAvailable,
@@ -75,10 +76,15 @@ interface TechNode {
 
 export class TechTreeScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
+  private mainPanel!: Panel;
   private nodes: TechNode[] = [];
-  private selectedTechId: string | null = null;
-  private researchButton!: Button;
+  private gridObjects: Phaser.GameObjects.GameObject[] = [];
+  private rpStatusText!: Phaser.GameObjects.Text;
+  private currentResearchText!: Phaser.GameObjects.Text;
   private progressBar!: ProgressBar;
+  private progressLabel: Phaser.GameObjects.Text | null = null;
+  private researchButton!: Button;
+  private selectedTechId: string | null = null;
 
   constructor() {
     super({ key: "TechTreeScene" });
@@ -87,6 +93,7 @@ export class TechTreeScene extends Phaser.Scene {
   create(): void {
     this.selectedTechId = null;
     this.nodes = [];
+    this.gridObjects = [];
     new SceneUiDirector(this);
     const L = getLayout();
     const theme = getTheme();
@@ -107,16 +114,11 @@ export class TechTreeScene extends Phaser.Scene {
     ]);
 
     // Main panel
-    const panelX = L.mainContentLeft;
-    const panelY = L.contentTop;
-    const panelW = L.mainContentWidth;
-    const panelH = L.contentHeight;
-
-    new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
+    this.mainPanel = new Panel(this, {
+      x: L.mainContentLeft,
+      y: L.contentTop,
+      width: L.mainContentWidth,
+      height: L.contentHeight,
       title: "Research & Technology",
     });
 
@@ -125,9 +127,9 @@ export class TechTreeScene extends Phaser.Scene {
     const rpPerTurn = calculateRPPerTurn(state);
     const currentResearch = getCurrentResearch(state.tech);
 
-    this.add.text(
-      panelX + 16,
-      panelY + 44,
+    this.rpStatusText = this.add.text(
+      0,
+      0,
       `Total RP: ${state.tech.researchPoints} \u2022 +${rpPerTurn} RP/turn \u2022 Techs: ${state.tech.completedTechIds.length}/20`,
       {
         fontSize: `${theme.fonts.caption.size}px`,
@@ -137,10 +139,9 @@ export class TechTreeScene extends Phaser.Scene {
     );
 
     // Current research display
-    const researchY = panelY + 64;
-    this.add.text(
-      panelX + 16,
-      researchY,
+    this.currentResearchText = this.add.text(
+      0,
+      0,
       currentResearch
         ? `\u2699 Researching: ${currentResearch.name}`
         : "\u2699 No research in progress",
@@ -156,19 +157,19 @@ export class TechTreeScene extends Phaser.Scene {
     // Progress bar for current research
     const progress = getResearchProgress(state.tech);
     this.progressBar = new ProgressBar(this, {
-      x: panelX + 16,
-      y: researchY + 22,
-      width: panelW - 32,
+      x: 0,
+      y: 0,
+      width: L.mainContentWidth - 32,
       height: 10,
     });
     this.progressBar.setValue(progress);
 
     // Progress label
     if (currentResearch) {
-      this.add
+      this.progressLabel = this.add
         .text(
-          panelX + panelW - 16,
-          researchY + 22,
+          0,
+          0,
           `${state.tech.researchProgress}/${currentResearch.rpCost} RP`,
           {
             fontSize: `${theme.fonts.caption.size}px`,
@@ -179,7 +180,84 @@ export class TechTreeScene extends Phaser.Scene {
         .setOrigin(1, 0);
     }
 
-    // ── Tech tree grid ──
+    // ── Research button ──
+    this.researchButton = new Button(this, {
+      x: 0,
+      y: 0,
+      autoWidth: true,
+      label: "Research Selected",
+      disabled: true,
+      onClick: () => this.confirmResearch(),
+    });
+
+    // Apply layout positions/sizes and register for future resizes.
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+
+    // PortraitPanel: setPosition before setSize.
+    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
+    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+
+    // Main panel.
+    this.mainPanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.mainPanel.setSize(L.mainContentWidth, L.contentHeight);
+
+    const panelX = L.mainContentLeft;
+    const panelY = L.contentTop;
+    const panelW = L.mainContentWidth;
+    const panelH = L.contentHeight;
+
+    // Status / current-research text — reposition only.
+    this.rpStatusText.setPosition(panelX + 16, panelY + 44);
+    const researchY = panelY + 64;
+    this.currentResearchText.setPosition(panelX + 16, researchY);
+
+    // Progress bar — ProgressBar lacks setSize(), reposition only.
+    // TODO(setSize): ProgressBar width should follow panel width on resize.
+    this.progressBar.setPosition(panelX + 16, researchY + 22);
+
+    // Progress label (right-aligned to panel edge).
+    if (this.progressLabel) {
+      this.progressLabel.setPosition(panelX + panelW - 16, researchY + 22);
+    }
+
+    // Tech-tree grid — custom widget without setSize support.
+    // TODO(setSize): tech-tree grid — destroy + rebuild on resize for now.
+    this.rebuildTechGrid(panelX, panelY, panelW, panelH, researchY);
+
+    // Research button (bottom-left of panel).
+    const buttonY = panelY + panelH - 52;
+    this.researchButton.setPosition(panelX + 16, buttonY);
+
+    // Sync selection-driven UI (rebuilt nodes lose hover-bound state otherwise).
+    this.updateResearchButton();
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // Tech grid build / rebuild
+  // ════════════════════════════════════════════════════════════════
+
+  private rebuildTechGrid(
+    panelX: number,
+    panelY: number,
+    panelW: number,
+    panelH: number,
+    researchY: number,
+  ): void {
+    // Tear down previous grid objects (rectangles, text, lines, glow tweens).
+    for (const obj of this.gridObjects) {
+      obj.destroy();
+    }
+    this.gridObjects = [];
+    this.nodes = [];
+
+    const theme = getTheme();
+    const state = gameStore.getState();
+
     const treeTop = researchY + 46;
     const treeLeft = panelX + 16;
     const treeWidth = panelW - 32;
@@ -204,13 +282,14 @@ export class TechTreeScene extends Phaser.Scene {
       const branchColor = BRANCH_COLORS[branch];
 
       // Branch label
-      this.add
+      const branchLabel = this.add
         .text(treeLeft, branchY + nodeHeight / 2, BRANCH_LABELS[branch], {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
           color: colorToString(branchColor),
         })
         .setOrigin(0, 0.5);
+      this.gridObjects.push(branchLabel);
 
       const branchTechs = TECH_TREE.filter((t) => t.branch === branch).sort(
         (a, b) => a.tier - b.tier,
@@ -242,6 +321,14 @@ export class TechTreeScene extends Phaser.Scene {
           branchColor,
         );
         this.nodes.push(node);
+        this.gridObjects.push(
+          node.bg,
+          node.label,
+          node.costLabel,
+          node.hitArea,
+        );
+        if (node.glow) this.gridObjects.push(node.glow);
+        if (node.checkmark) this.gridObjects.push(node.checkmark);
 
         // Connection line to previous tier
         if (tIdx > 0) {
@@ -252,23 +339,13 @@ export class TechTreeScene extends Phaser.Scene {
             nodeWidth;
           const lineY = branchY + nodeHeight / 2;
           const lineColor = nodeState === "locked" ? 0x333333 : branchColor;
-          this.add
+          const line = this.add
             .line(0, 0, prevX + 2, lineY, nodeX - 2, lineY, lineColor, 0.5)
             .setOrigin(0, 0);
+          this.gridObjects.push(line);
         }
       }
     }
-
-    // ── Research button ──
-    const buttonY = panelY + panelH - 52;
-    this.researchButton = new Button(this, {
-      x: panelX + 16,
-      y: buttonY,
-      autoWidth: true,
-      label: "Research Selected",
-      disabled: true,
-      onClick: () => this.confirmResearch(),
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
