@@ -17,6 +17,7 @@ import {
   Label,
   Panel,
   ScrollFrame,
+  attachReflowHandler,
   createStarfield,
   getLayout,
   getTheme,
@@ -118,6 +119,9 @@ interface TargetRow {
  * Lobby and propose-non-compete need multi-target pickers and ship in v2.
  */
 export class DiplomacyScene extends Phaser.Scene {
+  private headingLabel!: Label;
+  private targetTablePanel!: Panel;
+  private targetTableFrame!: ScrollFrame;
   private targetTable!: DataTable;
   private actionPanel!: Panel;
   private actionButtons: Button[] = [];
@@ -161,6 +165,7 @@ export class DiplomacyScene extends Phaser.Scene {
     this.buildHeader(L);
     this.buildTargetTable(L);
     this.buildActionPanel(L);
+    this.relayout();
     this.refreshFromState();
 
     const onChange = (): void => this.refreshFromState();
@@ -172,12 +177,58 @@ export class DiplomacyScene extends Phaser.Scene {
       this.storeUnsub?.();
       this.storeUnsub = null;
     });
+
+    attachReflowHandler(this, () => {
+      this.relayout();
+      // Re-render dynamic action-panel content (buttons, tag rows, portrait)
+      // at the new geometry. refreshActionPanel destroys + recreates them.
+      this.refreshActionPanel();
+    });
+  }
+
+  // ─── Reflow ─────────────────────────────────────────────────────────────
+
+  private relayout(): void {
+    const L = getLayout();
+
+    // Header heading + counter.
+    this.headingLabel.setPosition(L.mainContentLeft, L.contentTop - 28);
+    this.headerCounter.setPosition(
+      L.mainContentLeft + L.mainContentWidth - 8,
+      L.contentTop - 28,
+    );
+
+    // Target table panel.
+    const tableW = Math.floor(L.mainContentWidth * 0.55);
+    this.targetTablePanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.targetTablePanel.setSize(tableW, L.contentHeight);
+    const tableContent = this.targetTablePanel.getContentArea();
+    const tableAbsX = L.mainContentLeft + tableContent.x;
+    const tableAbsY = L.contentTop + tableContent.y;
+    this.targetTableFrame.setPosition(tableAbsX, tableAbsY);
+    this.targetTableFrame.setSize(tableContent.width, tableContent.height - 16);
+    this.targetTable.setSize(tableContent.width, tableContent.height - 16);
+
+    // Action panel.
+    const panelX = L.mainContentLeft + tableW + 8;
+    const panelW = L.mainContentWidth - tableW - 8;
+    this.actionPanel.setPosition(panelX, L.contentTop);
+    this.actionPanel.setSize(panelW, L.contentHeight);
+    const actionContent = this.actionPanel.getContentArea();
+    const actionAbsX = panelX + actionContent.x;
+    const actionAbsY = L.contentTop + actionContent.y;
+    // TODO(setSize): Label has no setSize — reposition only.
+    this.actionStatusLabel.setPosition(actionAbsX, actionAbsY);
+    this.queuedSummary.setPosition(
+      actionAbsX,
+      actionAbsY + actionContent.height - 24,
+    );
   }
 
   // ─── Layout builders ────────────────────────────────────────────────────
 
   private buildHeader(L: ReturnType<typeof getLayout>): void {
-    new Label(this, {
+    this.headingLabel = new Label(this, {
       x: L.mainContentLeft,
       y: L.contentTop - 28,
       text: "Foreign Relations",
@@ -194,18 +245,18 @@ export class DiplomacyScene extends Phaser.Scene {
 
   private buildTargetTable(L: ReturnType<typeof getLayout>): void {
     const tableW = Math.floor(L.mainContentWidth * 0.55);
-    const tablePanel = new Panel(this, {
+    this.targetTablePanel = new Panel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: tableW,
       height: L.contentHeight,
       title: "Targets",
     });
-    const content = tablePanel.getContentArea();
+    const content = this.targetTablePanel.getContentArea();
     const absX = L.mainContentLeft + content.x;
     const absY = L.contentTop + content.y;
 
-    const frame = new ScrollFrame(this, {
+    this.targetTableFrame = new ScrollFrame(this, {
       x: absX,
       y: absY,
       width: content.width,
@@ -238,7 +289,7 @@ export class DiplomacyScene extends Phaser.Scene {
         this.refreshActionPanel();
       },
     });
-    frame.setContent(this.targetTable);
+    this.targetTableFrame.setContent(this.targetTable);
   }
 
   private buildActionPanel(L: ReturnType<typeof getLayout>): void {
