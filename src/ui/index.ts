@@ -22,3 +22,10 @@ export type {
   TechTreeGridState,
   TechNodeState,
 } from "./TechTreeGrid.ts";
+
+export { StationBuilderGrid, ROOM_COLORS } from "./StationBuilderGrid.ts";
+export type {
+  StationBuilderGridConfig,
+  StationBuilderGridData,
+  CellEventPayload,
+} from "./StationBuilderGrid.ts";

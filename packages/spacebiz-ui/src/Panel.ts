@@ -187,6 +187,17 @@ export class Panel extends Phaser.GameObjects.Container {
     return this.contentY;
   }
 
+  /**
+   * Update the panel title text in place. No-op for panels constructed
+   * without a `title` (no title bar exists to mutate).
+   */
+  public setTitle(title: string): this {
+    if (this.titleText) {
+      this.titleText.setText(title);
+    }
+    return this;
+  }
+
   getContentArea(): { x: number; y: number; width: number; height: number } {
     const theme = getTheme();
     return {
