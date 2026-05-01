@@ -313,7 +313,141 @@ describe("DataTable", () => {
       expect(table.contentHeight).toBe(contentHeightBefore);
     });
   });
+
+  describe("flex columns", () => {
+    it("with no flex columns and outer width at base sum + scrollbar, widths are unchanged", () => {
+      // Outer width = base sum + 4px scrollbar reserve, so the legacy
+      // expandColumns scaling is a no-op AND there's no surplus for flex
+      // to distribute. Effective widths should equal the configured widths.
+      const table = new DataTable(scene as never, {
+        x: 0,
+        y: 0,
+        width: 204,
+        height: 400,
+        columns: [
+          { key: "a", label: "A", width: 100 },
+          { key: "b", label: "B", width: 100 },
+        ],
+      });
+      const widths = computeEffectiveWidths(table);
+      expect(widths).toEqual([100, 100]);
+    });
+
+    it("single flex column absorbs the entire surplus", () => {
+      const table = new DataTable(scene as never, {
+        x: 0,
+        y: 0,
+        // base sum = 300, outer = 600 → 300 surplus
+        width: 600,
+        height: 400,
+        columns: [
+          { key: "a", label: "A", width: 100, flex: 1 },
+          { key: "b", label: "B", width: 100 },
+          { key: "c", label: "C", width: 100 },
+        ],
+      });
+      const widths = computeEffectiveWidths(table);
+      expect(widths).toEqual([400, 100, 100]);
+      expect(widths.reduce((s, w) => s + w, 0)).toBe(600);
+    });
+
+    it("multiple flex columns split surplus proportionally", () => {
+      const table = new DataTable(scene as never, {
+        x: 0,
+        y: 0,
+        // base sum = 300, outer = 600 → 300 surplus.
+        // flex 1 + 2 = 3 → col A gets 100, col B gets 200.
+        width: 600,
+        height: 400,
+        columns: [
+          { key: "a", label: "A", width: 100, flex: 1 },
+          { key: "b", label: "B", width: 100, flex: 2 },
+          { key: "c", label: "C", width: 100 },
+        ],
+      });
+      const widths = computeEffectiveWidths(table);
+      expect(widths[0]).toBe(200); // 100 base + 100 surplus share
+      expect(widths[1]).toBe(300); // 100 base + 200 surplus share
+      expect(widths[2]).toBe(100);
+      expect(widths.reduce((s, w) => s + w, 0)).toBe(600);
+    });
+
+    it("sum of effective widths equals max(outer width, sum of base widths)", () => {
+      // outer wider than base sum → flex distributes
+      const wide = new DataTable(scene as never, {
+        x: 0,
+        y: 0,
+        width: 700,
+        height: 400,
+        columns: [
+          { key: "a", label: "A", width: 100, flex: 1 },
+          { key: "b", label: "B", width: 100 },
+        ],
+      });
+      expect(computeEffectiveWidths(wide).reduce((s, w) => s + w, 0)).toBe(700);
+
+      // outer narrower than base sum → effective widths == base widths
+      const narrow = new DataTable(scene as never, {
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 400,
+        columns: [
+          { key: "a", label: "A", width: 100, flex: 1 },
+          { key: "b", label: "B", width: 100 },
+        ],
+      });
+      expect(computeEffectiveWidths(narrow).reduce((s, w) => s + w, 0)).toBe(
+        200,
+      );
+    });
+
+    it("setSize re-flows: right-aligned cell text repositions when its column grows", () => {
+      const table = new DataTable(scene as never, {
+        x: 0,
+        y: 0,
+        // base sum = 200 = outer width: no surplus, so no flex distribution yet.
+        width: 200,
+        height: 400,
+        columns: [
+          { key: "name", label: "Name", width: 100, flex: 1 },
+          { key: "value", label: "Value", width: 100, align: "right" },
+        ],
+      });
+      table.setRows([{ name: "Alpha", value: 42 }]);
+
+      // Right-aligned text origin sits at (col-x + col-width - 8). With name flexed
+      // from 100 → 200, the value column shifts from x=100 to x=200, so the text
+      // should sit at x = 200 + 100 - 8 = 292.
+      const valueTextBefore = findRightAlignedValueText(table);
+      expect(valueTextBefore.x).toBe(100 + 100 - 8);
+
+      table.setSize(400, 400); // surplus = 200, all goes to flex column 'name'
+      const widths = computeEffectiveWidths(table);
+      expect(widths).toEqual([300, 100]);
+
+      const valueTextAfter = findRightAlignedValueText(table);
+      expect(valueTextAfter.x).toBe(300 + 100 - 8);
+    });
+  });
 });
+
+function computeEffectiveWidths(table: DataTable): number[] {
+  return asMock<{ computeEffectiveWidths: () => number[] }>(
+    table,
+  ).computeEffectiveWidths();
+}
+
+function findRightAlignedValueText(table: DataTable) {
+  const body = asMock<{ bodyContainer: MockContainerLike }>(
+    table,
+  ).bodyContainer;
+  // The "value" cell is the last text rendered in the row.
+  const allTexts = body.list.filter(
+    (child) => (child as { type?: string }).type === "Text",
+  );
+  return asMock<{ x: number; text: string }>(allTexts[allTexts.length - 1]);
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // DataTable-specific helpers (row backgrounds keyed off table width).

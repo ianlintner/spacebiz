@@ -102,7 +102,8 @@ export class FleetScene extends Phaser.Scene {
       height: content.height - 80,
       contentSized: true,
       columns: [
-        { key: "name", label: "Name", width: 110, sortable: true },
+        // 'name' and 'route' flex so they absorb extra width on wide displays.
+        { key: "name", label: "Name", width: 110, flex: 1, sortable: true },
         {
           key: "class",
           label: "Class",
@@ -142,7 +143,7 @@ export class FleetScene extends Phaser.Scene {
           format: (v) => `${Math.round(v as number)}%`,
           colorFn: conditionColor,
         },
-        { key: "route", label: "Route", width: 130, sortable: true },
+        { key: "route", label: "Route", width: 130, flex: 1, sortable: true },
         {
           key: "maintenance",
           label: "Maint.",

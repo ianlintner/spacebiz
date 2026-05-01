@@ -561,7 +561,8 @@ export class RoutesScene extends Phaser.Scene {
       height: tableHeight,
       contentSized: true,
       columns: [
-        { key: "origin", label: "Origin", width: 110, sortable: true },
+        // origin flexes to absorb extra width on wide displays.
+        { key: "origin", label: "Origin", width: 110, flex: 1, sortable: true },
         {
           key: "destination",
           label: "Destination",
