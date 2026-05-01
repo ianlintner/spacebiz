@@ -665,15 +665,14 @@ export class SimPlaybackScene extends Phaser.Scene {
   private relayout(): void {
     const L = getLayout();
 
-    // 3D galaxy viewport — recompute viewport rect.
-    // TODO(3d-resize): GalaxyView3D's renderer canvas is sized to the design
-    // dimensions captured at construction; only the viewport rect updates here.
+    // 3D galaxy viewport + WebGL drawing buffer + camera aspect.
     const vpX = L.navSidebarWidth;
     const vpY = L.contentTop;
     const vpW = L.gameWidth - L.navSidebarWidth;
     const vpH = L.gameHeight - L.contentTop - L.hudBottomBarHeight;
     this.vizRect = { x: vpX, y: vpY, w: vpW, h: vpH };
     this.view3D?.setViewport(this.vizRect);
+    this.view3D?.setSize(L.gameWidth, L.gameHeight);
 
     const sfW = vpW;
     const sfH = vpH;

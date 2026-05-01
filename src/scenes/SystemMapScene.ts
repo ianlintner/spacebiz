@@ -359,7 +359,7 @@ export class SystemMapScene extends Phaser.Scene {
     }
     this.lockMsg?.setPosition(cx, cy - 20);
 
-    // 3D viewport rect — pure data, safe to update.
+    // 3D viewport rect + WebGL drawing buffer + camera aspect.
     this.vizRect = {
       x: L.mainContentLeft + 4,
       y: L.contentTop + 60,
@@ -367,10 +367,7 @@ export class SystemMapScene extends Phaser.Scene {
       h: L.contentHeight - 130,
     };
     this.view3D?.setViewport(this.vizRect);
-    // TODO(3d-resize): SystemView3D's renderer/camera are sized to the design
-    // dimensions captured at construction. A true 3D resize would require
-    // calling renderer.setSize and updating the camera projection matrix —
-    // out of scope for this UI overlay reflow.
+    this.view3D?.setSize(L.gameWidth, L.gameHeight);
   }
 
   override update(_time: number, delta: number): void {
