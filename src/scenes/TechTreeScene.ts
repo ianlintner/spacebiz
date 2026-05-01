@@ -1,10 +1,5 @@
 import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
-import { TechBranch } from "../data/types.ts";
-import type {
-  Technology,
-  TechBranch as TechBranchValue,
-} from "../data/types.ts";
 import { TECH_TREE } from "../data/constants.ts";
 import {
   getTheme,
@@ -19,6 +14,7 @@ import {
   Modal,
   attachReflowHandler,
 } from "../ui/index.ts";
+import { TechTreeGrid, BRANCH_LABELS } from "../ui/TechTreeGrid.ts";
 import {
   isTechAvailable,
   setResearchTarget,
@@ -28,57 +24,13 @@ import {
 } from "../game/tech/TechTree.ts";
 
 // ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const BRANCH_ORDER: TechBranchValue[] = [
-  TechBranch.Logistics,
-  TechBranch.Diplomacy,
-  TechBranch.Engineering,
-  TechBranch.Intelligence,
-  TechBranch.Crisis,
-];
-
-const BRANCH_LABELS: Record<TechBranchValue, string> = {
-  [TechBranch.Logistics]: "Logistics",
-  [TechBranch.Diplomacy]: "Diplomacy",
-  [TechBranch.Engineering]: "Engineering",
-  [TechBranch.Intelligence]: "Intelligence",
-  [TechBranch.Crisis]: "Crisis Mgmt",
-};
-
-const BRANCH_COLORS: Record<TechBranchValue, number> = {
-  [TechBranch.Logistics]: 0x4fc3f7,
-  [TechBranch.Diplomacy]: 0xffd54f,
-  [TechBranch.Engineering]: 0xff8a65,
-  [TechBranch.Intelligence]: 0xce93d8,
-  [TechBranch.Crisis]: 0xef5350,
-};
-
-type NodeState = "locked" | "available" | "researching" | "completed";
-
-interface TechNode {
-  tech: Technology;
-  state: NodeState;
-  x: number;
-  y: number;
-  bg: Phaser.GameObjects.Rectangle;
-  label: Phaser.GameObjects.Text;
-  costLabel: Phaser.GameObjects.Text;
-  hitArea: Phaser.GameObjects.Rectangle;
-  glow?: Phaser.GameObjects.Rectangle;
-  checkmark?: Phaser.GameObjects.Text;
-}
-
-// ---------------------------------------------------------------------------
 // Scene
 // ---------------------------------------------------------------------------
 
 export class TechTreeScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
   private mainPanel!: Panel;
-  private nodes: TechNode[] = [];
-  private gridObjects: Phaser.GameObjects.GameObject[] = [];
+  private grid!: TechTreeGrid;
   private rpStatusText!: Phaser.GameObjects.Text;
   private currentResearchText!: Phaser.GameObjects.Text;
   private progressBar!: ProgressBar;
@@ -92,8 +44,6 @@ export class TechTreeScene extends Phaser.Scene {
 
   create(): void {
     this.selectedTechId = null;
-    this.nodes = [];
-    this.gridObjects = [];
     new SceneUiDirector(this);
     const L = getLayout();
     const theme = getTheme();
@@ -130,7 +80,7 @@ export class TechTreeScene extends Phaser.Scene {
     this.rpStatusText = this.add.text(
       0,
       0,
-      `Total RP: ${state.tech.researchPoints} \u2022 +${rpPerTurn} RP/turn \u2022 Techs: ${state.tech.completedTechIds.length}/20`,
+      `Total RP: ${state.tech.researchPoints} • +${rpPerTurn} RP/turn • Techs: ${state.tech.completedTechIds.length}/20`,
       {
         fontSize: `${theme.fonts.caption.size}px`,
         fontFamily: theme.fonts.caption.family,
@@ -143,8 +93,8 @@ export class TechTreeScene extends Phaser.Scene {
       0,
       0,
       currentResearch
-        ? `\u2699 Researching: ${currentResearch.name}`
-        : "\u2699 No research in progress",
+        ? `⚙ Researching: ${currentResearch.name}`
+        : "⚙ No research in progress",
       {
         fontSize: `${theme.fonts.body.size}px`,
         fontFamily: theme.fonts.body.family,
@@ -179,6 +129,20 @@ export class TechTreeScene extends Phaser.Scene {
         )
         .setOrigin(1, 0);
     }
+
+    // Tech tree grid (sized in relayout)
+    this.grid = new TechTreeGrid(this, {
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      onSelect: (techId) => {
+        this.selectedTechId = techId;
+        this.updateSelectedPortrait();
+        this.updateResearchButton();
+      },
+    });
+    this.grid.setGridState(this.buildGridState());
 
     // ── Research button ──
     this.researchButton = new Button(this, {
@@ -225,275 +189,33 @@ export class TechTreeScene extends Phaser.Scene {
       this.progressLabel.setPosition(panelX + panelW - 16, researchY + 22);
     }
 
-    // Tech-tree grid: deliberately rebuilt on every relayout. Lifting
-    // this into a TechTreeGrid widget with setSize requires extracting
-    // ~250 lines of node/edge/glow-tween bookkeeping that's tightly
-    // coupled to the scene's gridObjects/nodes state. Deferred — the
-    // destroy + rebuild is cheap (≤ ~30 nodes) and only fires on
-    // resize, not per-frame.
-    this.rebuildTechGrid(panelX, panelY, panelW, panelH, researchY);
+    // Tech-tree grid: reflow in place via setSize/setPosition (no rebuild).
+    const gridLeft = panelX + 16;
+    const gridTop = researchY + 46;
+    const gridWidth = panelW - 32;
+    const gridHeight = panelH - (gridTop - panelY) - 60;
+    this.grid.setPosition(gridLeft, gridTop);
+    this.grid.setSize(gridWidth, gridHeight);
 
     // Research button (bottom-left of panel).
     const buttonY = panelY + panelH - 52;
     this.researchButton.setPosition(panelX + 16, buttonY);
 
-    // Sync selection-driven UI (rebuilt nodes lose hover-bound state otherwise).
     this.updateResearchButton();
   }
 
-  // ════════════════════════════════════════════════════════════════
-  // Tech grid build / rebuild
-  // ════════════════════════════════════════════════════════════════
-
-  private rebuildTechGrid(
-    panelX: number,
-    panelY: number,
-    panelW: number,
-    panelH: number,
-    researchY: number,
-  ): void {
-    // Tear down previous grid objects (rectangles, text, lines, glow tweens).
-    for (const obj of this.gridObjects) {
-      obj.destroy();
-    }
-    this.gridObjects = [];
-    this.nodes = [];
-
-    const theme = getTheme();
+  private buildGridState(): {
+    completedTechIds: string[];
+    currentResearchId: string | null;
+    researchProgress: number;
+    isAvailable: (techId: string) => boolean;
+  } {
     const state = gameStore.getState();
-
-    const treeTop = researchY + 46;
-    const treeLeft = panelX + 16;
-    const treeWidth = panelW - 32;
-    const branchCount = BRANCH_ORDER.length;
-    const tiersCount = 4;
-    const rowHeight = Math.min(
-      68,
-      (panelH - (treeTop - panelY) - 60) / branchCount,
-    );
-    const labelColumnWidth = 90;
-    const nodeAreaWidth = treeWidth - labelColumnWidth;
-    const nodeGapX = 8;
-    const nodeWidth = Math.max(
-      60,
-      (nodeAreaWidth - nodeGapX * (tiersCount - 1)) / tiersCount,
-    );
-    const nodeHeight = rowHeight - 12;
-
-    for (let bIdx = 0; bIdx < branchCount; bIdx++) {
-      const branch = BRANCH_ORDER[bIdx];
-      const branchY = treeTop + bIdx * rowHeight;
-      const branchColor = BRANCH_COLORS[branch];
-
-      // Branch label
-      const branchLabel = this.add
-        .text(treeLeft, branchY + nodeHeight / 2, BRANCH_LABELS[branch], {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(branchColor),
-        })
-        .setOrigin(0, 0.5);
-      this.gridObjects.push(branchLabel);
-
-      const branchTechs = TECH_TREE.filter((t) => t.branch === branch).sort(
-        (a, b) => a.tier - b.tier,
-      );
-
-      for (let tIdx = 0; tIdx < branchTechs.length; tIdx++) {
-        const tech = branchTechs[tIdx];
-        const nodeX =
-          treeLeft + labelColumnWidth + tIdx * (nodeWidth + nodeGapX);
-        const nodeY = branchY;
-
-        // Determine state
-        let nodeState: NodeState = "locked";
-        if (state.tech.completedTechIds.includes(tech.id)) {
-          nodeState = "completed";
-        } else if (state.tech.currentResearchId === tech.id) {
-          nodeState = "researching";
-        } else if (isTechAvailable(tech.id, state.tech)) {
-          nodeState = "available";
-        }
-
-        const node = this.createNode(
-          tech,
-          nodeState,
-          nodeX,
-          nodeY,
-          nodeWidth,
-          nodeHeight,
-          branchColor,
-        );
-        this.nodes.push(node);
-        this.gridObjects.push(
-          node.bg,
-          node.label,
-          node.costLabel,
-          node.hitArea,
-        );
-        if (node.glow) this.gridObjects.push(node.glow);
-        if (node.checkmark) this.gridObjects.push(node.checkmark);
-
-        // Connection line to previous tier
-        if (tIdx > 0) {
-          const prevX =
-            treeLeft +
-            labelColumnWidth +
-            (tIdx - 1) * (nodeWidth + nodeGapX) +
-            nodeWidth;
-          const lineY = branchY + nodeHeight / 2;
-          const lineColor = nodeState === "locked" ? 0x333333 : branchColor;
-          const line = this.add
-            .line(0, 0, prevX + 2, lineY, nodeX - 2, lineY, lineColor, 0.5)
-            .setOrigin(0, 0);
-          this.gridObjects.push(line);
-        }
-      }
-    }
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  // Node rendering
-  // ════════════════════════════════════════════════════════════════
-
-  private createNode(
-    tech: Technology,
-    nodeState: NodeState,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    branchColor: number,
-  ): TechNode {
-    const theme = getTheme();
-
-    // Background
-    let bgColor = 0x1a1a2e;
-    let bgAlpha = 0.6;
-    let borderColor = 0x333333;
-
-    if (nodeState === "completed") {
-      bgColor = branchColor;
-      bgAlpha = 0.2;
-      borderColor = branchColor;
-    } else if (nodeState === "researching") {
-      bgColor = branchColor;
-      bgAlpha = 0.15;
-      borderColor = branchColor;
-    } else if (nodeState === "available") {
-      borderColor = branchColor;
-      bgAlpha = 0.4;
-    }
-
-    const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, bgColor, bgAlpha);
-    bg.setStrokeStyle(
-      nodeState === "locked" ? 1 : 2,
-      borderColor,
-      nodeState === "locked" ? 0.3 : 0.8,
-    );
-
-    // Tech name
-    const nameColor =
-      nodeState === "locked"
-        ? colorToString(0x555555)
-        : nodeState === "completed"
-          ? colorToString(branchColor)
-          : colorToString(theme.colors.text);
-
-    const label = this.add.text(x + 4, y + 3, tech.name, {
-      fontSize: "10px",
-      fontFamily: theme.fonts.caption.family,
-      color: nameColor,
-      wordWrap: { width: w - 8 },
-    });
-
-    // Cost label
-    const costText =
-      nodeState === "completed"
-        ? "\u2713"
-        : nodeState === "researching"
-          ? `${gameStore.getState().tech.researchProgress}/${tech.rpCost}`
-          : `${tech.rpCost} RP`;
-    const costColor =
-      nodeState === "completed"
-        ? colorToString(theme.colors.profit)
-        : nodeState === "locked"
-          ? colorToString(0x444444)
-          : colorToString(theme.colors.accent);
-
-    const costLabel = this.add.text(x + w - 4, y + h - 4, costText, {
-      fontSize: "9px",
-      fontFamily: theme.fonts.caption.family,
-      color: costColor,
-    });
-    costLabel.setOrigin(1, 1);
-
-    // Hit area for interaction
-    const hitArea = this.add
-      .rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
-      .setInteractive({ useHandCursor: nodeState !== "locked" });
-
-    hitArea.on("pointerup", () => {
-      this.selectedTechId = tech.id;
-      this.updateSelectedPortrait();
-      this.updateResearchButton();
-    });
-
-    hitArea.on("pointerover", () => {
-      if (nodeState !== "locked") {
-        bg.setStrokeStyle(2, 0xffffff, 0.8);
-      }
-    });
-
-    hitArea.on("pointerout", () => {
-      bg.setStrokeStyle(
-        nodeState === "locked" ? 1 : 2,
-        borderColor,
-        nodeState === "locked" ? 0.3 : 0.8,
-      );
-    });
-
-    // Animated glow for researching node
-    let glow: Phaser.GameObjects.Rectangle | undefined;
-    if (nodeState === "researching") {
-      glow = this.add.rectangle(
-        x + w / 2,
-        y + h / 2,
-        w + 4,
-        h + 4,
-        branchColor,
-        0.15,
-      );
-      this.tweens.add({
-        targets: glow,
-        alpha: { from: 0.08, to: 0.25 },
-        duration: 1200,
-        yoyo: true,
-        repeat: -1,
-      });
-    }
-
-    // Checkmark for completed
-    let checkmark: Phaser.GameObjects.Text | undefined;
-    if (nodeState === "completed") {
-      checkmark = this.add.text(x + w - 8, y + 2, "\u2713", {
-        fontSize: "14px",
-        color: colorToString(theme.colors.profit),
-      });
-      checkmark.setOrigin(1, 0);
-    }
-
     return {
-      tech,
-      state: nodeState,
-      x,
-      y,
-      bg,
-      label,
-      costLabel,
-      hitArea,
-      glow,
-      checkmark,
+      completedTechIds: state.tech.completedTechIds,
+      currentResearchId: state.tech.currentResearchId,
+      researchProgress: state.tech.researchProgress,
+      isAvailable: (techId) => isTechAvailable(techId, state.tech),
     };
   }
 
@@ -513,13 +235,13 @@ export class TechTreeScene extends Phaser.Scene {
 
     let statusLine: string;
     if (isCompleted) {
-      statusLine = "\u2713 Completed";
+      statusLine = "✓ Completed";
     } else if (isResearching) {
-      statusLine = `\u2699 Researching (${state.tech.researchProgress}/${tech.rpCost} RP)`;
+      statusLine = `⚙ Researching (${state.tech.researchProgress}/${tech.rpCost} RP)`;
     } else if (available) {
-      statusLine = "\u2605 Available";
+      statusLine = "★ Available";
     } else {
-      statusLine = "\uD83D\uDD12 Locked (complete prior tier)";
+      statusLine = "🔒 Locked (complete prior tier)";
     }
 
     const details: Array<{ label: string; value: string }> = [
