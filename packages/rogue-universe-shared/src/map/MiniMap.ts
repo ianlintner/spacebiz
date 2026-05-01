@@ -38,10 +38,10 @@ export interface MiniMapConfig {
 
 export class MiniMap {
   private readonly scene: Phaser.Scene;
-  private readonly x: number;
-  private readonly y: number;
-  private readonly width: number;
-  private readonly height: number;
+  private x: number;
+  private y: number;
+  private width: number;
+  private height: number;
   private readonly depth: number;
   private readonly graphics: Phaser.GameObjects.Graphics;
   private readonly labelText: Phaser.GameObjects.Text;
@@ -310,6 +310,36 @@ export class MiniMap {
   clear(): void {
     this.graphics.clear();
     this.labelText.setText("");
+  }
+
+  /**
+   * Reposition the mini-map. The graphics object's drawing is in
+   * absolute scene coordinates (not relative to a container), so the
+   * caller must redraw via one of the `draw*` methods after moving.
+   */
+  setPosition(x: number, y: number): this {
+    this.x = x;
+    this.y = y;
+    this.refreshChrome();
+    return this;
+  }
+
+  /**
+   * Resize the mini-map. Re-anchors the label and redraws the background
+   * at the new dimensions; planet markers are re-rendered the next time
+   * a draw method is called (they are scaled from the bounding box).
+   */
+  setSize(width: number, height: number): this {
+    this.width = width;
+    this.height = height;
+    this.refreshChrome();
+    return this;
+  }
+
+  private refreshChrome(): void {
+    this.labelText.setPosition(this.x + this.width / 2, this.y + 4);
+    this.clear();
+    this.drawBackground();
   }
 
   /** Remove all game objects */

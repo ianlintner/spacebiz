@@ -216,17 +216,21 @@ export class TechTreeScene extends Phaser.Scene {
     const researchY = panelY + 64;
     this.currentResearchText.setPosition(panelX + 16, researchY);
 
-    // Progress bar — ProgressBar lacks setSize(), reposition only.
-    // TODO(setSize): ProgressBar width should follow panel width on resize.
+    // Progress bar tracks the panel content width.
     this.progressBar.setPosition(panelX + 16, researchY + 22);
+    this.progressBar.setSize(panelW - 32, 10);
 
     // Progress label (right-aligned to panel edge).
     if (this.progressLabel) {
       this.progressLabel.setPosition(panelX + panelW - 16, researchY + 22);
     }
 
-    // Tech-tree grid — custom widget without setSize support.
-    // TODO(setSize): tech-tree grid — destroy + rebuild on resize for now.
+    // Tech-tree grid: deliberately rebuilt on every relayout. Lifting
+    // this into a TechTreeGrid widget with setSize requires extracting
+    // ~250 lines of node/edge/glow-tween bookkeeping that's tightly
+    // coupled to the scene's gridObjects/nodes state. Deferred — the
+    // destroy + rebuild is cheap (≤ ~30 nodes) and only fires on
+    // resize, not per-frame.
     this.rebuildTechGrid(panelX, panelY, panelW, panelH, researchY);
 
     // Research button (bottom-left of panel).

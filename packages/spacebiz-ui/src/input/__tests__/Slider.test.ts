@@ -90,4 +90,37 @@ describe("Slider", () => {
     s.setEnabled(false);
     expect(s.isEnabled()).toBe(false);
   });
+
+  it("setSize flexes the track width and re-anchors the thumb to current value", () => {
+    const scene = createMockScene();
+    const s = new Slider(scene as never, {
+      x: 0,
+      y: 0,
+      width: 100,
+      min: 0,
+      max: 100,
+      value: 50,
+    });
+    expect(s.setSize(400, 24)).toBe(s);
+    expect(s.width).toBe(400);
+    const thumb = (s as unknown as { thumb: { x: number } }).thumb;
+    // 50% across a 400px track ⇒ thumbX ≈ 200
+    expect(thumb.x).toBe(200);
+    const track = (s as unknown as { track: { width: number } }).track;
+    expect(track.width).toBe(400);
+  });
+
+  it("setSize preserves the slider value", () => {
+    const scene = createMockScene();
+    const s = new Slider(scene as never, {
+      x: 0,
+      y: 0,
+      width: 100,
+      min: 0,
+      max: 10,
+      value: 7,
+    });
+    s.setSize(300, 24);
+    expect(s.getValue()).toBe(7);
+  });
 });

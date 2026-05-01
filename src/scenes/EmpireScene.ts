@@ -175,13 +175,9 @@ export class EmpireScene extends Phaser.Scene {
 
     const toolbarH = 32;
 
-    // Filter toolbar: toggle button + summary label.
-    // TODO(setSize): Button (autoWidth — reposition only)
+    // Filter toolbar: autoWidth toggle button + dynamic summary label.
+    // Both flex to their content; reposition only.
     this.filterToggleBtn.setPosition(absX, absY);
-
-    // Summary label sits to the right of the autoWidth button — query its
-    // width after the button has been laid out for this frame.
-    // TODO(setSize): Label
     this.filterSummaryLabel.setPosition(
       this.filterToggleBtn.x + this.filterToggleBtn.width + 8,
       absY + toolbarH / 2,

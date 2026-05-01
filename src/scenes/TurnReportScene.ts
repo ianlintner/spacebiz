@@ -716,8 +716,9 @@ export class TurnReportScene extends Phaser.Scene {
     // Backdrop covers the full canvas.
     this.backdrop?.setPosition(0, 0).setSize(L.gameWidth, L.gameHeight);
 
-    // TODO(setSize): createStarfield is reposition-only; it builds emitters
-    // sized to the canvas at create() time. Resize is not a supported op.
+    // Note: createStarfield builds particle emitters sized to the canvas
+    // at create() time; emitters cannot be resized in place. Out of scope
+    // for the sub-widget setSize pass.
 
     // Sidebar portrait — setPosition before setSize.
     this.portrait?.setPosition(L.sidebarLeft, L.contentTop);

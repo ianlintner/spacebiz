@@ -114,6 +114,39 @@ describe("Button.setActive (visual selection state)", () => {
   });
 });
 
+describe("Button.setSize", () => {
+  it("returns the button instance for chaining", () => {
+    const { btn } = makeButton({ width: 100, height: 30 });
+    expect(btn.setSize(200, 50)).toBe(btn);
+  });
+
+  it("syncs inherited width and height", () => {
+    const { btn } = makeButton({ width: 100, height: 30 });
+    btn.setSize(220, 48);
+    expect(btn.width).toBe(220);
+    expect(btn.height).toBe(48);
+  });
+
+  it("re-anchors the label to the new center", () => {
+    const { btn } = makeButton({ width: 100, height: 30 });
+    btn.setSize(240, 60);
+    const lbl = (btn as unknown as { label: { x: number; y: number } }).label;
+    expect(lbl.x).toBe(120);
+    expect(lbl.y).toBe(30);
+  });
+
+  it("resizes the background nineslice in place (no new children)", () => {
+    const { btn } = makeButton({ width: 100, height: 30 });
+    const bgBefore = (btn as unknown as { bg: { width: number } }).bg;
+    const sizeBefore = btn.list.length;
+    btn.setSize(180, 44);
+    const bgAfter = (btn as unknown as { bg: { width: number } }).bg;
+    expect(bgAfter).toBe(bgBefore);
+    expect(bgAfter.width).toBe(180);
+    expect(btn.list.length).toBe(sizeBefore);
+  });
+});
+
 describe("Button.destroy", () => {
   it("tears down hit zone without throwing", () => {
     const { btn } = makeButton();

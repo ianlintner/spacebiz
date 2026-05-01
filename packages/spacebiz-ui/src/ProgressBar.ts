@@ -139,4 +139,26 @@ export class ProgressBar extends Phaser.GameObjects.Container {
     this.fillColor = color;
     this.fill.setFillStyle(color);
   }
+
+  /**
+   * Resize the bar in place. Updates the inherited container size, resizes
+   * the outer glow / border / background / fill rectangles in-place, and
+   * re-centers the optional label. Preserves the current fill ratio.
+   */
+  override setSize(width: number, height: number): this {
+    super.setSize(width, height);
+    const theme = getTheme();
+    const bw = theme.panel.borderWidth;
+    this.barWidth = width;
+
+    this.outerGlow.setSize(width + 4, height + 4);
+    this.border.setSize(width, height);
+    this.bg.setSize(width - bw * 2, height - bw * 2);
+    this.fill.setSize(this.calculateFillWidth(), height - bw * 2);
+
+    if (this.label) {
+      this.label.setPosition(width / 2, height / 2);
+    }
+    return this;
+  }
 }

@@ -441,9 +441,9 @@ export class SandboxSetupScene extends Phaser.Scene {
     this.layoutHorizontalButtonRow(this.shapeButtons, innerCx, rowY, 112);
     rowY += 38 + SECTION_GAP;
 
-    // AI companies slider — Slider has no public setSize(); reposition only.
-    // TODO(setSize): give Slider a setSize() so we can flex its width on resize.
+    // AI companies slider — flex track width to the panel inner area.
     this.companySlider.setPosition(innerX, rowY);
+    this.companySlider.setSize(panelW - PADDING * 2, 32);
     rowY += 60 + SECTION_GAP;
 
     // Playback speed.
@@ -488,9 +488,9 @@ export class SandboxSetupScene extends Phaser.Scene {
 
       this.savePanelTitle.setPosition(panelX + PADDING, savePanelY + 8);
 
-      // ScrollableList has no public setSize(); reposition only.
-      // TODO(setSize): give ScrollableList a setSize() so the saved-games list
-      // can resize without scene.restart().
+      // ScrollableList width/height are baked at construction; reposition
+      // only. Lifting it into a setSize-aware widget is future work, out
+      // of scope for the sub-widget pass.
       this.saveList.setPosition(panelX + PADDING, savePanelY + 32);
     }
   }

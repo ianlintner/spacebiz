@@ -790,8 +790,7 @@ export class GameHUDScene extends Phaser.Scene {
         navStartY + i * (iconBtnSize + iconSpacing) + iconBtnSize / 2;
       const container = this.navContainers.get(sceneKey);
       const hit = this.navHitAreas.get(sceneKey);
-      // TODO(setSize): nav button container is a plain Phaser.Container with
-      // hand-positioned children — reposition only.
+      // Nav button container holds a fixed-size icon — reposition only.
       if (container) container.setPosition(navCenterX, btnY);
       if (hit) hit.setPosition(navCenterX, btnY);
     }
@@ -801,8 +800,7 @@ export class GameHUDScene extends Phaser.Scene {
     const audioBtnY = bottomCluster - iconBtnSize / 2 - (iconBtnSize + 6);
     const saveBtnY = bottomCluster - iconBtnSize / 2;
     for (const btn of this.settingsButtons) {
-      // TODO(setSize): settings icon button is a plain Phaser.Container —
-      // reposition only.
+      // Settings icon button is a fixed-size container — reposition only.
       btn.container.setPosition(
         navCenterX,
         btn.role === "audio" ? audioBtnY : saveBtnY,
@@ -836,25 +834,35 @@ export class GameHUDScene extends Phaser.Scene {
     this.tickerBorder.setPosition(0, tickerY);
     this.tickerBorder.setSize(L.gameWidth, 1);
 
-    // HorizontalNewsTicker has no setSize/setPosition API — destroy and
-    // recreate so the marquee mask + travel distance match the new strip.
-    this.newsTicker?.destroy();
-    this.newsTicker = new HorizontalNewsTicker(
-      this,
-      L.navSidebarWidth,
-      tickerY,
-      L.gameWidth - L.navSidebarWidth,
-      L.hudTickerHeight,
-    );
-    this.newsTicker.updateItems(this.buildTickerItems(gameStore.getState()));
+    // News ticker reflows in place — mask + scroll travel rebuild against
+    // the new bounds without destroying the underlying graphics objects.
+    if (this.newsTicker) {
+      this.newsTicker.setPosition(L.navSidebarWidth, tickerY);
+      this.newsTicker.setSize(
+        L.gameWidth - L.navSidebarWidth,
+        L.hudTickerHeight,
+      );
+    } else {
+      this.newsTicker = new HorizontalNewsTicker(
+        this,
+        L.navSidebarWidth,
+        tickerY,
+        L.gameWidth - L.navSidebarWidth,
+        L.hudTickerHeight,
+      );
+      this.newsTicker.updateItems(this.buildTickerItems(gameStore.getState()));
+    }
 
     // ── Adviser drawer (upper-right, anchored to right edge) ──
     const advPanelW = 220;
     const advTabW = 36;
     const advPanelX = L.gameWidth - advTabW - advPanelW - 8;
     const advPanelY = L.hudTopBarHeight + 8;
-    // TODO(setSize): AdviserPanel is a Container — reposition only.
     this.adviserPanel.setPosition(advPanelX, advPanelY);
+    // Height is content-driven inside AdviserPanel; pass 0 to keep the
+    // current internal panelHeight (the override skips heights below the
+    // content-driven minimum).
+    this.adviserPanel.setSize(advPanelW, 0);
   }
 
   private maybeShowDilemma(): void {

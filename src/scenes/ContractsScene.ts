@@ -183,8 +183,8 @@ export class ContractsScene extends Phaser.Scene {
     // TAB 0 — AVAILABLE CONTRACTS
     // ════════════════════════════════════════════════════════════════
 
-    // TODO(setSize): Phaser.GameObjects.Text has no setSize for our purposes —
-    // reposition only and update wordWrap width during relayout.
+    // Plain Phaser.GameObjects.Text — relayout reflows wrap width via
+    // setWordWrapWidth(). No sub-widget wrapper needed here.
     this.availableSummary = this.add.text(CONTENT_INNER_INSET, 8, "", {
       fontSize: `${getTheme().fonts.caption.size}px`,
       fontFamily: getTheme().fonts.caption.family,
@@ -276,7 +276,7 @@ export class ContractsScene extends Phaser.Scene {
     // TAB 1 — ACTIVE CONTRACTS
     // ════════════════════════════════════════════════════════════════
 
-    // TODO(setSize): Phaser.GameObjects.Text — reposition + wordWrap only.
+    // Plain Phaser.GameObjects.Text — relayout reflows wrap width.
     this.activeSummary = this.add.text(CONTENT_INNER_INSET, 8, "", {
       fontSize: `${getTheme().fonts.caption.size}px`,
       fontFamily: getTheme().fonts.caption.family,

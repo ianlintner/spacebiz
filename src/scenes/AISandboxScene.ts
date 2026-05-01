@@ -445,13 +445,13 @@ export class AISandboxScene extends Phaser.Scene {
     this.topBarPanel.setPosition(0, 0);
     this.topBarPanel.setSize(L.gameWidth, topBarH);
 
-    // TODO(setSize): Label has no setSize().
     this.titleLabel.setPosition(padding, 8);
     this.turnLabel.setPosition(padding, 36);
     this.statusLabel.setPosition(200, 36);
 
-    // TODO(setSize): ProgressBar has no setSize() — reposition only.
+    // Progress bar tracks the right edge of the top bar at a fixed width.
     this.progressBar.setPosition(L.gameWidth - 310 - padding, 22);
+    this.progressBar.setSize(300, 18);
 
     // Left column.
     this.leftPanel.setPosition(0, topBarH);
@@ -476,14 +476,14 @@ export class AISandboxScene extends Phaser.Scene {
 
     this.activityHeading.setPosition(leftW + padding, topBarH + 8);
 
-    // TODO(setSize): ScrollableList has no setSize() — reposition only.
+    // ScrollableList width/height are configured at construction; reposition only.
     this.activityList.setPosition(leftW + padding, topBarH + 32);
 
     // Bottom bar.
     this.bottomBarPanel.setPosition(0, L.gameHeight - bottomBarH);
     this.bottomBarPanel.setSize(L.gameWidth, bottomBarH);
 
-    // TODO(setSize): Button has no public setSize() — reposition only.
+    // Bottom-bar buttons share a fixed width; reposition only.
     const btnW = 96;
     const btnY = L.gameHeight - bottomBarH + 12;
     let btnX = padding;

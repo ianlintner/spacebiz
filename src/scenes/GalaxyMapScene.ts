@@ -348,9 +348,10 @@ export class GalaxyMapScene extends Phaser.Scene {
       cf.hit.setPosition(x, rowY);
     }
 
-    // TODO(setSize): sidebar is composed of ad-hoc text/rect primitives, not
-    // a sized container. Rebuild so the per-row height clamp re-evaluates
-    // against the new sidebar height.
+    // Sidebar contents are ad-hoc text/rect primitives without a sized
+    // container; rebuild so the per-row height clamp re-evaluates
+    // against the new sidebar height. Lifting into a sidebar widget is
+    // future work — out of scope for the setSize sub-widget pass.
     this.rebuildSidebar();
   }
 

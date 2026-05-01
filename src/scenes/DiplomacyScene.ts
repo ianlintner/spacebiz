@@ -217,12 +217,13 @@ export class DiplomacyScene extends Phaser.Scene {
     const actionContent = this.actionPanel.getContentArea();
     const actionAbsX = panelX + actionContent.x;
     const actionAbsY = L.contentTop + actionContent.y;
-    // TODO(setSize): Label has no setSize — reposition only.
     this.actionStatusLabel.setPosition(actionAbsX, actionAbsY);
+    this.actionStatusLabel.setSize(actionContent.width, 24);
     this.queuedSummary.setPosition(
       actionAbsX,
       actionAbsY + actionContent.height - 24,
     );
+    this.queuedSummary.setSize(actionContent.width, 24);
   }
 
   // ─── Layout builders ────────────────────────────────────────────────────

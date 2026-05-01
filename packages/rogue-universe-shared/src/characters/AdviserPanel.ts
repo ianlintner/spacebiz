@@ -817,6 +817,71 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
     }
   }
 
+  /**
+   * Resize the drawer body. The tab handle on the left edge keeps its
+   * fixed `TAB_WIDTH`; only the panel-body geometry to its right reflows.
+   *
+   * The panel's content height is also driven internally by the active
+   * message length (`resizePanel` in `startTypewriter`); callers should
+   * pass at least `minPanelHeight`. If a smaller height is requested, the
+   * panel keeps its content-driven minimum.
+   */
+  setSize(width: number, height: number): this {
+    super.setSize(width, height);
+    this.panelWidth = width;
+    const bx = TAB_WIDTH; // body x offset (tab is on the left)
+
+    // Background layers tracking the body width.
+    this.shadow.setSize(width, this.panelHeight);
+    this.solidBg.setSize(width, this.panelHeight);
+    this.bg.setSize(width, this.panelHeight);
+    this.accentBar.setSize(width, 3);
+
+    // Re-anchor portrait elements horizontally inside the new width.
+    const portraitX = bx + Math.floor((width - this.portraitSize) / 2);
+    const portraitY = MSG_PADDING;
+    this.portraitBorder.setPosition(portraitX - 3, portraitY - 3);
+    this.portraitGlowBar.setPosition(
+      portraitX,
+      portraitY + this.portraitSize + 1,
+    );
+    if (this.portraitImage) {
+      this.portraitImage.setPosition(
+        portraitX + this.portraitSize / 2,
+        portraitY + this.portraitSize / 2,
+      );
+    }
+    if (this.portraitGfx) {
+      this.portraitGfx.setPosition(portraitX, portraitY);
+    }
+
+    // Text area follows the new width.
+    const textW = width - MSG_PADDING * 2 - 8;
+    this.msgLabel.setStyle({ wordWrap: { width: textW } });
+
+    if (this.navLabel) {
+      this.navLabel.setX(bx + width - MSG_PADDING);
+    }
+    if (this.dismissBtn) {
+      this.dismissBtn.setX(bx + width - DISMISS_SIZE / 2 - 6);
+    }
+    if (this.hitZone) {
+      this.hitZone.setSize(width, this.panelHeight);
+    }
+
+    // Honour explicit height by routing through resizePanel so
+    // bg/shadow/solidBg/hitZone all stay in sync.
+    if (height >= this.minPanelHeight) {
+      this.resizePanel(height);
+    }
+
+    // Update closedX so the drawer continues to sit just off the right
+    // edge of its host viewport. Caller is expected to setPosition()
+    // before/after this if their anchor changes.
+    this.closedX = this.openX + width;
+    return this;
+  }
+
   destroy(fromScene?: boolean): void {
     this.stopTypewriter();
     if (this.animTimer) {

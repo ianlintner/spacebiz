@@ -409,7 +409,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.portraitBorder.setRadius(portraitSize / 2 + 2);
 
     if (this.portraitLabel) {
-      // TODO(setSize): Label has no setSize; reposition only.
+      // Static label below portrait — reposition only.
       this.portraitLabel.setPosition(
         portraitCenterX,
         portraitCenterY + portraitSize / 2 + theme.spacing.sm,
@@ -435,21 +435,18 @@ export class GalaxySetupScene extends Phaser.Scene {
     const rowH = 44;
     let rowY = contentTop;
 
-    // Company row.
-    // TODO(setSize): Label has no setSize; reposition only.
+    // Company row — static field labels reposition only.
     this.companyFieldLabel.setPosition(rightX, rowY + 8);
     this.nameLabel.setPosition(fieldX, rowY + 8);
     rowY += rowH;
 
     // Seed row.
-    // TODO(setSize): Label has no setSize; reposition only.
     this.seedFieldLabel.setPosition(rightX, rowY + 8);
     this.seedLabel.setPosition(fieldX, rowY + 8);
     this.randomizeButton.setPosition(fieldX + 120, rowY + 4);
     rowY += rowH;
 
     // Length row.
-    // TODO(setSize): Label has no setSize; reposition only.
     this.lengthFieldLabel.setPosition(rightX, rowY + 6);
     const presetBtnH = 32;
     const presetBtnCount = PRESET_OPTIONS.length;
@@ -468,7 +465,6 @@ export class GalaxySetupScene extends Phaser.Scene {
       }
       const desc = this.presetDescriptions[idx];
       if (desc) {
-        // TODO(setSize): Label has no setSize; reposition only.
         desc.setPosition(btnX + presetBtnW / 2, rowY + presetBtnH + 6);
       }
     });
@@ -476,7 +472,6 @@ export class GalaxySetupScene extends Phaser.Scene {
     rowY += rowH + 20; // extra space for descriptions
 
     // Shape row.
-    // TODO(setSize): Label has no setSize; reposition only.
     this.shapeFieldLabel.setPosition(rightX, rowY + 6);
     this.shapeDropdown.setPosition(fieldX, rowY + 2);
     this.shapeDropdown.setSize(fieldW, 32);
@@ -484,7 +479,6 @@ export class GalaxySetupScene extends Phaser.Scene {
     rowY += rowH + theme.spacing.md;
 
     // ── Starting system header ──
-    // TODO(setSize): Label has no setSize; reposition only.
     this.selectStartingLabel.setPosition(panelX + pad, rowY);
 
     this.configX = panelX;

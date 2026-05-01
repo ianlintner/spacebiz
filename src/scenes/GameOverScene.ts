@@ -534,12 +534,13 @@ export class GameOverScene extends Phaser.Scene {
     this.playAgainButton.setPosition(L.gameWidth / 2 - BTN_WIDTH - 20, btnY);
     this.mainMenuButton.setPosition(L.gameWidth / 2 + 20, btnY);
 
-    // Adviser reveal panel — reposition only.
-    // TODO(setSize): AdviserPanel
+    // Adviser reveal panel — reposition + reflow internal width. Pass
+    // height=0 to keep AdviserPanel's content-driven internal panelHeight.
     if (this.revealPanel) {
       const revealX = L.gameWidth - REVEAL_PANEL_WIDTH - REVEAL_TAB_WIDTH - 12;
       const revealY = btnY - 200;
       this.revealPanel.setPosition(revealX, revealY);
+      this.revealPanel.setSize(REVEAL_PANEL_WIDTH, 0);
     }
   }
 }
