@@ -137,6 +137,50 @@ export class Panel extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
+  /**
+   * Redraws the background and title bar to match the current
+   * `panelWidth` / `panelHeight`. Called by `setSize()` after updating
+   * the stored dimensions.
+   */
+  private redraw(): void {
+    const theme = getTheme();
+
+    // Resize background nineslice in-place (no new object created)
+    this.bg.setSize(this.panelWidth, this.panelHeight);
+
+    // Resize glow layer if present
+    if (this.glowLayer) {
+      const glowW = theme.glow.width;
+      this.glowLayer.setSize(
+        this.panelWidth + glowW * 2,
+        this.panelHeight + glowW * 2,
+      );
+    }
+
+    // Resize title bar children if present
+    if (this.titleBar) {
+      const [titleBg, titleAccentLine, titleText] = this.titleBar.list as [
+        Phaser.GameObjects.Rectangle,
+        Phaser.GameObjects.Rectangle,
+        Phaser.GameObjects.Text,
+      ];
+      titleBg.setSize(this.panelWidth, theme.panel.titleHeight);
+      titleAccentLine.setSize(this.panelWidth, 1);
+      titleText.setWordWrapWidth(this.panelWidth - theme.spacing.md * 3);
+    }
+  }
+
+  /**
+   * Resize the panel and immediately reflow its visual elements.
+   * After this call `getContentArea()` reflects the new dimensions.
+   */
+  public setSize(width: number, height: number): this {
+    this.panelWidth = width;
+    this.panelHeight = height;
+    this.redraw();
+    return this;
+  }
+
   getContentY(): number {
     return this.contentY;
   }
