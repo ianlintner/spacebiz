@@ -7,6 +7,8 @@ import {
   ScrollFrame,
   Panel,
   PortraitPanel,
+  TabGroup,
+  StandingsGraph,
   createStarfield,
   getLayout,
 } from "../ui/index.ts";
@@ -16,6 +18,10 @@ import {
   getNextIntelUnlockDescription,
 } from "../game/intel/IntelLevel.ts";
 import type { IntelTier } from "../game/intel/IntelLevel.ts";
+import {
+  buildStandingsData,
+  type StandingsMetric,
+} from "../game/standingsHistory.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -40,6 +46,11 @@ export class CompetitionScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
   private table!: DataTable;
   private intelTier: IntelTier = 0;
+  private tableFrame: ScrollFrame | null = null;
+  private standingsGraph: StandingsGraph | null = null;
+  private hasAnimatedStandings = false;
+  private standingsArea: { x: number; y: number; w: number; h: number } | null =
+    null;
 
   constructor() {
     super({ key: "CompetitionScene" });
@@ -130,17 +141,40 @@ export class CompetitionScene extends Phaser.Scene {
       return value === "Bankrupt" ? theme.colors.loss : theme.colors.profit;
     };
 
-    const tableFrame = new ScrollFrame(this, {
+    // Tab strip — Companies | Standings — sits above the table/graph view.
+    const tabHeight = theme.button.height;
+    const tabGroup = new TabGroup(this, {
       x: absX,
       y: absY,
-      width: content.width,
-      height: content.height - 20,
+      width: Math.min(360, content.width),
+      tabHeight,
+      tabs: [
+        { label: "Companies", content: this.add.container(0, 0) },
+        { label: "Standings", content: this.add.container(0, 0) },
+      ],
     });
+
+    const viewTop = absY + tabHeight + 8;
+    const viewHeight = content.height - tabHeight - 28;
+    this.standingsArea = {
+      x: absX,
+      y: viewTop,
+      w: content.width,
+      h: viewHeight,
+    };
+
+    const tableFrame = new ScrollFrame(this, {
+      x: absX,
+      y: viewTop,
+      width: content.width,
+      height: viewHeight,
+    });
+    this.tableFrame = tableFrame;
     this.table = new DataTable(this, {
       x: 0,
       y: 0,
       width: content.width,
-      height: content.height - 20,
+      height: viewHeight,
       contentSized: true,
       columns: [
         { key: "name", label: "Company", width: 120 },
@@ -177,6 +211,47 @@ export class CompetitionScene extends Phaser.Scene {
     });
     tableFrame.setContent(this.table);
     this.table.setRows(rows);
+
+    // Hook tab switches → toggle ScrollFrame vs StandingsGraph.
+    const originalSetActiveTab = tabGroup.setActiveTab.bind(tabGroup);
+    tabGroup.setActiveTab = (index: number) => {
+      originalSetActiveTab(index);
+      if (index === 1) this.openStandingsTab();
+      else this.openCompaniesTab();
+    };
+  }
+
+  private openCompaniesTab(): void {
+    this.tableFrame?.setVisible(true);
+    this.standingsGraph?.setVisible(false);
+  }
+
+  private openStandingsTab(): void {
+    this.tableFrame?.setVisible(false);
+    if (!this.standingsGraph && this.standingsArea) {
+      const area = this.standingsArea;
+      this.standingsGraph = new StandingsGraph(this, {
+        x: area.x,
+        y: area.y,
+        width: area.w,
+        height: area.h,
+        onMetricChange: (metric: StandingsMetric) => {
+          if (!this.standingsGraph) return;
+          const data = buildStandingsData(gameStore.getState(), metric);
+          this.standingsGraph.setStandingsData(data);
+        },
+      });
+    }
+    if (this.standingsGraph) {
+      const data = buildStandingsData(gameStore.getState(), "cash");
+      this.standingsGraph.setMetric("cash");
+      this.standingsGraph.setStandingsData(data);
+      this.standingsGraph.setVisible(true);
+      if (!this.hasAnimatedStandings) {
+        this.standingsGraph.playDrawIn();
+        this.hasAnimatedStandings = true;
+      }
+    }
   }
 
   private updatePortraitForCompany(

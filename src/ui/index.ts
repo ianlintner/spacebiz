@@ -10,3 +10,6 @@ export {
   type RouteBuilderResult,
   type RouteBuilderOptions,
 } from "./RouteBuilderPanel.ts";
+
+export { StandingsGraph } from "./StandingsGraph.ts";
+export type { StandingsGraphConfig } from "./StandingsGraph.ts";
