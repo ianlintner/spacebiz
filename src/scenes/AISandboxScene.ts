@@ -10,6 +10,7 @@ import {
   ProgressBar,
   createStarfield,
   getLayout,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import type { ColumnDef } from "../ui/index.ts";
 import { SimulationRunner } from "../game/simulation/SimulationRunner.ts";
@@ -84,19 +85,33 @@ export class AISandboxScene extends Phaser.Scene {
   private lastAutoSaveTurn = 0;
 
   // UI
+  private titleLabel!: Label;
   private turnLabel!: Label;
   private statusLabel!: Label;
   private progressBar!: ProgressBar;
   private rankingsTable!: DataTable;
+  private rankingsFrame!: ScrollFrame;
+  private rankingsHeading!: Label;
   private activityList!: ScrollableList;
+  private activityHeading!: Label;
+  private economyHeading!: Label;
   private fuelLabel!: Label;
   private cargoLabel!: Label;
   private warningLabel!: Label;
+
+  // Panels
+  private topBarPanel!: Panel;
+  private leftPanel!: Panel;
+  private rightPanel!: Panel;
+  private bottomBarPanel!: Panel;
 
   // Buttons
   private pauseBtn!: Button;
   private stepBtn!: Button;
   private speedBtn!: Button;
+  private saveBtn!: Button;
+  private exportBtn!: Button;
+  private backBtn!: Button;
   private summaryBtn!: Button;
   // State for step mode
   private stepResolve: (() => void) | null = null;
@@ -140,21 +155,22 @@ export class AISandboxScene extends Phaser.Scene {
     const padding = 16;
 
     // ── Top bar: Title + turn + progress ─────────────────────
-    new Panel(this, {
+    this.topBarPanel = new Panel(this, {
       x: 0,
       y: 0,
       width: L.gameWidth,
       height: 64,
     });
 
-    new Label(this, {
+    this.titleLabel = new Label(this, {
       x: padding,
       y: 8,
       text: "AI SANDBOX",
       style: "heading",
       color: theme.colors.accent,
       glow: true,
-    }).setFontSize(22);
+    });
+    this.titleLabel.setFontSize(22);
 
     this.turnLabel = new Label(this, {
       x: padding,
@@ -191,14 +207,14 @@ export class AISandboxScene extends Phaser.Scene {
     const rightW = L.gameWidth - leftW;
 
     // ── Left column: Rankings ────────────────────────────────
-    new Panel(this, {
+    this.leftPanel = new Panel(this, {
       x: 0,
       y: topBarH,
       width: leftW,
       height: contentH,
     });
 
-    new Label(this, {
+    this.rankingsHeading = new Label(this, {
       x: padding,
       y: topBarH + 8,
       text: "Company Rankings",
@@ -243,7 +259,7 @@ export class AISandboxScene extends Phaser.Scene {
       },
     ];
 
-    const rankingsFrame = new ScrollFrame(this, {
+    this.rankingsFrame = new ScrollFrame(this, {
       x: padding,
       y: topBarH + 32,
       width: leftW - padding * 2,
@@ -258,12 +274,12 @@ export class AISandboxScene extends Phaser.Scene {
       columns: rankColumns,
       emptyStateText: "Waiting for simulation\u2026",
     });
-    rankingsFrame.setContent(this.rankingsTable);
+    this.rankingsFrame.setContent(this.rankingsTable);
 
     // ── Economy indicators below rankings ────────────────────
     const econY = topBarH + contentH - 90;
 
-    new Label(this, {
+    this.economyHeading = new Label(this, {
       x: padding,
       y: econY,
       text: "Economy",
@@ -296,14 +312,14 @@ export class AISandboxScene extends Phaser.Scene {
     });
 
     // ── Right column: Activity feed ──────────────────────────
-    new Panel(this, {
+    this.rightPanel = new Panel(this, {
       x: leftW,
       y: topBarH,
       width: rightW,
       height: contentH,
     });
 
-    new Label(this, {
+    this.activityHeading = new Label(this, {
       x: leftW + padding,
       y: topBarH + 8,
       text: "Activity Feed",
@@ -320,7 +336,7 @@ export class AISandboxScene extends Phaser.Scene {
     });
 
     // ── Bottom control bar ───────────────────────────────────
-    new Panel(this, {
+    this.bottomBarPanel = new Panel(this, {
       x: 0,
       y: L.gameHeight - bottomBarH,
       width: L.gameWidth,
@@ -363,7 +379,7 @@ export class AISandboxScene extends Phaser.Scene {
     });
     btnX += btnW + 8;
 
-    new Button(this, {
+    this.saveBtn = new Button(this, {
       x: btnX,
       y: btnY,
       width: btnW,
@@ -373,7 +389,7 @@ export class AISandboxScene extends Phaser.Scene {
     });
     btnX += btnW + 8;
 
-    new Button(this, {
+    this.exportBtn = new Button(this, {
       x: btnX,
       y: btnY,
       width: btnW,
@@ -383,7 +399,7 @@ export class AISandboxScene extends Phaser.Scene {
     });
     btnX += btnW + 8;
 
-    new Button(this, {
+    this.backBtn = new Button(this, {
       x: btnX,
       y: btnY,
       width: btnW,
@@ -406,15 +422,84 @@ export class AISandboxScene extends Phaser.Scene {
     // ── Start simulation ─────────────────────────────────────
     this.startSimulation(data);
 
-    // ── Resize handler ───────────────────────────────────────
-    const onResize = () => {
-      this.scene.restart(data);
-    };
-    this.scale.on("resize", onResize);
-    this.events.once("shutdown", () => {
-      this.scale.off("resize", onResize);
+    // ── Reflow on resize ─────────────────────────────────────
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.cleanup();
     });
+  }
+
+  // ── Layout ──────────────────────────────────────────────────
+
+  private relayout(): void {
+    const L = getLayout();
+    const padding = 16;
+    const topBarH = 64;
+    const bottomBarH = 64;
+    const contentH = L.gameHeight - topBarH - bottomBarH;
+    const leftW = Math.min(400, Math.floor(L.gameWidth * 0.45));
+    const rightW = L.gameWidth - leftW;
+
+    // Top bar.
+    this.topBarPanel.setPosition(0, 0);
+    this.topBarPanel.setSize(L.gameWidth, topBarH);
+
+    // TODO(setSize): Label has no setSize().
+    this.titleLabel.setPosition(padding, 8);
+    this.turnLabel.setPosition(padding, 36);
+    this.statusLabel.setPosition(200, 36);
+
+    // TODO(setSize): ProgressBar has no setSize() — reposition only.
+    this.progressBar.setPosition(L.gameWidth - 310 - padding, 22);
+
+    // Left column.
+    this.leftPanel.setPosition(0, topBarH);
+    this.leftPanel.setSize(leftW, contentH);
+
+    this.rankingsHeading.setPosition(padding, topBarH + 8);
+
+    this.rankingsFrame.setPosition(padding, topBarH + 32);
+    this.rankingsFrame.setSize(leftW - padding * 2, contentH - 130);
+    this.rankingsTable.setSize(leftW - padding * 2, contentH - 130);
+
+    // Economy block sits at the bottom of the left panel.
+    const econY = topBarH + contentH - 90;
+    this.economyHeading.setPosition(padding, econY);
+    this.fuelLabel.setPosition(padding, econY + 22);
+    this.cargoLabel.setPosition(padding + 140, econY + 22);
+    this.warningLabel.setPosition(padding, econY + 48);
+
+    // Right column.
+    this.rightPanel.setPosition(leftW, topBarH);
+    this.rightPanel.setSize(rightW, contentH);
+
+    this.activityHeading.setPosition(leftW + padding, topBarH + 8);
+
+    // TODO(setSize): ScrollableList has no setSize() — reposition only.
+    this.activityList.setPosition(leftW + padding, topBarH + 32);
+
+    // Bottom bar.
+    this.bottomBarPanel.setPosition(0, L.gameHeight - bottomBarH);
+    this.bottomBarPanel.setSize(L.gameWidth, bottomBarH);
+
+    // TODO(setSize): Button has no public setSize() — reposition only.
+    const btnW = 96;
+    const btnY = L.gameHeight - bottomBarH + 12;
+    let btnX = padding;
+    this.pauseBtn.setPosition(btnX, btnY);
+    btnX += btnW + 8;
+    this.stepBtn.setPosition(btnX, btnY);
+    btnX += btnW + 8;
+    this.speedBtn.setPosition(btnX, btnY);
+    btnX += btnW + 8;
+    this.saveBtn.setPosition(btnX, btnY);
+    btnX += btnW + 8;
+    this.exportBtn.setPosition(btnX, btnY);
+    btnX += btnW + 8;
+    this.backBtn.setPosition(btnX, btnY);
+    btnX += btnW + 8;
+    this.summaryBtn.setPosition(btnX, btnY);
   }
 
   // ── Simulation lifecycle ─────────────────────────────────────
