@@ -229,4 +229,66 @@ describe("TabGroup", () => {
     });
     expect(tg.getTabWidth()).toBe(720);
   });
+
+  describe("setSize", () => {
+    it("returns this for chaining", () => {
+      const tg = new TabGroup(scene as never, {
+        x: 0,
+        y: 0,
+        width: 600,
+        tabs: [
+          { label: "A", content: makeContent(scene) },
+          { label: "B", content: makeContent(scene) },
+        ],
+      });
+      expect(tg.setSize(800, 0)).toBe(tg);
+    });
+
+    it("updates tabGroupWidth so getTabWidth reflects the new value", () => {
+      const tg = new TabGroup(scene as never, {
+        x: 0,
+        y: 0,
+        width: 600,
+        tabs: [
+          { label: "A", content: makeContent(scene) },
+          { label: "B", content: makeContent(scene) },
+        ],
+      });
+      tg.setSize(800, 0);
+      expect(tg.getTabWidth()).toBe(800);
+    });
+
+    it("does not add new children to the tab group container", () => {
+      const tg = new TabGroup(scene as never, {
+        x: 0,
+        y: 0,
+        width: 600,
+        tabs: [
+          { label: "A", content: makeContent(scene) },
+          { label: "B", content: makeContent(scene) },
+        ],
+      });
+      const childCountBefore = tg.list.length;
+      tg.setSize(800, 0);
+      expect(tg.list.length).toBe(childCountBefore);
+    });
+
+    it("active tab switching still works after setSize", () => {
+      const a = makeContent(scene);
+      const b = makeContent(scene);
+      const tg = new TabGroup(scene as never, {
+        x: 0,
+        y: 0,
+        width: 600,
+        tabs: [
+          { label: "A", content: a },
+          { label: "B", content: b },
+        ],
+      });
+      tg.setSize(800, 0);
+      tg.setActiveTab(1);
+      expect(tg.getActiveIndex()).toBe(1);
+      expect((b as unknown as { visible: boolean }).visible).toBe(true);
+    });
+  });
 });

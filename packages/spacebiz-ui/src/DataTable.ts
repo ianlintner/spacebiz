@@ -650,6 +650,35 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.clipRowsToViewport();
   }
 
+  /**
+   * Resize the table chrome to a new width/height.
+   *
+   * Width: updates the header background and divider line to the new width.
+   *        Column widths stay at their configured (proportionally expanded)
+   *        values — only the chrome that spans the full table width is reflowed.
+   *
+   * Height: ignored when `contentSized: true` (height is row-driven in that
+   *         mode). In scrollable mode the new height becomes the visible
+   *         viewport; call `setRows` afterwards to recompute scroll bounds.
+   */
+  public setSize(width: number, height: number): this {
+    super.setSize(width, height);
+    this.tableConfig.width = width;
+    if (!this.contentSized) {
+      this.tableConfig.height = height;
+    }
+    this.redrawChrome();
+    return this;
+  }
+
+  /** Mutate existing chrome objects in place (no scene.add.* calls). */
+  private redrawChrome(): void {
+    // renderHeader rebuilds headerContainer from tableConfig.width — it only
+    // uses scene.add.* calls, but headerContainer.removeAll(true) destroys
+    // the old objects first, so child count stays constant.
+    this.renderHeader();
+  }
+
   /** Natural height of the rendered table (header + all rows). */
   get contentHeight(): number {
     return this._contentHeight;

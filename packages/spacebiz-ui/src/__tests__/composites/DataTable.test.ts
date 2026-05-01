@@ -259,6 +259,60 @@ describe("DataTable", () => {
     table.setRows([{ name: "A", value: 1 }]);
     expect(() => table.destroy()).not.toThrow();
   });
+
+  describe("setSize", () => {
+    it("returns this for chaining", () => {
+      const table = new DataTable(scene as never, {
+        x: 0,
+        y: 0,
+        width: 300,
+        height: 400,
+        columns: COLUMNS,
+      });
+      expect(table.setSize(500, 600)).toBe(table);
+    });
+
+    it("updates width reported by the container", () => {
+      const table = new DataTable(scene as never, {
+        x: 0,
+        y: 0,
+        width: 300,
+        height: 400,
+        columns: COLUMNS,
+      });
+      table.setSize(500, 600);
+      expect(table.width).toBe(500);
+    });
+
+    it("does not add new children to the table container", () => {
+      const table = new DataTable(scene as never, {
+        x: 0,
+        y: 0,
+        width: 300,
+        height: 400,
+        columns: COLUMNS,
+      });
+      const childCountBefore = table.list.length;
+      table.setSize(500, 600);
+      expect(table.list.length).toBe(childCountBefore);
+    });
+
+    it("contentSized: height argument is ignored (height remains row-driven)", () => {
+      const table = new DataTable(scene as never, {
+        x: 0,
+        y: 0,
+        width: 300,
+        height: 400,
+        columns: COLUMNS,
+        contentSized: true,
+      });
+      table.setRows([{ name: "A", value: 1 }]);
+      const contentHeightBefore = table.contentHeight;
+      table.setSize(500, 999);
+      // contentHeight should not be affected by the height arg in contentSized mode
+      expect(table.contentHeight).toBe(contentHeightBefore);
+    });
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
