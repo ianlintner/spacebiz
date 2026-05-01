@@ -18,8 +18,6 @@
  * Then `import { Button } from "../../Button.ts"` works as normal.
  */
 
- 
-
 class EventEmitterStub {
   private listeners = new Map<string, Array<(...args: unknown[]) => void>>();
 
