@@ -390,18 +390,52 @@ export class SandboxSetupScene extends Phaser.Scene {
         itemHeight: 36,
       });
 
-      // Use a placeholder row width for now; relayout() uses scene.restart() when
-      // dimensions actually change saved-row layout, so initial geometry is fine.
-      const initialRowWidth = getLayout().maxContentWidth - PADDING * 2;
-      for (const slot of saves) {
-        const itemContainer = this.add.container(0, 0);
-        this.buildSaveSlotRow(itemContainer, slot, initialRowWidth);
-        this.saveList.addItem(itemContainer);
-      }
+      this.populateSaveList(saves);
     }
 
     this.relayout();
     attachReflowHandler(this, () => this.relayout());
+  }
+
+  /**
+   * Rebuild the saved-sandbox rows from the given snapshot. Existing rows
+   * are destroyed in place; relayout() handles re-anchoring.
+   */
+  private populateSaveList(saves: SaveSlotMeta[]): void {
+    if (!this.saveList) return;
+    this.saveList.clearItems();
+    // Row width is re-applied via relayout()/setSize on the list, but each
+    // row's load/delete buttons are positioned relative to this width.
+    const rowWidth = getLayout().maxContentWidth - PADDING * 2;
+    for (const slot of saves) {
+      const itemContainer = this.add.container(0, 0);
+      this.buildSaveSlotRow(itemContainer, slot, rowWidth);
+      this.saveList.addItem(itemContainer);
+    }
+  }
+
+  /**
+   * In-place refresh of the saved-sandbox list after a delete. Hides the
+   * panel entirely once the last save is removed.
+   */
+  private refreshSaveList(): void {
+    const saves = listSandboxSaves();
+    this.hasSaves = saves.length > 0;
+
+    if (!this.hasSaves) {
+      // Last save removed — tear down the panel; relayout() will skip it.
+      this.savePanel?.destroy();
+      this.savePanelTitle?.destroy();
+      this.saveList?.destroy();
+      this.savePanel = null;
+      this.savePanelTitle = null;
+      this.saveList = null;
+      this.relayout();
+      return;
+    }
+
+    this.populateSaveList(saves);
+    this.relayout();
   }
 
   private relayout(): void {
@@ -567,7 +601,7 @@ export class SandboxSetupScene extends Phaser.Scene {
       label: "Delete",
       onClick: () => {
         deleteSandboxSave(slot.id);
-        this.scene.restart();
+        this.refreshSaveList();
       },
     });
     container.add(delBtn);

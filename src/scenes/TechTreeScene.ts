@@ -299,8 +299,58 @@ export class TechTreeScene extends Phaser.Scene {
     const newTech = setResearchTarget(techId, state.tech);
     if (newTech) {
       gameStore.setState({ ...state, tech: newTech });
-      // Refresh scene
-      this.scene.restart();
+      this.refreshUi();
     }
+  }
+
+  private refreshUi(): void {
+    const theme = getTheme();
+    const state = gameStore.getState();
+    const rpPerTurn = calculateRPPerTurn(state);
+    const currentResearch = getCurrentResearch(state.tech);
+
+    // RP totals + tech-count summary.
+    this.rpStatusText.setText(
+      `Total RP: ${state.tech.researchPoints} • +${rpPerTurn} RP/turn • Techs: ${state.tech.completedTechIds.length}/20`,
+    );
+
+    // Current-research line.
+    this.currentResearchText.setText(
+      currentResearch
+        ? `⚙ Researching: ${currentResearch.name}`
+        : "⚙ No research in progress",
+    );
+    this.currentResearchText.setColor(
+      colorToString(
+        currentResearch ? theme.colors.accent : theme.colors.textDim,
+      ),
+    );
+
+    // Progress bar.
+    this.progressBar.setValue(getResearchProgress(state.tech));
+
+    // Progress label — created lazily on first active research.
+    if (currentResearch) {
+      const progressText = `${state.tech.researchProgress}/${currentResearch.rpCost} RP`;
+      if (this.progressLabel) {
+        this.progressLabel.setText(progressText).setVisible(true);
+      } else {
+        this.progressLabel = this.add
+          .text(0, 0, progressText, {
+            fontSize: `${theme.fonts.caption.size}px`,
+            fontFamily: theme.fonts.caption.family,
+            color: colorToString(theme.colors.textDim),
+          })
+          .setOrigin(1, 0);
+      }
+    } else if (this.progressLabel) {
+      this.progressLabel.setVisible(false);
+    }
+
+    this.grid.setGridState(this.buildGridState());
+
+    // relayout() repositions any lazily created label and refreshes button enablement.
+    this.relayout();
+    this.updateSelectedPortrait();
   }
 }
