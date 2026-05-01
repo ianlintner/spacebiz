@@ -143,6 +143,10 @@ export class SftDriver {
   ) as ActionProxy;
 }
 
+import type { SandboxRunOptions } from "../../src/testing/actions.ts";
+
+export type { SandboxRunOptions };
+
 export type ActionProxy = {
   newGame: (seed?: number) => Promise<void>;
   endTurn: () => Promise<ClickResult | null>;
@@ -150,4 +154,8 @@ export type ActionProxy = {
   closeModal: () => Promise<void>;
   seed: (n: number) => Promise<void>;
   getSeed: () => Promise<number>;
+  triggerDilemma: (templateId?: string) => Promise<string>;
+  forceGameOver: (reason?: "completed" | "bankruptcy") => Promise<void>;
+  startSandboxPlayback: (opts?: SandboxRunOptions) => Promise<unknown>;
+  startSandboxSummary: (opts?: SandboxRunOptions) => Promise<unknown>;
 };
