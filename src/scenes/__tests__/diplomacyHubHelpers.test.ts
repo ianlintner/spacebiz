@@ -10,9 +10,11 @@ import {
   getActiveTagBadges,
   getTierColorName,
   describeTag,
+  describeActionEffect,
   detectTierShifts,
   snapshotTiers,
   getAmbientGreeting,
+  type HubActionDescriptor,
 } from "../diplomacyHubHelpers.ts";
 import { EMPTY_DIPLOMACY_STATE } from "../../data/types.ts";
 import type {
@@ -536,5 +538,63 @@ describe("getAmbientGreeting", () => {
     const hostile = getAmbientGreeting("warm", "Hostile");
     const allied = getAmbientGreeting("warm", "Allied");
     expect(hostile).not.toBe(allied);
+  });
+});
+
+describe("describeActionEffect", () => {
+  const baseAction = (
+    overrides: Partial<HubActionDescriptor>,
+  ): HubActionDescriptor => ({
+    id: "x",
+    kind: "giftEmpire",
+    label: "Send Gift",
+    cashCost: 10_000,
+    category: "single",
+    ...overrides,
+  });
+
+  it("describes giftEmpire", () => {
+    const s = describeActionEffect(baseAction({ kind: "giftEmpire" }));
+    expect(s).toMatch(/empire/i);
+  });
+
+  it("describes giftRival", () => {
+    const s = describeActionEffect(baseAction({ kind: "giftRival" }));
+    expect(s).toMatch(/rival/i);
+  });
+
+  it("describes surveil with each lens", () => {
+    const cash = describeActionEffect(
+      baseAction({ kind: "surveil", surveilLens: "cash" }),
+    );
+    const top = describeActionEffect(
+      baseAction({ kind: "surveil", surveilLens: "topContractByValue" }),
+    );
+    const standing = describeActionEffect(
+      baseAction({ kind: "surveil", surveilLens: "topEmpireStanding" }),
+    );
+    expect(cash).toMatch(/cash/i);
+    expect(top).toMatch(/contract/i);
+    expect(standing).toMatch(/empire|favor/i);
+  });
+
+  it("falls back to a generic surveil description when lens is missing", () => {
+    const s = describeActionEffect(baseAction({ kind: "surveil" }));
+    expect(s).toMatch(/intelligence|gather/i);
+  });
+
+  it("describes sabotage", () => {
+    const s = describeActionEffect(baseAction({ kind: "sabotage" }));
+    expect(s).toMatch(/sabotage|disrupt|risk/i);
+  });
+
+  it("returns null for non-single-category kinds", () => {
+    expect(describeActionEffect(baseAction({ kind: "lobbyFor" }))).toBeNull();
+    expect(
+      describeActionEffect(baseAction({ kind: "lobbyAgainst" })),
+    ).toBeNull();
+    expect(
+      describeActionEffect(baseAction({ kind: "proposeNonCompete" })),
+    ).toBeNull();
   });
 });

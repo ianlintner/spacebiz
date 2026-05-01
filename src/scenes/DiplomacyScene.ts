@@ -24,6 +24,7 @@ import {
 import type { StandingTierName } from "../game/diplomacy/StandingTiers.ts";
 import {
   buildQueuedAction,
+  describeActionEffect,
   detectTierShifts,
   evaluateActionState,
   getActionsForEmpire,
@@ -59,6 +60,11 @@ type PanelMode =
       action: HubActionDescriptor;
       targetId: string;
       selected: readonly string[];
+    }
+  | {
+      kind: "confirm";
+      action: HubActionDescriptor;
+      targetId: string;
     };
 
 /**
@@ -377,6 +383,10 @@ export class DiplomacyScene extends Phaser.Scene {
       this.renderPairPicker(state, this.mode);
       return;
     }
+    if (this.mode.kind === "confirm") {
+      this.renderConfirmPanel(state, this.mode);
+      return;
+    }
     this.renderActionList(state);
   }
 
@@ -575,6 +585,105 @@ export class DiplomacyScene extends Phaser.Scene {
       x: absX + Math.floor((contentWidth - 24) / 2) + 8,
       y: baseY,
       width: Math.floor((contentWidth - 24) / 2),
+      height: btnH,
+      label: "Cancel",
+      onClick: () => {
+        this.mode = { kind: "list" };
+        this.refreshActionPanel();
+      },
+    });
+    this.actionButtons.push(cancelBtn);
+  }
+
+  /**
+   * Confirm panel for single-category actions (Send Gift, Surveil X,
+   * Sabotage). The action list button doesn't queue immediately — it routes
+   * here so the player sees a short effect summary and an explicit cost
+   * line before committing the spend.
+   */
+  private renderConfirmPanel(
+    state: GameState,
+    mode: { action: HubActionDescriptor; targetId: string },
+  ): void {
+    const { action, targetId } = mode;
+    // Header restates the action so it's always visible above the buttons.
+    let targetName = targetId;
+    if (this.selection?.kind === "empire") {
+      const e = state.galaxy?.empires.find((x) => x.id === targetId);
+      if (e) targetName = e.name;
+    } else if (this.selection?.kind === "rival") {
+      const r = state.aiCompanies?.find((x) => x.id === targetId);
+      if (r) targetName = r.name;
+    }
+    this.actionStatusLabel.setText(`${action.label} — ${targetName}?`);
+
+    const { absX, absY, contentWidth } = this.getActionPanelGeometry();
+    const theme = getTheme();
+
+    // Effect summary line. Falls back to the bare label if the action kind
+    // isn't a known single-category one (defensive — shouldn't happen).
+    const effect = describeActionEffect(action) ?? action.label;
+    const effectLabel = this.add.text(absX, absY, effect, {
+      fontFamily: theme.fonts.body.family,
+      fontSize: "13px",
+      color: colorToHex(theme.colors.text),
+      wordWrap: { width: contentWidth - 16 },
+    });
+    this.tagDetailLabels.push(effectLabel);
+
+    // Cost line — explicit second row so the spend is unambiguous.
+    const costText =
+      action.cashCost > 0
+        ? `Cost: $${formatCash(action.cashCost)}`
+        : "Cost: free";
+    const costLabel = this.add.text(
+      absX,
+      absY + effectLabel.height + 6,
+      costText,
+      {
+        fontFamily: theme.fonts.value.family,
+        fontSize: "13px",
+        color: colorToHex(theme.colors.accent),
+      },
+    );
+    this.tagDetailLabels.push(costLabel);
+
+    // Affordance hint, if any (e.g. "+15% favor" / "-50% dampener").
+    const evalState = evaluateActionState(action, targetId, state);
+    let nextY = absY + effectLabel.height + 6 + costLabel.height + 4;
+    if (evalState.affordanceHint) {
+      const hint = this.add.text(absX, nextY, evalState.affordanceHint, {
+        fontFamily: theme.fonts.caption.family,
+        fontSize: "12px",
+        color: colorToHex(theme.colors.textDim),
+      });
+      this.tagDetailLabels.push(hint);
+      nextY += hint.height + 4;
+    }
+
+    // Confirm + Cancel sit on a shared row so the layout matches the pair
+    // picker's "Confirm | Cancel" footer.
+    const btnH = 36;
+    const btnY = nextY + 8;
+    const btnW = Math.floor((contentWidth - 24) / 2);
+    const confirmBtn = new Button(this, {
+      x: absX,
+      y: btnY,
+      width: btnW,
+      height: btnH,
+      label: "Confirm",
+      onClick: () => {
+        this.queueAction(action, targetId);
+        this.mode = { kind: "list" };
+        // refresh handled by gameStore.stateChanged subscription
+      },
+    });
+    this.actionButtons.push(confirmBtn);
+
+    const cancelBtn = new Button(this, {
+      x: absX + btnW + 8,
+      y: btnY,
+      width: btnW,
       height: btnH,
       label: "Cancel",
       onClick: () => {
@@ -795,7 +904,11 @@ export class DiplomacyScene extends Phaser.Scene {
     targetId: string,
   ): void {
     if (action.category === "single") {
-      this.queueAction(action, targetId);
+      // Send Gift / Surveil / Sabotage cost cash and have no picker step,
+      // so a stray click would otherwise spend the player's money silently.
+      // Route through a confirm panel so the action is always intentional.
+      this.mode = { kind: "confirm", action, targetId };
+      this.refreshActionPanel();
       return;
     }
     if (action.category === "subject") {
