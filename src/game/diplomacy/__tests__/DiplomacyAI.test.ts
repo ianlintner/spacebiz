@@ -64,4 +64,31 @@ describe("selectDiplomacyOffer", () => {
     }
     expect(saw).toBe(true);
   });
+
+  it("fires rivalSpyWarning when only Sabotaged tag is present (no SuspectedSpy)", () => {
+    const sabotagedState: GameState = {
+      ...baseState(),
+      diplomacy: {
+        ...EMPTY_DIPLOMACY_STATE,
+        rivalStanding: { chen: 30 },
+        empireTags: { vex: [], sol: [] },
+        rivalTags: {
+          chen: [{ kind: "Sabotaged", expiresOnTurn: 9 }],
+        },
+      },
+      // Override empireReputation so empires don't add Warm/Allied candidates
+      // and dilute the test signal.
+      empireReputation: { vex: 50, sol: 50 },
+    } as unknown as GameState;
+
+    let saw = false;
+    for (let s = 0; s < 80; s++) {
+      const out = selectDiplomacyOffer(new SeededRNG(s), sabotagedState);
+      if (out && out.eventId === "diplomacy:rivalSpyWarning") {
+        saw = true;
+        break;
+      }
+    }
+    expect(saw).toBe(true);
+  });
 });

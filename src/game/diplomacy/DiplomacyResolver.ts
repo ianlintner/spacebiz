@@ -1,5 +1,6 @@
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 import type {
+  AICompany,
   DiplomacyState,
   GameState,
   QueuedDiplomacyAction,
@@ -467,6 +468,85 @@ export function resolveSurveil(
   };
 }
 
+const SABOTAGE_BASE_SUCCESS = 0.5;
+const SABOTAGE_TAG_TTL = 4;
+const SABOTAGE_SPY_TTL = 5;
+const SABOTAGE_COOLDOWN = 8;
+const SABOTAGE_RIVAL_CASH_HIT = 200_000;
+
+export function resolveSabotage(
+  state: GameState,
+  action: QueuedDiplomacyAction,
+  rng: SeededRNG,
+): ResolutionOutcome {
+  const rivalId = action.targetId;
+  const success = rng.chance(SABOTAGE_BASE_SUCCESS);
+
+  const d = dip(state);
+  const tagsBefore = d.rivalTags[rivalId] ?? [];
+  let tagsAfter: readonly StandingTag[] = tagsBefore;
+  const modal: ModalEntry[] = [];
+  const digest: DigestEntry[] = [];
+  let cashAfter = state.cash - action.cashCost;
+  let aiCompanies = state.aiCompanies;
+
+  if (success) {
+    tagsAfter = addTag(tagsBefore, {
+      kind: "Sabotaged",
+      expiresOnTurn: state.turn + SABOTAGE_TAG_TTL,
+    });
+    // Apply the cash hit to the targeted rival, capped at their current cash
+    // so we never produce a negative balance.
+    if (aiCompanies) {
+      aiCompanies = aiCompanies.map((r): AICompany => {
+        if (r.id !== rivalId) return r;
+        const before = r.cash ?? 0;
+        const hit = Math.min(SABOTAGE_RIVAL_CASH_HIT, Math.max(0, before));
+        return { ...r, cash: before - hit };
+      });
+    }
+    digest.push({
+      text: `Sabotage of ${rivalId} succeeded: -$${SABOTAGE_RIVAL_CASH_HIT.toLocaleString("en-US")} disruption (${SABOTAGE_TAG_TTL} turns).`,
+    });
+  } else {
+    // Half-cost refund on exposure mirrors the gift-refused / lobby-failed
+    // pattern — the player still pays for the operation getting set up.
+    cashAfter = state.cash - Math.floor(action.cashCost * 0.5);
+    tagsAfter = addTag(tagsBefore, {
+      kind: "SuspectedSpy",
+      suspectId: "player",
+      expiresOnTurn: state.turn + SABOTAGE_SPY_TTL,
+    });
+    modal.push({
+      speakerKind: "rivalLiaison",
+      targetId: rivalId,
+      headline: "Sabotage exposed",
+      flavor: "Their counter-intel team has flagged your operation.",
+    });
+  }
+
+  return {
+    nextState: {
+      ...state,
+      cash: cashAfter,
+      ...(aiCompanies ? { aiCompanies } : {}),
+      diplomacy: {
+        ...d,
+        rivalTags: { ...d.rivalTags, [rivalId]: tagsAfter },
+        cooldowns: setCooldown(
+          d.cooldowns,
+          cooldownKey("sabotage", rivalId),
+          state.turn + SABOTAGE_COOLDOWN,
+        ),
+        actionsResolvedThisTurn: d.actionsResolvedThisTurn + 1,
+      },
+    },
+    modalEntries: modal,
+    digestEntries: digest,
+    success,
+  };
+}
+
 const THROTTLE_BASE = 2;
 const THROTTLE_HIGH = 3;
 const REPUTATION_THROTTLE_THRESHOLD = 75;
@@ -488,6 +568,8 @@ export function resolveDiplomacyAction(
       return resolveNonCompete(state, action, rng);
     case "surveil":
       return resolveSurveil(state, action, rng);
+    case "sabotage":
+      return resolveSabotage(state, action, rng);
   }
 }
 

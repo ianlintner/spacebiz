@@ -99,6 +99,22 @@ describe("resolveDiplomacyAction (dispatcher)", () => {
     const out = resolveDiplomacyAction(s, action, rng);
     expect(out.nextState.diplomacy!.cooldowns["surveil:chen"]).toBe(5 + 6);
   });
+
+  it("dispatches sabotage", () => {
+    const rng = new SeededRNG(1);
+    const action: QueuedDiplomacyAction = {
+      id: "a1",
+      kind: "sabotage",
+      targetId: "chen",
+      cashCost: 30_000,
+    };
+    const s = baseState();
+    (s as unknown as { aiCompanies: unknown[] }).aiCompanies = [
+      { id: "chen", name: "Chen", cash: 1_000_000, activeRoutes: [] },
+    ];
+    const out = resolveDiplomacyAction(s, action, rng);
+    expect(out.nextState.diplomacy!.cooldowns["sabotage:chen"]).toBe(5 + 8);
+  });
 });
 
 describe("processQueuedDiplomacyActions (throttle)", () => {

@@ -1092,7 +1092,8 @@ export type StandingTag =
       lens: "cash" | "topContractByValue" | "topEmpireStanding";
       value: string;
       expiresOnTurn: number;
-    };
+    }
+  | { kind: "Sabotaged"; expiresOnTurn: number };
 
 export type AmbassadorPersonality =
   | "formal"
@@ -1112,7 +1113,8 @@ export type DiplomacyActionKind =
   | "lobbyFor"
   | "lobbyAgainst"
   | "proposeNonCompete"
-  | "surveil";
+  | "surveil"
+  | "sabotage";
 
 export type SurveilLens = "cash" | "topContractByValue" | "topEmpireStanding";
 
