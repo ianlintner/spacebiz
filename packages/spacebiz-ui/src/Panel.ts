@@ -15,6 +15,9 @@ export class Panel extends Phaser.GameObjects.Container {
   protected bg: Phaser.GameObjects.NineSlice;
   protected glowLayer: Phaser.GameObjects.NineSlice | null = null;
   protected titleBar: Phaser.GameObjects.Container | null = null;
+  private titleBg: Phaser.GameObjects.Rectangle | null = null;
+  private titleAccentLine: Phaser.GameObjects.Rectangle | null = null;
+  private titleText: Phaser.GameObjects.Text | null = null;
   protected contentY: number;
   protected panelWidth: number;
   protected panelHeight: number;
@@ -104,6 +107,9 @@ export class Panel extends Phaser.GameObjects.Container {
         },
       );
 
+      this.titleBg = titleBg;
+      this.titleAccentLine = titleAccentLine;
+      this.titleText = titleText;
       this.titleBar = scene.add.container(0, 0, [
         titleBg,
         titleAccentLine,
@@ -158,15 +164,10 @@ export class Panel extends Phaser.GameObjects.Container {
     }
 
     // Resize title bar children if present
-    if (this.titleBar) {
-      const [titleBg, titleAccentLine, titleText] = this.titleBar.list as [
-        Phaser.GameObjects.Rectangle,
-        Phaser.GameObjects.Rectangle,
-        Phaser.GameObjects.Text,
-      ];
-      titleBg.setSize(this.panelWidth, theme.panel.titleHeight);
-      titleAccentLine.setSize(this.panelWidth, 1);
-      titleText.setWordWrapWidth(this.panelWidth - theme.spacing.md * 3);
+    if (this.titleText) {
+      this.titleBg!.setSize(this.panelWidth, theme.panel.titleHeight);
+      this.titleAccentLine!.setSize(this.panelWidth, 1);
+      this.titleText.setWordWrapWidth(this.panelWidth - theme.spacing.md * 3);
     }
   }
 
@@ -175,6 +176,7 @@ export class Panel extends Phaser.GameObjects.Container {
    * After this call `getContentArea()` reflects the new dimensions.
    */
   public setSize(width: number, height: number): this {
+    super.setSize(width, height);
     this.panelWidth = width;
     this.panelHeight = height;
     this.redraw();
