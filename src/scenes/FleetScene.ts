@@ -19,6 +19,7 @@ import {
   getShipIconKey,
   getShipColor,
   getShipLabel,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import {
   buyShip,
@@ -44,7 +45,12 @@ function conditionColor(value: unknown): number {
 export class FleetScene extends Phaser.Scene {
   private selectedShipId: string | null = null;
   private fleetTable!: DataTable;
+  private fleetTableFrame!: ScrollFrame;
   private portrait!: PortraitPanel;
+  private contentPanel!: Panel;
+  private buyShipButton!: Button;
+  private sellShipButton!: Button;
+  private overhaulButton!: Button;
   private ui!: SceneUiDirector;
 
   constructor() {
@@ -69,21 +75,21 @@ export class FleetScene extends Phaser.Scene {
     this.portrait.updatePortrait("ship", 0, "Select a Ship", []);
 
     // Content panel
-    const contentPanel = new Panel(this, {
+    this.contentPanel = new Panel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,
       height: L.contentHeight,
       title: "Fleet Management",
     });
-    const content = contentPanel.getContentArea();
+    const content = this.contentPanel.getContentArea();
     const absX = L.mainContentLeft + content.x;
     const absY = L.contentTop + content.y;
 
     // Cash is already shown in the HUD top bar — no inline duplicate here.
 
     // Fleet table
-    const fleetTableFrame = new ScrollFrame(this, {
+    this.fleetTableFrame = new ScrollFrame(this, {
       x: absX,
       y: absY + 28,
       width: content.width,
@@ -183,15 +189,15 @@ export class FleetScene extends Phaser.Scene {
         }
       },
     });
-    fleetTableFrame.setContent(this.fleetTable);
+    this.fleetTableFrame.setContent(this.fleetTable);
 
     this.refreshTable();
 
     // Buttons at bottom of content panel
-    const buttonY = absY + content.height - 40;
     const fleetEmpty = gameStore.getState().fleet.length === 0;
+    const buttonY = absY + content.height - 40;
 
-    new Button(this, {
+    this.buyShipButton = new Button(this, {
       x: absX,
       y: buttonY,
       width: 130,
@@ -201,7 +207,7 @@ export class FleetScene extends Phaser.Scene {
 
     // Sell / Overhaul make no sense with an empty fleet — disable the buttons
     // outright so clicking them can't raise "no ship selected" modals.
-    new Button(this, {
+    this.sellShipButton = new Button(this, {
       x: absX + 150,
       y: buttonY,
       width: 130,
@@ -210,7 +216,7 @@ export class FleetScene extends Phaser.Scene {
       onClick: () => this.confirmSellShip(),
     });
 
-    new Button(this, {
+    this.overhaulButton = new Button(this, {
       x: absX + 300,
       y: buttonY,
       width: 130,
@@ -218,6 +224,37 @@ export class FleetScene extends Phaser.Scene {
       disabled: fleetEmpty,
       onClick: () => this.confirmOverhaul(),
     });
+
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+
+    // PortraitPanel: setPosition before setSize.
+    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
+    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+
+    // Content panel.
+    this.contentPanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.contentPanel.setSize(L.mainContentWidth, L.contentHeight);
+
+    // Re-read content area after panel resize.
+    const content = this.contentPanel.getContentArea();
+    const absX = L.mainContentLeft + content.x;
+    const absY = L.contentTop + content.y;
+
+    // ScrollFrame + DataTable.
+    this.fleetTableFrame.setPosition(absX, absY + 28);
+    this.fleetTableFrame.setSize(content.width, content.height - 80);
+    this.fleetTable.setSize(content.width, content.height - 80);
+
+    // Bottom buttons.
+    const buttonY = absY + content.height - 40;
+    this.buyShipButton.setPosition(absX, buttonY);
+    this.sellShipButton.setPosition(absX + 150, buttonY);
+    this.overhaulButton.setPosition(absX + 300, buttonY);
   }
 
   private refreshTable(): void {
