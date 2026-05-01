@@ -60,7 +60,7 @@ export { applyClippingMask } from "./MaskUtils.ts";
 
 // Ambient / visual effects
 export { createStarfield } from "./Starfield.ts";
-export type { StarfieldConfig } from "./Starfield.ts";
+export type { StarfieldConfig, StarfieldHandle } from "./Starfield.ts";
 
 export {
   addPulseTween,
