@@ -126,7 +126,7 @@ describe("getActionsForEmpire", () => {
 });
 
 describe("getActionsForRival", () => {
-  it("returns gift + three surveil lenses + propose-non-compete", () => {
+  it("returns gift + three surveil lenses + propose-non-compete + sabotage", () => {
     const actions = getActionsForRival(rival);
     expect(actions.map((a) => a.kind)).toEqual([
       "giftRival",
@@ -134,12 +134,14 @@ describe("getActionsForRival", () => {
       "surveil",
       "surveil",
       "proposeNonCompete",
+      "sabotage",
     ]);
     expect(actions.map((a) => a.surveilLens)).toEqual([
       undefined,
       "cash",
       "topContractByValue",
       "topEmpireStanding",
+      undefined,
       undefined,
     ]);
   });
@@ -149,6 +151,14 @@ describe("getActionsForRival", () => {
     const nc = actions.find((a) => a.kind === "proposeNonCompete")!;
     expect(nc.category).toBe("pair");
     expect(nc.subjectPrompt).toContain("Chen Logistics");
+  });
+
+  it("sabotage is single-category with 30k cost", () => {
+    const actions = getActionsForRival(rival);
+    const sabo = actions.find((a) => a.kind === "sabotage")!;
+    expect(sabo.category).toBe("single");
+    expect(sabo.cashCost).toBe(30_000);
+    expect(sabo.subjectPrompt).toBeUndefined();
   });
 });
 
@@ -342,6 +352,10 @@ describe("getActiveTagBadges", () => {
         expiresOnTurn: 99,
       }).intent,
     ).toBe("good");
+    const sabo = describeTag({ kind: "Sabotaged", expiresOnTurn: 99 });
+    expect(sabo.intent).toBe("good");
+    expect(sabo.label).toBe("Sabotaged");
+    expect(sabo.tooltip.length).toBeGreaterThan(0);
   });
 
   it("non-compete tooltip lists protected empires", () => {

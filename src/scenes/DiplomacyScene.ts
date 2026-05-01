@@ -669,6 +669,7 @@ export class DiplomacyScene extends Phaser.Scene {
       lobbyAgainst: "Lobby against",
       proposeNonCompete: "Non-Compete",
       surveil: "Surveil",
+      sabotage: "Sabotage",
     };
     const lines = d.queuedActions
       .map((a) => {

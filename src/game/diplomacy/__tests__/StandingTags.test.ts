@@ -12,6 +12,7 @@ const tag = (kind: StandingTag["kind"], expiresOnTurn: number): StandingTag => {
   switch (kind) {
     case "OweFavor":
     case "RecentlyGifted":
+    case "Sabotaged":
       return { kind, expiresOnTurn };
     case "SuspectedSpy":
       return { kind, suspectId: "player", expiresOnTurn };

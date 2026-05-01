@@ -60,10 +60,13 @@ export function selectDiplomacyOffer(
     }
   }
 
-  // Rival warnings: when SuspectedSpy is on the rival's tags.
+  // Rival warnings: when either SuspectedSpy:player OR Sabotaged is on the
+  // rival's tags. Both signal the rival is angry at the player. We don't
+  // double up the candidate weight when both are present — one warning per
+  // rival per turn is plenty.
   for (const r of state.aiCompanies ?? []) {
     const tags = d.rivalTags[r.id] ?? [];
-    if (hasTagOfKind(tags, "SuspectedSpy")) {
+    if (hasTagOfKind(tags, "SuspectedSpy") || hasTagOfKind(tags, "Sabotaged")) {
       candidates.push({
         weight: 4,
         build: () => ({
