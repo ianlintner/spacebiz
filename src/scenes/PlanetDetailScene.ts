@@ -17,6 +17,7 @@ import {
   getCargoIconKey,
   getCargoColor,
   getCargoLabel,
+  attachReflowHandler,
 } from "../ui/index.ts";
 
 const CARGO_TYPE_VALUES = Object.values(CargoType) as Array<
@@ -51,6 +52,15 @@ function formatPopulation(pop: number): string {
 export class PlanetDetailScene extends Phaser.Scene {
   private planetId = "";
   private ui!: SceneUiDirector;
+  private overlayBg!: Phaser.GameObjects.Rectangle;
+  private portraitPanel!: PortraitPanel;
+  private contentPanel!: Panel;
+  private infoLabel!: Label;
+  private hintLabel!: Label;
+  private tableFrame!: ScrollFrame;
+  private table!: DataTable;
+  private createRouteButton!: Button;
+  private closeButton!: Button;
 
   constructor() {
     super({ key: "PlanetDetailScene" });
@@ -73,7 +83,7 @@ export class PlanetDetailScene extends Phaser.Scene {
     const planetMarket = state.market.planetMarkets[this.planetId];
 
     // Overlay background
-    this.add
+    this.overlayBg = this.add
       .rectangle(
         0,
         0,
@@ -85,74 +95,59 @@ export class PlanetDetailScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setInteractive();
 
-    // Overlay layout: sidebar (PortraitPanel) + content panel
-    const overlayWidth = 900;
-    const overlayHeight = 580;
-    const overlayX = (L.gameWidth - overlayWidth) / 2;
-    const overlayY = (L.gameHeight - overlayHeight) / 2;
-    const portraitWidth = 200;
-    const contentX = overlayX + portraitWidth + L.contentGap;
-    const contentWidth = overlayWidth - portraitWidth - L.contentGap;
-
     // Portrait panel (left sidebar)
-    const portraitPanel = new PortraitPanel(this, {
-      x: overlayX,
-      y: overlayY,
-      width: portraitWidth,
-      height: overlayHeight,
+    this.portraitPanel = new PortraitPanel(this, {
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 580,
     });
-    portraitPanel.showPlanet(planet);
+    this.portraitPanel.showPlanet(planet);
 
     // Content panel (right)
-    const panel = new Panel(this, {
-      x: contentX,
-      y: overlayY,
-      width: contentWidth,
-      height: overlayHeight,
+    this.contentPanel = new Panel(this, {
+      x: 0,
+      y: 0,
+      width: 700,
+      height: 580,
       title: planet.name,
     });
 
-    const contentArea = panel.getContentArea();
-
     // Planet info
-    new Label(this, {
-      x: contentX + contentArea.x,
-      y: overlayY + contentArea.y,
+    this.infoLabel = new Label(this, {
+      x: 0,
+      y: 0,
       text: `Type: ${planet.type}  |  Population: ${formatPopulation(planet.population)}`,
       style: "body",
     });
 
-    new Label(this, {
-      x: contentX + contentArea.x,
-      y: overlayY + contentArea.y + 20,
+    this.hintLabel = new Label(this, {
+      x: 0,
+      y: 0,
       text: "Local market for this world — use Market for galaxy-wide comparison. Esc or Close returns to the system map.",
       style: "caption",
       color: theme.colors.textDim,
-      maxWidth: contentArea.width,
+      maxWidth: 700,
     });
 
     // Market data table
-    const tableY = overlayY + contentArea.y + 54;
-    const tableWidth = contentArea.width;
-    const colScale = tableWidth / 600; // scale columns proportionally
-
-    const tableFrame = new ScrollFrame(this, {
-      x: contentX + contentArea.x,
-      y: tableY,
-      width: tableWidth,
-      height: 320,
-    });
-    const table = new DataTable(this, {
+    this.tableFrame = new ScrollFrame(this, {
       x: 0,
       y: 0,
-      width: tableWidth,
+      width: 700,
+      height: 320,
+    });
+    this.table = new DataTable(this, {
+      x: 0,
+      y: 0,
+      width: 700,
       height: 320,
       contentSized: true,
       columns: [
         {
           key: "cargoType",
           label: "Cargo Type",
-          width: Math.floor(130 * colScale),
+          width: 130,
           sortable: true,
           format: (v) => getCargoLabel(v as string),
           iconFn: (v) => getCargoIconKey(v as string),
@@ -161,7 +156,7 @@ export class PlanetDetailScene extends Phaser.Scene {
         {
           key: "supply",
           label: "Supply",
-          width: Math.floor(80 * colScale),
+          width: 80,
           align: "right",
           sortable: true,
           format: (v) => String(Math.round(v as number)),
@@ -169,7 +164,7 @@ export class PlanetDetailScene extends Phaser.Scene {
         {
           key: "demand",
           label: "Demand",
-          width: Math.floor(80 * colScale),
+          width: 80,
           align: "right",
           sortable: true,
           format: (v) => String(Math.round(v as number)),
@@ -177,7 +172,7 @@ export class PlanetDetailScene extends Phaser.Scene {
         {
           key: "price",
           label: "Price",
-          width: Math.floor(100 * colScale),
+          width: 100,
           align: "right",
           sortable: true,
           format: (v) => formatCash(v as number),
@@ -185,7 +180,7 @@ export class PlanetDetailScene extends Phaser.Scene {
         {
           key: "trend",
           label: "Trend",
-          width: Math.floor(70 * colScale),
+          width: 70,
           align: "center",
           format: (v) => trendArrow(v as string),
           colorFn: (v) => trendColor(v as string),
@@ -193,13 +188,13 @@ export class PlanetDetailScene extends Phaser.Scene {
         {
           key: "saturation",
           label: "Sat%",
-          width: Math.floor(80 * colScale),
+          width: 80,
           align: "right",
           format: (v) => `${Math.round((v as number) * 100)}%`,
         },
       ],
     });
-    tableFrame.setContent(table);
+    this.tableFrame.setContent(this.table);
 
     // Build rows from market data
     if (planetMarket) {
@@ -214,16 +209,13 @@ export class PlanetDetailScene extends Phaser.Scene {
           saturation: entry.saturation,
         };
       });
-      table.setRows(rows);
+      this.table.setRows(rows);
     }
 
-    // Buttons row at bottom of content panel
-    const buttonY = overlayY + overlayHeight - 60;
-
     // Create Route button
-    new Button(this, {
-      x: contentX + contentArea.x,
-      y: buttonY,
+    this.createRouteButton = new Button(this, {
+      x: 0,
+      y: 0,
       width: 150,
       label: "Create Route",
       onClick: () => {
@@ -232,15 +224,74 @@ export class PlanetDetailScene extends Phaser.Scene {
     });
 
     // Close button
-    new Button(this, {
-      x: contentX + contentWidth - contentArea.x - 120,
-      y: buttonY,
+    this.closeButton = new Button(this, {
+      x: 0,
+      y: 0,
       width: 120,
       label: "Close",
       onClick: () => {
         this.closeOverlay();
       },
     });
+
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+
+    // Overlay background covers full canvas.
+    this.overlayBg.setSize(L.gameWidth, L.gameHeight);
+
+    // Overlay layout: sidebar (PortraitPanel) + content panel
+    const overlayWidth = 900;
+    const overlayHeight = 580;
+    const overlayX = (L.gameWidth - overlayWidth) / 2;
+    const overlayY = (L.gameHeight - overlayHeight) / 2;
+    const portraitWidth = 200;
+    const contentX = overlayX + portraitWidth + L.contentGap;
+    const contentWidth = overlayWidth - portraitWidth - L.contentGap;
+
+    // PortraitPanel: setPosition before setSize.
+    this.portraitPanel.setPosition(overlayX, overlayY);
+    this.portraitPanel.setSize(portraitWidth, overlayHeight);
+
+    // Content panel.
+    this.contentPanel.setPosition(contentX, overlayY);
+    this.contentPanel.setSize(contentWidth, overlayHeight);
+
+    // Re-read content area after panel resize.
+    const contentArea = this.contentPanel.getContentArea();
+
+    // Labels reposition only (no setSize on Label).
+    // TODO(setSize): Label
+    this.infoLabel.setPosition(
+      contentX + contentArea.x,
+      overlayY + contentArea.y,
+    );
+    // TODO(setSize): Label
+    this.hintLabel.setPosition(
+      contentX + contentArea.x,
+      overlayY + contentArea.y + 20,
+    );
+
+    // Market data table.
+    const tableY = overlayY + contentArea.y + 54;
+    const tableWidth = contentArea.width;
+    this.tableFrame.setPosition(contentX + contentArea.x, tableY);
+    this.tableFrame.setSize(tableWidth, 320);
+    this.table.setSize(tableWidth, 320);
+
+    // Bottom buttons.
+    const buttonY = overlayY + overlayHeight - 60;
+    // TODO(setSize): Button
+    this.createRouteButton.setPosition(contentX + contentArea.x, buttonY);
+    // TODO(setSize): Button
+    this.closeButton.setPosition(
+      contentX + contentWidth - contentArea.x - 120,
+      buttonY,
+    );
   }
 
   private showDestinationPicker(originPlanet: Planet): void {
