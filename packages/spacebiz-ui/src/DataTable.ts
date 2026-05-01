@@ -6,7 +6,15 @@ import { applyClippingMask } from "./MaskUtils.ts";
 export interface ColumnDef {
   key: string;
   label: string;
+  /** Base / minimum width in pixels. Always required. */
   width: number;
+  /**
+   * Optional grow factor. When the table's outer width exceeds the sum of
+   * configured `width`s, the surplus is distributed across columns with
+   * `flex > 0` proportionally to their flex value. Columns with no `flex`
+   * (or `flex: 0`) keep their pixel `width`. Default: 0 (fixed).
+   */
+  flex?: number;
   align?: "left" | "center" | "right";
   sortable?: boolean;
   format?: (value: unknown) => string;
@@ -208,14 +216,56 @@ export class DataTable extends Phaser.GameObjects.Container {
     return true;
   }
 
-  /** Expand column widths proportionally to fill the available table width. */
+  /**
+   * Expand column widths proportionally to fill the available table width.
+   *
+   * When any column declares `flex`, this proportional scaling is skipped:
+   * configured widths are treated as the base/minimum and `computeEffective
+   * Widths` distributes the surplus to flex columns instead.
+   */
   private expandColumns(columns: ColumnDef[], tableWidth: number): ColumnDef[] {
+    const hasFlex = columns.some((c) => (c.flex ?? 0) > 0);
+    if (hasFlex) return columns;
     const scrollBarWidth = 4;
     const usableWidth = tableWidth - scrollBarWidth;
     const totalDefined = columns.reduce((sum, c) => sum + c.width, 0);
     if (totalDefined === 0 || totalDefined === usableWidth) return columns;
     const scale = usableWidth / totalDefined;
     return columns.map((c) => ({ ...c, width: Math.floor(c.width * scale) }));
+  }
+
+  /**
+   * Compute effective per-column widths for the current table outer width.
+   *
+   * Columns with `flex > 0` absorb any surplus (outer width minus sum of
+   * base widths) proportionally to their flex value. Columns with no flex
+   * keep their configured `width` exactly. The returned array is the same
+   * length and order as `this.columns`.
+   *
+   * If outer width is at or below the sum of base widths, every column is
+   * returned at its base width — flex never shrinks below `width`.
+   */
+  private computeEffectiveWidths(): number[] {
+    const widths = this.columns.map((c) => c.width);
+    const totalBase = widths.reduce((sum, w) => sum + w, 0);
+    let surplus = this.tableConfig.width - totalBase;
+    if (surplus <= 0) return widths;
+
+    let remainingFlex = this.columns.reduce((sum, c) => sum + (c.flex ?? 0), 0);
+    if (remainingFlex <= 0) return widths;
+
+    // Walk the columns once. Each flex column takes a floor()'d share of the
+    // remaining surplus, and the last flex column absorbs whatever is left
+    // so the total matches the outer width exactly (no pixel-rounding gap).
+    for (let i = 0; i < this.columns.length; i++) {
+      const flex = this.columns[i].flex ?? 0;
+      if (flex <= 0) continue;
+      const share = Math.floor((surplus * flex) / remainingFlex);
+      widths[i] += share;
+      surplus -= share;
+      remainingFlex -= flex;
+    }
+    return widths;
   }
 
   /**
@@ -327,8 +377,11 @@ export class DataTable extends Phaser.GameObjects.Container {
       .setAlpha(0.6);
     this.headerContainer.add(headerBorderLine);
 
+    const effectiveWidths = this.computeEffectiveWidths();
     let x = 0;
-    for (const col of this.columns) {
+    for (let ci = 0; ci < this.columns.length; ci++) {
+      const col = this.columns[ci];
+      const colWidth = effectiveWidths[ci];
       let textX = x + 8;
 
       // Optional header icon (left of label text)
@@ -350,10 +403,10 @@ export class DataTable extends Phaser.GameObjects.Container {
 
       if (col.sortable) {
         const hitArea = this.scene.add
-          .rectangle(x, 0, col.width, this.headerHeight, 0x000000, 0)
+          .rectangle(x, 0, colWidth, this.headerHeight, 0x000000, 0)
           .setOrigin(0, 0)
           .setInteractive(
-            new Phaser.Geom.Rectangle(0, 0, col.width, this.headerHeight),
+            new Phaser.Geom.Rectangle(0, 0, colWidth, this.headerHeight),
             Phaser.Geom.Rectangle.Contains,
           );
         hitArea.setData("consumesWheel", true);
@@ -385,7 +438,7 @@ export class DataTable extends Phaser.GameObjects.Container {
       }
 
       this.headerContainer.add(text);
-      x += col.width;
+      x += colWidth;
     }
   }
 
@@ -481,6 +534,7 @@ export class DataTable extends Phaser.GameObjects.Container {
     }
 
     let yCursor = 0;
+    const effectiveWidths = this.computeEffectiveWidths();
 
     sortedRows.forEach((row, i) => {
       const rowTop = yCursor;
@@ -492,7 +546,9 @@ export class DataTable extends Phaser.GameObjects.Container {
       let maxTextHeight = theme.fonts.body.size;
 
       let x = 0;
-      for (const col of this.columns) {
+      for (let ci = 0; ci < this.columns.length; ci++) {
+        const col = this.columns[ci];
+        const colWidth = effectiveWidths[ci];
         const raw = row[col.key];
         const display = col.format ? col.format(raw) : String(raw ?? "");
         const color = col.colorFn ? col.colorFn(raw) : theme.colors.text;
@@ -521,24 +577,24 @@ export class DataTable extends Phaser.GameObjects.Container {
           fontSize: `${theme.fonts.body.size}px`,
           fontFamily: theme.fonts.body.family,
           color: colorToString(color ?? theme.colors.text),
-          wordWrap: { width: col.width - 16 - (cellTextX - (x + 8)) },
+          wordWrap: { width: colWidth - 16 - (cellTextX - (x + 8)) },
           maxLines: 1,
         });
 
         if (col.align === "right") {
-          text.setOrigin(1, 0).setX(x + col.width - 8);
+          text.setOrigin(1, 0).setX(x + colWidth - 8);
         } else if (col.align === "center") {
-          text.setOrigin(0.5, 0).setX(x + col.width / 2);
+          text.setOrigin(0.5, 0).setX(x + colWidth / 2);
         }
 
         // Crop text to column bounds to prevent overflow into adjacent columns
         const textLeft =
           col.align === "right"
-            ? x + col.width - 8 - text.width
+            ? x + colWidth - 8 - text.width
             : col.align === "center"
-              ? x + col.width / 2 - text.width / 2
+              ? x + colWidth / 2 - text.width / 2
               : cellTextX;
-        const colRight = x + col.width;
+        const colRight = x + colWidth;
         const overflow = textLeft + text.width - colRight;
         if (overflow > 0) {
           text.setCrop(0, 0, text.width - overflow, text.height);
@@ -546,7 +602,7 @@ export class DataTable extends Phaser.GameObjects.Container {
 
         maxTextHeight = Math.max(maxTextHeight, text.height);
         rowTexts.push(text);
-        x += col.width;
+        x += colWidth;
       }
 
       const rowHeightPx = Math.max(this.rowHeight, maxTextHeight + 14);
@@ -653,9 +709,9 @@ export class DataTable extends Phaser.GameObjects.Container {
   /**
    * Resize the table chrome to a new width/height.
    *
-   * Width: updates the header background and divider line to the new width.
-   *        Column widths stay at their configured (proportionally expanded)
-   *        values — only the chrome that spans the full table width is reflowed.
+   * Width: updates the header background and divider line to the new width
+   *        and re-renders header + rows so any flex columns absorb the new
+   *        surplus. Columns with no `flex` keep their pixel width.
    *
    * Height: ignored when `contentSized: true` (height is row-driven in that
    *         mode). In scrollable mode the new height becomes the visible
@@ -663,11 +719,21 @@ export class DataTable extends Phaser.GameObjects.Container {
    */
   public setSize(width: number, height: number): this {
     super.setSize(width, height);
+    const widthChanged = this.tableConfig.width !== width;
     this.tableConfig.width = width;
     if (!this.contentSized) {
       this.tableConfig.height = height;
     }
     this.redrawChrome();
+    // Re-render rows so flex columns pick up the new widths. Header alone
+    // is not enough — column borders shift, right-aligned cells need to
+    // reposition, and the row background spans the table width.
+    if (widthChanged && this.rows.length > 0) {
+      this.renderBody();
+      if (this.contentSized) {
+        this.emit("contentResize", { height: this._contentHeight });
+      }
+    }
     return this;
   }
 
