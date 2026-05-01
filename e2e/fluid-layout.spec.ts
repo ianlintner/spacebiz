@@ -21,17 +21,18 @@ import * as path from "node:path";
  *      is started (MainMenu, GalaxySetup, SandboxSetup). Re-uses the same
  *      reparented #game-container trick.
  *
+ * Scenes captured via dedicated __sft helpers (each in its own test below):
+ *   - DilemmaScene        ←  __sft.actions.triggerDilemma()
+ *   - GameOverScene       ←  __sft.actions.forceGameOver()
+ *   - SimPlaybackScene    ←  __sft.actions.startSandboxPlayback({ seed, turns })
+ *   - SimSummaryScene     ←  __sft.actions.startSandboxSummary({ seed, turns })
+ *
  * Scenes intentionally not screenshotted:
- *   - GameHUDScene — overlay that's already implicitly captured behind every
- *     in-game content screenshot, so a dedicated capture would be redundant.
- *   - DilemmaScene — needs a pending dilemma event in state; no programmatic
- *     trigger exposed via __sft.
- *   - SimPlaybackScene — render is animation-driven and relies on the 3D
- *     galaxy canvas overlay; static screenshots aren't meaningful.
- *   - SimSummaryScene — requires a populated SimulationResult passed as init
- *     data; only reachable from the AI sandbox flow.
- *   - GameOverScene — requires end-of-game state with a final TurnResult; no
- *     programmatic trigger exposed.
+ *   - GameHUDScene — the in-game HUD is a persistent overlay rendered above
+ *     every other content scene, so its layout is already implicitly captured
+ *     in every in-game screenshot above. A dedicated "HUD on its own" shot
+ *     wouldn't reflect how players ever see it; the test concept simply
+ *     doesn't apply to overlays.
  */
 
 interface Resolution {
@@ -166,6 +167,25 @@ function screenshotPath(resolution: string, sceneKey: string): string {
   );
 }
 
+/**
+ * Bootstrap a started game with a deterministic seed and detach the game
+ * container so viewport changes drive Phaser's resize pipeline. Returns the
+ * game-container locator for screenshotting.
+ */
+async function bootstrapStartedGame(
+  page: import("@playwright/test").Page,
+  sft: import("./fixtures/SftDriver.ts").SftDriver,
+  seed = 2026,
+): Promise<import("@playwright/test").Locator> {
+  await sft.seed(seed);
+  await sft.actions.newGame(seed);
+  await sft.readyWithWidgets();
+  await sft.clickIfPresent("btn-launch");
+  await page.waitForTimeout(500);
+  await detachGameContainer(page);
+  return page.locator("#game-container");
+}
+
 test.describe("Fluid layout visual QA", () => {
   test.beforeAll(() => {
     if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -270,5 +290,137 @@ test.describe("Fluid layout visual QA", () => {
     }
 
     console.log(`✅ Fluid-layout pre-game screenshots saved → ${OUT_DIR}`);
+  });
+
+  test("captures DilemmaScene at every HD resolution", async ({
+    page,
+    sft,
+  }) => {
+    test.setTimeout(240_000);
+
+    const gameContainer = await bootstrapStartedGame(page, sft);
+
+    for (const res of RESOLUTIONS) {
+      await page.setViewportSize({ width: res.width, height: res.height });
+      await settleResize(page);
+
+      // Synthesise a deterministic dilemma and open the modal.
+      await sft.actions.triggerDilemma();
+      await page.waitForTimeout(500);
+
+      const sceneNow = await sft.currentScene();
+      expect(
+        sceneNow.active.includes("DilemmaScene"),
+        `expected DilemmaScene active at ${res.label}`,
+      ).toBe(true);
+
+      await gameContainer.screenshot({
+        path: screenshotPath(res.label, "DilemmaScene"),
+      });
+    }
+
+    console.log(`✅ Fluid-layout DilemmaScene screenshots saved → ${OUT_DIR}`);
+  });
+
+  test("captures GameOverScene at every HD resolution", async ({
+    page,
+    sft,
+  }) => {
+    test.setTimeout(240_000);
+
+    const gameContainer = await bootstrapStartedGame(page, sft);
+
+    for (const res of RESOLUTIONS) {
+      await page.setViewportSize({ width: res.width, height: res.height });
+      await settleResize(page);
+
+      await sft.actions.forceGameOver("completed");
+      // The score counter tween runs ~1.6s; wait it out so the screenshot
+      // shows the final number rather than a half-rolled value.
+      await page.waitForTimeout(2000);
+
+      const sceneNow = await sft.currentScene();
+      expect(
+        sceneNow.active.includes("GameOverScene"),
+        `expected GameOverScene active at ${res.label}`,
+      ).toBe(true);
+
+      await gameContainer.screenshot({
+        path: screenshotPath(res.label, "GameOverScene"),
+      });
+    }
+
+    console.log(`✅ Fluid-layout GameOverScene screenshots saved → ${OUT_DIR}`);
+  });
+
+  test("captures SimPlaybackScene at every HD resolution", async ({
+    page,
+    sft,
+  }) => {
+    test.setTimeout(240_000);
+
+    const gameContainer = await bootstrapStartedGame(page, sft);
+
+    for (const res of RESOLUTIONS) {
+      await page.setViewportSize({ width: res.width, height: res.height });
+      await settleResize(page);
+
+      await sft.actions.startSandboxPlayback({ seed: 2026, turns: 8 });
+      // Allow the scene to finish create() and lay out HUD chrome before
+      // the timeScale=0 freeze takes effect — the 3D galaxy needs one frame
+      // to paint its first ship sprites.
+      await page.waitForTimeout(1200);
+
+      const sceneNow = await sft.currentScene();
+      expect(
+        sceneNow.active.includes("SimPlaybackScene"),
+        `expected SimPlaybackScene active at ${res.label}`,
+      ).toBe(true);
+
+      await gameContainer.screenshot({
+        path: screenshotPath(res.label, "SimPlaybackScene"),
+      });
+    }
+
+    console.log(
+      `✅ Fluid-layout SimPlaybackScene screenshots saved → ${OUT_DIR}`,
+    );
+  });
+
+  test("captures SimSummaryScene at every HD resolution", async ({
+    page,
+    sft,
+  }) => {
+    test.setTimeout(240_000);
+
+    // No newGame() — SimSummaryScene operates on the SimulationResult passed
+    // as init data, independent of gameStore.
+    await sft.ready();
+    await page.waitForTimeout(300);
+
+    await detachGameContainer(page);
+    const gameContainer = page.locator("#game-container");
+
+    for (const res of RESOLUTIONS) {
+      await page.setViewportSize({ width: res.width, height: res.height });
+      await settleResize(page);
+
+      await sft.actions.startSandboxSummary({ seed: 2026, turns: 8 });
+      await page.waitForTimeout(700);
+
+      const sceneNow = await sft.currentScene();
+      expect(
+        sceneNow.active.includes("SimSummaryScene"),
+        `expected SimSummaryScene active at ${res.label}`,
+      ).toBe(true);
+
+      await gameContainer.screenshot({
+        path: screenshotPath(res.label, "SimSummaryScene"),
+      });
+    }
+
+    console.log(
+      `✅ Fluid-layout SimSummaryScene screenshots saved → ${OUT_DIR}`,
+    );
   });
 });
