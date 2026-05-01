@@ -21,6 +21,7 @@ import {
   getCargoLabel,
   getCargoIconKey,
   getCargoColor,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import {
   acceptContract,
@@ -98,14 +99,25 @@ function rewardSummary(c: Contract): string {
   return parts.join(" \u2022 ") || "\u2014";
 }
 
+// Layout-derived geometry constants.
+const PANEL_TITLE_HEIGHT = 38;
+const TAB_BAR_HEIGHT = 40;
+const SUMMARY_HEIGHT = 50;
+const BUTTON_AREA_HEIGHT = 52;
+const CONTENT_INNER_INSET = 12;
+
 // ---------------------------------------------------------------------------
 // Scene
 // ---------------------------------------------------------------------------
 
 export class ContractsScene extends Phaser.Scene {
-  private availableTable!: DataTable;
-  private activeTable!: DataTable;
   private portrait!: PortraitPanel;
+  private mainPanel!: Panel;
+  private tabGroup!: TabGroup;
+  private availableTable!: DataTable;
+  private availableTableFrame!: ScrollFrame;
+  private activeTable!: DataTable;
+  private activeTableFrame!: ScrollFrame;
   private availableSummary!: Phaser.GameObjects.Text;
   private activeSummary!: Phaser.GameObjects.Text;
   private acceptButton!: Button;
@@ -139,26 +151,18 @@ export class ContractsScene extends Phaser.Scene {
     const activeContent = this.add.container(0, 0);
 
     // ── Main Panel with TabGroup ──
-    const panelX = L.mainContentLeft;
-    const panelY = L.contentTop;
-    const panelW = L.mainContentWidth;
-    const panelH = L.contentHeight;
-
-    new Panel(this, {
-      x: panelX,
-      y: panelY,
-      width: panelW,
-      height: panelH,
+    this.mainPanel = new Panel(this, {
+      x: L.mainContentLeft,
+      y: L.contentTop,
+      width: L.mainContentWidth,
+      height: L.contentHeight,
       title: "Contract Board",
     });
 
-    const tabY = panelY + 38;
-    const tabContentY = 0;
-
-    new TabGroup(this, {
-      x: panelX,
-      y: tabY,
-      width: panelW,
+    this.tabGroup = new TabGroup(this, {
+      x: L.mainContentLeft,
+      y: L.contentTop + PANEL_TITLE_HEIGHT,
+      width: L.mainContentWidth,
       tabs: [
         { label: "\u2606 Available", content: availableContent },
         { label: "\u2611 Active", content: activeContent },
@@ -166,39 +170,41 @@ export class ContractsScene extends Phaser.Scene {
       defaultTab: 0,
     });
 
-    const contentInnerX = 12;
-    const contentInnerW = panelW - 24;
-    const tabBarHeight = 40;
-    const summaryHeight = 50;
-    const buttonAreaHeight = 52;
-    const tableTop = tabContentY + summaryHeight;
-    const tableHeight =
-      panelH - 38 - tabBarHeight - summaryHeight - buttonAreaHeight - 8;
+    const initialContentInnerW = L.mainContentWidth - CONTENT_INNER_INSET * 2;
+    const initialTableHeight =
+      L.contentHeight -
+      PANEL_TITLE_HEIGHT -
+      TAB_BAR_HEIGHT -
+      SUMMARY_HEIGHT -
+      BUTTON_AREA_HEIGHT -
+      8;
 
     // ════════════════════════════════════════════════════════════════
     // TAB 0 — AVAILABLE CONTRACTS
     // ════════════════════════════════════════════════════════════════
 
-    this.availableSummary = this.add.text(contentInnerX, tabContentY + 8, "", {
+    // TODO(setSize): Phaser.GameObjects.Text has no setSize for our purposes —
+    // reposition only and update wordWrap width during relayout.
+    this.availableSummary = this.add.text(CONTENT_INNER_INSET, 8, "", {
       fontSize: `${getTheme().fonts.caption.size}px`,
       fontFamily: getTheme().fonts.caption.family,
       color: colorToString(getTheme().colors.textDim),
-      wordWrap: { width: contentInnerW },
+      wordWrap: { width: initialContentInnerW },
     });
     availableContent.add(this.availableSummary);
 
-    const availableTableFrame = new ScrollFrame(this, {
-      x: contentInnerX,
-      y: tableTop,
-      width: contentInnerW,
-      height: tableHeight,
+    this.availableTableFrame = new ScrollFrame(this, {
+      x: CONTENT_INNER_INSET,
+      y: SUMMARY_HEIGHT,
+      width: initialContentInnerW,
+      height: initialTableHeight,
     });
-    availableContent.add(availableTableFrame);
+    availableContent.add(this.availableTableFrame);
     this.availableTable = new DataTable(this, {
       x: 0,
       y: 0,
-      width: contentInnerW,
-      height: tableHeight,
+      width: initialContentInnerW,
+      height: initialTableHeight,
       contentSized: true,
       columns: [
         {
@@ -253,13 +259,12 @@ export class ContractsScene extends Phaser.Scene {
         this.confirmAcceptContract();
       },
     });
-    availableTableFrame.setContent(this.availableTable);
+    this.availableTableFrame.setContent(this.availableTable);
 
-    // Accept button
-    const availableBtnY = tableTop + tableHeight + 8;
+    // Accept button — y is computed during relayout.
     this.acceptButton = new Button(this, {
-      x: contentInnerX,
-      y: availableBtnY,
+      x: CONTENT_INNER_INSET,
+      y: 0,
       autoWidth: true,
       label: "Accept Contract [Enter]",
       disabled: true,
@@ -271,26 +276,27 @@ export class ContractsScene extends Phaser.Scene {
     // TAB 1 — ACTIVE CONTRACTS
     // ════════════════════════════════════════════════════════════════
 
-    this.activeSummary = this.add.text(contentInnerX, tabContentY + 8, "", {
+    // TODO(setSize): Phaser.GameObjects.Text — reposition + wordWrap only.
+    this.activeSummary = this.add.text(CONTENT_INNER_INSET, 8, "", {
       fontSize: `${getTheme().fonts.caption.size}px`,
       fontFamily: getTheme().fonts.caption.family,
       color: colorToString(getTheme().colors.textDim),
-      wordWrap: { width: contentInnerW },
+      wordWrap: { width: initialContentInnerW },
     });
     activeContent.add(this.activeSummary);
 
-    const activeTableFrame = new ScrollFrame(this, {
-      x: contentInnerX,
-      y: tableTop,
-      width: contentInnerW,
-      height: tableHeight,
+    this.activeTableFrame = new ScrollFrame(this, {
+      x: CONTENT_INNER_INSET,
+      y: SUMMARY_HEIGHT,
+      width: initialContentInnerW,
+      height: initialTableHeight,
     });
-    activeContent.add(activeTableFrame);
+    activeContent.add(this.activeTableFrame);
     this.activeTable = new DataTable(this, {
       x: 0,
       y: 0,
-      width: contentInnerW,
-      height: tableHeight,
+      width: initialContentInnerW,
+      height: initialTableHeight,
       contentSized: true,
       columns: [
         {
@@ -349,13 +355,12 @@ export class ContractsScene extends Phaser.Scene {
         this.updateActivePortrait();
       },
     });
-    activeTableFrame.setContent(this.activeTable);
+    this.activeTableFrame.setContent(this.activeTable);
 
-    // Abandon button
-    const activeBtnY = tableTop + tableHeight + 8;
+    // Abandon button — y is computed during relayout.
     this.abandonButton = new Button(this, {
-      x: contentInnerX,
-      y: activeBtnY,
+      x: CONTENT_INNER_INSET,
+      y: 0,
       autoWidth: true,
       label: "Abandon Contract",
       disabled: true,
@@ -366,6 +371,57 @@ export class ContractsScene extends Phaser.Scene {
     // ── Initial refresh ──
     this.refreshAvailableTable();
     this.refreshActiveTable();
+
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+
+    // PortraitPanel: setPosition before setSize.
+    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
+    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+
+    // Main panel.
+    this.mainPanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.mainPanel.setSize(L.mainContentWidth, L.contentHeight);
+
+    // Tab strip below panel title.
+    this.tabGroup.setPosition(
+      L.mainContentLeft,
+      L.contentTop + PANEL_TITLE_HEIGHT,
+    );
+    this.tabGroup.setSize(L.mainContentWidth, this.tabGroup.height);
+
+    // Recompute inner geometry — child positions inside tab content
+    // containers are relative to the container origin (set by TabGroup).
+    const contentInnerW = L.mainContentWidth - CONTENT_INNER_INSET * 2;
+    const tableHeight =
+      L.contentHeight -
+      PANEL_TITLE_HEIGHT -
+      TAB_BAR_HEIGHT -
+      SUMMARY_HEIGHT -
+      BUTTON_AREA_HEIGHT -
+      8;
+    const tableTop = SUMMARY_HEIGHT;
+    const buttonY = tableTop + tableHeight + 8;
+
+    // Available tab.
+    this.availableSummary.setPosition(CONTENT_INNER_INSET, 8);
+    this.availableSummary.setWordWrapWidth(contentInnerW);
+    this.availableTableFrame.setPosition(CONTENT_INNER_INSET, tableTop);
+    this.availableTableFrame.setSize(contentInnerW, tableHeight);
+    this.availableTable.setSize(contentInnerW, tableHeight);
+    this.acceptButton.setPosition(CONTENT_INNER_INSET, buttonY);
+
+    // Active tab.
+    this.activeSummary.setPosition(CONTENT_INNER_INSET, 8);
+    this.activeSummary.setWordWrapWidth(contentInnerW);
+    this.activeTableFrame.setPosition(CONTENT_INNER_INSET, tableTop);
+    this.activeTableFrame.setSize(contentInnerW, tableHeight);
+    this.activeTable.setSize(contentInnerW, tableHeight);
+    this.abandonButton.setPosition(CONTENT_INNER_INSET, buttonY);
   }
 
   // ════════════════════════════════════════════════════════════════
