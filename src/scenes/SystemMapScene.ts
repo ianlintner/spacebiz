@@ -9,6 +9,7 @@ import {
   Button,
   PortraitPanel,
   addPulseTween,
+  attachReflowHandler,
   getLayout,
   getShipColor,
   getShipIconKey,
@@ -52,6 +53,14 @@ export class SystemMapScene extends Phaser.Scene {
   private vizRect = { x: 0, y: 0, w: 0, h: 0 };
   private lastTurn = 1;
   private modalHidden = false;
+  // Layout-derived UI chrome — repositioned in relayout().
+  private titleStripRect: Phaser.GameObjects.Rectangle | null = null;
+  private titleLabel: Label | null = null;
+  private hintRect: Phaser.GameObjects.Rectangle | null = null;
+  private hintText: Phaser.GameObjects.Text | null = null;
+  private backButton: Button | null = null;
+  private lockOverlay: Phaser.GameObjects.Graphics | null = null;
+  private lockMsg: Phaser.GameObjects.Text | null = null;
   // Reused per-frame scratch vectors (avoid GC churn in update loop).
   private readonly tmpWorld = new THREE.Vector3();
   private readonly tmpWorldNext = new THREE.Vector3();
@@ -105,24 +114,25 @@ export class SystemMapScene extends Phaser.Scene {
     const cy = L.contentTop + L.contentHeight / 2;
 
     // Title strip
-    this.add
+    this.titleStripRect = this.add
       .rectangle(cx, L.contentTop + 7, 220, 22, theme.colors.background, 0.42)
       .setStrokeStyle(1, theme.colors.panelBorder, 0.2)
       .setOrigin(0.5, 0);
-    new Label(this, {
+    this.titleLabel = new Label(this, {
       x: cx,
       y: L.contentTop + 10,
       text: system.name,
       style: "caption",
       color: theme.colors.textDim,
-    }).setOrigin(0.5, 0);
+    });
+    this.titleLabel.setOrigin(0.5, 0);
 
     // Right-edge hint
     const hintBoxWidth = Math.min(280, L.mainContentWidth - 232);
     if (hintBoxWidth > 160) {
       const hintX = L.mainContentLeft + L.mainContentWidth - 8;
       const hintY = L.contentTop + 34;
-      this.add
+      this.hintRect = this.add
         .rectangle(
           hintX,
           hintY,
@@ -133,7 +143,7 @@ export class SystemMapScene extends Phaser.Scene {
         )
         .setStrokeStyle(1, theme.colors.panelBorder, 0.2)
         .setOrigin(1, 0);
-      this.add
+      this.hintText = this.add
         .text(
           hintX - 6,
           hintY + 4,
@@ -152,7 +162,7 @@ export class SystemMapScene extends Phaser.Scene {
 
     // Back button — placed at bottom-left of main content, OUTSIDE the 3D
     // viewport rect so it stays visible above the WebGL canvas.
-    new Button(this, {
+    this.backButton = new Button(this, {
       x: L.mainContentLeft,
       y: L.contentTop + L.contentHeight - 50,
       width: 160,
@@ -164,17 +174,17 @@ export class SystemMapScene extends Phaser.Scene {
     });
 
     if (!systemEmpireAccessible) {
-      const overlayBg = this.add.graphics();
-      overlayBg.fillStyle(0x000000, 0.5);
-      overlayBg.fillRect(
+      this.lockOverlay = this.add.graphics();
+      this.lockOverlay.fillStyle(0x000000, 0.5);
+      this.lockOverlay.fillRect(
         L.mainContentLeft,
         L.contentTop,
         L.mainContentWidth,
         L.contentHeight,
       );
-      overlayBg.setDepth(900);
+      this.lockOverlay.setDepth(900);
 
-      const lockMsg = this.add
+      this.lockMsg = this.add
         .text(
           cx,
           cy - 20,
@@ -190,7 +200,7 @@ export class SystemMapScene extends Phaser.Scene {
         )
         .setOrigin(0.5, 0.5)
         .setDepth(901);
-      addPulseTween(this, lockMsg, {
+      addPulseTween(this, this.lockMsg, {
         minAlpha: 0.6,
         maxAlpha: 1.0,
         duration: 2000,
@@ -295,6 +305,72 @@ export class SystemMapScene extends Phaser.Scene {
     };
     this.events.once("shutdown", cleanup);
     this.events.once("destroy", cleanup);
+
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+    const cx = L.mainContentLeft + L.mainContentWidth / 2;
+    const cy = L.contentTop + L.contentHeight / 2;
+
+    // PortraitPanel: setPosition before setSize.
+    if (this.portraitPanel) {
+      this.portraitPanel.setPosition(L.sidebarLeft, L.contentTop);
+      this.portraitPanel.setSize(L.sidebarWidth, L.contentHeight);
+    }
+
+    // Title strip — fixed-size rect; reposition only.
+    this.titleStripRect?.setPosition(cx, L.contentTop + 7);
+    this.titleLabel?.setPosition(cx, L.contentTop + 10);
+
+    // Right-edge hint box (rect + text). Reposition only — Phaser.GameObjects.Text
+    // doesn't expose setSize for fixedWidth-driven wrapping.
+    if (this.hintRect && this.hintText) {
+      const hintBoxWidth = Math.min(280, L.mainContentWidth - 232);
+      const hintX = L.mainContentLeft + L.mainContentWidth - 8;
+      const hintY = L.contentTop + 34;
+      this.hintRect.setPosition(hintX, hintY);
+      this.hintRect.setSize(hintBoxWidth, 46);
+      // TODO(setSize): Phaser.GameObjects.Text has no setSize; fixedWidth is
+      // baked at construction. Reposition only — wrapping width does not
+      // adapt on resize.
+      this.hintText.setPosition(hintX - 6, hintY + 4);
+    }
+
+    // Back button — sub-widget without setSize; reposition only.
+    // TODO(setSize): Button does not expose setSize; width is fixed.
+    this.backButton?.setPosition(
+      L.mainContentLeft,
+      L.contentTop + L.contentHeight - 50,
+    );
+
+    // Lock overlay — graphics needs to be redrawn at the new rect.
+    if (this.lockOverlay) {
+      this.lockOverlay.clear();
+      this.lockOverlay.fillStyle(0x000000, 0.5);
+      this.lockOverlay.fillRect(
+        L.mainContentLeft,
+        L.contentTop,
+        L.mainContentWidth,
+        L.contentHeight,
+      );
+    }
+    this.lockMsg?.setPosition(cx, cy - 20);
+
+    // 3D viewport rect — pure data, safe to update.
+    this.vizRect = {
+      x: L.mainContentLeft + 4,
+      y: L.contentTop + 60,
+      w: L.mainContentWidth - 8,
+      h: L.contentHeight - 130,
+    };
+    this.view3D?.setViewport(this.vizRect);
+    // TODO(3d-resize): SystemView3D's renderer/camera are sized to the design
+    // dimensions captured at construction. A true 3D resize would require
+    // calling renderer.setSize and updating the camera projection matrix —
+    // out of scope for this UI overlay reflow.
   }
 
   override update(_time: number, delta: number): void {
