@@ -476,8 +476,8 @@ export class AISandboxScene extends Phaser.Scene {
 
     this.activityHeading.setPosition(leftW + padding, topBarH + 8);
 
-    // ScrollableList width/height are configured at construction; reposition only.
     this.activityList.setPosition(leftW + padding, topBarH + 32);
+    this.activityList.setSize(rightW - padding * 2, contentH - 48);
 
     // Bottom bar.
     this.bottomBarPanel.setPosition(0, L.gameHeight - bottomBarH);

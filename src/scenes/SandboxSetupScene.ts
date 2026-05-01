@@ -488,10 +488,8 @@ export class SandboxSetupScene extends Phaser.Scene {
 
       this.savePanelTitle.setPosition(panelX + PADDING, savePanelY + 8);
 
-      // ScrollableList width/height are baked at construction; reposition
-      // only. Lifting it into a setSize-aware widget is future work, out
-      // of scope for the sub-widget pass.
       this.saveList.setPosition(panelX + PADDING, savePanelY + 32);
+      this.saveList.setSize(panelW - PADDING * 2, savePanelH - 40);
     }
   }
 

@@ -272,3 +272,120 @@ describe("ScrollableList", () => {
     expect(() => list.destroy()).not.toThrow();
   });
 });
+
+describe("ScrollableList.setSize", () => {
+  let scene: MockScene;
+
+  beforeEach(() => {
+    scene = createMockScene();
+  });
+
+  it("returns the ScrollableList instance for chaining", () => {
+    const list = new ScrollableList(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+      itemHeight: 40,
+    });
+    expect(list.setSize(400, 250)).toBe(list);
+  });
+
+  it("syncs inherited width and height", () => {
+    const list = new ScrollableList(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+      itemHeight: 40,
+    });
+    list.setSize(450, 350);
+    expect(list.width).toBe(450);
+    expect(list.height).toBe(350);
+  });
+
+  it("updates the wheel capture hit-area to the new dimensions", () => {
+    const list = new ScrollableList(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+      itemHeight: 40,
+    });
+    const wheelCapture = list.list[0] as unknown as {
+      width: number;
+      height: number;
+    };
+    list.setSize(500, 300);
+    expect(wheelCapture.width).toBe(500);
+    expect(wheelCapture.height).toBe(300);
+  });
+
+  it("redraws the mask shape in place (no new mask object)", () => {
+    const list = new ScrollableList(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+      itemHeight: 40,
+    });
+    const before = (list as unknown as { maskGraphics: object }).maskGraphics;
+    list.setSize(400, 250);
+    const after = (list as unknown as { maskGraphics: object }).maskGraphics;
+    expect(after).toBe(before);
+  });
+
+  it("clamps scrollY when growing the viewport so content no longer overflows", () => {
+    const list = new ScrollableList(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 100,
+      itemHeight: 40,
+    });
+    // 4 items × 40 = 160 > 100 viewport → maxScroll = 60.
+    for (let i = 0; i < 4; i++) {
+      list.addItem(makeRow(scene, "i") as unknown as never);
+    }
+
+    // Grow the viewport so all content fits — maxScroll becomes 0.
+    list.setSize(300, 400);
+    const internal = list as unknown as {
+      maxScroll: number;
+      scrollY: number;
+      contentContainer: { y: number };
+    };
+    expect(internal.maxScroll).toBe(0);
+    expect(internal.scrollY).toBe(0);
+    // -0 and +0 are both acceptable here.
+    expect(Math.abs(internal.contentContainer.y)).toBe(0);
+  });
+
+  it("does not add new top-level children when content fits both before and after", () => {
+    const list = new ScrollableList(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+      itemHeight: 40,
+    });
+    list.addItem(makeRow(scene, "a") as unknown as never);
+    const before = list.list.length;
+    list.setSize(400, 300);
+    expect(list.list.length).toBe(before);
+  });
+
+  it("destroy still works cleanly after a setSize call", () => {
+    const list = new ScrollableList(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+      itemHeight: 40,
+      keyboardNavigation: true,
+    });
+    list.addItem(makeRow(scene, "a") as unknown as never);
+    list.setSize(500, 400);
+    expect(() => list.destroy()).not.toThrow();
+  });
+});

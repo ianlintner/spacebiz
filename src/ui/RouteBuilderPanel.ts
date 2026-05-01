@@ -106,24 +106,28 @@ export function openRouteBuilder(
  * directly to the scene's display list via layer.track(). This avoids
  * Phaser Container nesting issues where Button hitZones end up at wrong
  * coordinates and child objects may not render.
+ *
+ * Exported for unit testing of `setSize` reflow behaviour. Production code
+ * should construct it via `openRouteBuilder()`.
  */
-class RouteBuilderPanel {
+export class RouteBuilderPanel {
   private readonly scene: Phaser.Scene;
   private readonly layer: SceneUiLayer;
   private readonly options: RouteBuilderOptions;
   private readonly planets: Planet[];
   private readonly fieldOrder: FieldKey[];
   private readonly keyHandler: (event: KeyboardEvent) => void;
-  private readonly panelX: number;
-  private readonly panelY: number;
-  private readonly panelWidth: number;
-  private readonly panelHeight: number;
+  private panelX: number;
+  private panelY: number;
+  private panelWidth: number;
+  private panelHeight: number;
   private originIndex: number;
   private destinationIndex: number;
   private cargoIndex: number;
   private shipOptionIndex = 0;
   private focusedFieldIndex = 0;
   private autoBuy: boolean;
+  private panel!: Panel;
   private titleValue!: Label;
   private originValue!: Label;
   private destinationValue!: Label;
@@ -140,6 +144,13 @@ class RouteBuilderPanel {
   private cargoIcon!: Phaser.GameObjects.Image;
   private fieldLabels = new Map<FieldKey, Label>();
   private fieldValues = new Map<FieldKey, Label>();
+  private fieldArrows = new Map<FieldKey, { left: Button; right: Button }>();
+  private statsTitle!: Label;
+  private mktTitle!: Label;
+  private pickerHint!: Label;
+  private confirmButton!: Button;
+  private cancelButton!: Button;
+  private closeButton!: Button;
   private pickerMap: RoutePickerMap | null = null;
   private nextClickSlot: "origin" | "destination" = "origin";
   private hoveredPlanetId: string | null = null;
@@ -179,17 +190,17 @@ class RouteBuilderPanel {
       ? ["destination", "cargo", "ship", "autoBuy"]
       : ["origin", "destination", "cargo", "ship", "autoBuy"];
 
-    const panel = new Panel(scene, {
+    this.panel = new Panel(scene, {
       x: this.panelX,
       y: this.panelY,
       width: this.panelWidth,
       height: this.panelHeight,
       title: options.title ?? "Route Builder",
     });
-    panel.setDepth(DEPTH_MODAL);
-    layer.track(panel);
+    this.panel.setDepth(DEPTH_MODAL);
+    layer.track(this.panel);
 
-    const content = panel.getContentArea();
+    const content = this.panel.getContentArea();
 
     this.titleValue = new Label(scene, {
       x: this.panelX + content.x,
@@ -252,15 +263,15 @@ class RouteBuilderPanel {
 
     rowY += 58;
 
-    const statsTitle = new Label(scene, {
+    this.statsTitle = new Label(scene, {
       x: this.panelX + content.x,
       y: this.panelY + rowY,
       text: "Route preview",
       style: "body",
       color: getTheme().colors.accent,
     });
-    statsTitle.setDepth(DEPTH_MODAL);
-    layer.track(statsTitle);
+    this.statsTitle.setDepth(DEPTH_MODAL);
+    layer.track(this.statsTitle);
 
     rowY += 30;
     this.distanceValue = this.createSummaryLabel(content.x, rowY);
@@ -281,15 +292,15 @@ class RouteBuilderPanel {
     rowY += 36;
 
     // ── Market Intel section ──────────────────────────────────
-    const mktTitle = new Label(scene, {
+    this.mktTitle = new Label(scene, {
       x: this.panelX + content.x,
       y: this.panelY + rowY,
       text: "Market Intel",
       style: "body",
       color: getTheme().colors.accent,
     });
-    mktTitle.setDepth(DEPTH_MODAL);
-    layer.track(mktTitle);
+    this.mktTitle.setDepth(DEPTH_MODAL);
+    layer.track(this.mktTitle);
     rowY += 26;
 
     this.mktOriginPriceValue = this.createSummaryLabel(content.x, rowY);
@@ -332,7 +343,7 @@ class RouteBuilderPanel {
     for (const obj of this.pickerMap.getGameObjects()) {
       layer.track(obj);
     }
-    const pickerHint = new Label(scene, {
+    this.pickerHint = new Label(scene, {
       x: pickerMapX,
       y: pickerMapY - 18,
       text: "Click a planet to set origin → click another for destination",
@@ -340,10 +351,10 @@ class RouteBuilderPanel {
       color: getTheme().colors.textDim,
       maxWidth: pickerMapWidth,
     });
-    pickerHint.setDepth(DEPTH_MODAL);
-    layer.track(pickerHint);
+    this.pickerHint.setDepth(DEPTH_MODAL);
+    layer.track(this.pickerHint);
 
-    const confirmButton = new Button(scene, {
+    this.confirmButton = new Button(scene, {
       x: this.panelX + content.x,
       y: this.panelY + this.panelHeight - 54,
       width: 180,
@@ -352,10 +363,10 @@ class RouteBuilderPanel {
         this.confirm();
       },
     });
-    confirmButton.setDepth(DEPTH_MODAL);
-    layer.track(confirmButton);
+    this.confirmButton.setDepth(DEPTH_MODAL);
+    layer.track(this.confirmButton);
 
-    const cancelButton = new Button(scene, {
+    this.cancelButton = new Button(scene, {
       x: this.panelX + this.panelWidth - content.x - 130,
       y: this.panelY + this.panelHeight - 54,
       width: 130,
@@ -364,10 +375,10 @@ class RouteBuilderPanel {
         this.cancel();
       },
     });
-    cancelButton.setDepth(DEPTH_MODAL);
-    layer.track(cancelButton);
+    this.cancelButton.setDepth(DEPTH_MODAL);
+    layer.track(this.cancelButton);
 
-    const closeButton = new Button(scene, {
+    this.closeButton = new Button(scene, {
       x: this.panelX + this.panelWidth - 58,
       y: this.panelY + 8,
       width: 42,
@@ -377,8 +388,8 @@ class RouteBuilderPanel {
         this.cancel();
       },
     });
-    closeButton.setDepth(DEPTH_MODAL);
-    layer.track(closeButton);
+    this.closeButton.setDepth(DEPTH_MODAL);
+    layer.track(this.closeButton);
 
     this.keyHandler = (event: KeyboardEvent) => {
       this.handleKeyDown(event);
@@ -387,6 +398,128 @@ class RouteBuilderPanel {
     layer.onDestroy(() => this.destroy());
 
     this.refreshUi();
+  }
+
+  /**
+   * Resize the route-builder panel and reflow all of its children. Delegates
+   * the size update to the inner `Panel`, then repositions every tracked
+   * label, button, and the picker map relative to the new bounds.
+   *
+   * The panel is normally a modal that re-instantiates per open, but having
+   * `setSize` available keeps the widget consistent with `Panel`,
+   * `AdviserPanel`, and `PortraitPanel` and lets callers track viewport
+   * resizes while the modal is open.
+   */
+  public setSize(width: number, height: number): this {
+    this.panelWidth = width;
+    this.panelHeight = height;
+    this.panel.setSize(width, height);
+    this.redraw();
+    return this;
+  }
+
+  /**
+   * Reposition every tracked child to match the current panel bounds.
+   * Called from `setSize()`. Mirrors the layout offsets used in the
+   * constructor so changes here must stay in sync there.
+   */
+  private redraw(): void {
+    const content = this.panel.getContentArea();
+    const contentLeft = this.panelX + content.x;
+    const contentTop = (rowY: number): number => this.panelY + rowY;
+    const place = (
+      child: { setPosition: (x: number, y: number) => unknown },
+      rowY: number,
+    ): void => {
+      child.setPosition(contentLeft, contentTop(rowY));
+    };
+
+    place(this.titleValue, content.y);
+    place(this.hintValue, content.y + 26);
+
+    // Field rows (origin/destination/cargo/ship). The rowY sequence below
+    // mirrors the constructor's `rowY` accumulator exactly.
+    const rowOffsets: Array<{ field: FieldKey; rowY: number }> = [
+      { field: "origin", rowY: content.y + 66 },
+      { field: "destination", rowY: content.y + 66 + 46 },
+      { field: "cargo", rowY: content.y + 66 + 46 * 2 },
+      { field: "ship", rowY: content.y + 66 + 46 * 3 },
+    ];
+    const contentX = 16;
+    for (const { field, rowY } of rowOffsets) {
+      this.fieldLabels
+        .get(field)
+        ?.setPosition(this.panelX + contentX, contentTop(rowY + 4));
+      this.fieldValues
+        .get(field)
+        ?.setPosition(this.panelX + contentX + 120, contentTop(rowY + 4));
+      const arrows = this.fieldArrows.get(field);
+      arrows?.left.setPosition(this.panelX + 430, contentTop(rowY));
+      arrows?.right.setPosition(this.panelX + 478, contentTop(rowY));
+    }
+
+    // Cargo icon hugs the cargo value label.
+    const cargoRow = this.fieldValues.get("cargo");
+    if (cargoRow) {
+      this.cargoIcon.setPosition(cargoRow.x - 22, cargoRow.y + 8);
+    }
+
+    // Auto-buy / preview / market intel column (left).
+    let rowY = content.y + 66 + 46 * 3 + 56; // ship row + 56 spacer
+    place(this.autoBuyButton, rowY);
+    rowY += 58;
+    place(this.statsTitle, rowY);
+    rowY += 30;
+    place(this.distanceValue, rowY);
+    rowY += 24;
+    place(this.recommendationValue, rowY);
+    rowY += 24;
+    place(this.statusValue, rowY);
+    rowY += 32;
+    place(this.revenueValue, rowY);
+    rowY += 24;
+    place(this.fuelValue, rowY);
+    rowY += 24;
+    place(this.profitValue, rowY);
+    rowY += 36;
+    place(this.mktTitle, rowY);
+    rowY += 26;
+    place(this.mktOriginPriceValue, rowY);
+    rowY += 22;
+    place(this.mktDestPriceValue, rowY);
+    rowY += 22;
+    place(this.mktOriginSupplyValue, rowY);
+    rowY += 22;
+    place(this.mktDestDemandValue, rowY);
+    rowY += 22;
+    place(this.mktTrendValue, rowY);
+    rowY += 22;
+    place(this.mktSaturationValue, rowY);
+
+    // Picker hint anchored to the picker-map column. The picker map itself
+    // currently has no `setBounds` API (it locks `x/y/width/height` at
+    // construction), so its rendered geometry doesn't track `setSize`.
+    // Modal lifecycle keeps the panel re-instantiated per open in practice.
+    const pickerColumnLeft = 540;
+    const pickerMapX = this.panelX + pickerColumnLeft;
+    const pickerMapY = this.panelY + content.y + 70;
+    this.pickerHint.setPosition(pickerMapX, pickerMapY - 18);
+
+    // Action buttons along the bottom edge.
+    this.confirmButton.setPosition(
+      this.panelX + content.x,
+      this.panelY + this.panelHeight - 54,
+    );
+    this.cancelButton.setPosition(
+      this.panelX + this.panelWidth - content.x - 130,
+      this.panelY + this.panelHeight - 54,
+    );
+    this.closeButton.setPosition(
+      this.panelX + this.panelWidth - 58,
+      this.panelY + 8,
+    );
+
+    this.refreshPickerMap();
   }
 
   private createSummaryLabel(x: number, y: number, color?: number): Label {
@@ -461,6 +594,7 @@ class RouteBuilderPanel {
     });
     rightButton.setDepth(DEPTH_MODAL);
     this.layer.track(rightButton);
+    this.fieldArrows.set(field, { left: leftButton, right: rightButton });
   }
 
   private getInitialOriginIndex(): number {
