@@ -36,29 +36,26 @@ export class ScrollableList extends Phaser.GameObjects.Container {
 
   constructor(scene: Phaser.Scene, config: ScrollableListConfig) {
     super(scene, config.x, config.y);
-    this.listConfig = config;
+    this.listConfig = { ...config };
     this.keyboardNavigationEnabled = config.keyboardNavigation ?? false;
 
-    // Clipping mask (Phaser 4 Mask filter)
+    // Clipping mask (Phaser 4 Mask filter). Filled in redraw().
     this.maskGraphics = scene.make.graphics({});
-    this.maskGraphics.fillStyle(0xffffff);
-    this.maskGraphics.fillRect(0, 0, config.width, config.height);
     this.maskGraphics.setPosition(config.x, config.y);
 
     this.contentContainer = scene.add.container(0, 0);
     applyClippingMask(this.contentContainer, this.maskGraphics);
     this.add(this.contentContainer);
 
-    // Wheel capture area (kept behind list content so it doesn't block row clicks)
+    // Wheel capture area (kept behind list content so it doesn't block row
+    // clicks). Sized in redraw().
     this.wheelCapture = scene.add
       .rectangle(0, 0, config.width, config.height, 0x000000, 0)
-      .setOrigin(0, 0)
-      .setInteractive(
-        new Phaser.Geom.Rectangle(0, 0, config.width, config.height),
-        Phaser.Geom.Rectangle.Contains,
-      );
+      .setOrigin(0, 0);
     this.addAt(this.wheelCapture, 0);
     this.wheelCapture.setData("consumesWheel", true);
+
+    this.redraw();
 
     this.wheelCapture.on(
       "wheel",
@@ -400,6 +397,58 @@ export class ScrollableList extends Phaser.GameObjects.Container {
       this.hoverIndicator = null;
       this.currentHoverContainer = null;
     }
+  }
+
+  /**
+   * Resize the viewport. Updates internal dimensions, redraws the mask shape
+   * and wheel hit-area in place, refreshes the scrollbar, and clamps the
+   * current scroll offset to the new bounds.
+   *
+   * Item rows are positioned by `index × itemHeight`, so they don't need
+   * recomputation here — only the viewport-level geometry changes.
+   */
+  public setSize(width: number, height: number): this {
+    super.setSize(width, height);
+    this.listConfig.width = width;
+    this.listConfig.height = height;
+    this.redraw();
+    return this;
+  }
+
+  /**
+   * Mutate existing game objects to match the current viewport width/height.
+   * Called from the constructor and from `setSize()`. Never creates new
+   * children (other than the optional scrollbar elements that
+   * `updateScrollbar()` itself manages).
+   */
+  private redraw(): void {
+    const w = this.listConfig.width;
+    const h = this.listConfig.height;
+
+    // Mask shape — clear + re-fill in place so the same mask object
+    // continues to clip the content container.
+    this.maskGraphics.clear();
+    this.maskGraphics.fillStyle(0xffffff);
+    this.maskGraphics.fillRect(0, 0, w, h);
+
+    // Wheel capture hit-area.
+    this.wheelCapture.width = w;
+    this.wheelCapture.height = h;
+    this.wheelCapture.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, w, h),
+      Phaser.Geom.Rectangle.Contains,
+    );
+
+    // Recompute scroll bounds for the new viewport, then clamp scrollY.
+    this.maxScroll = Math.max(
+      0,
+      this.items.length * this.listConfig.itemHeight - h,
+    );
+    this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScroll);
+    this.contentContainer.y = -this.scrollY;
+
+    // Rebuild scrollbar (track + thumb) for the new dimensions.
+    this.updateScrollbar();
   }
 
   private updateScrollbar(): void {
