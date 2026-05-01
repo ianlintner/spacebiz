@@ -11,7 +11,9 @@ import {
   getShipMapKey,
   getShipMapAnimKey,
   attachReflowHandler,
+  GalaxySidebarPanel,
 } from "../ui/index.ts";
+import type { GalaxySidebarData } from "../ui/index.ts";
 import {
   getEmpireFlagKey,
   generateEmpireFlags,
@@ -98,7 +100,7 @@ export class GalaxyMapScene extends Phaser.Scene {
   private companyFilterCycle: (string | null)[] = [null];
   private layerToggles: LayerToggleButton[] = [];
   private companyFilterButton: LayerToggleButton | null = null;
-  private sidebarObjects: Phaser.GameObjects.GameObject[] = [];
+  private sidebar: GalaxySidebarPanel | null = null;
 
   // ── Reflow-tracked overlay chrome ─────────────────────────────────────────
   // Cached so relayout() can reposition without rebuilding the world.
@@ -168,7 +170,7 @@ export class GalaxyMapScene extends Phaser.Scene {
 
     // ── HUD overlay (top-of-content strip) ─────────────────────────────────
     this.buildHud(state, theme, L);
-    this.buildSidebar(state, theme, L);
+    this.buildSidebar(state, L);
     this.buildLayerToggleRow(state, theme, L);
 
     attachReflowHandler(this, () => this.relayout());
@@ -257,8 +259,8 @@ export class GalaxyMapScene extends Phaser.Scene {
         m.nameText.destroy();
       }
       this.empireMarkers = [];
-      for (const obj of this.sidebarObjects) obj.destroy();
-      this.sidebarObjects = [];
+      this.sidebar?.destroy();
+      this.sidebar = null;
       for (const t of this.layerToggles) {
         t.bg.destroy();
         t.label.destroy();
@@ -348,17 +350,15 @@ export class GalaxyMapScene extends Phaser.Scene {
       cf.hit.setPosition(x, rowY);
     }
 
-    // Sidebar contents are ad-hoc text/rect primitives without a sized
-    // container; rebuild so the per-row height clamp re-evaluates
-    // against the new sidebar height. Lifting into a sidebar widget is
-    // future work — out of scope for the setSize sub-widget pass.
-    this.rebuildSidebar();
-  }
-
-  private rebuildSidebar(): void {
-    for (const obj of this.sidebarObjects) obj.destroy();
-    this.sidebarObjects = [];
-    this.buildSidebar(gameStore.getState(), getTheme(), getLayout());
+    // Sidebar widget reflows in place — its row count is height-clamped, so
+    // setSize() may show or hide rows depending on the new content height.
+    // Refresh data alongside the resize so the per-empire row reflects the
+    // latest state (matches the previous rebuildSidebar() behaviour).
+    if (this.sidebar && L.sidebarWidth > 0) {
+      this.sidebar.setPosition(L.sidebarLeft, L.contentTop);
+      this.sidebar.setSize(L.sidebarWidth, L.contentHeight);
+      this.sidebar.setSidebarData(this.gatherSidebarData(gameStore.getState()));
+    }
   }
 
   private buildHud(
@@ -451,63 +451,23 @@ export class GalaxyMapScene extends Phaser.Scene {
    */
   private buildSidebar(
     state: GameState,
-    theme: ReturnType<typeof getTheme>,
     L: ReturnType<typeof getLayout>,
   ): void {
     if (L.sidebarWidth <= 0) return;
-    const x = L.sidebarLeft;
-    const y = L.contentTop;
-    const w = L.sidebarWidth;
-    const h = L.contentHeight;
+    this.sidebar = new GalaxySidebarPanel(this, {
+      x: L.sidebarLeft,
+      y: L.contentTop,
+      width: L.sidebarWidth,
+      height: L.contentHeight,
+    });
+    this.sidebar.setDepth(40);
+    this.sidebar.setSidebarData(this.gatherSidebarData(state));
+  }
 
-    const bg = this.add
-      .rectangle(x, y, w, h, theme.colors.panelBg, 0.55)
-      .setStrokeStyle(1, theme.colors.panelBorder, 0.4)
-      .setOrigin(0, 0)
-      .setDepth(40);
-    this.sidebarObjects.push(bg);
-
-    const titleText = this.add
-      .text(x + 12, y + 12, "Galaxy Overview", {
-        fontSize: `${theme.fonts.heading.size}px`,
-        fontFamily: theme.fonts.heading.family,
-        color: colorToString(theme.colors.accent),
-      })
-      .setDepth(41);
-    this.sidebarObjects.push(titleText);
-
+  private gatherSidebarData(state: GameState): GalaxySidebarData {
     const empires = state.galaxy.empires;
     const systems = state.galaxy.systems;
     const hyperlanes = state.hyperlanes ?? [];
-    const stats = [
-      `Systems: ${systems.length}`,
-      `Empires: ${empires.length}`,
-      `Hyperlanes: ${hyperlanes.length}`,
-      `Player Empire: ${empires.find((e) => e.id === state.playerEmpireId)?.name ?? "—"}`,
-    ];
-    let cy = y + 38;
-    for (const line of stats) {
-      const t = this.add
-        .text(x + 12, cy, line, {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.text),
-        })
-        .setDepth(41);
-      this.sidebarObjects.push(t);
-      cy += 16;
-    }
-
-    cy += 8;
-    const empireHeader = this.add
-      .text(x + 12, cy, "EMPIRES", {
-        fontSize: `${theme.fonts.caption.size}px`,
-        fontFamily: theme.fonts.caption.family,
-        color: colorToString(theme.colors.accent),
-      })
-      .setDepth(41);
-    this.sidebarObjects.push(empireHeader);
-    cy += 20;
 
     // System count per empire so the player can rank empires by size at a
     // glance — matches the visual mass of empire halos in the 3D view.
@@ -522,34 +482,22 @@ export class GalaxyMapScene extends Phaser.Scene {
       (a, b) =>
         (empSystemCount.get(b.id) ?? 0) - (empSystemCount.get(a.id) ?? 0),
     );
-    for (const emp of empiresSorted) {
-      const swatch = this.add
-        .rectangle(x + 12, cy + 6, 10, 10, emp.color)
-        .setOrigin(0, 0.5)
-        .setDepth(41);
-      this.sidebarObjects.push(swatch);
-      const accessible = isEmpireAccessible(emp.id, state);
-      const lockSuffix = accessible ? "" : " 🔒";
-      const sysCount = empSystemCount.get(emp.id) ?? 0;
-      const txt = this.add
-        .text(
-          x + 28,
-          cy,
-          `${emp.name}${lockSuffix}\n${sysCount} systems · ${Math.round(emp.tariffRate * 100)}% tariff`,
-          {
-            fontSize: `${theme.fonts.caption.size}px`,
-            fontFamily: theme.fonts.caption.family,
-            color: colorToString(
-              accessible ? theme.colors.text : theme.colors.textDim,
-            ),
-          },
-        )
-        .setAlpha(accessible ? 1 : 0.6)
-        .setDepth(41);
-      this.sidebarObjects.push(txt);
-      cy += 32;
-      if (cy > y + h - 24) break;
-    }
+
+    return {
+      systemCount: systems.length,
+      empireCount: empires.length,
+      hyperlaneCount: hyperlanes.length,
+      playerEmpireName:
+        empires.find((e) => e.id === state.playerEmpireId)?.name ?? "—",
+      empires: empiresSorted.map((emp) => ({
+        id: emp.id,
+        name: emp.name,
+        color: emp.color,
+        systemCount: empSystemCount.get(emp.id) ?? 0,
+        tariffRate: emp.tariffRate,
+        accessible: isEmpireAccessible(emp.id, state),
+      })),
+    };
   }
 
   /**
