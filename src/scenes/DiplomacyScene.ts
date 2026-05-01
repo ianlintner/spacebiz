@@ -1,5 +1,7 @@
 import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
+import { portraitLoader } from "../game/PortraitLoader.ts";
+import { getAmbassadorTextureKey } from "../data/ambassadorPortraits.ts";
 import type {
   AICompany,
   Empire,
@@ -114,6 +116,19 @@ export class DiplomacyScene extends Phaser.Scene {
   private actionPanel!: Panel;
   private actionButtons: Button[] = [];
   private tagDetailLabels: Phaser.GameObjects.Text[] = [];
+  /**
+   * Persistent ambassador portrait image. Placed by `renderAmbassadorPortrait`
+   * and kept across re-renders (we reuse the same Image and just swap its
+   * texture) so the load cost is paid once per portrait per scene session.
+   */
+  private portraitImage: Phaser.GameObjects.Image | null = null;
+  private portraitFrame: Phaser.GameObjects.Rectangle | null = null;
+  /**
+   * Texture key currently requested by `renderAmbassadorPortrait`. Used to
+   * detect stale async load callbacks when the player switches targets while
+   * a portrait is still loading — only the most recent request should win.
+   */
+  private requestedPortraitTexture: string | null = null;
   private actionStatusLabel!: Label;
   private headerCounter!: Label;
   private queuedSummary!: Label;
@@ -375,6 +390,7 @@ export class DiplomacyScene extends Phaser.Scene {
     let activeTags: ReturnType<typeof getActiveTagBadges>;
     let ambassadorLine: string | null = null;
     let greetingLine: string | null = null;
+    let portraitId: string | null = null;
     if (kind === "empire") {
       const empire = state.galaxy?.empires.find((e) => e.id === id);
       if (!empire) return;
@@ -386,6 +402,7 @@ export class DiplomacyScene extends Phaser.Scene {
         ambassadorLine = `Ambassador ${amb.name} · ${amb.personality}`;
         const tier = getStandingTier(state.empireReputation?.[id] ?? 50);
         greetingLine = getAmbientGreeting(amb.personality, tier);
+        portraitId = amb.portrait.portraitId;
       }
     } else {
       const rival = state.aiCompanies?.find((r) => r.id === id);
@@ -398,21 +415,30 @@ export class DiplomacyScene extends Phaser.Scene {
         ambassadorLine = `Liaison ${liaison.name} · ${liaison.personality}`;
         const tier = getStandingTier(d.rivalStanding[id] ?? 50);
         greetingLine = getAmbientGreeting(liaison.personality, tier);
+        portraitId = liaison.portrait.portraitId;
       }
     }
 
     this.actionStatusLabel.setText(header);
 
     const { absX, absY, contentWidth } = this.getActionPanelGeometry();
-    // Ambassador name + ambient greeting render between the header and the
-    // tag detail rows. We reuse `tagDetailLabels` for lifecycle management
-    // since the cleanup loop in refreshActionPanel destroys all of them on
-    // each pass.
+    // Portrait sits above the ambassador name; if loaded, ambassador rows
+    // start beneath it.
+    const portraitBottom = this.renderAmbassadorPortrait(
+      portraitId,
+      absX,
+      absY,
+    );
+    const ambStartY = portraitBottom > absY ? portraitBottom + 6 : absY;
+    // Ambassador name + ambient greeting render between the portrait and
+    // the tag detail rows. We reuse `tagDetailLabels` for lifecycle
+    // management since the cleanup loop in refreshActionPanel destroys
+    // all of them on each pass.
     const ambassadorBottom = this.renderAmbassadorRows(
       ambassadorLine,
       greetingLine,
       absX,
-      absY,
+      ambStartY,
       contentWidth - 16,
     );
     const tagRowGap = 18;
@@ -565,6 +591,87 @@ export class DiplomacyScene extends Phaser.Scene {
    * coordinate of the bottom of the last rendered row, so the caller can
    * push subsequent UI (action buttons) down beneath.
    */
+  /**
+   * Render the ambassador portrait image above the ambassador text rows.
+   * The image lives across re-renders — we reuse the same Phaser.Image
+   * instance and just swap its texture key as the player switches targets.
+   * The portrait texture loads asynchronously via `portraitLoader`; until
+   * it's in Phaser's TextureManager, the image stays hidden so we don't
+   * flash a placeholder.
+   *
+   * Returns the y of the bottom of the portrait frame (or `yStart` if no
+   * portrait is rendered) so subsequent UI can stack beneath.
+   */
+  private renderAmbassadorPortrait(
+    portraitId: string | null,
+    x: number,
+    yStart: number,
+  ): number {
+    const SIZE = 72;
+    if (!portraitId) {
+      this.requestedPortraitTexture = null;
+      this.portraitImage?.setVisible(false);
+      this.portraitFrame?.setVisible(false);
+      return yStart;
+    }
+    const theme = getTheme();
+    const cx = x + SIZE / 2;
+    const cy = yStart + SIZE / 2;
+    const textureKey = getAmbassadorTextureKey(portraitId);
+    this.requestedPortraitTexture = textureKey;
+
+    if (!this.portraitFrame) {
+      this.portraitFrame = this.add
+        .rectangle(cx, cy, SIZE + 4, SIZE + 4, 0x000000, 0)
+        .setStrokeStyle(1, theme.colors.accent, 0.7);
+    } else {
+      this.portraitFrame.setPosition(cx, cy).setVisible(true);
+    }
+
+    if (this.portraitImage) {
+      this.portraitImage.setPosition(cx, cy).setVisible(true);
+    }
+
+    if (this.textures.exists(textureKey)) {
+      // Texture already in TextureManager — set immediately.
+      if (!this.portraitImage) {
+        this.portraitImage = this.add
+          .image(cx, cy, textureKey)
+          .setDisplaySize(SIZE, SIZE);
+      } else {
+        this.portraitImage.setTexture(textureKey).setDisplaySize(SIZE, SIZE);
+      }
+    } else {
+      // Hide while loading; swap texture in once loaded. The selection may
+      // change before the load completes — guard by re-checking that the
+      // load result still matches the current portrait.
+      this.portraitImage?.setVisible(false);
+      portraitLoader
+        .ensureAmbassadorPortrait(this, portraitId)
+        .then((key) => {
+          // If the player switched targets while we were loading, the
+          // requested texture key has moved on — skip the swap so the
+          // current (newer) request wins.
+          if (this.requestedPortraitTexture !== key) return;
+          if (!this.portraitImage) {
+            this.portraitImage = this.add
+              .image(cx, cy, key)
+              .setDisplaySize(SIZE, SIZE);
+          } else {
+            this.portraitImage.setTexture(key).setDisplaySize(SIZE, SIZE);
+          }
+          this.portraitImage.setVisible(true);
+        })
+        .catch(() => {
+          // Load failed (missing asset / 404). Leave the frame visible and
+          // the image hidden — the ambassador text below still tells the
+          // player who they're talking to.
+        });
+    }
+
+    return yStart + SIZE + 4;
+  }
+
   /**
    * Renders two text rows below the action header: the ambassador's name
    * and personality, then a single ambient greeting line keyed to their
