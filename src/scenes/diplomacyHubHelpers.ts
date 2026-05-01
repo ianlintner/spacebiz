@@ -477,6 +477,38 @@ export function snapshotTiers(
   return out;
 }
 
+/**
+ * Short prose summary of what a single-category action will do, used in the
+ * confirm panel. Lobby/non-compete actions go through their own pickers and
+ * never reach this helper, so we don't enumerate them here.
+ *
+ * Returns `null` for kinds that aren't single-category — callers should fall
+ * back to the action label.
+ */
+export function describeActionEffect(
+  action: HubActionDescriptor,
+): string | null {
+  switch (action.kind) {
+    case "giftEmpire":
+      return "Sends a one-time gift to improve standing with this empire.";
+    case "giftRival":
+      return "Sends a peace offering to improve standing with this rival.";
+    case "surveil": {
+      const lens = action.surveilLens;
+      if (lens === "cash") return "Reveals this rival's current cash reserves.";
+      if (lens === "topContractByValue")
+        return "Reveals this rival's most valuable active contract.";
+      if (lens === "topEmpireStanding")
+        return "Reveals which empire most favors this rival.";
+      return "Gathers intelligence on this rival.";
+    }
+    case "sabotage":
+      return "Disrupts a rival operation. High risk if detected.";
+    default:
+      return null;
+  }
+}
+
 export function buildQueuedAction(
   action: HubActionDescriptor,
   targetId: string,
