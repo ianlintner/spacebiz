@@ -325,22 +325,20 @@ export class SystemMapScene extends Phaser.Scene {
     this.titleStripRect?.setPosition(cx, L.contentTop + 7);
     this.titleLabel?.setPosition(cx, L.contentTop + 10);
 
-    // Right-edge hint box (rect + text). Reposition only — Phaser.GameObjects.Text
-    // doesn't expose setSize for fixedWidth-driven wrapping.
+    // Right-edge hint box (rect + text). The text is a plain
+    // Phaser.GameObjects.Text whose fixedWidth is baked at construction;
+    // wrap width is updated via setWordWrapWidth so long hints reflow.
     if (this.hintRect && this.hintText) {
       const hintBoxWidth = Math.min(280, L.mainContentWidth - 232);
       const hintX = L.mainContentLeft + L.mainContentWidth - 8;
       const hintY = L.contentTop + 34;
       this.hintRect.setPosition(hintX, hintY);
       this.hintRect.setSize(hintBoxWidth, 46);
-      // TODO(setSize): Phaser.GameObjects.Text has no setSize; fixedWidth is
-      // baked at construction. Reposition only — wrapping width does not
-      // adapt on resize.
       this.hintText.setPosition(hintX - 6, hintY + 4);
+      this.hintText.setWordWrapWidth(hintBoxWidth - 12);
     }
 
-    // Back button — sub-widget without setSize; reposition only.
-    // TODO(setSize): Button does not expose setSize; width is fixed.
+    // Back button has a fixed width; reposition only.
     this.backButton?.setPosition(
       L.mainContentLeft,
       L.contentTop + L.contentHeight - 50,

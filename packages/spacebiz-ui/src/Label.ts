@@ -35,6 +35,22 @@ export class Label extends Phaser.GameObjects.Text {
     scene.add.existing(this);
   }
 
+  /**
+   * Resize the label's bounds. Updates the inherited `width`/`height` so
+   * Phaser layout machinery sees the new dimensions, and rewires the
+   * text's wordWrap width so long strings reflow inside the new bounds.
+   *
+   * Phaser's underlying `Text` measures its own pixel size from the glyphs;
+   * `setSize` does not literally stretch the text. The behaviour we want
+   * for a layout-driven Label is "give me a text widget that wraps at this
+   * width" — so wrap-width is the load-bearing side effect.
+   */
+  override setSize(width: number, height: number): this {
+    super.setSize(width, height);
+    this.setWordWrapWidth(width);
+    return this;
+  }
+
   setLabelColor(color: number): this {
     this.setColor(colorToString(color));
     return this;

@@ -24,7 +24,7 @@ const THUMB_RADIUS = 9;
 const LABEL_GAP = 4;
 
 export class Slider extends Phaser.GameObjects.Container {
-  private readonly widthPx: number;
+  private widthPx: number;
   private readonly min: number;
   private readonly max: number;
   private readonly step?: number;
@@ -206,6 +206,28 @@ export class Slider extends Phaser.GameObjects.Container {
   setValue(value: number): void {
     const next = quantizeSliderValue(value, this.min, this.max, this.step);
     this.applyValue(next, false);
+  }
+
+  /**
+   * Flex the slider's track width on resize. The height parameter is
+   * accepted for API symmetry with the rest of the layout system but is
+   * effectively dictated by the track + thumb geometry, so it is
+   * forwarded to `super.setSize` and otherwise ignored.
+   *
+   * The handle is re-anchored to the current value (no value change).
+   */
+  override setSize(width: number, height: number): this {
+    super.setSize(width, height);
+    this.widthPx = width;
+    this.track.setSize(width, TRACK_HEIGHT);
+    if (this.valueText) {
+      this.valueText.setX(width);
+    }
+    this.hitZone.setSize(width, THUMB_RADIUS * 2 + TRACK_HEIGHT);
+    const x = this.computeThumbX();
+    this.thumb.setX(x);
+    this.fill.setSize(x, TRACK_HEIGHT);
+    return this;
   }
 
   setEnabled(enabled: boolean): void {

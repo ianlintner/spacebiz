@@ -355,6 +355,38 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
     return this;
   }
 
+  /**
+   * Resize the button's background, accent line, and hit zone in place,
+   * and re-anchor the label to the new center.
+   *
+   * Note: this is the layout-driven escape hatch for `autoWidth: true`
+   * buttons that need to flex with their container. Buttons measured to
+   * their label at construction time still own their `widthPx`; calling
+   * `setSize` overrides that.
+   */
+  override setSize(width: number, height: number): this {
+    super.setSize(width, height);
+    this.widthPx = width;
+    this.heightPx = height;
+    // Children are constructed after the super.setSize() call in the
+    // constructor; guard so the initial sizing call doesn't crash.
+    this.bg?.setSize(width, height);
+    if (this.accentLine) {
+      this.accentLine.setPosition(2, height - 1);
+      this.accentLine.setSize(width - 4, 1);
+    }
+    this.label?.setPosition(width / 2, height / 2);
+    this.focusRing?.setSize(width, height);
+    if (this.hitZone) {
+      this.hitZone.setSize(
+        width + this.hitPaddingX * 2,
+        height + this.hitPaddingY * 2,
+      );
+      this.syncHitZonePosition();
+    }
+    return this;
+  }
+
   override setVisible(value: boolean): this {
     super.setVisible(value);
     if (!this.hitZone) {

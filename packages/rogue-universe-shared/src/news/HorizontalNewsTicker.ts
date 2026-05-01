@@ -24,10 +24,11 @@ function buildMarqueeString(items: TickerItem[]): string {
  */
 export class HorizontalNewsTicker {
   private readonly scene: Phaser.Scene;
-  private readonly x: number;
-  private readonly y: number;
-  private readonly width: number;
-  private readonly height: number;
+  private x: number;
+  private y: number;
+  private width: number;
+  private height: number;
+  private lastItems: TickerItem[] = [];
 
   private maskShape: Phaser.GameObjects.Graphics | null = null;
   private marqueeText: Phaser.GameObjects.Text | null = null;
@@ -50,13 +51,41 @@ export class HorizontalNewsTicker {
   }
 
   private buildMask(): void {
+    this.maskShape?.destroy();
     this.maskShape = this.scene.add.graphics();
     this.maskShape.fillStyle(0xffffff, 1);
     this.maskShape.fillRect(this.x, this.y, this.width, this.height);
     this.maskShape.setVisible(false);
   }
 
+  /**
+   * Resize the ticker viewport in place. Mask + scroll geometry are
+   * rebuilt against the new bounds; existing items keep scrolling.
+   */
+  setSize(width: number, height: number): this {
+    this.width = width;
+    this.height = height;
+    this.rebuild();
+    return this;
+  }
+
+  /** Move the ticker strip to a new origin and rebuild mask + scroll. */
+  setPosition(x: number, y: number): this {
+    this.x = x;
+    this.y = y;
+    this.rebuild();
+    return this;
+  }
+
+  private rebuild(): void {
+    this.buildMask();
+    if (this.lastItems.length > 0 || this.marqueeText) {
+      this.updateItems(this.lastItems);
+    }
+  }
+
   updateItems(items: TickerItem[]): void {
+    this.lastItems = items;
     this.scrollTween?.stop();
     this.scrollTween = null;
     this.marqueeText?.destroy();

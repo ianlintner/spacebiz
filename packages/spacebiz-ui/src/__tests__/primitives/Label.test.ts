@@ -112,3 +112,38 @@ describe("Label.setGlow", () => {
     expect(lbl.setGlow(false)).toBe(lbl);
   });
 });
+
+describe("Label.setSize", () => {
+  it("returns the label instance for chaining", () => {
+    const lbl = new Label(scene as unknown as Phaser.Scene, {
+      x: 0,
+      y: 0,
+      text: "Hello",
+    });
+    expect(lbl.setSize(200, 40)).toBe(lbl);
+  });
+
+  it("syncs inherited width and height", () => {
+    const lbl = new Label(scene as unknown as Phaser.Scene, {
+      x: 0,
+      y: 0,
+      text: "Hello",
+    });
+    lbl.setSize(250, 60);
+    expect(lbl.width).toBe(250);
+    expect(lbl.height).toBe(60);
+  });
+
+  it("updates the wordWrap width so long text reflows in the new bounds", () => {
+    const lbl = new Label(scene as unknown as Phaser.Scene, {
+      x: 0,
+      y: 0,
+      text: "Long",
+      maxWidth: 100,
+    });
+    lbl.setSize(300, 40);
+    expect((lbl as unknown as { wordWrapWidth: number }).wordWrapWidth).toBe(
+      300,
+    );
+  });
+});

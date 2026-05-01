@@ -264,17 +264,17 @@ export class PlanetDetailScene extends Phaser.Scene {
     // Re-read content area after panel resize.
     const contentArea = this.contentPanel.getContentArea();
 
-    // Labels reposition only (no setSize on Label).
-    // TODO(setSize): Label
+    // Labels flex their wrap-width to the content area.
     this.infoLabel.setPosition(
       contentX + contentArea.x,
       overlayY + contentArea.y,
     );
-    // TODO(setSize): Label
+    this.infoLabel.setSize(contentArea.width, 20);
     this.hintLabel.setPosition(
       contentX + contentArea.x,
       overlayY + contentArea.y + 20,
     );
+    this.hintLabel.setSize(contentArea.width, 36);
 
     // Market data table.
     const tableY = overlayY + contentArea.y + 54;
@@ -283,11 +283,9 @@ export class PlanetDetailScene extends Phaser.Scene {
     this.tableFrame.setSize(tableWidth, 320);
     this.table.setSize(tableWidth, 320);
 
-    // Bottom buttons.
+    // Bottom buttons keep their fixed widths; reposition only.
     const buttonY = overlayY + overlayHeight - 60;
-    // TODO(setSize): Button
     this.createRouteButton.setPosition(contentX + contentArea.x, buttonY);
-    // TODO(setSize): Button
     this.closeButton.setPosition(
       contentX + contentWidth - contentArea.x - 120,
       buttonY,

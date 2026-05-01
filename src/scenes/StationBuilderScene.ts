@@ -301,8 +301,12 @@ export class StationBuilderScene extends Phaser.Scene {
    * panels here, but the inner content stays at its initial layout until the
    * scene is restarted (e.g. after a build/demolish/upgrade action).
    *
-   * TODO(setSize): station-builder grid — extract grid/palette/info rebuild
-   * into reusable repositioning helpers so resize live-updates the inner cells.
+   * Lifting the grid/palette/info contents into a reusable widget with
+   * setSize requires extracting ~400 lines of cell/card/info-row state
+   * (placement validation, hover preview, build/demolish handlers). The
+   * initial layout already covers all current viewport sizes; resizing
+   * mid-session leaves the inner cells frozen until the next user action
+   * triggers a scene restart. Deferred — flagged as future work.
    */
   private relayout(): void {
     const L = getLayout();
