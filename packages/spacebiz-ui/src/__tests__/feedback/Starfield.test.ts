@@ -38,9 +38,72 @@ describe("Starfield", () => {
     scene.textures.add("glow-dot");
   });
 
-  it("returns void (no handle exposed)", () => {
+  it("returns a handle exposing setSize + destroy", () => {
     const handle = createStarfield(scene as never);
-    expect(handle).toBeUndefined();
+    expect(handle).toBeDefined();
+    expect(typeof handle.setSize).toBe("function");
+    expect(typeof handle.destroy).toBe("function");
+  });
+
+  it("setSize tears down old containers and rebuilds with the new bounds", () => {
+    const handle = createStarfield(scene as never, {
+      drift: false,
+      twinkle: false,
+      shimmer: false,
+      haze: false,
+      layers: [
+        {
+          count: 3,
+          scrollFactor: 0.1,
+          minAlpha: 0.2,
+          maxAlpha: 0.5,
+          minScale: 0.5,
+          maxScale: 1.0,
+          tints: [0xffffff],
+        },
+      ],
+    });
+    expect(getLayerContainers(scene).length).toBe(1);
+    const initialContainers = getLayerContainers(scene);
+    handle.setSize(1600, 900);
+    // Old containers were destroyed and removed from the scene; a new one was
+    // added in their place.
+    for (const c of initialContainers) {
+      expect(c.destroyed).toBe(true);
+    }
+    expect(getLayerContainers(scene).length).toBe(1);
+    expect(totalStars(scene)).toBe(3);
+  });
+
+  it("destroy tears down all containers and stops perpetual tweens", () => {
+    const handle = createStarfield(scene as never, {
+      drift: true,
+      twinkle: false,
+      shimmer: false,
+      haze: false,
+      layers: [
+        {
+          count: 2,
+          scrollFactor: 0.1,
+          minAlpha: 0.2,
+          maxAlpha: 0.5,
+          minScale: 0.5,
+          maxScale: 1.0,
+          tints: [0xffffff],
+        },
+      ],
+    });
+    const initial = getLayerContainers(scene);
+    const initialTweens = scene.tweens._all.slice();
+    expect(initial.length).toBe(1);
+    expect(initialTweens.length).toBeGreaterThan(0);
+    handle.destroy();
+    for (const c of initial) {
+      expect(c.destroyed).toBe(true);
+    }
+    for (const t of initialTweens) {
+      expect(t.stopped).toBe(true);
+    }
   });
 
   it("creates one container per default layer", () => {

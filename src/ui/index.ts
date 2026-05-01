@@ -29,3 +29,10 @@ export type {
   StationBuilderGridData,
   CellEventPayload,
 } from "./StationBuilderGrid.ts";
+
+export { GalaxySidebarPanel } from "./GalaxySidebarPanel.ts";
+export type {
+  GalaxySidebarData,
+  GalaxySidebarEmpireRow,
+  GalaxySidebarPanelConfig,
+} from "./GalaxySidebarPanel.ts";

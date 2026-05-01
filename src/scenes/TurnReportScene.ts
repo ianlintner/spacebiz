@@ -13,6 +13,7 @@ import {
   getLayout,
   attachReflowHandler,
 } from "../ui/index.ts";
+import type { StarfieldHandle } from "../ui/index.ts";
 import { autoSave } from "../game/SaveManager.ts";
 import type { TurnResult } from "../data/types.ts";
 import type { GameHUDScene } from "./GameHUDScene.ts";
@@ -52,6 +53,7 @@ const TR_PL_ROW_GAP = 20;
 export class TurnReportScene extends Phaser.Scene {
   // Backdrop + structural panels.
   private backdrop?: Phaser.GameObjects.Rectangle;
+  private starfield?: StarfieldHandle;
   private portrait?: PortraitPanel;
   private plPanel?: Panel;
   private routePanel?: Panel;
@@ -122,8 +124,9 @@ export class TurnReportScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDepth(-200);
 
-    // Starfield background
-    createStarfield(this);
+    // Starfield background — handle is retained so relayout() can refit it
+    // to the new canvas bounds when the window resizes.
+    this.starfield = createStarfield(this);
 
     // -----------------------------------------------------------------------
     // Left sidebar — PortraitPanel with turn summary
@@ -716,9 +719,10 @@ export class TurnReportScene extends Phaser.Scene {
     // Backdrop covers the full canvas.
     this.backdrop?.setPosition(0, 0).setSize(L.gameWidth, L.gameHeight);
 
-    // Note: createStarfield builds particle emitters sized to the canvas
-    // at create() time; emitters cannot be resized in place. Out of scope
-    // for the sub-widget setSize pass.
+    // Refit the starfield to the new canvas size. Stars are randomly placed,
+    // so the handle internally tears down + rebuilds with the new bounds —
+    // visually equivalent to the original field at the new size.
+    this.starfield?.setSize(L.gameWidth, L.gameHeight);
 
     // Sidebar portrait — setPosition before setSize.
     this.portrait?.setPosition(L.sidebarLeft, L.contentTop);
