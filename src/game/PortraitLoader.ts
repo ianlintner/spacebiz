@@ -28,6 +28,11 @@ import {
   getLeaderTextureKey,
   getLeaderAssetUrls,
 } from "../data/empireLeaderPortraits.ts";
+import {
+  AMBASSADOR_PORTRAITS,
+  getAmbassadorTextureKey,
+  getAmbassadorAssetUrls,
+} from "../data/ambassadorPortraits.ts";
 
 /** Placeholder texture key used while a portrait is loading. */
 export const PORTRAIT_PLACEHOLDER_KEY = "panel-bg";
@@ -104,6 +109,41 @@ class PortraitLoader {
     return Promise.all(
       ids.map((id) =>
         this.ensureLeaderPortrait(scene, id).catch(() => undefined),
+      ),
+    ).then(() => undefined);
+  }
+
+  // ── Ambassador / Liaison portraits ───────────────────────────────────────
+
+  /**
+   * Ensure an Ambassador (or Rival Liaison) portrait texture is loaded.
+   * The same pool serves both empire ambassadors and rival liaisons since
+   * the portrait pool is keyed by `(personality, category)`, not by
+   * faction type.
+   */
+  ensureAmbassadorPortrait(
+    scene: Phaser.Scene,
+    portraitId: string,
+  ): Promise<string> {
+    const key = getAmbassadorTextureKey(portraitId);
+    return this.ensureKey(scene, key, () => {
+      const def = AMBASSADOR_PORTRAITS.find((p) => p.id === portraitId);
+      if (!def)
+        return Promise.reject(
+          new Error(`Unknown ambassador portrait: ${portraitId}`),
+        );
+      return Promise.resolve(getAmbassadorAssetUrls(def));
+    });
+  }
+
+  /** Pre-warm a batch of ambassador portraits. */
+  preloadAmbassadorPortraits(
+    scene: Phaser.Scene,
+    ids: readonly string[],
+  ): Promise<void> {
+    return Promise.all(
+      ids.map((id) =>
+        this.ensureAmbassadorPortrait(scene, id).catch(() => undefined),
       ),
     ).then(() => undefined);
   }
