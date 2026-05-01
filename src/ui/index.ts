@@ -15,3 +15,10 @@ export {
 
 export { StandingsGraph } from "./StandingsGraph.ts";
 export type { StandingsGraphConfig } from "./StandingsGraph.ts";
+
+export { TechTreeGrid } from "./TechTreeGrid.ts";
+export type {
+  TechTreeGridConfig,
+  TechTreeGridState,
+  TechNodeState,
+} from "./TechTreeGrid.ts";

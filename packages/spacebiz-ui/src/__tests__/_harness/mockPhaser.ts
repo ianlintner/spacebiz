@@ -223,6 +223,52 @@ class Rectangle extends GameObject {
   }
 }
 
+class Line extends GameObject {
+  type = "Line";
+  geomX1 = 0;
+  geomY1 = 0;
+  geomX2 = 0;
+  geomY2 = 0;
+  strokeColor = 0;
+  strokeAlpha = 1;
+  lineWidth = 1;
+  constructor(
+    scene: MockScene,
+    x: number,
+    y: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    strokeColor = 0,
+    strokeAlpha = 1,
+  ) {
+    super(scene, x, y);
+    this.geomX1 = x1;
+    this.geomY1 = y1;
+    this.geomX2 = x2;
+    this.geomY2 = y2;
+    this.strokeColor = strokeColor;
+    this.strokeAlpha = strokeAlpha;
+  }
+  setTo(x1: number, y1: number, x2: number, y2: number): this {
+    this.geomX1 = x1;
+    this.geomY1 = y1;
+    this.geomX2 = x2;
+    this.geomY2 = y2;
+    return this;
+  }
+  setStrokeStyle(lineWidth: number, color = 0, alpha = 1): this {
+    this.lineWidth = lineWidth;
+    this.strokeColor = color;
+    this.strokeAlpha = alpha;
+    return this;
+  }
+  setOrigin(_x: number, _y?: number): this {
+    return this;
+  }
+}
+
 class TextObject extends GameObject {
   text: string;
   style: Record<string, unknown>;
@@ -465,6 +511,20 @@ class GameObjectFactory {
       new Rectangle(this.scene, x, y, w, h, fillColor, fillAlpha),
     );
   }
+  line(
+    x: number,
+    y: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    strokeColor = 0,
+    strokeAlpha = 1,
+  ): Line {
+    return this.scene._track(
+      new Line(this.scene, x, y, x1, y1, x2, y2, strokeColor, strokeAlpha),
+    );
+  }
   image(x: number, y: number, key: string): ImageObject {
     return this.scene._track(new ImageObject(this.scene, x, y, key));
   }
@@ -535,6 +595,24 @@ class TimeManager {
   }
 }
 
+class TweenStub {
+  isPlaying = true;
+  stop(): this {
+    this.isPlaying = false;
+    return this;
+  }
+}
+
+class TweenManager {
+  scene: MockScene;
+  constructor(scene: MockScene) {
+    this.scene = scene;
+  }
+  add(_config: Record<string, unknown>): TweenStub {
+    return new TweenStub();
+  }
+}
+
 class KeyboardManager extends EventEmitter {}
 
 class InputManager {
@@ -593,6 +671,7 @@ export class MockScene extends EventEmitter {
   game: GameMock;
   input: InputManager;
   time: TimeManager;
+  tweens: TweenManager;
   children: ChildrenManager;
   cameras: { main: { width: number; height: number } };
   _tracked: GameObject[] = [];
@@ -607,6 +686,7 @@ export class MockScene extends EventEmitter {
     this.game = new GameMock();
     this.input = new InputManager();
     this.time = new TimeManager(this);
+    this.tweens = new TweenManager(this);
     this.children = new ChildrenManager(this);
     this.cameras = { main: { width: 1280, height: 720 } };
   }
@@ -661,12 +741,17 @@ const GameObjectsEvents = {
 export const GameObjects = {
   Container,
   Rectangle,
+  Line,
   Text: TextObject,
   Image: ImageObject,
   Graphics,
   NineSlice,
   GameObject,
   Events: GameObjectsEvents,
+};
+
+export const Tweens = {
+  Tween: TweenStub,
 };
 
 export const Input = {
