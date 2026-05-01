@@ -11,6 +11,7 @@ import {
   createStarfield,
   getLayout,
   AdviserPanel,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import { CargoType } from "../data/types.ts";
 import type { CargoType as CargoTypeT } from "../data/types.ts";
@@ -31,7 +32,36 @@ function formatCash(amount: number): string {
   return sign + "\u00A7" + abs.toLocaleString("en-US");
 }
 
+const SCORE_PANEL_WIDTH = 520;
+const SCORE_PANEL_HEIGHT = 280;
+const HS_PANEL_WIDTH = 520;
+const HS_PANEL_HEIGHT = 280;
+const HS_PANEL_X_OFFSET = 540;
+const RANK_PANEL_HEIGHT = 160;
+const BTN_WIDTH = 180;
+const BTN_HEIGHT = 48;
+const REVEAL_PANEL_WIDTH = 220;
+const REVEAL_TAB_WIDTH = 36; // mirrors AdviserPanel TAB_WIDTH
+
 export class GameOverScene extends Phaser.Scene {
+  private heading!: Label;
+  private subtitle!: Label;
+  private scorePanel!: Panel;
+  private scoreRowLabels: Phaser.GameObjects.Text[] = [];
+  private scoreRowValues: Phaser.GameObjects.Text[] = [];
+  private scoreSeparator!: Phaser.GameObjects.Rectangle;
+  private totalLabel!: Phaser.GameObjects.Text;
+  private totalValue!: Phaser.GameObjects.Text;
+  private hsPanel!: Panel;
+  private hsTableFrame!: ScrollFrame;
+  private hsTable!: DataTable;
+  private rankPanel!: Panel;
+  private rankTableFrame!: ScrollFrame;
+  private rankTable!: DataTable;
+  private playAgainButton!: Button;
+  private mainMenuButton!: Button;
+  private revealPanel: AdviserPanel | null = null;
+
   constructor() {
     super({ key: "GameOverScene" });
   }
@@ -55,7 +85,7 @@ export class GameOverScene extends Phaser.Scene {
     const headingText = isVictory ? "VICTORY!" : "BANKRUPTCY!";
     const headingColor = isVictory ? theme.colors.profit : theme.colors.loss;
 
-    const heading = new Label(this, {
+    this.heading = new Label(this, {
       x: L.gameWidth / 2,
       y: L.contentTop + 10,
       text: headingText,
@@ -63,15 +93,15 @@ export class GameOverScene extends Phaser.Scene {
       color: headingColor,
       glow: true,
     });
-    heading.setOrigin(0.5, 0.5);
-    heading.setFontSize(48);
-    heading.setStroke("#000000", 3);
+    this.heading.setOrigin(0.5, 0.5);
+    this.heading.setFontSize(48);
+    this.heading.setStroke("#000000", 3);
 
     // Subtitle
     const subtitleText = isVictory
       ? `Congratulations, ${state.companyName}! You survived all ${state.maxTurns} turns.`
       : `${state.companyName} has gone bankrupt after ${state.turn - 1} turns.`;
-    const subtitle = new Label(this, {
+    this.subtitle = new Label(this, {
       x: L.gameWidth / 2,
       y: L.contentTop + 60,
       text: subtitleText,
@@ -79,7 +109,7 @@ export class GameOverScene extends Phaser.Scene {
       color: theme.colors.text,
       maxWidth: L.gameWidth - 80,
     });
-    subtitle.setOrigin(0.5, 0);
+    this.subtitle.setOrigin(0.5, 0);
 
     // -----------------------------------------------------------------------
     // Score calculation and breakdown
@@ -133,14 +163,13 @@ export class GameOverScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     // Score breakdown panel (left side, glass panel)
     // -----------------------------------------------------------------------
-    const scorePanel = new Panel(this, {
+    this.scorePanel = new Panel(this, {
       x: L.fullContentLeft,
       y: L.contentTop + 90,
-      width: 520,
-      height: 280,
+      width: SCORE_PANEL_WIDTH,
+      height: SCORE_PANEL_HEIGHT,
       title: "Score Breakdown",
     });
-    const spContent = scorePanel.getContentArea();
 
     const breakdownRows: Array<{
       label: string;
@@ -179,56 +208,48 @@ export class GameOverScene extends Phaser.Scene {
       },
     ];
 
-    let rowY = spContent.y + 4;
     for (const row of breakdownRows) {
-      const labelText = this.add.text(spContent.x + 8, rowY, row.label, {
+      const labelText = this.add.text(0, 0, row.label, {
         fontSize: `${theme.fonts.body.size}px`,
         fontFamily: theme.fonts.body.family,
         color: colorToString(theme.colors.text),
       });
-      scorePanel.add(labelText);
+      this.scorePanel.add(labelText);
+      this.scoreRowLabels.push(labelText);
 
       const valueText = this.add
-        .text(spContent.x + spContent.width - 8, rowY, row.value, {
+        .text(0, 0, row.value, {
           fontSize: `${theme.fonts.value.size}px`,
           fontFamily: theme.fonts.value.family,
           color: colorToString(row.color),
         })
         .setOrigin(1, 0);
-      scorePanel.add(valueText);
-
-      rowY += 32;
+      this.scorePanel.add(valueText);
+      this.scoreRowValues.push(valueText);
     }
 
     // Separator
-    const sep = this.add
-      .rectangle(
-        spContent.x + 8,
-        rowY + 4,
-        spContent.width - 16,
-        1,
-        theme.colors.panelBorder,
-      )
+    this.scoreSeparator = this.add
+      .rectangle(0, 0, 1, 1, theme.colors.panelBorder)
       .setOrigin(0, 0);
-    scorePanel.add(sep);
-    rowY += 16;
+    this.scorePanel.add(this.scoreSeparator);
 
     // Total score
-    const totalLabel = this.add.text(spContent.x + 8, rowY, "TOTAL SCORE", {
+    this.totalLabel = this.add.text(0, 0, "TOTAL SCORE", {
       fontSize: `${theme.fonts.heading.size}px`,
       fontFamily: theme.fonts.heading.family,
       color: colorToString(theme.colors.text),
     });
-    scorePanel.add(totalLabel);
+    this.scorePanel.add(this.totalLabel);
 
-    const totalValue = this.add
-      .text(spContent.x + spContent.width - 8, rowY, "0", {
+    this.totalValue = this.add
+      .text(0, 0, "0", {
         fontSize: `${theme.fonts.heading.size}px`,
         fontFamily: theme.fonts.heading.family,
         color: colorToString(theme.colors.accent),
       })
       .setOrigin(1, 0);
-    scorePanel.add(totalValue);
+    this.scorePanel.add(this.totalValue);
 
     // Animate score counter rolling up
     const scoreCounter = { value: 0 };
@@ -239,14 +260,14 @@ export class GameOverScene extends Phaser.Scene {
       delay: 400,
       ease: "Cubic.easeOut",
       onUpdate: () => {
-        totalValue.setText(
+        this.totalValue.setText(
           Math.round(scoreCounter.value).toLocaleString("en-US"),
         );
       },
       onComplete: () => {
-        totalValue.setText(finalScore.toLocaleString("en-US"));
+        this.totalValue.setText(finalScore.toLocaleString("en-US"));
         this.tweens.add({
-          targets: totalValue,
+          targets: this.totalValue,
           scaleX: 1.15,
           scaleY: 1.15,
           duration: 150,
@@ -264,32 +285,30 @@ export class GameOverScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     // High score table (right side, glass panel)
     // -----------------------------------------------------------------------
-    const hsPanelX = L.fullContentLeft + 540;
+    const hsPanelX = L.fullContentLeft + HS_PANEL_X_OFFSET;
     const hsPanelY = L.contentTop + 90;
-    const hsPanelWidth = 520;
-    const hsPanelHeight = 280;
 
-    new Panel(this, {
+    this.hsPanel = new Panel(this, {
       x: hsPanelX,
       y: hsPanelY,
-      width: hsPanelWidth,
-      height: hsPanelHeight,
+      width: HS_PANEL_WIDTH,
+      height: HS_PANEL_HEIGHT,
       title: "High Scores",
     });
 
     const highScores = getHighScores();
 
-    const hsTableFrame = new ScrollFrame(this, {
+    this.hsTableFrame = new ScrollFrame(this, {
       x: hsPanelX + 10,
       y: hsPanelY + 40,
-      width: hsPanelWidth - 20,
-      height: hsPanelHeight - 50,
+      width: HS_PANEL_WIDTH - 20,
+      height: HS_PANEL_HEIGHT - 50,
     });
-    const hsTable = new DataTable(this, {
+    this.hsTable = new DataTable(this, {
       x: 0,
       y: 0,
-      width: hsPanelWidth - 20,
-      height: hsPanelHeight - 50,
+      width: HS_PANEL_WIDTH - 20,
+      height: HS_PANEL_HEIGHT - 50,
       contentSized: true,
       columns: [
         {
@@ -326,34 +345,34 @@ export class GameOverScene extends Phaser.Scene {
       score: hs.score,
       seed: hs.seed,
     }));
-    hsTableFrame.setContent(hsTable);
-    hsTable.setRows(hsRows);
+    this.hsTableFrame.setContent(this.hsTable);
+    this.hsTable.setRows(hsRows);
 
     // -----------------------------------------------------------------------
     // Company Rankings panel (full width below score + high score panels)
     // -----------------------------------------------------------------------
     const rankings = rankCompanies(state);
     const rankPanelY = L.contentTop + 380;
-    const rankPanelHeight = 160;
-    new Panel(this, {
+    const rankPanelWidth = hsPanelX + HS_PANEL_WIDTH - L.fullContentLeft;
+    this.rankPanel = new Panel(this, {
       x: L.fullContentLeft,
       y: rankPanelY,
-      width: hsPanelX + hsPanelWidth - L.fullContentLeft,
-      height: rankPanelHeight,
+      width: rankPanelWidth,
+      height: RANK_PANEL_HEIGHT,
       title: "Company Rankings",
     });
 
-    const rankTableFrame = new ScrollFrame(this, {
+    this.rankTableFrame = new ScrollFrame(this, {
       x: L.fullContentLeft + 10,
       y: rankPanelY + 40,
-      width: hsPanelX + hsPanelWidth - L.fullContentLeft - 20,
-      height: rankPanelHeight - 50,
+      width: rankPanelWidth - 20,
+      height: RANK_PANEL_HEIGHT - 50,
     });
-    const rankTable = new DataTable(this, {
+    this.rankTable = new DataTable(this, {
       x: 0,
       y: 0,
-      width: hsPanelX + hsPanelWidth - L.fullContentLeft - 20,
-      height: rankPanelHeight - 50,
+      width: rankPanelWidth - 20,
+      height: RANK_PANEL_HEIGHT - 50,
       contentSized: true,
       columns: [
         { key: "rank", label: "#", width: 50, align: "center" },
@@ -397,14 +416,12 @@ export class GameOverScene extends Phaser.Scene {
       routes: r.routeCount,
       score: r.score,
     }));
-    rankTableFrame.setContent(rankTable);
-    rankTable.setRows(rankRows);
+    this.rankTableFrame.setContent(this.rankTable);
+    this.rankTable.setRows(rankRows);
 
     // -----------------------------------------------------------------------
     // Action buttons — centered horizontally below panels
     // -----------------------------------------------------------------------
-    const btnWidth = 180;
-    const btnHeight = 48;
     const btnY = L.contentTop + L.contentHeight - 100;
 
     // -----------------------------------------------------------------------
@@ -418,52 +435,111 @@ export class GameOverScene extends Phaser.Scene {
     if (state.adviser && !state.adviser.secretRevealed) {
       const revealMsgs = buildRevealMessages(state);
       if (revealMsgs.length > 0) {
-        const revealPanelW = 220;
-        const revealTabW = 36; // mirrors AdviserPanel TAB_WIDTH
-        const revealX = L.gameWidth - revealPanelW - revealTabW - 12;
+        const revealX =
+          L.gameWidth - REVEAL_PANEL_WIDTH - REVEAL_TAB_WIDTH - 12;
         const revealY = btnY - 200;
-        const revealPanel = new AdviserPanel(this, {
+        this.revealPanel = new AdviserPanel(this, {
           x: revealX,
           y: revealY,
-          width: revealPanelW,
+          width: REVEAL_PANEL_WIDTH,
         });
-        revealPanel.setDepth(150);
-        revealPanel.showMessages(revealMsgs);
+        this.revealPanel.setDepth(150);
+        this.revealPanel.showMessages(revealMsgs);
         gameStore.update({
           adviser: { ...state.adviser, secretRevealed: true },
         });
       }
     }
 
-    new Button(this, {
-      x: L.gameWidth / 2 - btnWidth - 20,
+    this.playAgainButton = new Button(this, {
+      x: L.gameWidth / 2 - BTN_WIDTH - 20,
       y: btnY,
-      width: btnWidth,
-      height: btnHeight,
+      width: BTN_WIDTH,
+      height: BTN_HEIGHT,
       label: "Play Again",
       onClick: () => {
         this.scene.start("MainMenuScene");
       },
     });
 
-    new Button(this, {
+    this.mainMenuButton = new Button(this, {
       x: L.gameWidth / 2 + 20,
       y: btnY,
-      width: btnWidth,
-      height: btnHeight,
+      width: BTN_WIDTH,
+      height: BTN_HEIGHT,
       label: "Main Menu",
       onClick: () => {
         this.scene.start("MainMenuScene");
       },
     });
 
-    // Restart scene on resize so layout recalculates
-    const onResize = () => {
-      this.scene.restart();
-    };
-    this.scale.on("resize", onResize);
-    this.events.once("shutdown", () => {
-      this.scale.off("resize", onResize);
-    });
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+
+    // Heading + subtitle
+    this.heading.setPosition(L.gameWidth / 2, L.contentTop + 10);
+    this.subtitle.setPosition(L.gameWidth / 2, L.contentTop + 60);
+    this.subtitle.setWordWrapWidth(L.gameWidth - 80);
+
+    // Score breakdown panel
+    this.scorePanel.setPosition(L.fullContentLeft, L.contentTop + 90);
+    this.scorePanel.setSize(SCORE_PANEL_WIDTH, SCORE_PANEL_HEIGHT);
+    const spContent = this.scorePanel.getContentArea();
+
+    let rowY = spContent.y + 4;
+    for (let i = 0; i < this.scoreRowLabels.length; i++) {
+      this.scoreRowLabels[i]!.setPosition(spContent.x + 8, rowY);
+      this.scoreRowValues[i]!.setPosition(
+        spContent.x + spContent.width - 8,
+        rowY,
+      );
+      rowY += 32;
+    }
+
+    // Separator
+    this.scoreSeparator.setPosition(spContent.x + 8, rowY + 4);
+    this.scoreSeparator.setSize(spContent.width - 16, 1);
+    rowY += 16;
+
+    // Total
+    this.totalLabel.setPosition(spContent.x + 8, rowY);
+    this.totalValue.setPosition(spContent.x + spContent.width - 8, rowY);
+
+    // High score panel
+    const hsPanelX = L.fullContentLeft + HS_PANEL_X_OFFSET;
+    const hsPanelY = L.contentTop + 90;
+    this.hsPanel.setPosition(hsPanelX, hsPanelY);
+    this.hsPanel.setSize(HS_PANEL_WIDTH, HS_PANEL_HEIGHT);
+
+    this.hsTableFrame.setPosition(hsPanelX + 10, hsPanelY + 40);
+    this.hsTableFrame.setSize(HS_PANEL_WIDTH - 20, HS_PANEL_HEIGHT - 50);
+    this.hsTable.setSize(HS_PANEL_WIDTH - 20, HS_PANEL_HEIGHT - 50);
+
+    // Rankings panel
+    const rankPanelY = L.contentTop + 380;
+    const rankPanelWidth = hsPanelX + HS_PANEL_WIDTH - L.fullContentLeft;
+    this.rankPanel.setPosition(L.fullContentLeft, rankPanelY);
+    this.rankPanel.setSize(rankPanelWidth, RANK_PANEL_HEIGHT);
+
+    this.rankTableFrame.setPosition(L.fullContentLeft + 10, rankPanelY + 40);
+    this.rankTableFrame.setSize(rankPanelWidth - 20, RANK_PANEL_HEIGHT - 50);
+    this.rankTable.setSize(rankPanelWidth - 20, RANK_PANEL_HEIGHT - 50);
+
+    // Action buttons
+    const btnY = L.contentTop + L.contentHeight - 100;
+    this.playAgainButton.setPosition(L.gameWidth / 2 - BTN_WIDTH - 20, btnY);
+    this.mainMenuButton.setPosition(L.gameWidth / 2 + 20, btnY);
+
+    // Adviser reveal panel — reposition only.
+    // TODO(setSize): AdviserPanel
+    if (this.revealPanel) {
+      const revealX = L.gameWidth - REVEAL_PANEL_WIDTH - REVEAL_TAB_WIDTH - 12;
+      const revealY = btnY - 200;
+      this.revealPanel.setPosition(revealX, revealY);
+    }
   }
 }

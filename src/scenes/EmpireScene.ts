@@ -11,6 +11,7 @@ import {
   PortraitPanel,
   createStarfield,
   getLayout,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import { TARIFF_DIPLOMATIC_MULTIPLIER } from "../data/constants.ts";
 
@@ -43,6 +44,8 @@ function statusColor(value: unknown): number | null {
 
 export class EmpireScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
+  private contentPanel!: Panel;
+  private tableFrame!: ScrollFrame;
   private table!: DataTable;
   private filterToPlayer = true;
   private cachedRows: Array<Record<string, unknown>> = [];
@@ -79,14 +82,14 @@ export class EmpireScene extends Phaser.Scene {
     ]);
 
     // Content panel
-    const contentPanel = new Panel(this, {
+    this.contentPanel = new Panel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,
       height: L.contentHeight,
       title: "Diplomatic Relations",
     });
-    const content = contentPanel.getContentArea();
+    const content = this.contentPanel.getContentArea();
     const absX = L.mainContentLeft + content.x;
     const absY = L.contentTop + content.y;
 
@@ -96,7 +99,7 @@ export class EmpireScene extends Phaser.Scene {
     // empire. Default the filter on; players can toggle it off to see the
     // full galactic picture.
     const toolbarH = 32;
-    const toggleBtn = new Button(this, {
+    this.filterToggleBtn = new Button(this, {
       x: absX,
       y: absY,
       height: toolbarH - 4,
@@ -109,8 +112,7 @@ export class EmpireScene extends Phaser.Scene {
         this.applyRowFilter();
       },
     });
-    toggleBtn.setActive(this.filterToPlayer);
-    this.filterToggleBtn = toggleBtn;
+    this.filterToggleBtn.setActive(this.filterToPlayer);
 
     this.filterSummaryLabel = new Label(this, {
       x: absX + 8,
@@ -121,11 +123,9 @@ export class EmpireScene extends Phaser.Scene {
     // Align label vertically with button
     this.filterSummaryLabel.setOrigin(0, 0.5);
 
-    const tableY = absY + toolbarH + 4;
-
-    const tableFrame = new ScrollFrame(this, {
+    this.tableFrame = new ScrollFrame(this, {
       x: absX,
-      y: tableY,
+      y: absY + toolbarH + 4,
       width: content.width,
       height: content.height - 20 - toolbarH - 4,
     });
@@ -147,18 +147,50 @@ export class EmpireScene extends Phaser.Scene {
         this.updatePortraitForEmpire(rowData["empireAId"] as string, empires);
       },
     });
-    tableFrame.setContent(this.table);
-
-    // Position summary label to the right of the toggle button
-    // (autoWidth button has variable width, so query after construction)
-    this.filterSummaryLabel.setPosition(
-      toggleBtn.x + toggleBtn.width + 8,
-      absY + toolbarH / 2,
-    );
+    this.tableFrame.setContent(this.table);
 
     // Build all rows once; the filter just hides/shows.
     this.cachedRows = this.buildRelationRows(empires, relations, systems);
     this.applyRowFilter();
+
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+
+    // PortraitPanel: setPosition before setSize.
+    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
+    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+
+    // Content panel.
+    this.contentPanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.contentPanel.setSize(L.mainContentWidth, L.contentHeight);
+
+    // Re-read content area after panel resize.
+    const content = this.contentPanel.getContentArea();
+    const absX = L.mainContentLeft + content.x;
+    const absY = L.contentTop + content.y;
+
+    const toolbarH = 32;
+
+    // Filter toolbar: toggle button + summary label.
+    // TODO(setSize): Button (autoWidth — reposition only)
+    this.filterToggleBtn.setPosition(absX, absY);
+
+    // Summary label sits to the right of the autoWidth button — query its
+    // width after the button has been laid out for this frame.
+    // TODO(setSize): Label
+    this.filterSummaryLabel.setPosition(
+      this.filterToggleBtn.x + this.filterToggleBtn.width + 8,
+      absY + toolbarH / 2,
+    );
+
+    // ScrollFrame + DataTable.
+    this.tableFrame.setPosition(absX, absY + toolbarH + 4);
+    this.tableFrame.setSize(content.width, content.height - 20 - toolbarH - 4);
+    this.table.setSize(content.width, content.height - 20 - toolbarH - 4);
   }
 
   private applyRowFilter(): void {

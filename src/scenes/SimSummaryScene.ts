@@ -8,6 +8,7 @@ import {
   TabGroup,
   getLayout,
   createStarfield,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import type { SimulationResult } from "../game/simulation/SimulationLogger.ts";
 import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
@@ -201,12 +202,32 @@ function buildLegend(
 // ── Scene ──────────────────────────────────────────────────────
 
 export class SimSummaryScene extends Phaser.Scene {
+  private result!: SimulationResult;
+  private colorMap!: Map<string, number>;
+  private backdrop!: Phaser.GameObjects.Rectangle;
+  private titleLabel!: Label;
+  private subLabel!: Label;
+  private mainPanel!: Panel;
+  private tabGroup!: TabGroup;
+  private runAgainButton!: Button;
+  private exportLogButton!: Button;
+  private mainMenuButton!: Button;
+
+  // Layout constants used by both create() and relayout().
+  private readonly panelTop = 60;
+  private readonly panelBottomMargin = 60;
+  private readonly btnW = 140;
+  private readonly btnH = 38;
+  private readonly btnGap = 16;
+  private readonly btnBottomOffset = 48;
+
   constructor() {
     super("SimSummaryScene");
   }
 
   create(data: SimSummaryData): void {
     const { result } = data;
+    this.result = result;
     const theme = getTheme();
     const L = getLayout();
 
@@ -218,7 +239,7 @@ export class SimSummaryScene extends Phaser.Scene {
     });
 
     // Opaque backdrop — defensive backup for the DOM hide above.
-    this.add
+    this.backdrop = this.add
       .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 1)
       .setOrigin(0, 0)
       .setDepth(-200);
@@ -226,57 +247,103 @@ export class SimSummaryScene extends Phaser.Scene {
     createStarfield(this);
 
     // ── Title bar ──────────────────────────────────────────
-    const titleLabel = new Label(this, {
+    this.titleLabel = new Label(this, {
       x: L.gameWidth / 2,
       y: 14,
       text: "Simulation Summary",
       style: "heading",
       color: theme.colors.accent,
     });
-    titleLabel.setOrigin(0.5, 0);
+    this.titleLabel.setOrigin(0.5, 0);
 
     // ── Subtitle ───────────────────────────────────────────
     const sub = result.summary.winner
       ? `Winner: ${result.summary.winner.name}  |  ${result.summary.totalTurns} turns  |  ${(result.wallTimeMs / 1000).toFixed(1)}s`
       : `No winner  |  ${result.summary.totalTurns} turns  |  ${(result.wallTimeMs / 1000).toFixed(1)}s`;
-    const subLabel = new Label(this, {
+    this.subLabel = new Label(this, {
       x: L.gameWidth / 2,
       y: 42,
       text: sub,
       style: "caption",
       color: theme.colors.textDim,
     });
-    subLabel.setOrigin(0.5, 0);
+    this.subLabel.setOrigin(0.5, 0);
 
     // ── Build company color map ────────────────────────────
     const companyNames = this.getCompanyNames(result);
-    const colorMap = new Map<string, number>();
+    this.colorMap = new Map<string, number>();
     companyNames.forEach((name, i) => {
-      colorMap.set(name, COMPANY_COLORS[i % COMPANY_COLORS.length]);
+      this.colorMap.set(name, COMPANY_COLORS[i % COMPANY_COLORS.length]);
     });
 
     // ── Main panel ─────────────────────────────────────────
-    const panelTop = 60;
-    const panelH = L.gameHeight - panelTop - 60;
-    const mainPanel = new Panel(this, {
+    const panelH = L.gameHeight - this.panelTop - this.panelBottomMargin;
+    this.mainPanel = new Panel(this, {
       x: L.fullContentLeft,
-      y: panelTop,
+      y: this.panelTop,
       width: L.fullContentWidth,
       height: panelH,
       title: "Results",
     });
-    const ca = mainPanel.getContentArea();
+    const ca = this.mainPanel.getContentArea();
 
-    // ── Build tab contents ─────────────────────────────────
-    const cashTab = this.buildCashGraph(result, colorMap, ca.width);
-    const fleetTab = this.buildFleetGraph(result, colorMap, ca.width);
-    const economyTab = this.buildEconomyGraph(result, ca.width);
-    const rankingsTab = this.buildRankingsTab(result, colorMap, ca.width);
+    // ── Build tab contents + tab group ─────────────────────
+    this.tabGroup = this.buildTabGroup(
+      L.fullContentLeft + ca.x,
+      this.panelTop + ca.y,
+      ca.width,
+    );
 
-    new TabGroup(this, {
-      x: L.fullContentLeft + ca.x,
-      y: panelTop + ca.y,
-      width: ca.width,
+    // ── Bottom buttons ─────────────────────────────────────
+    this.runAgainButton = new Button(this, {
+      x: 0,
+      y: 0,
+      width: this.btnW,
+      height: this.btnH,
+      label: "Run Again",
+      onClick: () => {
+        this.scene.start("SandboxSetupScene");
+      },
+    });
+
+    this.exportLogButton = new Button(this, {
+      x: 0,
+      y: 0,
+      width: this.btnW,
+      height: this.btnH,
+      label: "Export Log",
+      onClick: () => this.exportLog(result),
+    });
+
+    this.mainMenuButton = new Button(this, {
+      x: 0,
+      y: 0,
+      width: this.btnW,
+      height: this.btnH,
+      label: "Main Menu",
+      onClick: () => {
+        this.scene.start("MainMenuScene");
+      },
+    });
+
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private buildTabGroup(x: number, y: number, width: number): TabGroup {
+    const cashTab = this.buildCashGraph(this.result, this.colorMap, width);
+    const fleetTab = this.buildFleetGraph(this.result, this.colorMap, width);
+    const economyTab = this.buildEconomyGraph(this.result, width);
+    const rankingsTab = this.buildRankingsTab(
+      this.result,
+      this.colorMap,
+      width,
+    );
+
+    return new TabGroup(this, {
+      x,
+      y,
+      width,
       tabs: [
         { label: "Cash", content: cashTab },
         { label: "Fleet", content: fleetTab },
@@ -284,56 +351,43 @@ export class SimSummaryScene extends Phaser.Scene {
         { label: "Rankings", content: rankingsTab },
       ],
     });
+  }
 
-    // ── Bottom buttons ─────────────────────────────────────
-    const btnY = L.gameHeight - 48;
-    const btnW = 140;
-    const btnH = 38;
-    const btnGap = 16;
-    const totalBtnW = btnW * 3 + btnGap * 2;
+  private relayout(): void {
+    const L = getLayout();
+
+    // Backdrop
+    this.backdrop.setSize(L.gameWidth, L.gameHeight);
+
+    // Title + subtitle (centered horizontally)
+    this.titleLabel.setPosition(L.gameWidth / 2, 14);
+    this.subLabel.setPosition(L.gameWidth / 2, 42);
+
+    // Main panel
+    const panelH = L.gameHeight - this.panelTop - this.panelBottomMargin;
+    this.mainPanel.setPosition(L.fullContentLeft, this.panelTop);
+    this.mainPanel.setSize(L.fullContentWidth, panelH);
+
+    // Re-read content area after panel resize.
+    const ca = this.mainPanel.getContentArea();
+    const tabX = L.fullContentLeft + ca.x;
+    const tabY = this.panelTop + ca.y;
+
+    // TabGroup contents are tightly bound to the available width — graphs are
+    // drawn with raw graphics into containers and have no setSize.  Follow the
+    // StandingsGraph precedent: destroy on resize and rebuild at the new size.
+    this.tabGroup.destroy();
+    this.tabGroup = this.buildTabGroup(tabX, tabY, ca.width);
+
+    // Bottom buttons (centered).
+    const btnY = L.gameHeight - this.btnBottomOffset;
+    const totalBtnW = this.btnW * 3 + this.btnGap * 2;
     let btnX = Math.floor((L.gameWidth - totalBtnW) / 2);
-
-    new Button(this, {
-      x: btnX,
-      y: btnY,
-      width: btnW,
-      height: btnH,
-      label: "Run Again",
-      onClick: () => {
-        this.scene.start("SandboxSetupScene");
-      },
-    });
-    btnX += btnW + btnGap;
-
-    new Button(this, {
-      x: btnX,
-      y: btnY,
-      width: btnW,
-      height: btnH,
-      label: "Export Log",
-      onClick: () => this.exportLog(result),
-    });
-    btnX += btnW + btnGap;
-
-    new Button(this, {
-      x: btnX,
-      y: btnY,
-      width: btnW,
-      height: btnH,
-      label: "Main Menu",
-      onClick: () => {
-        this.scene.start("MainMenuScene");
-      },
-    });
-
-    // ── Resize handler ─────────────────────────────────────
-    const onResize = () => {
-      this.scene.restart(data);
-    };
-    this.scale.on("resize", onResize);
-    this.events.once("shutdown", () => {
-      this.scale.off("resize", onResize);
-    });
+    this.runAgainButton.setPosition(btnX, btnY);
+    btnX += this.btnW + this.btnGap;
+    this.exportLogButton.setPosition(btnX, btnY);
+    btnX += this.btnW + this.btnGap;
+    this.mainMenuButton.setPosition(btnX, btnY);
   }
 
   // ── Tab builders ─────────────────────────────────────────────

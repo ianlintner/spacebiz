@@ -27,6 +27,7 @@ import {
   getCargoShortLabel,
   getShipIconKey,
   getShipColor,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import {
   assignShipToRoute,
@@ -110,7 +111,14 @@ export class RoutesScene extends Phaser.Scene {
   private finderEmpireFilter: string | null = null;
 
   // ── Sidebar mini-map ──
+  // MiniMap has no setSize() — it's destroyed and rebuilt in relayout().
   private miniMap!: MiniMap;
+  private miniMapHeight = 150;
+  private miniMapGap = 8;
+
+  // ── Main layout panels ──
+  private contentPanel!: Panel;
+  private tabGroup!: TabGroup;
 
   constructor() {
     super({ key: "RoutesScene" });
@@ -124,9 +132,8 @@ export class RoutesScene extends Phaser.Scene {
     createStarfield(this);
 
     // Sidebar portrait — shortened to leave room for mini-map below
-    const miniMapHeight = 150;
-    const miniMapGap = 8;
-    const portraitHeight = L.contentHeight - miniMapHeight - miniMapGap;
+    const portraitHeight =
+      L.contentHeight - this.miniMapHeight - this.miniMapGap;
 
     this.portrait = new PortraitPanel(this, {
       x: L.sidebarLeft,
@@ -139,9 +146,9 @@ export class RoutesScene extends Phaser.Scene {
     this.miniMap = new MiniMap({
       scene: this,
       x: L.sidebarLeft,
-      y: L.contentTop + portraitHeight + miniMapGap,
+      y: L.contentTop + portraitHeight + this.miniMapGap,
       width: L.sidebarWidth,
-      height: miniMapHeight,
+      height: this.miniMapHeight,
       depth: 0,
     });
     this.portrait.updatePortrait("planet", 0, "Route Command", [], {
@@ -159,7 +166,7 @@ export class RoutesScene extends Phaser.Scene {
     const panelH = L.contentHeight;
 
     // Background panel
-    new Panel(this, {
+    this.contentPanel = new Panel(this, {
       x: panelX,
       y: panelY,
       width: panelW,
@@ -171,7 +178,7 @@ export class RoutesScene extends Phaser.Scene {
     const tabY = panelY + 38;
     const tabContentY = 0; // relative to tab content container
 
-    new TabGroup(this, {
+    this.tabGroup = new TabGroup(this, {
       x: panelX,
       y: tabY,
       width: panelW,
@@ -713,6 +720,74 @@ export class RoutesScene extends Phaser.Scene {
     this.refreshFinderTable();
     this.refreshActiveTable();
     this.updateSelectedRouteUi();
+
+    // Apply layout positions/sizes and register for future resizes.
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+    const portraitHeight =
+      L.contentHeight - this.miniMapHeight - this.miniMapGap;
+
+    // PortraitPanel: setPosition before setSize.
+    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
+    this.portrait.setSize(L.sidebarWidth, portraitHeight);
+
+    // MiniMap has no setSize() — destroy and rebuild at new position/size.
+    this.miniMap.destroy();
+    this.miniMap = new MiniMap({
+      scene: this,
+      x: L.sidebarLeft,
+      y: L.contentTop + portraitHeight + this.miniMapGap,
+      width: L.sidebarWidth,
+      height: this.miniMapHeight,
+      depth: 0,
+    });
+    // Redraw empty state after rebuild; the next route selection will repopulate.
+    this.miniMap.drawEmpty();
+
+    // Content (background) panel.
+    this.contentPanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.contentPanel.setSize(L.mainContentWidth, L.contentHeight);
+
+    // Tab group.
+    const tabY = L.contentTop + 38;
+    this.tabGroup.setPosition(L.mainContentLeft, tabY);
+    this.tabGroup.setSize(L.mainContentWidth, this.tabGroup.height);
+
+    // Recompute table sizing constants (must match create() formulas).
+    const tabBarHeight = 40;
+    const summaryHeight = 50;
+    const buttonAreaHeight = 52;
+    const dropH = 28;
+    const finderTableTop = summaryHeight - 4 + dropH + 4 + dropH + 8;
+    const finderTableHeight =
+      L.contentHeight -
+      38 -
+      tabBarHeight -
+      finderTableTop -
+      buttonAreaHeight -
+      8;
+    const activeTableTop = summaryHeight;
+    const activeTableHeight =
+      L.contentHeight -
+      38 -
+      tabBarHeight -
+      summaryHeight -
+      buttonAreaHeight -
+      8;
+
+    // Finder ScrollFrame + DataTable.
+    this.finderScrollFrame.setPosition(12, finderTableTop);
+    this.finderScrollFrame.setSize(L.mainContentWidth - 24, finderTableHeight);
+    this.finderTable.setSize(L.mainContentWidth - 24, finderTableHeight);
+
+    // Active Routes ScrollFrame + DataTable.
+    this.routeScrollFrame.setPosition(12, activeTableTop);
+    this.routeScrollFrame.setSize(L.mainContentWidth - 24, activeTableHeight);
+    this.routeTable.setSize(L.mainContentWidth - 24, activeTableHeight);
   }
 
   // ════════════════════════════════════════════════════════════════

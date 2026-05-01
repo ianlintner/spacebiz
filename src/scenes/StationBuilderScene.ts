@@ -11,6 +11,7 @@ import {
   getLayout,
   Label,
   Modal,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import {
   HUB_ROOM_DEFINITIONS,
@@ -106,6 +107,10 @@ function formatEffect(type: string, value: number): string {
   }
 }
 
+const GRID_PANEL_HEIGHT = 220;
+const PALETTE_PANEL_HEIGHT = 160;
+const PANEL_GAP = 8;
+
 export class StationBuilderScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
   private selectedRoomType: HubRoomType | null = null;
@@ -114,6 +119,7 @@ export class StationBuilderScene extends Phaser.Scene {
   private roomCardWidth = 110;
   private roomCardHeight = 50;
   private gridPanel!: Panel;
+  private palettePanel!: Panel;
   private infoPanel!: Panel;
   private infoContent!: { x: number; y: number; width: number; height: number };
   private infoElements: Phaser.GameObjects.GameObject[] = [];
@@ -161,7 +167,7 @@ export class StationBuilderScene extends Phaser.Scene {
     this.showHubPortrait(hub);
 
     // ── Grid Panel (top of main content) ──
-    const gridH = 220;
+    const gridH = GRID_PANEL_HEIGHT;
     this.gridPanel = new Panel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
@@ -181,9 +187,9 @@ export class StationBuilderScene extends Phaser.Scene {
     }
 
     // ── Room Palette / Build Panel (middle) ──
-    const paletteY = L.contentTop + gridH + 8;
-    const paletteH = 160;
-    const palettePanel = new Panel(this, {
+    const paletteY = L.contentTop + gridH + PANEL_GAP;
+    const paletteH = PALETTE_PANEL_HEIGHT;
+    this.palettePanel = new Panel(this, {
       x: L.mainContentLeft,
       y: paletteY,
       width: L.mainContentWidth,
@@ -192,7 +198,7 @@ export class StationBuilderScene extends Phaser.Scene {
     });
 
     if (hub) {
-      const paletteContent = palettePanel.getContentArea();
+      const paletteContent = this.palettePanel.getContentArea();
       const completedTechIds = state.tech.completedTechIds;
       // Filter out upgrade-only rooms (Improved/Advanced Terminal)
       const roomTypes = hub.availableRoomTypes.filter(
@@ -223,11 +229,11 @@ export class StationBuilderScene extends Phaser.Scene {
           interactive: true,
         });
         const { bg } = card;
-        palettePanel.add(bg);
-        palettePanel.add(card.iconText);
-        palettePanel.add(card.nameText);
+        this.palettePanel.add(bg);
+        this.palettePanel.add(card.iconText);
+        this.palettePanel.add(card.nameText);
         if (card.costText) {
-          palettePanel.add(card.costText);
+          this.palettePanel.add(card.costText);
         }
 
         bg.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
@@ -259,8 +265,8 @@ export class StationBuilderScene extends Phaser.Scene {
     }
 
     // ── Info / Action Panel (bottom) ──
-    const infoY = L.contentTop + gridH + 8 + paletteH + 8;
-    const infoH = L.contentHeight - gridH - paletteH - 16;
+    const infoY = paletteY + paletteH + PANEL_GAP;
+    const infoH = L.contentHeight - gridH - paletteH - PANEL_GAP * 2;
     this.infoPanel = new Panel(this, {
       x: L.mainContentLeft,
       y: infoY,
@@ -282,6 +288,50 @@ export class StationBuilderScene extends Phaser.Scene {
       this.input.off("pointermove", this.handlePointerMove);
       this.input.off("pointerup", this.handlePointerUp);
     });
+
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  /**
+   * Reflow panel positions/sizes on resize.
+   *
+   * The grid cells, palette cards, and info-panel children are built procedurally
+   * inside the panels and don't have a `setSize` path — we resize the outer
+   * panels here, but the inner content stays at its initial layout until the
+   * scene is restarted (e.g. after a build/demolish/upgrade action).
+   *
+   * TODO(setSize): station-builder grid — extract grid/palette/info rebuild
+   * into reusable repositioning helpers so resize live-updates the inner cells.
+   */
+  private relayout(): void {
+    const L = getLayout();
+
+    // PortraitPanel: setPosition before setSize.
+    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
+    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+
+    // Grid panel.
+    this.gridPanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.gridPanel.setSize(L.mainContentWidth, GRID_PANEL_HEIGHT);
+
+    // Palette panel.
+    const paletteY = L.contentTop + GRID_PANEL_HEIGHT + PANEL_GAP;
+    this.palettePanel.setPosition(L.mainContentLeft, paletteY);
+    this.palettePanel.setSize(L.mainContentWidth, PALETTE_PANEL_HEIGHT);
+
+    // Info panel.
+    const infoY = paletteY + PALETTE_PANEL_HEIGHT + PANEL_GAP;
+    const infoH =
+      L.contentHeight -
+      GRID_PANEL_HEIGHT -
+      PALETTE_PANEL_HEIGHT -
+      PANEL_GAP * 2;
+    this.infoPanel.setPosition(L.mainContentLeft, infoY);
+    this.infoPanel.setSize(L.mainContentWidth, Math.max(infoH, 120));
+
+    // Re-read content area after panel resize.
+    this.infoContent = this.infoPanel.getContentArea();
   }
 
   // ── Grid rendering ──

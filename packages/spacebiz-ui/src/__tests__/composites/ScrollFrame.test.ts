@@ -292,3 +292,76 @@ describe("ScrollFrame", () => {
     expect(child.setViewportScrollY).toHaveBeenLastCalledWith(100);
   });
 });
+
+describe("ScrollFrame.setSize", () => {
+  let scene: MockScene;
+
+  beforeEach(() => {
+    scene = createMockScene();
+  });
+
+  it("returns the ScrollFrame instance for chaining", () => {
+    const frame = new ScrollFrame(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+    });
+    expect(frame.setSize(400, 300)).toBe(frame);
+  });
+
+  it("updates width and height", () => {
+    const frame = new ScrollFrame(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+    });
+    frame.setSize(450, 350);
+    expect(frame.width).toBe(450);
+    expect(frame.height).toBe(350);
+  });
+
+  it("updates getViewportHeight to reflect the new height", () => {
+    const frame = new ScrollFrame(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+    });
+    frame.setSize(300, 400);
+    expect(frame.getViewportHeight()).toBe(400);
+  });
+
+  it("does not add new children to the container", () => {
+    const frame = new ScrollFrame(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+    });
+    const before = frame.list.length;
+    frame.setSize(400, 300);
+    expect(frame.list.length).toBe(before);
+  });
+
+  it("clamps scrollY within new bounds after shrinking the viewport", () => {
+    const frame = new ScrollFrame(scene as never, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 200,
+    });
+    // Content 500px tall in a 200px viewport → maxScroll = 300.
+    frame.setContent(makeChildOfHeight(scene, 500) as unknown as never);
+    frame.scrollTo(250); // scroll partway down
+
+    // Grow the viewport so content no longer overflows.
+    frame.setSize(300, 600);
+    // maxScroll is now 0; scrollY must also be 0.
+    expect(frame.getMaxScroll()).toBe(0);
+    // Content layer y should equal padding (0 here) meaning scrollY == 0.
+    const layer = frame.list[1] as unknown as { y: number };
+    expect(layer.y).toBe(0);
+  });
+});

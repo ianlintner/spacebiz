@@ -5,6 +5,8 @@ export * from "@spacebiz/ui";
 export * from "@rogue-universe/shared";
 
 // ─── Game-specific components ─────────────────────────────────────────────────
+export { attachReflowHandler } from "./sceneReflow.ts";
+
 export {
   openRouteBuilder,
   type RouteBuilderResult,

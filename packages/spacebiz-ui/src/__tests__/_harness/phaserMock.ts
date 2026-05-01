@@ -18,8 +18,6 @@
  * Then `import { Button } from "../../Button.ts"` works as normal.
  */
 
-/* eslint-disable */
-
 class EventEmitterStub {
   private listeners = new Map<string, Array<(...args: unknown[]) => void>>();
 
@@ -215,6 +213,7 @@ class ContainerStub extends GameObjectStub {
 class TextStub extends GameObjectStub {
   text: string;
   style: Record<string, unknown>;
+  wordWrapWidth = 0;
 
   constructor(scene: any, x: number, y: number, text: string, style: any) {
     super(scene);
@@ -230,6 +229,11 @@ class TextStub extends GameObjectStub {
   setText(t: string): this {
     this.text = t;
     this.width = Math.max(1, t.length * 8);
+    return this;
+  }
+
+  setWordWrapWidth(width: number): this {
+    this.wordWrapWidth = width;
     return this;
   }
 }

@@ -173,6 +173,21 @@ export class ScrollFrame extends Phaser.GameObjects.Container {
     return this.maxScroll;
   }
 
+  /**
+   * Resize the viewport. Updates internal dimensions, redraws the mask shape
+   * in place, resizes the wheel hit-area, and clamps the current scroll
+   * position to the new bounds.
+   */
+  public setSize(width: number, height: number): this {
+    // Keep inherited Container.width / .height in sync.
+    super.setSize(width, height);
+    this.viewportWidth = width;
+    this.viewportHeight = height;
+    this.redraw();
+    this.clampScroll();
+    return this;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
 
   /** Measure content height via Container.getBounds — captures wrapped rows. */
@@ -193,6 +208,48 @@ export class ScrollFrame extends Phaser.GameObjects.Container {
       setViewportScrollY?: (scrollY: number) => void;
     } | null;
     child?.setViewportScrollY?.(this.scrollY);
+  }
+
+  /**
+   * Mutate existing game objects to match the current `viewportWidth` /
+   * `viewportHeight`. Called from `setSize()` and safe to call at any time.
+   * Never creates new children.
+   */
+  private redraw(): void {
+    // Resize the transparent wheel hit-area.
+    this.wheelHitArea.width = this.viewportWidth;
+    this.wheelHitArea.height = this.viewportHeight;
+    this.wheelHitArea.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, this.viewportWidth, this.viewportHeight),
+      Phaser.Geom.Rectangle.Contains,
+    );
+
+    // Redraw the mask shape in place (clear + re-fill; same object, same mask).
+    this.maskShape.clear();
+    this.maskShape.fillStyle(0xffffff);
+    this.maskShape.fillRect(
+      0,
+      0,
+      this.viewportWidth - this.padding * 2,
+      this.viewportHeight - this.padding * 2,
+    );
+
+    // Recompute scroll bounds for the new viewport dimensions.
+    const measured = this.measureContentHeight();
+    const visibleH = this.viewportHeight - this.padding * 2;
+    this.maxScroll = Math.max(0, measured - visibleH);
+  }
+
+  /**
+   * Clamp `scrollY` to [0, maxScroll] and re-apply the content offset.
+   * Should be called whenever the viewport or content size changes.
+   */
+  private clampScroll(): void {
+    if (this.scrollY > this.maxScroll) this.scrollY = this.maxScroll;
+    if (this.scrollY < 0) this.scrollY = 0;
+    this.contentLayer.y = this.padding - this.scrollY;
+    this.syncContentScrollOffset();
+    this.syncMaskPosition();
   }
 
   private syncMaskPosition(): void {

@@ -10,6 +10,7 @@ import {
   getShipIconKey,
   getShipMapKey,
   getShipMapAnimKey,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import {
   getEmpireFlagKey,
@@ -67,9 +68,15 @@ interface LayerToggleButton {
   bg: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
   hit: Phaser.GameObjects.Zone;
+  width: number;
   isOn: () => boolean;
   setOn: (on: boolean) => void;
 }
+
+const VIZ_TOP_STRIP = 60;
+const VIZ_BOTTOM_STRIP = 60; // layer toggle row height
+const TOGGLE_ROW_GAP = 8;
+const TOGGLE_FILTER_WIDTH = 220;
 
 export class GalaxyMapScene extends Phaser.Scene {
   private view3D: GalaxyView3D | null = null;
@@ -92,6 +99,14 @@ export class GalaxyMapScene extends Phaser.Scene {
   private layerToggles: LayerToggleButton[] = [];
   private companyFilterButton: LayerToggleButton | null = null;
   private sidebarObjects: Phaser.GameObjects.GameObject[] = [];
+
+  // ── Reflow-tracked overlay chrome ─────────────────────────────────────────
+  // Cached so relayout() can reposition without rebuilding the world.
+  private hudBackdropLeft: Phaser.GameObjects.Rectangle | null = null;
+  private hudBackdropRight: Phaser.GameObjects.Rectangle | null = null;
+  private hudTitleLabel: Label | null = null;
+  private hudSlotsLabel: Label | null = null;
+  private hudHintText: Phaser.GameObjects.Text | null = null;
 
   // Last state slices used to drive the 3D scene. Reference-compared so we
   // only rebuild Three.js geometry when the visual contents of the galaxy
@@ -121,14 +136,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     // Carve a 3D viewport out of the main content area, leaving strips at
     // top (HUD: title, slot count) and bottom (layer toggles) for 2D Phaser
     // chrome. The left sidebar slot becomes the galaxy info panel.
-    const TOP_STRIP = 60;
-    const BOTTOM_STRIP = 60; // layer toggle row height
-    this.vizRect = {
-      x: L.mainContentLeft + 4,
-      y: L.contentTop + TOP_STRIP,
-      w: L.mainContentWidth - 8,
-      h: L.contentHeight - TOP_STRIP - BOTTOM_STRIP,
-    };
+    this.vizRect = this.computeVizRect(L);
 
     const phaserCanvas = this.game.canvas;
     this.view3D = new GalaxyView3D({
@@ -162,6 +170,8 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.buildHud(state, theme, L);
     this.buildSidebar(state, theme, L);
     this.buildLayerToggleRow(state, theme, L);
+
+    attachReflowHandler(this, () => this.relayout());
 
     // ── State subscription ─────────────────────────────────────────────────
     const handleStateChanged = (
@@ -276,6 +286,80 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.updateTrafficShips(delta);
   }
 
+  private computeVizRect(L: ReturnType<typeof getLayout>): {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } {
+    return {
+      x: L.mainContentLeft + 4,
+      y: L.contentTop + VIZ_TOP_STRIP,
+      w: L.mainContentWidth - 8,
+      h: L.contentHeight - VIZ_TOP_STRIP - VIZ_BOTTOM_STRIP,
+    };
+  }
+
+  /**
+   * Re-flow the 2D overlay chrome on canvas resize. The 3D viewport rect is
+   * updated via `view3D.setViewport`; the underlying Three.js renderer/camera
+   * keeps its design dimensions and is not resized here.
+   * TODO(3d-resize): wire renderer.setSize + camera aspect when the canvas
+   * dimensions themselves change (out of scope for this pass).
+   */
+  private relayout(): void {
+    const L = getLayout();
+
+    // 3D viewport rect (overlay-side only).
+    this.vizRect = this.computeVizRect(L);
+    this.view3D?.setViewport(this.vizRect);
+
+    // HUD overlay strip.
+    const hudLabelTop = L.contentTop + 18;
+    if (this.hudBackdropLeft) {
+      this.hudBackdropLeft.setPosition(L.mainContentLeft + 8, hudLabelTop - 4);
+    }
+    if (this.hudBackdropRight) {
+      this.hudBackdropRight.setPosition(
+        L.mainContentLeft + L.mainContentWidth - 8,
+        hudLabelTop - 4,
+      );
+    }
+    this.hudTitleLabel?.setPosition(L.mainContentLeft + 16, hudLabelTop);
+    this.hudSlotsLabel?.setPosition(L.mainContentLeft + 16, hudLabelTop + 18);
+    this.hudHintText?.setPosition(
+      L.mainContentLeft + L.mainContentWidth - 16,
+      hudLabelTop,
+    );
+
+    // Layer toggle row — reposition existing buttons sequentially.
+    const rowY = L.contentTop + L.contentHeight - 56;
+    let x = L.mainContentLeft + 8;
+    for (const btn of this.layerToggles) {
+      btn.bg.setPosition(x, rowY);
+      btn.label.setPosition(x + btn.width / 2, rowY + 18);
+      btn.hit.setPosition(x, rowY);
+      x += btn.width + TOGGLE_ROW_GAP;
+    }
+    if (this.companyFilterButton) {
+      const cf = this.companyFilterButton;
+      cf.bg.setPosition(x, rowY);
+      cf.label.setPosition(x + cf.width / 2, rowY + 18);
+      cf.hit.setPosition(x, rowY);
+    }
+
+    // TODO(setSize): sidebar is composed of ad-hoc text/rect primitives, not
+    // a sized container. Rebuild so the per-row height clamp re-evaluates
+    // against the new sidebar height.
+    this.rebuildSidebar();
+  }
+
+  private rebuildSidebar(): void {
+    for (const obj of this.sidebarObjects) obj.destroy();
+    this.sidebarObjects = [];
+    this.buildSidebar(gameStore.getState(), getTheme(), getLayout());
+  }
+
   private buildHud(
     state: GameState,
     theme: ReturnType<typeof getTheme>,
@@ -305,8 +389,15 @@ export class GalaxyMapScene extends Phaser.Scene {
         .setOrigin(ox, oy)
         .setDepth(900);
 
-    addBackdrop(L.mainContentLeft + 8, hudLabelTop - 4, 156, 46, 0, 0);
-    addBackdrop(
+    this.hudBackdropLeft = addBackdrop(
+      L.mainContentLeft + 8,
+      hudLabelTop - 4,
+      156,
+      46,
+      0,
+      0,
+    );
+    this.hudBackdropRight = addBackdrop(
       L.mainContentLeft + L.mainContentWidth - 8,
       hudLabelTop - 4,
       280,
@@ -315,22 +406,24 @@ export class GalaxyMapScene extends Phaser.Scene {
       0,
     );
 
-    new Label(this, {
+    this.hudTitleLabel = new Label(this, {
       x: L.mainContentLeft + 16,
       y: hudLabelTop,
       text: "Galaxy Map",
       style: "caption",
       color: theme.colors.textDim,
-    }).setDepth(901);
-    new Label(this, {
+    });
+    this.hudTitleLabel.setDepth(901);
+    this.hudSlotsLabel = new Label(this, {
       x: L.mainContentLeft + 16,
       y: hudLabelTop + 18,
       text: `Sys ${sysUsed}/${sysTot} · Emp ${empUsed}/${empTot} · Gal ${galUsed}/${galTot}`,
       style: "caption",
       color: slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
-    }).setDepth(901);
+    });
+    this.hudSlotsLabel.setDepth(901);
 
-    this.add
+    this.hudHintText = this.add
       .text(
         L.mainContentLeft + L.mainContentWidth - 16,
         hudLabelTop,
@@ -532,11 +625,12 @@ export class GalaxyMapScene extends Phaser.Scene {
         bg,
         label: text,
         hit,
+        width,
         isOn,
         setOn: () => refresh(),
       };
       refresh();
-      x += width + 8;
+      x += width + TOGGLE_ROW_GAP;
       return btn;
     };
 
@@ -569,7 +663,7 @@ export class GalaxyMapScene extends Phaser.Scene {
 
     // Company filter — wider button, separate row slot. Custom isOn() returns
     // true whenever a filter is active so the styling reflects "filtering on".
-    const filterWidth = 220;
+    const filterWidth = TOGGLE_FILTER_WIDTH;
     const filterBg = this.add
       .rectangle(x, rowY, filterWidth, 36, theme.colors.panelBg, 0.85)
       .setStrokeStyle(1, theme.colors.panelBorder, 0.6)
@@ -618,6 +712,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       bg: filterBg,
       label: filterText,
       hit: filterHit,
+      width: filterWidth,
       isOn: () => this.companyFilter !== null,
       setOn: () => refreshFilter(),
     };

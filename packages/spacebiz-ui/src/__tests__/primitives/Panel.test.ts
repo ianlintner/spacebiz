@@ -118,6 +118,86 @@ describe("Panel.getContentArea", () => {
   });
 });
 
+describe("Panel.setSize", () => {
+  it("returns the panel instance for chaining", () => {
+    const panel = new Panel(scene as unknown as Phaser.Scene, {
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 100,
+    });
+    expect(panel.setSize(300, 150)).toBe(panel);
+  });
+
+  it("updates getContentArea dimensions on an untitled panel", () => {
+    const panel = new Panel(scene as unknown as Phaser.Scene, {
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 100,
+    });
+    panel.setSize(400, 300);
+    const area = panel.getContentArea();
+    expect(area.width).toBeGreaterThan(0);
+    expect(area.width).toBeLessThan(400);
+    expect(area.height).toBeGreaterThan(0);
+    expect(area.height).toBeLessThan(300);
+  });
+
+  it("updates getContentArea dimensions on a titled panel", () => {
+    const panel = new Panel(scene as unknown as Phaser.Scene, {
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 200,
+      title: "Cargo",
+    });
+    panel.setSize(500, 400);
+    const area = panel.getContentArea();
+    expect(area.width).toBeGreaterThan(0);
+    expect(area.width).toBeLessThan(500);
+    expect(area.height).toBeGreaterThan(0);
+    expect(area.height).toBeLessThan(400);
+  });
+
+  it("does not add new children to the container", () => {
+    const panel = new Panel(scene as unknown as Phaser.Scene, {
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 100,
+    });
+    const before = panel.list.length;
+    panel.setSize(300, 150);
+    expect(panel.list.length).toBe(before);
+  });
+
+  it("does not add new children on a titled panel", () => {
+    const panel = new Panel(scene as unknown as Phaser.Scene, {
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 200,
+      title: "Cargo",
+    });
+    const before = panel.list.length;
+    panel.setSize(400, 300);
+    expect(panel.list.length).toBe(before);
+  });
+
+  it("syncs inherited width and height", () => {
+    const panel = new Panel(scene as unknown as Phaser.Scene, {
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 100,
+    });
+    panel.setSize(350, 250);
+    expect(panel.width).toBe(350);
+    expect(panel.height).toBe(250);
+  });
+});
+
 describe("Panel.setActive", () => {
   it("returns the panel instance for chaining", () => {
     const panel = new Panel(scene as unknown as Phaser.Scene, {

@@ -15,6 +15,7 @@ import {
   getShipColor,
   getShipMapKey,
   getShipMapAnimKey,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import type { GameHUDScene } from "./GameHUDScene.ts";
 import type { GameState, TurnResult } from "../data/types.ts";
@@ -83,6 +84,11 @@ export class SimPlaybackScene extends Phaser.Scene {
   private costsText!: Phaser.GameObjects.Text;
   private profitText!: Phaser.GameObjects.Text;
 
+  // HUD chrome containers used for reflow.
+  private simLabel!: Phaser.GameObjects.Text;
+  private rightPanelContainer!: Phaser.GameObjects.Container;
+  private speedButtons: Button[] = [];
+
   constructor() {
     super({ key: "SimPlaybackScene" });
   }
@@ -93,6 +99,7 @@ export class SimPlaybackScene extends Phaser.Scene {
     this.animationComplete = false;
     this.leaderCashTexts.clear();
     this.leaderProfitTexts.clear();
+    this.speedButtons = [];
 
     // ── Step 1: Simulate the turn immediately (animation is cosmetic) ─────────
     const state = gameStore.getState();
@@ -330,7 +337,7 @@ export class SimPlaybackScene extends Phaser.Scene {
     // ── Top-centre: sim turn indicator ─────────────────────────────────────────
     const quarter = ((state.turn - 1) % 4) + 1;
     const year = Math.floor((state.turn - 1) / 4) + 1;
-    const simLabel = hudText(
+    this.simLabel = hudText(
       sfW / 2,
       8,
       `\u27eb SIMULATING Q${quarter} Y${year} \u27ea`,
@@ -339,7 +346,7 @@ export class SimPlaybackScene extends Phaser.Scene {
       3,
     ).setOrigin(0.5, 0);
     this.tweens.add({
-      targets: simLabel,
+      targets: this.simLabel,
       alpha: { from: 0.9, to: 0.35 },
       duration: 700,
       yoyo: true,
@@ -435,27 +442,53 @@ export class SimPlaybackScene extends Phaser.Scene {
     }
 
     // ── Right panel: Financial Report ─────────────────────────────────────────
+    // Built inside a container so resize() only needs to reposition the
+    // container's anchor. Children use coords relative to the container origin.
     const RP = 10;
     const RPW = 210;
-    const RPX = sfW - RPW - RP;
     const RBPT = 30;
-    this.add
-      .rectangle(RPX, RBPT, RPW, 218, 0x050c1a, 0.84)
-      .setOrigin(0, 0)
-      .setStrokeStyle(1, theme.colors.panelBorder, 0.55)
+    const rightPanelX = sfW - RPW - RP;
+    this.rightPanelContainer = this.add
+      .container(rightPanelX, 0)
       .setScrollFactor(0)
       .setDepth(49);
-    hudText(RPX + 8, RBPT + 6, "FINANCIAL REPORT", theme.colors.accent, 10, 2);
-    this.add
-      .rectangle(RPX + 4, RBPT + 20, RPW - 8, 1, theme.colors.accent, 0.28)
+
+    const rightBg = this.add
+      .rectangle(0, RBPT, RPW, 218, 0x050c1a, 0.84)
       .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(50);
+      .setStrokeStyle(1, theme.colors.panelBorder, 0.55);
+    this.rightPanelContainer.add(rightBg);
+
+    const rightHudText = (
+      x: number,
+      y: number,
+      txt: string,
+      col: number,
+      fs = 11,
+      stroke = 2,
+    ) => {
+      const t = this.add.text(x, y, txt, {
+        fontSize: `${fs}px`,
+        fontFamily: theme.fonts.body.family,
+        color: colorToString(col),
+        stroke: "#000000",
+        strokeThickness: stroke,
+      });
+      this.rightPanelContainer.add(t);
+      return t;
+    };
+
+    rightHudText(8, RBPT + 6, "FINANCIAL REPORT", theme.colors.accent, 10, 2);
+    const rightSep1 = this.add
+      .rectangle(4, RBPT + 20, RPW - 8, 1, theme.colors.accent, 0.28)
+      .setOrigin(0, 0);
+    this.rightPanelContainer.add(rightSep1);
+
     let ty = RBPT + 26;
-    hudText(RPX + 8, ty, "REVENUE", theme.colors.textDim, 9, 1);
+    rightHudText(8, ty, "REVENUE", theme.colors.textDim, 9, 1);
     ty += 13;
-    this.revenueText = hudText(
-      RPX + 8,
+    this.revenueText = rightHudText(
+      8,
       ty,
       formatCash(0),
       theme.colors.profit,
@@ -463,10 +496,10 @@ export class SimPlaybackScene extends Phaser.Scene {
       2,
     );
     ty += 22;
-    hudText(RPX + 8, ty, "OPERATING COSTS", theme.colors.textDim, 9, 1);
+    rightHudText(8, ty, "OPERATING COSTS", theme.colors.textDim, 9, 1);
     ty += 13;
-    this.costsText = hudText(
-      RPX + 8,
+    this.costsText = rightHudText(
+      8,
       ty,
       formatCash(0),
       theme.colors.loss,
@@ -474,16 +507,15 @@ export class SimPlaybackScene extends Phaser.Scene {
       2,
     );
     ty += 22;
-    this.add
-      .rectangle(RPX + 4, ty, RPW - 8, 1, theme.colors.panelBorder, 0.4)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(50);
+    const rightSep2 = this.add
+      .rectangle(4, ty, RPW - 8, 1, theme.colors.panelBorder, 0.4)
+      .setOrigin(0, 0);
+    this.rightPanelContainer.add(rightSep2);
     ty += 8;
-    hudText(RPX + 8, ty, "NET PROFIT", theme.colors.textDim, 9, 1);
+    rightHudText(8, ty, "NET PROFIT", theme.colors.textDim, 9, 1);
     ty += 13;
-    this.profitText = hudText(
-      RPX + 8,
+    this.profitText = rightHudText(
+      8,
       ty,
       formatCash(0),
       theme.colors.text,
@@ -491,14 +523,13 @@ export class SimPlaybackScene extends Phaser.Scene {
       2,
     );
     ty += 25;
-    this.add
-      .rectangle(RPX + 4, ty, RPW - 8, 1, theme.colors.panelBorder, 0.35)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(50);
+    const rightSep3 = this.add
+      .rectangle(4, ty, RPW - 8, 1, theme.colors.panelBorder, 0.35)
+      .setOrigin(0, 0);
+    this.rightPanelContainer.add(rightSep3);
     ty += 8;
-    hudText(
-      RPX + 8,
+    rightHudText(
+      8,
       ty,
       `\u25b6 ${state.activeRoutes.length} active routes`,
       theme.colors.textDim,
@@ -506,8 +537,8 @@ export class SimPlaybackScene extends Phaser.Scene {
       1,
     );
     ty += 14;
-    hudText(
-      RPX + 8,
+    rightHudText(
+      8,
       ty,
       `\u25b6 ${state.fleet.length} ships in fleet`,
       theme.colors.textDim,
@@ -515,8 +546,8 @@ export class SimPlaybackScene extends Phaser.Scene {
       1,
     );
     ty += 14;
-    hudText(
-      RPX + 8,
+    rightHudText(
+      8,
       ty + 4,
       "Scroll to zoom \u00b7 Drag to pan",
       theme.colors.textDim,
@@ -613,6 +644,7 @@ export class SimPlaybackScene extends Phaser.Scene {
           def.speed === 0 ? this.skipAnimation() : this.setSpeed(def.speed),
       });
       btn.setScrollFactor(0);
+      this.speedButtons.push(btn);
     }
 
     // No dual-camera filter needed — the HUD chrome and ships all render on
@@ -625,6 +657,48 @@ export class SimPlaybackScene extends Phaser.Scene {
     const cleanup = (): void => this.cleanup();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
+
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+
+    // 3D galaxy viewport — recompute viewport rect.
+    // TODO(3d-resize): GalaxyView3D's renderer canvas is sized to the design
+    // dimensions captured at construction; only the viewport rect updates here.
+    const vpX = L.navSidebarWidth;
+    const vpY = L.contentTop;
+    const vpW = L.gameWidth - L.navSidebarWidth;
+    const vpH = L.gameHeight - L.contentTop - L.hudBottomBarHeight;
+    this.vizRect = { x: vpX, y: vpY, w: vpW, h: vpH };
+    this.view3D?.setViewport(this.vizRect);
+
+    const sfW = vpW;
+    const sfH = vpH;
+
+    // Top-centre sim label.
+    this.simLabel.setPosition(sfW / 2, 8);
+
+    // Right panel (financial report) — slides with sfW.
+    const RP = 10;
+    const RPW = 210;
+    this.rightPanelContainer.setPosition(sfW - RPW - RP, 0);
+
+    // Speed control bar — bottom-centred.
+    const BTN_W = 80;
+    const BTN_H = 32;
+    const BTN_GAP = 10;
+    const totalBW = BTN_W * 4 + BTN_GAP * 3;
+    const btnStartX = sfW / 2 - totalBW / 2;
+    const btnBaseY = sfH - BTN_H - 18;
+    for (let i = 0; i < this.speedButtons.length; i++) {
+      this.speedButtons[i].setPosition(
+        btnStartX + i * (BTN_W + BTN_GAP),
+        btnBaseY,
+      );
+    }
   }
 
   // ── Speed control ─────────────────────────────────────────────────────────

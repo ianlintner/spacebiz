@@ -48,6 +48,10 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
   private panel: Panel;
   private portraitGraphics: Phaser.GameObjects.Graphics;
   private portraitMaskShape!: Phaser.GameObjects.Graphics;
+  // Outer clip mask (world-space Graphics). Stored so setPosition/redraw can
+  // recompute its rect — both masks use viewTransform:'world' via applyClippingMask,
+  // so they must track the container's world position.
+  private clipMaskShape!: Phaser.GameObjects.Graphics;
   private portraitImage: Phaser.GameObjects.Image | null = null;
   private nameLabel: Label;
   private statLabels: Label[];
@@ -127,12 +131,102 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     // Clip all content (stats, name, portrait) to panel bounds. Without this
     // (working) clip mask, long stat lists overflow the panel into the minimap
     // below. Falls back to Phaser 3 setMask when filters isn't available.
-    const clipShape = scene.make.graphics({});
-    clipShape.fillStyle(0xffffff, 1);
-    clipShape.fillRect(config.x, config.y, this.panelWidth, panelHeight);
-    applyClippingMask(this, clipShape);
+    // Stored so redraw()/setPosition can recompute when the container moves.
+    this.clipMaskShape = scene.make.graphics({});
+    this.clipMaskShape.fillStyle(0xffffff, 1);
+    this.clipMaskShape.fillRect(
+      config.x,
+      config.y,
+      this.panelWidth,
+      panelHeight,
+    );
+    applyClippingMask(this, this.clipMaskShape);
 
     scene.add.existing(this);
+  }
+
+  /**
+   * Resize the panel and reflow all internal children.
+   * After this call, `panelWidth`/`panelHeight` reflect the new dimensions and
+   * `updatePortrait` / convenience show*() calls will use the updated layout.
+   */
+  public setSize(width: number, height: number): this {
+    super.setSize(width, height);
+    this.panelWidth = width;
+    this.panelHeight = height;
+    this.redraw();
+    return this;
+  }
+
+  /**
+   * Override setPosition so that the world-space mask Graphics objects
+   * (portraitMaskShape and clipMaskShape) are recomputed when the container
+   * moves. Both masks use viewTransform:'world' via applyClippingMask, so their
+   * fillRect coordinates must always equal the container's world position.
+   */
+  public setPosition(x?: number, y?: number, z?: number, w?: number): this {
+    super.setPosition(x, y, z, w);
+    // Guard: redraw() references portraitMaskShape and clipMaskShape which are
+    // assigned after super() in the constructor — skip if not yet initialised.
+    if (this.portraitMaskShape && this.clipMaskShape) {
+      this.redraw();
+    }
+    return this;
+  }
+
+  /**
+   * Mutate all existing child objects in-place to reflect the current
+   * `panelWidth`/`panelHeight`. Never creates new children.
+   */
+  private redraw(): void {
+    const theme = getTheme();
+
+    this.portraitWidth = this.panelWidth - theme.spacing.sm * 2;
+    this.portraitHeight = Math.floor(this.panelHeight * 0.5);
+
+    // Resize the inner panel chrome
+    this.panel.setSize(this.panelWidth, this.panelHeight);
+
+    // Reposition the portrait graphics origin (position is constant, no resize needed)
+    this.portraitGraphics.setPosition(theme.spacing.sm, theme.spacing.sm);
+
+    // Update portrait mask shape (world-space coords — viewTransform:'world').
+    this.portraitMaskShape.clear();
+    this.portraitMaskShape.fillStyle(0xffffff, 1);
+    this.portraitMaskShape.fillRect(
+      this.x + theme.spacing.sm,
+      this.y + theme.spacing.sm,
+      this.portraitWidth,
+      this.portraitHeight,
+    );
+
+    // Update outer clip mask (also world-space).
+    this.clipMaskShape.clear();
+    this.clipMaskShape.fillStyle(0xffffff, 1);
+    this.clipMaskShape.fillRect(
+      this.x,
+      this.y,
+      this.panelWidth,
+      this.panelHeight,
+    );
+
+    // Reposition the portrait image if it exists
+    if (this.portraitImage) {
+      this.portraitImage.setPosition(
+        theme.spacing.sm + this.portraitWidth / 2,
+        theme.spacing.sm + this.portraitHeight / 2,
+      );
+      fitImageContain(
+        this.portraitImage,
+        this.portraitWidth,
+        this.portraitHeight,
+      );
+    }
+
+    // Reposition name label
+    const nameLabelY =
+      theme.spacing.sm + this.portraitHeight + theme.spacing.md;
+    this.nameLabel.setPosition(this.panelWidth / 2, nameLabelY);
   }
 
   /** Update the portrait display with new data. */

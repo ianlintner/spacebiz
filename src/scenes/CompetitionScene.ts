@@ -11,6 +11,7 @@ import {
   StandingsGraph,
   createStarfield,
   getLayout,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import {
   getIntelTier,
@@ -26,7 +27,7 @@ import {
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(Math.round(n));
-  return sign + "\u00A7" + abs.toLocaleString("en-US");
+  return sign + "§" + abs.toLocaleString("en-US");
 }
 
 function personalityLabel(p: string): string {
@@ -44,6 +45,8 @@ function personalityLabel(p: string): string {
 
 export class CompetitionScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
+  private contentPanel!: Panel;
+  private tabGroup!: TabGroup;
   private table!: DataTable;
   private intelTier: IntelTier = 0;
   private tableFrame: ScrollFrame | null = null;
@@ -97,14 +100,14 @@ export class CompetitionScene extends Phaser.Scene {
     this.portrait.updatePortrait("company", 0, "Competition", sidebarStats);
 
     // Content panel
-    const contentPanel = new Panel(this, {
+    this.contentPanel = new Panel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,
       height: L.contentHeight,
       title: "AI Companies",
     });
-    const content = contentPanel.getContentArea();
+    const content = this.contentPanel.getContentArea();
     const absX = L.mainContentLeft + content.x;
     const absY = L.contentTop + content.y;
 
@@ -143,7 +146,7 @@ export class CompetitionScene extends Phaser.Scene {
 
     // Tab strip — Companies | Standings — sits above the table/graph view.
     const tabHeight = theme.button.height;
-    const tabGroup = new TabGroup(this, {
+    this.tabGroup = new TabGroup(this, {
       x: absX,
       y: absY,
       width: Math.min(360, content.width),
@@ -213,12 +216,66 @@ export class CompetitionScene extends Phaser.Scene {
     this.table.setRows(rows);
 
     // Hook tab switches → toggle ScrollFrame vs StandingsGraph.
-    const originalSetActiveTab = tabGroup.setActiveTab.bind(tabGroup);
-    tabGroup.setActiveTab = (index: number) => {
+    const originalSetActiveTab = this.tabGroup.setActiveTab.bind(this.tabGroup);
+    this.tabGroup.setActiveTab = (index: number) => {
       originalSetActiveTab(index);
       if (index === 1) this.openStandingsTab();
       else this.openCompaniesTab();
     };
+
+    // Apply layout positions/sizes and register for future resizes.
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const theme = getTheme();
+    const L = getLayout();
+
+    // PortraitPanel: setPosition triggers mask refresh, then setSize.
+    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
+    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+
+    // Content panel.
+    this.contentPanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.contentPanel.setSize(L.mainContentWidth, L.contentHeight);
+
+    // Re-read content area after panel resize to get fresh inset coords.
+    const content = this.contentPanel.getContentArea();
+    const absX = L.mainContentLeft + content.x;
+    const absY = L.contentTop + content.y;
+
+    // Tab strip.
+    this.tabGroup.setPosition(absX, absY);
+    this.tabGroup.setSize(Math.min(360, content.width), this.tabGroup.height);
+
+    const tabHeight = theme.button.height;
+    const viewTop = absY + tabHeight + 8;
+    const viewHeight = content.height - tabHeight - 28;
+
+    this.standingsArea = {
+      x: absX,
+      y: viewTop,
+      w: content.width,
+      h: viewHeight,
+    };
+
+    // ScrollFrame + DataTable.
+    if (this.tableFrame) {
+      this.tableFrame.setPosition(absX, viewTop);
+      this.tableFrame.setSize(content.width, viewHeight);
+    }
+    this.table.setSize(content.width, viewHeight);
+
+    // StandingsGraph: no setSize support. If visible during resize, destroy it
+    // so openStandingsTab() rebuilds at the new size. Force back to Companies
+    // tab so the user isn't left staring at an empty area.
+    if (this.standingsGraph?.visible) {
+      this.standingsGraph.destroy();
+      this.standingsGraph = null;
+      this.hasAnimatedStandings = false;
+      this.tableFrame?.setVisible(true);
+    }
   }
 
   private openCompaniesTab(): void {

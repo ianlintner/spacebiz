@@ -268,6 +268,26 @@ export class TabGroup
     );
   }
 
+  /**
+   * Resize the tab group to a new width.
+   *
+   * Only `tabGroupWidth` is updated — per-tab button widths stay at their
+   * configured values (equal subdivisions of the original width).  The stored
+   * `tabGroupWidth` is used by `positionFocusRing` and `getTabWidth` so they
+   * return consistent values after a resize.  Content containers below the tab
+   * strip are responsible for their own reflow; callers should pass the new
+   * width down to them after calling `setSize`.
+   *
+   * The `_height` parameter is accepted for interface consistency but has no
+   * effect — tab strip height is fixed by the per-tab button height set at
+   * construction.
+   */
+  public setSize(width: number, _height: number): this {
+    super.setSize(width, _height);
+    this.tabGroupWidth = width;
+    return this;
+  }
+
   getActiveIndex(): number {
     return this.activeIndex;
   }
