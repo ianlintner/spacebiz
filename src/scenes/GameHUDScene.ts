@@ -8,6 +8,7 @@ import {
   Tooltip,
   FloatingText,
   AdviserPanel,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import { SettingsPanel } from "../ui/SettingsPanel.ts";
 import { formatTurnShort, formatTurnLong } from "../utils/turnFormat.ts";
@@ -123,6 +124,26 @@ export class GameHUDScene extends Phaser.Scene {
   private navBadges = new Map<string, Phaser.GameObjects.Arc>();
   private endTurnModal: Modal | null = null;
   private newsTicker: HorizontalNewsTicker | null = null;
+  // ── Layout-derived widgets re-positioned/re-sized by relayout() ──
+  private topBarBg!: Phaser.GameObjects.NineSlice;
+  private bottomBarBg!: Phaser.GameObjects.NineSlice;
+  private navSidebarBg!: Phaser.GameObjects.NineSlice;
+  private navSidebarAccent!: Phaser.GameObjects.Rectangle;
+  private tickerBg!: Phaser.GameObjects.Rectangle;
+  private tickerBorder!: Phaser.GameObjects.Rectangle;
+  private ceoPortraitImg!: Phaser.GameObjects.Image;
+  private ceoPortraitMask!: Phaser.GameObjects.Arc;
+  private ceoPortraitBorder!: Phaser.GameObjects.Arc;
+  /** Per-nav button containers (used by relayout to reposition the cluster). */
+  private navContainers = new Map<string, Phaser.GameObjects.Container>();
+  /** Order of nav scenes as built — needed to recompute Y on resize. */
+  private navOrder: string[] = [];
+  /** Settings (audio + save) icon buttons; stored for repositioning. */
+  private settingsButtons: Array<{
+    container: Phaser.GameObjects.Container;
+    /** "audio" | "save" — drives Y placement relative to bottom of sidebar. */
+    role: "audio" | "save";
+  }> = [];
   private readonly navIconButtonSize = 46;
   private readonly navIconSpacing = 8;
   private readonly navHitHeight = 50;
@@ -205,7 +226,7 @@ export class GameHUDScene extends Phaser.Scene {
     audio.setPlanningSubstate("galaxy");
 
     // ── Top Bar ──────────────────────────────────────────────
-    this.add
+    this.topBarBg = this.add
       .nineslice(
         0,
         0,
@@ -235,13 +256,15 @@ export class GameHUDScene extends Phaser.Scene {
       .image(hudPortraitX, hudPortraitY, initialKey)
       .setOrigin(0.5, 0.5);
     fitImageCover(portraitImg, portraitSize, portraitSize);
+    this.ceoPortraitImg = portraitImg;
     // Round mask (Phaser 4 Mask filter)
     const hudMask = this.add
       .circle(hudPortraitX, hudPortraitY, portraitSize / 2, 0xffffff)
       .setVisible(false);
     portraitImg.filters?.internal.addMask(hudMask);
+    this.ceoPortraitMask = hudMask;
     // Subtle border ring
-    this.add
+    this.ceoPortraitBorder = this.add
       .circle(hudPortraitX, hudPortraitY, portraitSize / 2 + 1)
       .setStrokeStyle(1, theme.colors.panelBorder)
       .setFillStyle(0x000000, 0);
@@ -374,7 +397,7 @@ export class GameHUDScene extends Phaser.Scene {
     const navSidebarH = L.hudBottomBarTop - L.hudTopBarHeight;
 
     // Sidebar background strip
-    this.add
+    this.navSidebarBg = this.add
       .nineslice(
         0,
         navSidebarTop,
@@ -391,7 +414,7 @@ export class GameHUDScene extends Phaser.Scene {
       .setAlpha(0.88);
 
     // Right edge accent line
-    this.add
+    this.navSidebarAccent = this.add
       .rectangle(
         L.navSidebarWidth - 1,
         navSidebarTop,
@@ -504,6 +527,8 @@ export class GameHUDScene extends Phaser.Scene {
       this.navBackgrounds.set(item.scene, bg);
       this.navIcons.set(item.scene, icon);
       this.navHitAreas.set(item.scene, hitRect);
+      this.navContainers.set(item.scene, btnContainer);
+      this.navOrder.push(item.scene);
 
       // Attention badge (small colored dot, top-right of icon)
       const badge = this.add
@@ -525,26 +550,28 @@ export class GameHUDScene extends Phaser.Scene {
     const audioBtnY = bottomCluster - iconBtnSize / 2 - (iconBtnSize + 6);
     const saveBtnY = bottomCluster - iconBtnSize / 2;
 
-    this.createSettingsIconButton({
+    const audioBtn = this.createSettingsIconButton({
       x: navCenterX,
       y: audioBtnY,
       iconKey: "icon-audio",
       tooltip: "Audio Settings",
       onClick: () => this.toggleSettingsPanel("audio"),
     });
-    this.createSettingsIconButton({
+    this.settingsButtons.push({ container: audioBtn, role: "audio" });
+    const saveBtn = this.createSettingsIconButton({
       x: navCenterX,
       y: saveBtnY,
       iconKey: "icon-save",
       tooltip: "Save / Load",
       onClick: () => this.toggleSettingsPanel("save"),
     });
+    this.settingsButtons.push({ container: saveBtn, role: "save" });
 
     // ── Bottom Bar ───────────────────────────────────────────
     const bottomBarY = L.hudBottomBarTop;
     const bottomBarMidY = bottomBarY + L.hudBottomBarHeight / 2;
 
-    this.add
+    this.bottomBarBg = this.add
       .nineslice(
         0,
         bottomBarY,
@@ -639,7 +666,7 @@ export class GameHUDScene extends Phaser.Scene {
 
     // ── Horizontal News Ticker strip (below bottom bar) ──
     const tickerY = L.gameHeight - L.hudTickerHeight;
-    this.add
+    this.tickerBg = this.add
       .rectangle(
         0,
         tickerY,
@@ -651,18 +678,12 @@ export class GameHUDScene extends Phaser.Scene {
       .setAlpha(0.97)
       .setDepth(290);
     // 1px top border
-    this.add
+    this.tickerBorder = this.add
       .rectangle(0, tickerY, L.gameWidth, 1, theme.colors.panelBorder)
       .setOrigin(0, 0)
       .setDepth(291);
-    this.newsTicker = new HorizontalNewsTicker(
-      this,
-      L.navSidebarWidth,
-      tickerY,
-      L.gameWidth - L.navSidebarWidth,
-      L.hudTickerHeight,
-    );
-    this.newsTicker.updateItems(this.buildTickerItems(state));
+    // newsTicker is created/recreated by relayout() so the geometry is
+    // owned by a single code path.
 
     // ── Adviser Panel (drawer-style, upper-right) ──
     // Tab (36px) is at x=0 of the container, panel body at x=36.
@@ -697,27 +718,7 @@ export class GameHUDScene extends Phaser.Scene {
     // ── State Subscription ───────────────────────────────────
     gameStore.on("stateChanged", this.stateListener);
 
-    // ── Resize handler: restart HUD and content scenes on layout change ──
-    const onResize = () => {
-      for (const key of this.contentSceneKeys) {
-        if (this.scene.isActive(key) || this.scene.isPaused(key)) {
-          this.scene.stop(key);
-        }
-      }
-      for (const key of this.overlaySceneKeys) {
-        if (this.scene.isActive(key)) {
-          this.scene.stop(key);
-        }
-      }
-      this.scene.restart({
-        restoreScene: this.activeContentScene,
-        restoreData: this.activeContentData,
-      });
-    };
-    this.scale.on("resize", onResize);
-
     this.events.once("shutdown", () => {
-      this.scale.off("resize", onResize);
       gameStore.off("stateChanged", this.stateListener);
       this.settingsPanel?.destroy();
       this.settingsPanel = null;
@@ -725,12 +726,135 @@ export class GameHUDScene extends Phaser.Scene {
       this.newsTicker = null;
     });
 
+    // Initial layout pass + reflow on viewport resize. Content scenes own
+    // their own reflow handlers, so the HUD only repositions its own widgets.
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+
     // Launch content scene (restored on resize, default GalaxyMapScene)
     this.scene.launch(this.activeContentScene, this.activeContentData);
     this.scene.bringToTop();
 
     // If a dilemma was already pending (e.g. resumed save), surface it now.
     this.maybeShowDilemma();
+  }
+
+  /**
+   * Reposition + resize every layout-dependent widget when the viewport
+   * changes. Children themselves are built once in `create()`; this only
+   * touches geometry, not content/state.
+   */
+  private relayout(): void {
+    const L = getLayout();
+
+    // ── Top bar ─────────────────────────────────────────────
+    this.topBarBg.setPosition(0, 0);
+    this.topBarBg.setSize(L.gameWidth, L.hudTopBarHeight);
+
+    // CEO portrait cluster (image + mask + border ring) — left side of top bar.
+    const portraitSize = L.hudTopBarHeight - 12;
+    const hudPortraitX = 6 + portraitSize / 2;
+    const hudPortraitY = L.hudTopBarHeight / 2;
+    this.ceoPortraitImg.setPosition(hudPortraitX, hudPortraitY);
+    fitImageCover(this.ceoPortraitImg, portraitSize, portraitSize);
+    this.ceoPortraitMask.setPosition(hudPortraitX, hudPortraitY);
+    this.ceoPortraitMask.setRadius(portraitSize / 2);
+    this.ceoPortraitBorder.setPosition(hudPortraitX, hudPortraitY);
+    this.ceoPortraitBorder.setRadius(portraitSize / 2 + 1);
+
+    // Top-bar labels.
+    const topMidY = L.hudTopBarHeight / 2;
+    const nameOffsetX = 6 + portraitSize + 10;
+    this.companyLabel.setPosition(nameOffsetX, topMidY);
+    this.turnLabel.setPosition(L.gameWidth / 2, topMidY);
+    this.apBadgeLabel.setPosition(L.gameWidth / 2 + 80, topMidY);
+    this.cashLabel.setPosition(L.gameWidth - 20, topMidY);
+    this.streakLabel.setPosition(L.gameWidth - 20, topMidY + 1);
+
+    // ── Nav sidebar background + accent line ──────────────
+    const navSidebarTop = L.hudTopBarHeight;
+    const navSidebarH = L.hudBottomBarTop - L.hudTopBarHeight;
+    this.navSidebarBg.setPosition(0, navSidebarTop);
+    this.navSidebarBg.setSize(L.navSidebarWidth, navSidebarH);
+    this.navSidebarAccent.setPosition(L.navSidebarWidth - 1, navSidebarTop);
+    this.navSidebarAccent.setSize(1, navSidebarH);
+
+    // Nav button cluster — recompute Y for each scene in build order.
+    const iconBtnSize = this.navIconButtonSize;
+    const iconSpacing = this.navIconSpacing;
+    const navStartY = navSidebarTop + 12;
+    const navCenterX = L.navSidebarWidth / 2;
+    for (let i = 0; i < this.navOrder.length; i++) {
+      const sceneKey = this.navOrder[i];
+      const btnY =
+        navStartY + i * (iconBtnSize + iconSpacing) + iconBtnSize / 2;
+      const container = this.navContainers.get(sceneKey);
+      const hit = this.navHitAreas.get(sceneKey);
+      // TODO(setSize): nav button container is a plain Phaser.Container with
+      // hand-positioned children — reposition only.
+      if (container) container.setPosition(navCenterX, btnY);
+      if (hit) hit.setPosition(navCenterX, btnY);
+    }
+
+    // Settings buttons (audio above, save below) — anchored to sidebar bottom.
+    const bottomCluster = navSidebarTop + navSidebarH - 12;
+    const audioBtnY = bottomCluster - iconBtnSize / 2 - (iconBtnSize + 6);
+    const saveBtnY = bottomCluster - iconBtnSize / 2;
+    for (const btn of this.settingsButtons) {
+      // TODO(setSize): settings icon button is a plain Phaser.Container —
+      // reposition only.
+      btn.container.setPosition(
+        navCenterX,
+        btn.role === "audio" ? audioBtnY : saveBtnY,
+      );
+    }
+
+    // ── Bottom bar ──────────────────────────────────────────
+    const bottomBarY = L.hudBottomBarTop;
+    const bottomBarMidY = bottomBarY + L.hudBottomBarHeight / 2;
+    this.bottomBarBg.setPosition(0, bottomBarY);
+    this.bottomBarBg.setSize(L.gameWidth, L.hudBottomBarHeight);
+
+    this.phaseLabel.setPosition(20, bottomBarMidY);
+    this.actionPromptLabel.setPosition(200, bottomBarMidY);
+    this.routeSlotLabel.setPosition(L.gameWidth - 200, bottomBarMidY - 8);
+    this.researchLabel.setPosition(L.gameWidth - 200, bottomBarMidY + 8);
+
+    // End Turn cluster (button + small turn-info label) — right edge.
+    const endTurnSize = 52;
+    const endTurnX = L.gameWidth - endTurnSize - 12;
+    this.bottomTurnInfoLabel.setPosition(
+      endTurnX - 12,
+      bottomBarY + endTurnSize / 2,
+    );
+    this.endTurnButton.setPosition(endTurnX, bottomBarY);
+
+    // ── News ticker strip ──────────────────────────────────
+    const tickerY = L.gameHeight - L.hudTickerHeight;
+    this.tickerBg.setPosition(0, tickerY);
+    this.tickerBg.setSize(L.gameWidth, L.hudTickerHeight);
+    this.tickerBorder.setPosition(0, tickerY);
+    this.tickerBorder.setSize(L.gameWidth, 1);
+
+    // HorizontalNewsTicker has no setSize/setPosition API — destroy and
+    // recreate so the marquee mask + travel distance match the new strip.
+    this.newsTicker?.destroy();
+    this.newsTicker = new HorizontalNewsTicker(
+      this,
+      L.navSidebarWidth,
+      tickerY,
+      L.gameWidth - L.navSidebarWidth,
+      L.hudTickerHeight,
+    );
+    this.newsTicker.updateItems(this.buildTickerItems(gameStore.getState()));
+
+    // ── Adviser drawer (upper-right, anchored to right edge) ──
+    const advPanelW = 220;
+    const advTabW = 36;
+    const advPanelX = L.gameWidth - advTabW - advPanelW - 8;
+    const advPanelY = L.hudTopBarHeight + 8;
+    // TODO(setSize): AdviserPanel is a Container — reposition only.
+    this.adviserPanel.setPosition(advPanelX, advPanelY);
   }
 
   private maybeShowDilemma(): void {
@@ -981,7 +1105,7 @@ export class GameHUDScene extends Phaser.Scene {
     iconKey: string;
     tooltip: string;
     onClick: () => void;
-  }): void {
+  }): Phaser.GameObjects.Container {
     const L = getLayout();
     const theme = getTheme();
     const iconBtnSize = this.navIconButtonSize;
@@ -1023,6 +1147,8 @@ export class GameHUDScene extends Phaser.Scene {
     hit.on("pointerup", () => {
       opts.onClick();
     });
+
+    return container;
   }
 
   private toggleSettingsPanel(initialTab: "audio" | "save"): void {
