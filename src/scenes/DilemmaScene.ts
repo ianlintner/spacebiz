@@ -8,6 +8,7 @@ import {
   Label,
   ProgressBar,
   getLayout,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import { resolveChoiceEvent } from "../game/events/ChoiceEventResolver.ts";
 import { tagLabel } from "../game/events/SuccessFormula.ts";
@@ -161,6 +162,7 @@ function capitalize(s: string): string {
  * up front (frozen at fire-time) so they can make an informed choice.
  */
 export class DilemmaScene extends Phaser.Scene {
+  private solid!: Phaser.GameObjects.Rectangle;
   private overlay!: Phaser.GameObjects.Rectangle;
   private widgets: Phaser.GameObjects.GameObject[] = [];
   private currentEventId: string | null = null;
@@ -186,10 +188,10 @@ export class DilemmaScene extends Phaser.Scene {
     // belt-and-suspenders to the DOM hide above — kept so the modal still
     // has a defined background colour even if the canvas hide is bypassed
     // (e.g. transient resize churn).
-    const solid = this.add
+    this.solid = this.add
       .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 1)
       .setOrigin(0, 0);
-    solid.setDepth(-1);
+    this.solid.setDepth(-1);
 
     this.overlay = this.add
       .rectangle(
@@ -204,6 +206,18 @@ export class DilemmaScene extends Phaser.Scene {
       .setInteractive();
     this.overlay.setDepth(0);
 
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+
+    this.solid.setSize(L.gameWidth, L.gameHeight);
+    this.overlay.setSize(L.gameWidth, L.gameHeight);
+
+    // Dilemma content reads getLayout() at render time, so re-rendering it
+    // recenters the panel + reflows option cards for the new viewport.
     this.renderCurrentDilemma();
   }
 
