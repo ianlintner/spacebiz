@@ -11,6 +11,7 @@ import {
   createStarfield,
   MilestoneOverlay,
   getLayout,
+  attachReflowHandler,
 } from "../ui/index.ts";
 import { autoSave } from "../game/SaveManager.ts";
 import type { TurnResult } from "../data/types.ts";
@@ -39,7 +40,50 @@ function getTurnGrade(
   return { grade: "F", color: theme.colors.loss };
 }
 
+// Layout constants — see original commit for derivation rationale. The
+// numbers are reused inside relayout() so we declare them at module scope.
+const TR_GAP = 8;
+const TR_PL_H = 220;
+const TR_ROUTE_H = 152;
+const TR_AI_H = 152;
+const TR_BOTTOM_H = 72;
+const TR_PL_ROW_GAP = 20;
+
 export class TurnReportScene extends Phaser.Scene {
+  // Backdrop + structural panels.
+  private backdrop?: Phaser.GameObjects.Rectangle;
+  private portrait?: PortraitPanel;
+  private plPanel?: Panel;
+  private routePanel?: Panel;
+  private routeTableFrame?: ScrollFrame;
+  private routeTable?: DataTable;
+  private aiPanel?: Panel;
+  private aiTableFrame?: ScrollFrame;
+  private aiTable?: DataTable;
+  private marketPanel?: Panel;
+  private fuelLabel?: Phaser.GameObjects.Text;
+  private summaryLabel?: Phaser.GameObjects.Text;
+  private dipPanel?: Panel;
+  private dipPanelHeight = 0;
+  private dipLines: Phaser.GameObjects.Text[] = [];
+  private dipLineHeight = 18;
+
+  // P&L panel children (panel-relative coordinates).
+  private plLabelTexts: Phaser.GameObjects.Text[] = [];
+  private plValueTexts: Phaser.GameObjects.Text[] = [];
+  private plRowYs: number[] = [];
+  private plSepLine?: Phaser.GameObjects.Rectangle;
+  private plSepY = 0;
+  private plNetLabel?: Phaser.GameObjects.Text;
+  private plNetValue?: Phaser.GameObjects.Text;
+  private plNetRowY = 0;
+  private plGradeLabel?: Phaser.GameObjects.Text;
+  private plStreakBadge?: Phaser.GameObjects.Text;
+  private plStreakRowY = 0;
+
+  // Game-over button.
+  private resultsButton?: Button;
+
   constructor() {
     super({ key: "TurnReportScene" });
   }
@@ -49,28 +93,6 @@ export class TurnReportScene extends Phaser.Scene {
     const theme = getTheme();
     const state = gameStore.getState();
     getAudioDirector().setMusicState("report");
-
-    // Flow constants: budget = contentHeight (592px) − 3 × TR_GAP (24px) = 568px.
-    // Panel chrome (title bar 36 + bottom padding 8 + content top padding 8 = 52);
-    // DataTable header is 36px and each row 32px. Earlier sizes (104/86/132)
-    // could not fit even a single row + header inside their panel, so rows
-    // overflowed and visibly collided with the next section's title (e.g.
-    // "Deep Freight Lines §105,222 2 Active" landing on top of "Market
-    // Changes"). Current sizes:
-    //   - PL Panel:    192 → 140 content, fits 5 rows × 20 + separator + net.
-    //                  PL row spacing was tightened from 28 → 20 below.
-    //   - Top Routes:  152 → 100 content = header 36 + 2 rows × 32 exactly.
-    //   - Rival Snap:  152 → 100 content = header 36 + 2 rows × 32 exactly.
-    //   - Market:       72 →  20 content, fuel-price line only (cargo +
-    //                  passengers detail moved to the global ticker).
-    const TR_GAP = 8;
-    const TR_PL_H = 220;
-    const TR_ROUTE_H = 152;
-    const TR_AI_H = 152;
-    const TR_BOTTOM_H = 72;
-    const TR_ROUTE_Y = L.contentTop + TR_PL_H + TR_GAP;
-    const TR_AI_Y = TR_ROUTE_Y + TR_ROUTE_H + TR_GAP;
-    const TR_PL_ROW_GAP = 20; // tightened from 28 so 5 rows + separator + net fit
 
     const history = state.history;
     const lastTurn: TurnResult | undefined = history[history.length - 1];
@@ -95,7 +117,7 @@ export class TurnReportScene extends Phaser.Scene {
     });
 
     // Opaque scene backdrop — defensive backup if the DOM hide is bypassed.
-    this.add
+    this.backdrop = this.add
       .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 1)
       .setOrigin(0, 0)
       .setDepth(-200);
@@ -117,13 +139,13 @@ export class TurnReportScene extends Phaser.Scene {
     const netColor =
       lastTurn.netProfit >= 0 ? theme.colors.profit : theme.colors.loss;
 
-    const portrait = new PortraitPanel(this, {
+    this.portrait = new PortraitPanel(this, {
       x: L.sidebarLeft,
       y: L.contentTop,
       width: L.sidebarWidth,
       height: L.contentHeight,
     });
-    portrait.updatePortrait(
+    this.portrait.updatePortrait(
       "event",
       lastTurn.turn,
       "Quarter Complete",
@@ -143,14 +165,14 @@ export class TurnReportScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     // P&L Panel (top of main content area)
     // -----------------------------------------------------------------------
-    const plPanel = new Panel(this, {
+    this.plPanel = new Panel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,
       height: TR_PL_H,
       title: "Quarter Summary",
     });
-    const plContent = plPanel.getContentArea();
+    const plContent = this.plPanel.getContentArea();
 
     const plRows: Array<{ label: string; value: string; color: number }> = [
       {
@@ -205,7 +227,8 @@ export class TurnReportScene extends Phaser.Scene {
           color: colorToString(theme.colors.text),
         })
         .setAlpha(0);
-      plPanel.add(labelText);
+      this.plPanel.add(labelText);
+      this.plLabelTexts.push(labelText);
 
       const valueText = this.add
         .text(plContent.x + plContent.width - 8, rowY, row.value, {
@@ -215,7 +238,9 @@ export class TurnReportScene extends Phaser.Scene {
         })
         .setOrigin(1, 0)
         .setAlpha(0);
-      plPanel.add(valueText);
+      this.plPanel.add(valueText);
+      this.plValueTexts.push(valueText);
+      this.plRowYs.push(rowY);
 
       // Stagger-in: slide from left + fade
       this.tweens.add({
@@ -235,31 +260,34 @@ export class TurnReportScene extends Phaser.Scene {
     }
 
     // Separator line
-    const sepLine = this.add
+    this.plSepY = rowY + 4;
+    this.plSepLine = this.add
       .rectangle(
         plContent.x + 8,
-        rowY + 4,
+        this.plSepY,
         plContent.width - 16,
         1,
         theme.colors.panelBorder,
       )
-      .setAlpha(0.5);
-    plPanel.add(sepLine);
+      .setAlpha(0.5)
+      .setOrigin(0, 0.5);
+    this.plPanel.add(this.plSepLine);
     rowY += 12;
 
     // Net profit row — animated counter
+    this.plNetRowY = rowY;
     const plNetColor =
       lastTurn.netProfit >= 0 ? theme.colors.profit : theme.colors.loss;
-    const netLabel = this.add
+    this.plNetLabel = this.add
       .text(plContent.x + 8, rowY, "Net Profit", {
         fontSize: `${theme.fonts.body.size}px`,
         fontFamily: theme.fonts.body.family,
         color: colorToString(theme.colors.text),
       })
       .setAlpha(0);
-    plPanel.add(netLabel);
+    this.plPanel.add(this.plNetLabel);
 
-    const netValue = this.add
+    this.plNetValue = this.add
       .text(plContent.x + plContent.width - 8, rowY, formatCash(0), {
         fontSize: `${theme.fonts.value.size}px`,
         fontFamily: theme.fonts.value.family,
@@ -267,12 +295,13 @@ export class TurnReportScene extends Phaser.Scene {
       })
       .setOrigin(1, 0)
       .setAlpha(0);
-    plPanel.add(netValue);
+    this.plPanel.add(this.plNetValue);
+    const netValue = this.plNetValue;
 
     // Fade in the net row after the P&L rows have appeared
     const netRevealDelay = plRows.length * 90 + 80;
     this.tweens.add({
-      targets: [netLabel, netValue],
+      targets: [this.plNetLabel, netValue],
       alpha: 1,
       duration: 260,
       delay: netRevealDelay,
@@ -310,7 +339,7 @@ export class TurnReportScene extends Phaser.Scene {
       lastTurn.revenue,
     );
     const titleBarH = theme.panel.titleHeight;
-    const gradeLabel = this.add
+    this.plGradeLabel = this.add
       .text(L.mainContentWidth - theme.spacing.md, titleBarH / 2, grade, {
         fontSize: "24px",
         fontFamily: theme.fonts.heading.family,
@@ -322,9 +351,9 @@ export class TurnReportScene extends Phaser.Scene {
       .setOrigin(1, 0.5)
       .setAlpha(0)
       .setScale(1.5);
-    plPanel.add(gradeLabel);
+    this.plPanel.add(this.plGradeLabel);
     this.tweens.add({
-      targets: gradeLabel,
+      targets: this.plGradeLabel,
       alpha: 0.85,
       scaleX: 1,
       scaleY: 1,
@@ -339,10 +368,11 @@ export class TurnReportScene extends Phaser.Scene {
     const streakTurns = state.storyteller.consecutiveProfitTurns;
     if (streakTurns >= 2) {
       const streakText = `\uD83D\uDD25 ${streakTurns}-Turn Streak!`;
-      const streakBadge = this.add
+      this.plStreakRowY = rowY + theme.fonts.value.size + 8;
+      this.plStreakBadge = this.add
         .text(
           plContent.x + plContent.width / 2,
-          rowY + theme.fonts.value.size + 8,
+          this.plStreakRowY,
           streakText,
           {
             fontSize: `${theme.fonts.caption.size}px`,
@@ -354,9 +384,9 @@ export class TurnReportScene extends Phaser.Scene {
         )
         .setOrigin(0.5, 0)
         .setAlpha(0);
-      plPanel.add(streakBadge);
+      this.plPanel.add(this.plStreakBadge);
       this.tweens.add({
-        targets: streakBadge,
+        targets: this.plStreakBadge,
         alpha: 1,
         y: `+=0`,
         duration: 280,
@@ -420,21 +450,22 @@ export class TurnReportScene extends Phaser.Scene {
       routeLabelMap.set(route.id, `${originName} > ${destName}`);
     }
 
-    new Panel(this, {
+    const routeY = L.contentTop + TR_PL_H + TR_GAP;
+    this.routePanel = new Panel(this, {
       x: L.mainContentLeft,
-      y: TR_ROUTE_Y,
+      y: routeY,
       width: L.mainContentWidth,
       height: TR_ROUTE_H,
       title: "Top Routes",
     });
 
-    const routeTableFrame = new ScrollFrame(this, {
+    this.routeTableFrame = new ScrollFrame(this, {
       x: L.mainContentLeft + 10,
-      y: TR_ROUTE_Y + 38,
+      y: routeY + 38,
       width: L.mainContentWidth - 20,
       height: TR_ROUTE_H - 44,
     });
-    const routeTable = new DataTable(this, {
+    this.routeTable = new DataTable(this, {
       x: 0,
       y: 0,
       width: L.mainContentWidth - 20,
@@ -483,29 +514,30 @@ export class TurnReportScene extends Phaser.Scene {
       }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 2);
-    routeTableFrame.setContent(routeTable);
-    routeTable.setRows(routeRows);
+    this.routeTableFrame.setContent(this.routeTable);
+    this.routeTable.setRows(routeRows);
 
     // -----------------------------------------------------------------------
     // AI Rivals Summary (below route performance)
     // -----------------------------------------------------------------------
     const aiSummaries = lastTurn.aiSummaries ?? [];
+    const aiY = routeY + TR_ROUTE_H + TR_GAP;
     if (aiSummaries.length > 0) {
-      new Panel(this, {
+      this.aiPanel = new Panel(this, {
         x: L.mainContentLeft,
-        y: TR_AI_Y,
+        y: aiY,
         width: L.mainContentWidth,
         height: TR_AI_H,
         title: "Rival Snapshot",
       });
 
-      const aiTableFrame = new ScrollFrame(this, {
+      this.aiTableFrame = new ScrollFrame(this, {
         x: L.mainContentLeft + 10,
-        y: TR_AI_Y + 38,
+        y: aiY + 38,
         width: L.mainContentWidth - 20,
         height: TR_AI_H - 44,
       });
-      const aiTable = new DataTable(this, {
+      this.aiTable = new DataTable(this, {
         x: 0,
         y: 0,
         width: L.mainContentWidth - 20,
@@ -546,41 +578,35 @@ export class TurnReportScene extends Phaser.Scene {
         }))
         .sort((a, b) => b.cash - a.cash)
         .slice(0, 2);
-      aiTableFrame.setContent(aiTable);
-      aiTable.setRows(aiRows);
+      this.aiTableFrame.setContent(this.aiTable);
+      this.aiTable.setRows(aiRows);
     }
 
     // -----------------------------------------------------------------------
     // Bottom row: Market Changes (full width — ticker moved to global HUD)
     // -----------------------------------------------------------------------
-    const bottomY =
-      aiSummaries.length > 0 ? TR_AI_Y + TR_AI_H + TR_GAP : TR_AI_Y;
+    const bottomY = aiSummaries.length > 0 ? aiY + TR_AI_H + TR_GAP : aiY;
 
-    const marketPanel = new Panel(this, {
+    this.marketPanel = new Panel(this, {
       x: L.mainContentLeft,
       y: bottomY,
       width: L.mainContentWidth,
       height: TR_BOTTOM_H,
       title: "Market Changes",
     });
-    const mpContent = marketPanel.getContentArea();
+    const mpContent = this.marketPanel.getContentArea();
 
     // Fuel price (left) + cargo/passenger totals as a single inline summary
     // line (right). Earlier the cargo grid + passengers stretched the panel
     // beyond its 72px height — they now condense into a single caption that
     // fits the available content area.
     const fuelText = `Fuel price: ${formatCash(state.market.fuelPrice)} (${state.market.fuelTrend})`;
-    const fuelLabel = this.add.text(
-      mpContent.x + 8,
-      mpContent.y + 4,
-      fuelText,
-      {
-        fontSize: `${theme.fonts.body.size}px`,
-        fontFamily: theme.fonts.body.family,
-        color: colorToString(theme.colors.text),
-      },
-    );
-    marketPanel.add(fuelLabel);
+    this.fuelLabel = this.add.text(mpContent.x + 8, mpContent.y + 4, fuelText, {
+      fontSize: `${theme.fonts.body.size}px`,
+      fontFamily: theme.fonts.body.family,
+      color: colorToString(theme.colors.text),
+    });
+    this.marketPanel.add(this.fuelLabel);
 
     const cargoEntries = Object.entries(lastTurn.cargoDelivered)
       .filter(([, amount]) => amount > 0)
@@ -603,7 +629,7 @@ export class TurnReportScene extends Phaser.Scene {
       );
     }
     if (summaryParts.length > 0) {
-      const summaryLabel = this.add.text(
+      this.summaryLabel = this.add.text(
         mpContent.x + mpContent.width - 8,
         mpContent.y + 4,
         summaryParts.join("  ·  "),
@@ -613,8 +639,8 @@ export class TurnReportScene extends Phaser.Scene {
           color: colorToString(theme.colors.textDim),
         },
       );
-      summaryLabel.setOrigin(1, 0);
-      marketPanel.add(summaryLabel);
+      this.summaryLabel.setOrigin(1, 0);
+      this.marketPanel.add(this.summaryLabel);
     }
 
     // -----------------------------------------------------------------------
@@ -624,24 +650,25 @@ export class TurnReportScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     const diplomacyDigest = state.turnReport?.diplomacyDigest ?? [];
     if (diplomacyDigest.length > 0) {
-      const dipLineHeight = 18;
-      const dipPanelHeight = Math.max(
+      this.dipLineHeight = 18;
+      this.dipPanelHeight = Math.max(
         56,
-        38 + diplomacyDigest.length * dipLineHeight + 8,
+        38 + diplomacyDigest.length * this.dipLineHeight + 8,
       );
       const dipY = bottomY + TR_BOTTOM_H + TR_GAP;
-      const dipPanel = new Panel(this, {
+      this.dipPanel = new Panel(this, {
         x: L.mainContentLeft,
         y: dipY,
         width: L.mainContentWidth,
-        height: dipPanelHeight,
+        height: this.dipPanelHeight,
         title: "Diplomatic Activity",
       });
+      const dipPanel = this.dipPanel;
       const dipContent = dipPanel.getContentArea();
       diplomacyDigest.forEach((line, idx) => {
         const lineLabel = this.add.text(
           dipContent.x + 8,
-          dipContent.y + 4 + idx * dipLineHeight,
+          dipContent.y + 4 + idx * this.dipLineHeight,
           `• ${line}`,
           {
             fontSize: `${theme.fonts.body.size}px`,
@@ -650,6 +677,7 @@ export class TurnReportScene extends Phaser.Scene {
           },
         );
         dipPanel.add(lineLabel);
+        this.dipLines.push(lineLabel);
       });
     }
 
@@ -660,7 +688,7 @@ export class TurnReportScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     if (state.gameOver) {
       const btnY = bottomY + TR_BOTTOM_H + TR_GAP;
-      new Button(this, {
+      this.resultsButton = new Button(this, {
         x: L.gameWidth / 2 - 80,
         y: btnY,
         width: 160,
@@ -675,6 +703,118 @@ export class TurnReportScene extends Phaser.Scene {
       if (state.phase !== "planning") {
         gameStore.update({ phase: "planning" });
       }
+    }
+
+    this.relayout();
+    attachReflowHandler(this, () => this.relayout());
+  }
+
+  private relayout(): void {
+    const L = getLayout();
+    const theme = getTheme();
+
+    // Backdrop covers the full canvas.
+    this.backdrop?.setPosition(0, 0).setSize(L.gameWidth, L.gameHeight);
+
+    // TODO(setSize): createStarfield is reposition-only; it builds emitters
+    // sized to the canvas at create() time. Resize is not a supported op.
+
+    // Sidebar portrait — setPosition before setSize.
+    this.portrait?.setPosition(L.sidebarLeft, L.contentTop);
+    this.portrait?.setSize(L.sidebarWidth, L.contentHeight);
+
+    // P&L panel.
+    if (this.plPanel) {
+      this.plPanel.setPosition(L.mainContentLeft, L.contentTop);
+      this.plPanel.setSize(L.mainContentWidth, TR_PL_H);
+      const plContent = this.plPanel.getContentArea();
+
+      // Reposition row label/value pairs (panel-relative coords).
+      for (let i = 0; i < this.plLabelTexts.length; i++) {
+        const y = this.plRowYs[i];
+        this.plLabelTexts[i].setPosition(plContent.x + 8, y);
+        this.plValueTexts[i].setPosition(plContent.x + plContent.width - 8, y);
+      }
+
+      // Separator line — re-anchor x and stretch to new content width.
+      this.plSepLine?.setPosition(plContent.x + 8, this.plSepY);
+      this.plSepLine?.setSize(plContent.width - 16, 1);
+
+      // Net profit row.
+      this.plNetLabel?.setPosition(plContent.x + 8, this.plNetRowY);
+      this.plNetValue?.setPosition(
+        plContent.x + plContent.width - 8,
+        this.plNetRowY,
+      );
+
+      // Grade badge sits in the panel title bar (panel-relative coords).
+      this.plGradeLabel?.setPosition(
+        L.mainContentWidth - theme.spacing.md,
+        theme.panel.titleHeight / 2,
+      );
+
+      // Streak badge centered on content.
+      this.plStreakBadge?.setPosition(
+        plContent.x + plContent.width / 2,
+        this.plStreakRowY,
+      );
+    }
+
+    // Top Routes panel + table.
+    const routeY = L.contentTop + TR_PL_H + TR_GAP;
+    if (this.routePanel) {
+      this.routePanel.setPosition(L.mainContentLeft, routeY);
+      this.routePanel.setSize(L.mainContentWidth, TR_ROUTE_H);
+    }
+    if (this.routeTableFrame) {
+      this.routeTableFrame.setPosition(L.mainContentLeft + 10, routeY + 38);
+      this.routeTableFrame.setSize(L.mainContentWidth - 20, TR_ROUTE_H - 44);
+    }
+    this.routeTable?.setSize(L.mainContentWidth - 20, TR_ROUTE_H - 44);
+
+    // Rival Snapshot panel + table (optional).
+    const aiY = routeY + TR_ROUTE_H + TR_GAP;
+    if (this.aiPanel) {
+      this.aiPanel.setPosition(L.mainContentLeft, aiY);
+      this.aiPanel.setSize(L.mainContentWidth, TR_AI_H);
+    }
+    if (this.aiTableFrame) {
+      this.aiTableFrame.setPosition(L.mainContentLeft + 10, aiY + 38);
+      this.aiTableFrame.setSize(L.mainContentWidth - 20, TR_AI_H - 44);
+    }
+    this.aiTable?.setSize(L.mainContentWidth - 20, TR_AI_H - 44);
+
+    // Market Changes panel.
+    const bottomY = this.aiPanel ? aiY + TR_AI_H + TR_GAP : aiY;
+    if (this.marketPanel) {
+      this.marketPanel.setPosition(L.mainContentLeft, bottomY);
+      this.marketPanel.setSize(L.mainContentWidth, TR_BOTTOM_H);
+      const mpContent = this.marketPanel.getContentArea();
+      this.fuelLabel?.setPosition(mpContent.x + 8, mpContent.y + 4);
+      this.summaryLabel?.setPosition(
+        mpContent.x + mpContent.width - 8,
+        mpContent.y + 4,
+      );
+    }
+
+    // Diplomatic Activity panel (optional).
+    if (this.dipPanel) {
+      const dipY = bottomY + TR_BOTTOM_H + TR_GAP;
+      this.dipPanel.setPosition(L.mainContentLeft, dipY);
+      this.dipPanel.setSize(L.mainContentWidth, this.dipPanelHeight);
+      const dipContent = this.dipPanel.getContentArea();
+      for (let i = 0; i < this.dipLines.length; i++) {
+        this.dipLines[i].setPosition(
+          dipContent.x + 8,
+          dipContent.y + 4 + i * this.dipLineHeight,
+        );
+      }
+    }
+
+    // Game-over button.
+    if (this.resultsButton) {
+      const btnY = bottomY + TR_BOTTOM_H + TR_GAP;
+      this.resultsButton.setPosition(L.gameWidth / 2 - 80, btnY);
     }
   }
 }
