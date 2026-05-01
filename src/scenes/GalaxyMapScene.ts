@@ -302,17 +302,17 @@ export class GalaxyMapScene extends Phaser.Scene {
 
   /**
    * Re-flow the 2D overlay chrome on canvas resize. The 3D viewport rect is
-   * updated via `view3D.setViewport`; the underlying Three.js renderer/camera
-   * keeps its design dimensions and is not resized here.
-   * TODO(3d-resize): wire renderer.setSize + camera aspect when the canvas
-   * dimensions themselves change (out of scope for this pass).
+   * updated via `view3D.setViewport`, and the underlying Three.js
+   * renderer/camera is resized via `view3D.setSize` so the WebGL drawing
+   * buffer matches the new host-canvas dimensions.
    */
   private relayout(): void {
     const L = getLayout();
 
-    // 3D viewport rect (overlay-side only).
+    // 3D viewport rect (overlay-side) + WebGL drawing buffer + camera aspect.
     this.vizRect = this.computeVizRect(L);
     this.view3D?.setViewport(this.vizRect);
+    this.view3D?.setSize(L.gameWidth, L.gameHeight);
 
     // HUD overlay strip.
     const hudLabelTop = L.contentTop + 18;

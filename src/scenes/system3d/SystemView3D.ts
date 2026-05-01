@@ -10,6 +10,7 @@ import {
   planetPositionAtTurn,
   type Vec3,
 } from "../../game/system/OrbitalMechanics.ts";
+import { applyView3DResize } from "../view3d/applyView3DResize.ts";
 
 const PLANET_BASE_COLORS: Record<PlanetType, number> = {
   terran: 0x4b86d6,
@@ -73,8 +74,11 @@ export class SystemView3D {
   private routes: ActiveRoute[] = [];
 
   private readonly phaserCanvas: HTMLCanvasElement;
-  private readonly designWidth: number;
-  private readonly designHeight: number;
+  // Drawing-buffer size of the WebGL canvas. Initialized from the design
+  // dimensions and updated by `setSize` whenever the host canvas resizes so
+  // the scissor/viewport math in `render()` stays in canvas-pixel space.
+  private designWidth: number;
+  private designHeight: number;
 
   private rafId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -167,6 +171,18 @@ export class SystemView3D {
 
   setViewport(rect: ViewportRect): void {
     this.viewport = rect;
+  }
+
+  /**
+   * Resize the WebGL drawing buffer + camera projection to match the new
+   * host-canvas dimensions. The third arg to renderer.setSize is `false` so
+   * Three.js leaves the canvas's CSS size alone — `syncCanvasPosition` already
+   * mirrors the Phaser canvas's offset/size via inline styles.
+   */
+  setSize(width: number, height: number): void {
+    this.designWidth = width;
+    this.designHeight = height;
+    applyView3DResize(this.renderer, this.camera, width, height);
   }
 
   setSystem(

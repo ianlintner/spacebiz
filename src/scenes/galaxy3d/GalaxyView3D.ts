@@ -6,6 +6,7 @@ import type {
   StarSystem,
 } from "../../data/types.ts";
 import type { RouteTrafficVisual } from "../../game/routes/RouteManager.ts";
+import { applyView3DResize } from "../view3d/applyView3DResize.ts";
 
 /**
  * Three.js controller for the 3D galaxy view. Renders star systems as glowing
@@ -101,8 +102,12 @@ export class GalaxyView3D {
   private viewport: ViewportRect = { x: 0, y: 0, w: 0, h: 0 };
 
   private readonly phaserCanvas: HTMLCanvasElement;
-  private readonly designWidth: number;
-  private readonly designHeight: number;
+  // Drawing-buffer size of the WebGL canvas. Initialized from the design
+  // dimensions and then updated by `setSize` whenever the host canvas resizes
+  // so the renderer scissor/viewport math in `render()` stays in canvas-pixel
+  // space and the 3D viewport never gets clipped or stretched.
+  private designWidth: number;
+  private designHeight: number;
 
   private rafId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -192,6 +197,21 @@ export class GalaxyView3D {
 
   setViewport(rect: ViewportRect): void {
     this.viewport = rect;
+  }
+
+  /**
+   * Resize the WebGL drawing buffer + camera projection to match the new
+   * host-canvas dimensions. The third arg to renderer.setSize is `false` so
+   * Three.js leaves the canvas's CSS size alone — `syncCanvasPosition` already
+   * mirrors the Phaser canvas's offset/size via inline styles, and we don't
+   * want WebGLRenderer to fight that. After this call the scissor/viewport
+   * math in `render()` (which references designWidth/designHeight) stays in
+   * sync with the actual drawing buffer.
+   */
+  setSize(width: number, height: number): void {
+    this.designWidth = width;
+    this.designHeight = height;
+    applyView3DResize(this.renderer, this.camera, width, height);
   }
 
   setGalaxy(
