@@ -63,8 +63,6 @@ export class TurnReportScene extends Phaser.Scene {
   private marketPanel?: Panel;
   private fuelLabel?: Phaser.GameObjects.Text;
   private summaryLabel?: Phaser.GameObjects.Text;
-  private dipPanel?: Panel;
-  private dipPanelHeight = 0;
   private dipLines: Phaser.GameObjects.Text[] = [];
   private dipLineHeight = 18;
 
@@ -83,7 +81,6 @@ export class TurnReportScene extends Phaser.Scene {
 
   // Tab state.
   private activeTab: TRTab = "financials";
-  private tabStrip?: Phaser.GameObjects.Container;
   private tabBgs: Partial<Record<TRTab, Phaser.GameObjects.Rectangle>> = {};
   private tabLabels: Partial<Record<TRTab, Phaser.GameObjects.Text>> = {};
 
@@ -619,32 +616,16 @@ export class TurnReportScene extends Phaser.Scene {
       this.marketPanel.add(this.summaryLabel);
     }
 
-    // -----------------------------------------------------------------------
-    // Diplomatic Activity (renders only when the simulator produced digest
-    // entries this turn). Wave 1 surfaces a simple bulleted list; richer
-    // formatting (icons, click-throughs to standing changes) ships in wave 2.
-    // -----------------------------------------------------------------------
+    // Diplomatic Activity lives inside the World tab (below Market Changes).
     const diplomacyDigest = state.turnReport?.diplomacyDigest ?? [];
     if (diplomacyDigest.length > 0) {
+      const mpContent = this.marketPanel!.getContentArea();
+      const dipStartY = mpContent.y + 48; // below fuel/cargo lines
       this.dipLineHeight = 18;
-      this.dipPanelHeight = Math.max(
-        56,
-        38 + diplomacyDigest.length * this.dipLineHeight + 8,
-      );
-      const dipY = bottomY + TR_BOTTOM_H + TR_GAP;
-      this.dipPanel = new Panel(this, {
-        x: L.mainContentLeft,
-        y: dipY,
-        width: L.mainContentWidth,
-        height: this.dipPanelHeight,
-        title: "Diplomatic Activity",
-      });
-      const dipPanel = this.dipPanel;
-      const dipContent = dipPanel.getContentArea();
       diplomacyDigest.forEach((line, idx) => {
         const lineLabel = this.add.text(
-          dipContent.x + 8,
-          dipContent.y + 4 + idx * this.dipLineHeight,
+          mpContent.x + 8,
+          dipStartY + idx * this.dipLineHeight,
           `• ${line}`,
           {
             fontSize: `${theme.fonts.body.size}px`,
@@ -652,21 +633,23 @@ export class TurnReportScene extends Phaser.Scene {
             color: colorToString(theme.colors.text),
           },
         );
-        dipPanel.add(lineLabel);
+        this.marketPanel!.add(lineLabel);
         this.dipLines.push(lineLabel);
       });
     }
 
+    // ── Tab strip ────────────────────────────────────────────────────────────
+    this.buildTabStrip(L.mainContentLeft, L.contentTop, L.mainContentWidth);
+    this.setActiveTab("financials");
+
     // -----------------------------------------------------------------------
-    // Quarter summary is non-blocking — players can navigate freely while it
-    // is open, and the persistent End Quarter button in the HUD advances the
-    // turn when they're ready. The only forced flow is GameOver.
+    // Quarter summary is non-blocking — players can navigate freely.
+    // The only forced flow is GameOver (View Results button).
     // -----------------------------------------------------------------------
     if (state.gameOver) {
-      const btnY = bottomY + TR_BOTTOM_H + TR_GAP;
       this.resultsButton = new Button(this, {
         x: L.gameWidth / 2 - 80,
-        y: btnY,
+        y: panelY + panelH + 8,
         width: 160,
         height: 40,
         label: "View Results",
@@ -675,7 +658,6 @@ export class TurnReportScene extends Phaser.Scene {
         },
       });
     } else {
-      // Ensure the rest of the HUD is unlocked for browsing.
       if (state.phase !== "planning") {
         gameStore.update({ phase: "planning" });
       }
@@ -683,6 +665,99 @@ export class TurnReportScene extends Phaser.Scene {
 
     this.relayout();
     attachReflowHandler(this, () => this.relayout());
+  }
+
+  private buildTabStrip(x: number, y: number, width: number): void {
+    const theme = getTheme();
+    const tabs: Array<{ id: TRTab; label: string }> = [
+      { id: "financials", label: "Financials" },
+      { id: "routes", label: "Routes" },
+      { id: "rivals", label: "Rivals" },
+      { id: "world", label: "World" },
+    ];
+    const tabW = Math.floor(width / tabs.length);
+
+    const strip = this.add.container(x, y);
+
+    const stripBg = this.add
+      .rectangle(0, 0, width, TR_TAB_H, theme.colors.headerBg, 0.9)
+      .setOrigin(0, 0);
+    strip.add(stripBg);
+
+    tabs.forEach(({ id, label }, i) => {
+      const tx = i * tabW;
+      const isActive = id === this.activeTab;
+
+      const bg = this.add
+        .rectangle(
+          tx,
+          0,
+          tabW,
+          TR_TAB_H,
+          isActive ? theme.colors.panelBg : theme.colors.headerBg,
+          isActive ? 1 : 0.6,
+        )
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true });
+
+      const indicator = this.add
+        .rectangle(tx, TR_TAB_H - 2, tabW, 2, theme.colors.accent)
+        .setOrigin(0, 0)
+        .setVisible(isActive);
+
+      const text = this.add
+        .text(tx + tabW / 2, TR_TAB_H / 2, label, {
+          fontSize: `${theme.fonts.caption.size}px`,
+          fontFamily: theme.fonts.caption.family,
+          color: colorToString(
+            isActive ? theme.colors.accent : theme.colors.textDim,
+          ),
+        })
+        .setOrigin(0.5, 0.5);
+
+      bg.on("pointerover", () => {
+        if (id !== this.activeTab) bg.setFillStyle(theme.colors.buttonHover);
+      });
+      bg.on("pointerout", () => {
+        if (id !== this.activeTab) {
+          bg.setFillStyle(theme.colors.headerBg);
+          bg.setAlpha(0.6);
+        }
+      });
+      bg.on("pointerup", () => this.setActiveTab(id));
+
+      this.tabBgs[id] = bg;
+      this.tabLabels[id] = text;
+      strip.add([bg, indicator, text]);
+    });
+  }
+
+  private setActiveTab(tab: TRTab): void {
+    const theme = getTheme();
+    this.activeTab = tab;
+
+    this.plPanel?.setVisible(tab === "financials");
+    this.routePanel?.setVisible(tab === "routes");
+    this.routeTableFrame?.setVisible(tab === "routes");
+    this.aiPanel?.setVisible(tab === "rivals");
+    this.aiTableFrame?.setVisible(tab === "rivals");
+    this.marketPanel?.setVisible(tab === "world");
+
+    // Update tab button highlight.
+    for (const [id, bg] of Object.entries(this.tabBgs) as Array<
+      [TRTab, Phaser.GameObjects.Rectangle]
+    >) {
+      const active = id === tab;
+      bg.setFillStyle(active ? theme.colors.panelBg : theme.colors.headerBg);
+      bg.setAlpha(active ? 1 : 0.6);
+    }
+    for (const [id, label] of Object.entries(this.tabLabels) as Array<
+      [TRTab, Phaser.GameObjects.Text]
+    >) {
+      label.setColor(
+        colorToString(id === tab ? theme.colors.accent : theme.colors.textDim),
+      );
+    }
   }
 
   private relayout(): void {
@@ -701,72 +776,64 @@ export class TurnReportScene extends Phaser.Scene {
     this.portrait?.setPosition(L.sidebarLeft, L.contentTop);
     this.portrait?.setSize(L.sidebarWidth, L.contentHeight);
 
-    // P&L panel.
+    // All tab panels share the same position — only one is visible at a time.
+    const panelY = L.contentTop + TR_TAB_H;
+    const panelH = L.contentHeight - TR_TAB_H;
+
+    // Financials panel.
     if (this.plPanel) {
-      this.plPanel.setPosition(L.mainContentLeft, L.contentTop);
-      this.plPanel.setSize(L.mainContentWidth, TR_PL_H);
+      this.plPanel.setPosition(L.mainContentLeft, panelY);
+      this.plPanel.setSize(L.mainContentWidth, panelH);
       const plContent = this.plPanel.getContentArea();
 
-      // Reposition row label/value pairs (panel-relative coords).
       for (let i = 0; i < this.plLabelTexts.length; i++) {
         const y = this.plRowYs[i];
         this.plLabelTexts[i].setPosition(plContent.x + 8, y);
         this.plValueTexts[i].setPosition(plContent.x + plContent.width - 8, y);
       }
-
-      // Separator line — re-anchor x and stretch to new content width.
       this.plSepLine?.setPosition(plContent.x + 8, this.plSepY);
       this.plSepLine?.setSize(plContent.width - 16, 1);
-
-      // Net profit row.
       this.plNetLabel?.setPosition(plContent.x + 8, this.plNetRowY);
       this.plNetValue?.setPosition(
         plContent.x + plContent.width - 8,
         this.plNetRowY,
       );
-
-      // Grade badge sits in the panel title bar (panel-relative coords).
       this.plGradeLabel?.setPosition(
         L.mainContentWidth - theme.spacing.md,
         theme.panel.titleHeight / 2,
       );
-
-      // Streak badge centered on content.
       this.plStreakBadge?.setPosition(
         plContent.x + plContent.width / 2,
         this.plStreakRowY,
       );
     }
 
-    // Top Routes panel + table.
-    const routeY = L.contentTop + TR_PL_H + TR_GAP;
+    // Routes panel + table.
     if (this.routePanel) {
-      this.routePanel.setPosition(L.mainContentLeft, routeY);
-      this.routePanel.setSize(L.mainContentWidth, TR_ROUTE_H);
+      this.routePanel.setPosition(L.mainContentLeft, panelY);
+      this.routePanel.setSize(L.mainContentWidth, panelH);
     }
     if (this.routeTableFrame) {
-      this.routeTableFrame.setPosition(L.mainContentLeft + 10, routeY + 38);
-      this.routeTableFrame.setSize(L.mainContentWidth - 20, TR_ROUTE_H - 44);
+      this.routeTableFrame.setPosition(L.mainContentLeft + 10, panelY + 38);
+      this.routeTableFrame.setSize(L.mainContentWidth - 20, panelH - 44);
     }
-    this.routeTable?.setSize(L.mainContentWidth - 20, TR_ROUTE_H - 44);
+    this.routeTable?.setSize(L.mainContentWidth - 20, panelH - 44);
 
-    // Rival Snapshot panel + table (optional).
-    const aiY = routeY + TR_ROUTE_H + TR_GAP;
+    // Rivals panel + table.
     if (this.aiPanel) {
-      this.aiPanel.setPosition(L.mainContentLeft, aiY);
-      this.aiPanel.setSize(L.mainContentWidth, TR_AI_H);
+      this.aiPanel.setPosition(L.mainContentLeft, panelY);
+      this.aiPanel.setSize(L.mainContentWidth, panelH);
     }
     if (this.aiTableFrame) {
-      this.aiTableFrame.setPosition(L.mainContentLeft + 10, aiY + 38);
-      this.aiTableFrame.setSize(L.mainContentWidth - 20, TR_AI_H - 44);
+      this.aiTableFrame.setPosition(L.mainContentLeft + 10, panelY + 38);
+      this.aiTableFrame.setSize(L.mainContentWidth - 20, panelH - 44);
     }
-    this.aiTable?.setSize(L.mainContentWidth - 20, TR_AI_H - 44);
+    this.aiTable?.setSize(L.mainContentWidth - 20, panelH - 44);
 
-    // Market Changes panel.
-    const bottomY = this.aiPanel ? aiY + TR_AI_H + TR_GAP : aiY;
+    // World panel (Market Changes + Diplomacy lines inline).
     if (this.marketPanel) {
-      this.marketPanel.setPosition(L.mainContentLeft, bottomY);
-      this.marketPanel.setSize(L.mainContentWidth, TR_BOTTOM_H);
+      this.marketPanel.setPosition(L.mainContentLeft, panelY);
+      this.marketPanel.setSize(L.mainContentWidth, panelH);
       const mpContent = this.marketPanel.getContentArea();
       this.fuelLabel?.setPosition(mpContent.x + 8, mpContent.y + 4);
       this.summaryLabel?.setPosition(
@@ -775,24 +842,7 @@ export class TurnReportScene extends Phaser.Scene {
       );
     }
 
-    // Diplomatic Activity panel (optional).
-    if (this.dipPanel) {
-      const dipY = bottomY + TR_BOTTOM_H + TR_GAP;
-      this.dipPanel.setPosition(L.mainContentLeft, dipY);
-      this.dipPanel.setSize(L.mainContentWidth, this.dipPanelHeight);
-      const dipContent = this.dipPanel.getContentArea();
-      for (let i = 0; i < this.dipLines.length; i++) {
-        this.dipLines[i].setPosition(
-          dipContent.x + 8,
-          dipContent.y + 4 + i * this.dipLineHeight,
-        );
-      }
-    }
-
-    // Game-over button.
-    if (this.resultsButton) {
-      const btnY = bottomY + TR_BOTTOM_H + TR_GAP;
-      this.resultsButton.setPosition(L.gameWidth / 2 - 80, btnY);
-    }
+    // Game-over button (below active panel).
+    this.resultsButton?.setPosition(L.gameWidth / 2 - 80, panelY + panelH + 8);
   }
 }

@@ -56,6 +56,10 @@ import {
 import { generateTurnMessages } from "../adviser/AdviserEngine.ts";
 import { simulateAITurns } from "../ai/AISimulator.ts";
 import { processContracts } from "../contracts/ContractManager.ts";
+import {
+  expireAvailableContracts,
+  generateContracts,
+} from "../contracts/ContractGenerator.ts";
 import { calculateRPPerTurn, processResearch } from "../tech/TechTree.ts";
 import {
   getMaintenanceMultiplier,
@@ -76,6 +80,8 @@ import { computeReputationTier } from "../reputation/ReputationEffects.ts";
 import { processQueuedDiplomacyActions } from "../diplomacy/DiplomacyResolver.ts";
 import { selectDiplomacyOffer } from "../diplomacy/DiplomacyAI.ts";
 import { tickDiplomacyState } from "../diplomacy/DiplomacyTick.ts";
+
+const MAX_TURN_REPORT_WORLD_LINES = 8;
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -333,6 +339,21 @@ function checkBankruptcy(
   return insufficientAssets && turnsInDebt >= 2;
 }
 
+function appendTurnReportLines(state: GameState, lines: string[]): GameState {
+  if (lines.length === 0) return state;
+  const prevDigest =
+    (state.turnReport?.diplomacyDigest as string[] | undefined) ?? [];
+  return {
+    ...state,
+    turnReport: {
+      ...(state.turnReport ?? {}),
+      diplomacyDigest: [...prevDigest, ...lines].slice(
+        -MAX_TURN_REPORT_WORLD_LINES,
+      ),
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Main simulation function
 // ---------------------------------------------------------------------------
@@ -342,7 +363,7 @@ function checkBankruptcy(
  * without mutating the input.
  */
 export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
-  let nextState = { ...state };
+  let nextState: GameState = { ...state, turnReport: {} };
 
   // ----- Step 1 & 2: Route simulation (revenue, fuel, breakdowns) -----
   let totalRevenue = 0;
@@ -588,7 +609,26 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
     ...nextState,
     aiCompanies: aiResult.aiCompanies,
     market: aiResult.marketUpdate,
+    contracts: aiResult.contracts,
   };
+  nextState = appendTurnReportLines(
+    nextState,
+    aiResult.summaries
+      .filter((s) => s.narrativeBeat !== undefined)
+      .map((s) => s.narrativeBeat!.headline),
+  );
+  nextState = appendTurnReportLines(
+    nextState,
+    aiResult.contracts.flatMap((contract) => {
+      const before = state.contracts.find((c) => c.id === contract.id);
+      if (!before || before.aiCompanyId === contract.aiCompanyId) return [];
+      const company = aiResult.aiCompanies.find(
+        (ai) => ai.id === contract.aiCompanyId,
+      );
+      if (!company) return [];
+      return [`${company.name} accepted a ${contract.type} contract.`];
+    }),
+  );
 
   // ----- Step 7: Market evolution -----
   const updatedMarket = updateMarket(nextState.market, rng);
@@ -600,6 +640,10 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
     nextState.storyteller,
     nextState.galaxy,
     nextState.activeRoutes,
+  );
+  const blockingChoiceEvent = newEvents.find(
+    (event) =>
+      event.requiresChoice && event.choices && event.choices.length > 0,
   );
 
   // Apply each new event's effects
@@ -615,6 +659,37 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
     ...nextState,
     activeEvents: [...tickedEvents, ...newEvents],
   };
+  nextState = appendTurnReportLines(
+    nextState,
+    newEvents
+      .filter((event) => event.category === "empire")
+      .map((event) => event.description),
+  );
+
+  if (blockingChoiceEvent?.choices) {
+    nextState = {
+      ...nextState,
+      pendingChoiceEvents: [
+        ...nextState.pendingChoiceEvents,
+        {
+          id: `event-choice-${blockingChoiceEvent.id}`,
+          eventId: blockingChoiceEvent.id,
+          prompt: blockingChoiceEvent.description,
+          options: blockingChoiceEvent.choices.map((choice, index) => ({
+            id: `choice-${index}`,
+            label: choice.label,
+            outcomeDescription: "",
+            effects: choice.effects,
+          })),
+          turnCreated: nextState.turn,
+          category:
+            blockingChoiceEvent.category === "empire"
+              ? "diplomatic"
+              : undefined,
+        },
+      ],
+    };
+  }
 
   // ----- Step 8a: Process diplomacy -----
   if (
@@ -692,18 +767,10 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
 
     // Append digest entries to the turn report.
     if (result.digestEntries.length > 0) {
-      const prevDigest =
-        (nextState.turnReport?.diplomacyDigest as string[] | undefined) ?? [];
-      nextState = {
-        ...nextState,
-        turnReport: {
-          ...(nextState.turnReport ?? {}),
-          diplomacyDigest: [
-            ...prevDigest,
-            ...result.digestEntries.map((d) => d.text),
-          ],
-        },
-      };
+      nextState = appendTurnReportLines(
+        nextState,
+        result.digestEntries.map((d) => d.text),
+      );
     }
   }
 
@@ -727,8 +794,49 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   nextState = tickDiplomacyState(nextState);
 
   // ----- Step 8b: Process contracts -----
+  const contractsBefore = nextState.contracts;
   const contractResult = processContracts(nextState);
   nextState = { ...nextState, ...contractResult };
+  const contractLines = nextState.contracts.flatMap((contract) => {
+    const before = contractsBefore.find((c) => c.id === contract.id);
+    if (!before || before.status === contract.status) return [];
+    if (contract.status === "completed") {
+      return [
+        `Contract completed: ${contract.type} paid §${(
+          contract.rewardCash + contract.depositPaid
+        ).toLocaleString("en-US")}.`,
+      ];
+    }
+    if (contract.status === "failed") {
+      return [`Contract failed: ${contract.type}.`];
+    }
+    return [];
+  });
+  nextState = appendTurnReportLines(nextState, contractLines);
+
+  // ----- Step 8b-iv: Refresh the available contract board -----
+  {
+    const expiredContracts = expireAvailableContracts(
+      nextState.contracts,
+      nextState.turn,
+    );
+    const generatedContracts = generateContracts(
+      { ...nextState, contracts: expiredContracts },
+      rng,
+    );
+    nextState = {
+      ...nextState,
+      contracts: [...expiredContracts, ...generatedContracts],
+    };
+    nextState = appendTurnReportLines(
+      nextState,
+      generatedContracts.length > 0
+        ? [
+            `Contracts posted: ${generatedContracts.length} new offers available.`,
+          ]
+        : [],
+    );
+  }
 
   // ----- Step 8c: Research point accumulation & tech completion -----
   const baseRP = calculateRPPerTurn(nextState);
