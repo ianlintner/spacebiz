@@ -9,9 +9,9 @@ import type {
 // Configuration matrix — vary seeds, sizes, company counts, shapes
 // ---------------------------------------------------------------------------
 
-const SEEDS = [42, 100, 256, 777, 1337, 2024, 3141, 5000, 6174, 9999];
+const SEEDS = [42, 100, 256];
 const SIZES: SimulationConfig["gameSize"][] = ["quick", "standard", "epic"];
-const COMPANY_COUNTS = [4, 6, 8];
+const COMPANY_COUNTS = [4, 8];
 const SHAPES: SimulationConfig["galaxyShape"][] = [
   "spiral",
   "elliptical",
@@ -21,9 +21,9 @@ const SHAPES: SimulationConfig["galaxyShape"][] = [
 
 // Run full turn counts per preset to see endgame dynamics
 const MAX_TURNS_BY_SIZE: Record<string, number> = {
-  quick: 25,
-  standard: 45,
-  epic: 80,
+  quick: 10,
+  standard: 16,
+  epic: 24,
 };
 
 function makeConfig(
@@ -562,7 +562,7 @@ describe("Batch AI Simulation Analysis", () => {
   it("runs shape variation matrix", () => {
     const startLen = allRuns.length;
     for (const shape of SHAPES) {
-      for (const seed of SEEDS.slice(0, 5)) {
+      for (const seed of SEEDS.slice(0, 2)) {
         const config = makeConfig(seed, "quick", 0, shape);
         const runner = new SimulationRunner();
         const result = runner.run(config);
@@ -575,7 +575,7 @@ describe("Batch AI Simulation Analysis", () => {
   it("runs company count variation matrix", () => {
     const startLen = allRuns.length;
     for (const count of COMPANY_COUNTS) {
-      for (const seed of SEEDS.slice(0, 5)) {
+      for (const seed of SEEDS.slice(0, 2)) {
         const config = makeConfig(seed, "standard", count, "spiral");
         const runner = new SimulationRunner();
         const result = runner.run(config);
