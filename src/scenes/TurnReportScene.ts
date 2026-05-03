@@ -41,14 +41,12 @@ function getTurnGrade(
   return { grade: "F", color: theme.colors.loss };
 }
 
-// Layout constants — see original commit for derivation rationale. The
-// numbers are reused inside relayout() so we declare them at module scope.
-const TR_GAP = 8;
-const TR_PL_H = 220;
-const TR_ROUTE_H = 152;
-const TR_AI_H = 152;
-const TR_BOTTOM_H = 72;
+// Row spacing inside the P&L list — unchanged by the tab refactor.
 const TR_PL_ROW_GAP = 20;
+// Height of the tab strip that replaces the old panel-stacking layout.
+const TR_TAB_H = 30;
+
+type TRTab = "financials" | "routes" | "rivals" | "world";
 
 export class TurnReportScene extends Phaser.Scene {
   // Backdrop + structural panels.
@@ -82,6 +80,12 @@ export class TurnReportScene extends Phaser.Scene {
   private plGradeLabel?: Phaser.GameObjects.Text;
   private plStreakBadge?: Phaser.GameObjects.Text;
   private plStreakRowY = 0;
+
+  // Tab state.
+  private activeTab: TRTab = "financials";
+  private tabStrip?: Phaser.GameObjects.Container;
+  private tabBgs: Partial<Record<TRTab, Phaser.GameObjects.Rectangle>> = {};
+  private tabLabels: Partial<Record<TRTab, Phaser.GameObjects.Text>> = {};
 
   // Game-over button.
   private resultsButton?: Button;
@@ -166,13 +170,18 @@ export class TurnReportScene extends Phaser.Scene {
     void netColor; // acknowledged but not applicable via API
 
     // -----------------------------------------------------------------------
-    // P&L Panel (top of main content area)
+    // Shared panel Y: all tab panels start here (below the tab strip).
+    // Only one is visible at a time; setActiveTab() toggles visibility.
     // -----------------------------------------------------------------------
+    const panelY = L.contentTop + TR_TAB_H;
+    const panelH = L.contentHeight - TR_TAB_H;
+
+    // ── Financials tab ───────────────────────────────────────────────────────
     this.plPanel = new Panel(this, {
       x: L.mainContentLeft,
-      y: L.contentTop,
+      y: panelY,
       width: L.mainContentWidth,
-      height: TR_PL_H,
+      height: panelH,
       title: "Quarter Summary",
     });
     const plContent = this.plPanel.getContentArea();
@@ -434,18 +443,13 @@ export class TurnReportScene extends Phaser.Scene {
       }
     });
 
-    // -----------------------------------------------------------------------
-    // Route Performance (middle of main content area)
-    // -----------------------------------------------------------------------
+    // ── Routes tab ───────────────────────────────────────────────────────────
     const routePerf = lastTurn.routePerformance;
 
-    // Build planet name lookup for route labels
     const planetMap = new Map<string, string>();
     for (const planet of state.galaxy.planets) {
       planetMap.set(planet.id, planet.name);
     }
-
-    // Build route label lookup
     const routeLabelMap = new Map<string, string>();
     for (const route of state.activeRoutes) {
       const originName = planetMap.get(route.originPlanetId) ?? "???";
@@ -453,39 +457,29 @@ export class TurnReportScene extends Phaser.Scene {
       routeLabelMap.set(route.id, `${originName} > ${destName}`);
     }
 
-    const routeY = L.contentTop + TR_PL_H + TR_GAP;
     this.routePanel = new Panel(this, {
       x: L.mainContentLeft,
-      y: routeY,
+      y: panelY,
       width: L.mainContentWidth,
-      height: TR_ROUTE_H,
+      height: panelH,
       title: "Top Routes",
     });
 
     this.routeTableFrame = new ScrollFrame(this, {
       x: L.mainContentLeft + 10,
-      y: routeY + 38,
+      y: panelY + 38,
       width: L.mainContentWidth - 20,
-      height: TR_ROUTE_H - 44,
+      height: panelH - 44,
     });
     this.routeTable = new DataTable(this, {
       x: 0,
       y: 0,
       width: L.mainContentWidth - 20,
-      height: TR_ROUTE_H - 44,
+      height: panelH - 44,
       contentSized: true,
       columns: [
-        {
-          key: "route",
-          label: "Route",
-          width: 280,
-        },
-        {
-          key: "trips",
-          label: "Trips",
-          width: 70,
-          align: "right",
-        },
+        { key: "route", label: "Route", width: 280 },
+        { key: "trips", label: "Trips", width: 70, align: "right" },
         {
           key: "revenue",
           label: "Revenue",
@@ -506,8 +500,7 @@ export class TurnReportScene extends Phaser.Scene {
       ],
     });
 
-    // Top-routes panel is ~60px of content — show the best two so the rows
-    // don't overflow into "Rival Snapshot" below.
+    // Show all routes (tab has full height — no cap needed).
     const routeRows = routePerf
       .map((rp) => ({
         route: routeLabelMap.get(rp.routeId) ?? rp.routeId,
@@ -515,36 +508,32 @@ export class TurnReportScene extends Phaser.Scene {
         revenue: rp.revenue,
         margin: rp.revenue - rp.fuelCost,
       }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 2);
+      .sort((a, b) => b.revenue - a.revenue);
     this.routeTableFrame.setContent(this.routeTable);
     this.routeTable.setRows(routeRows);
 
-    // -----------------------------------------------------------------------
-    // AI Rivals Summary (below route performance)
-    // -----------------------------------------------------------------------
+    // ── Rivals tab ───────────────────────────────────────────────────────────
     const aiSummaries = lastTurn.aiSummaries ?? [];
-    const aiY = routeY + TR_ROUTE_H + TR_GAP;
     if (aiSummaries.length > 0) {
       this.aiPanel = new Panel(this, {
         x: L.mainContentLeft,
-        y: aiY,
+        y: panelY,
         width: L.mainContentWidth,
-        height: TR_AI_H,
+        height: panelH,
         title: "Rival Snapshot",
       });
 
       this.aiTableFrame = new ScrollFrame(this, {
         x: L.mainContentLeft + 10,
-        y: aiY + 38,
+        y: panelY + 38,
         width: L.mainContentWidth - 20,
-        height: TR_AI_H - 44,
+        height: panelH - 44,
       });
       this.aiTable = new DataTable(this, {
         x: 0,
         y: 0,
         width: L.mainContentWidth - 20,
-        height: TR_AI_H - 44,
+        height: panelH - 44,
         contentSized: true,
         columns: [
           { key: "name", label: "Company", width: 300 },
@@ -555,23 +544,12 @@ export class TurnReportScene extends Phaser.Scene {
             align: "right",
             format: (v) => formatCash(v as number),
           },
-          {
-            key: "routes",
-            label: "Routes",
-            width: 100,
-            align: "right",
-          },
-          {
-            key: "status",
-            label: "Status",
-            width: 160,
-          },
+          { key: "routes", label: "Routes", width: 100, align: "right" },
+          { key: "status", label: "Status", width: 160 },
         ],
       });
 
-      // Cap visible rivals to what physically fits inside TR_AI_H (~42px of
-      // content). Earlier code requested 5 rows and they spilled into the
-      // Market Changes panel below (QA: "End of Turn Summary Clutter").
+      // Show all rivals (tab has full height — no cap needed).
       const aiRows = aiSummaries
         .map((s) => ({
           name: s.companyName,
@@ -579,22 +557,17 @@ export class TurnReportScene extends Phaser.Scene {
           routes: s.routeCount,
           status: s.bankrupt ? "BANKRUPT" : "Active",
         }))
-        .sort((a, b) => b.cash - a.cash)
-        .slice(0, 2);
+        .sort((a, b) => b.cash - a.cash);
       this.aiTableFrame.setContent(this.aiTable);
       this.aiTable.setRows(aiRows);
     }
 
-    // -----------------------------------------------------------------------
-    // Bottom row: Market Changes (full width — ticker moved to global HUD)
-    // -----------------------------------------------------------------------
-    const bottomY = aiSummaries.length > 0 ? aiY + TR_AI_H + TR_GAP : aiY;
-
+    // ── World tab: Market Changes + Diplomatic Activity ──────────────────────
     this.marketPanel = new Panel(this, {
       x: L.mainContentLeft,
-      y: bottomY,
+      y: panelY,
       width: L.mainContentWidth,
-      height: TR_BOTTOM_H,
+      height: panelH,
       title: "Market Changes",
     });
     const mpContent = this.marketPanel.getContentArea();

@@ -10,6 +10,7 @@ import {
   AdviserPanel,
   attachReflowHandler,
 } from "../ui/index.ts";
+import { colorToString } from "@spacebiz/ui";
 import { SettingsPanel } from "../ui/SettingsPanel.ts";
 import { formatTurnShort, formatTurnLong } from "../utils/turnFormat.ts";
 import { HorizontalNewsTicker } from "@rogue-universe/shared";
@@ -60,6 +61,14 @@ import {
   PORTRAIT_PLACEHOLDER_KEY,
 } from "../game/PortraitLoader.ts";
 import { getNewlyUnlockedTabs } from "../game/nav/NavUnlocks.ts";
+import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
+import {
+  NAV_GROUPS,
+  SCENE_TO_NAV_TAB,
+  findGroupForScene,
+  hasSceneUrgency,
+  resolveDefaultTab,
+} from "../game/nav/NavGroups.ts";
 
 /** Mapping from NavTabId to the Phaser scene key used for that nav item. */
 const NAV_TAB_TO_SCENE: Record<NavTabId, string> = {
@@ -138,6 +147,10 @@ export class GameHUDScene extends Phaser.Scene {
   private navContainers = new Map<string, Phaser.GameObjects.Container>();
   /** Order of nav scenes as built — needed to recompute Y on resize. */
   private navOrder: string[] = [];
+  /** In-session memory: last scene the player opened within each group. */
+  private lastVisitedByGroup = new Map<string, string>();
+  /** Horizontal tab strip rendered when a grouped scene is active. */
+  private tabStrip!: Phaser.GameObjects.Container;
   /** Settings (audio + save) icon buttons; stored for repositioning. */
   private settingsButtons: Array<{
     container: Phaser.GameObjects.Container;
@@ -374,24 +387,17 @@ export class GameHUDScene extends Phaser.Scene {
     this.streakLabel.setAlpha(initStreak >= 2 ? 1 : 0);
 
     // ── Left Navigation Sidebar (Paradox-style icon strip) ──
-    const navItems = [
-      { label: "Map", scene: "GalaxyMapScene", icon: "icon-map" },
-      { label: "Routes", scene: "RoutesScene", icon: "icon-routes" },
-      { label: "Fleet", scene: "FleetScene", icon: "icon-fleet" },
-      { label: "Contracts", scene: "ContractsScene", icon: "icon-contracts" },
-      // Market nav removed (Track 2.6): market intel is now embedded in RouteBuilderPanel.
-      // MarketScene file is retained for potential future use.
-      {
-        label: "Foreign Relations",
-        scene: "DiplomacyScene",
-        icon: "icon-contracts", // TODO: dedicated icon
-      },
-      { label: "Research", scene: "TechTreeScene", icon: "icon-research" },
-      { label: "Finance", scene: "FinanceScene", icon: "icon-finance" },
-      { label: "Empires", scene: "EmpireScene", icon: "icon-empire" },
-      { label: "Rivals", scene: "CompetitionScene", icon: "icon-rival" },
-      { label: "Hub", scene: "StationBuilderScene", icon: "icon-hub" },
-    ];
+    // 6-icon nav: 4 standalone (Map/Routes/Fleet/Finance) + 2 grouped
+    // (Empire / Ops). Grouped icons open via `resolveDefaultTab` (urgency
+    // → last-visited → first tab). Each nav button is keyed by the
+    // group's *primary* scene (`group.scenes[0]`), so existing per-scene
+    // map infrastructure (icons, badges, indicators) keeps working.
+    const navItems = NAV_GROUPS.map((group) => ({
+      label: group.label,
+      scene: group.scenes[0],
+      icon: group.icon,
+      group,
+    }));
 
     const navSidebarTop = L.hudTopBarHeight;
     const navSidebarH = L.hudBottomBarTop - L.hudTopBarHeight;
@@ -478,7 +484,13 @@ export class GameHUDScene extends Phaser.Scene {
         .setOrigin(0, 0.5)
         .setX(-(iconBtnSize / 2));
 
-      const isActive = item.scene === this.activeContentScene;
+      // A grouped nav icon is "active" when ANY scene in its group is the
+      // active content scene (e.g. Empire icon stays lit while user has
+      // Diplomacy or Rivals open).
+      const isItemActive = (): boolean =>
+        item.group.scenes.includes(this.activeContentScene);
+
+      const isActive = isItemActive();
       indicator.setVisible(isActive);
       if (isActive) {
         bg.setAlpha(0.3);
@@ -496,29 +508,34 @@ export class GameHUDScene extends Phaser.Scene {
       );
 
       hitRect.on("pointerover", () => {
-        if (item.scene !== this.activeContentScene) {
+        if (!isItemActive()) {
           getAudioDirector().sfx("ui_hover");
           bg.setAlpha(0.22);
           icon.setTint(theme.colors.text);
         }
       });
       hitRect.on("pointerout", () => {
-        if (item.scene !== this.activeContentScene) {
+        if (!isItemActive()) {
           bg.setAlpha(0.0);
           icon.setTint(theme.colors.textDim);
         }
       });
       hitRect.on("pointerdown", () => {
-        if (item.scene !== this.activeContentScene) {
+        if (!isItemActive()) {
           bg.setAlpha(0.32);
         }
       });
       hitRect.on("pointerup", () => {
         getAudioDirector().sfx("ui_click_primary");
-        this.switchContentScene(item.scene);
+        const target = resolveDefaultTab(
+          item.group,
+          gameStore.getState(),
+          this.lastVisitedByGroup,
+        );
+        this.switchContentScene(target);
       });
       hitRect.on("pointerupoutside", () => {
-        if (item.scene !== this.activeContentScene) {
+        if (!isItemActive()) {
           bg.setAlpha(0.0);
         }
       });
@@ -726,6 +743,10 @@ export class GameHUDScene extends Phaser.Scene {
       this.newsTicker = null;
     });
 
+    // Tab strip: empty container, populated by `rebuildTabStrip()` whenever
+    // the active scene belongs to a NavGroup with multiple tabs.
+    this.tabStrip = this.add.container(0, 0).setDepth(50);
+
     // Initial layout pass + reflow on viewport resize. Content scenes own
     // their own reflow handlers, so the HUD only repositions its own widgets.
     this.relayout();
@@ -733,6 +754,8 @@ export class GameHUDScene extends Phaser.Scene {
 
     // Launch content scene (restored on resize, default GalaxyMapScene)
     this.scene.launch(this.activeContentScene, this.activeContentData);
+    setGalaxy3DVisible(this.activeContentScene === "GalaxyMapScene");
+    this.rebuildTabStrip();
     this.scene.bringToTop();
 
     // If a dilemma was already pending (e.g. resumed save), surface it now.
@@ -863,6 +886,12 @@ export class GameHUDScene extends Phaser.Scene {
     // current internal panelHeight (the override skips heights below the
     // content-driven minimum).
     this.adviserPanel.setSize(advPanelW, 0);
+
+    // Tab strip repositions on resize (strip is already visible/hidden by
+    // rebuildTabStrip; here we only need to reflow positions).
+    if (this.tabStrip) {
+      this.rebuildTabStrip();
+    }
   }
 
   private maybeShowDilemma(): void {
@@ -1087,16 +1116,173 @@ export class GameHUDScene extends Phaser.Scene {
 
     // Launch new content scene
     this.scene.launch(sceneName, data);
+    setGalaxy3DVisible(sceneName === "GalaxyMapScene");
 
     this.activeContentScene = sceneName;
     this.activeContentData = data;
+
+    // Remember last-visited tab within its group, so re-clicking the group
+    // icon (when no urgency fires) returns the player here.
+    const group = findGroupForScene(sceneName);
+    if (group) {
+      this.lastVisitedByGroup.set(group.id, sceneName);
+    }
+
     this.updateNavVisualState(sceneName, theme);
+    this.rebuildTabStrip();
     this.scene.bringToTop();
   }
 
+  /**
+   * Build (or rebuild + reposition) the horizontal tab strip shown above
+   * the content area when the active scene belongs to a NavGroup with
+   * more than one tab. Hidden for solo groups (Map, Routes, Fleet, Finance).
+   */
+  private rebuildTabStrip(): void {
+    const theme = getTheme();
+    const L = getLayout();
+
+    this.tabStrip.removeAll(true);
+
+    const group = findGroupForScene(this.activeContentScene);
+    if (!group || group.scenes.length < 2) {
+      this.tabStrip.setVisible(false);
+      return;
+    }
+    this.tabStrip.setVisible(true);
+
+    const stripHeight = 28;
+    const stripTop = L.hudTopBarHeight;
+    const stripLeft = L.navSidebarWidth + 12;
+    const stripWidth = L.gameWidth - stripLeft - 12;
+
+    // Translucent background — keeps scene content visible behind tabs but
+    // creates a clear "this is chrome" affordance.
+    const bg = this.add
+      .rectangle(
+        stripLeft,
+        stripTop,
+        stripWidth,
+        stripHeight,
+        theme.colors.panelBg,
+        0.78,
+      )
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, theme.colors.panelBorder, 0.6);
+    this.tabStrip.add(bg);
+
+    // Render tabs left-to-right.
+    const tabHeight = stripHeight - 4;
+    const tabSpacing = 4;
+    const tabWidth = 110;
+    const tabsTotalWidth =
+      group.scenes.length * tabWidth + (group.scenes.length - 1) * tabSpacing;
+    let tabX = stripLeft + 10;
+    void tabsTotalWidth; // reserved for right-aligned variant
+
+    const state = gameStore.getState();
+
+    for (const sceneKey of group.scenes) {
+      const isActive = sceneKey === this.activeContentScene;
+      const tabY = stripTop + 2;
+
+      const tabBg = this.add
+        .rectangle(
+          tabX,
+          tabY,
+          tabWidth,
+          tabHeight,
+          isActive ? theme.colors.buttonBg : theme.colors.headerBg,
+          isActive ? 1.0 : 0.6,
+        )
+        .setOrigin(0, 0)
+        .setStrokeStyle(
+          1,
+          isActive ? theme.colors.accent : theme.colors.panelBorder,
+          isActive ? 1 : 0.4,
+        )
+        .setInteractive({ useHandCursor: true });
+
+      const label = this.add
+        .text(
+          tabX + tabWidth / 2,
+          tabY + tabHeight / 2,
+          this.tabLabel(sceneKey),
+          {
+            fontSize: `${theme.fonts.caption.size}px`,
+            fontFamily: theme.fonts.caption.family,
+            color: colorToString(
+              isActive ? theme.colors.accent : theme.colors.textDim,
+            ),
+          },
+        )
+        .setOrigin(0.5, 0.5);
+
+      // Urgency dot on this tab if its scene wants attention.
+      let urgencyDot: Phaser.GameObjects.Arc | null = null;
+      if (hasSceneUrgency(sceneKey, state)) {
+        urgencyDot = this.add
+          .circle(tabX + tabWidth - 8, tabY + 6, 4, theme.colors.warning)
+          .setDepth(1);
+      }
+
+      tabBg.on("pointerover", () => {
+        if (!isActive) {
+          tabBg.setFillStyle(theme.colors.buttonHover);
+          label.setColor(colorToString(theme.colors.text));
+        }
+      });
+      tabBg.on("pointerout", () => {
+        if (!isActive) {
+          tabBg.setFillStyle(theme.colors.headerBg, 0.6);
+          label.setColor(colorToString(theme.colors.textDim));
+        }
+      });
+      tabBg.on("pointerup", () => {
+        if (sceneKey !== this.activeContentScene) {
+          getAudioDirector().sfx("ui_click_primary");
+          this.switchContentScene(sceneKey);
+        }
+      });
+
+      this.tabStrip.add(tabBg);
+      this.tabStrip.add(label);
+      if (urgencyDot) this.tabStrip.add(urgencyDot);
+
+      tabX += tabWidth + tabSpacing;
+    }
+  }
+
+  private tabLabel(sceneKey: string): string {
+    switch (sceneKey) {
+      case "EmpireScene":
+        return "Empires";
+      case "DiplomacyScene":
+        return "Diplomacy";
+      case "CompetitionScene":
+        return "Rivals";
+      case "ContractsScene":
+        return "Contracts";
+      case "TechTreeScene":
+        return "Research";
+      case "StationBuilderScene":
+        return "Hub";
+      default:
+        return sceneKey;
+    }
+  }
+
   private updateNavVisualState(sceneName: string, theme = getTheme()): void {
+    // Each nav icon is keyed by its group's primary scene. The icon is
+    // active when the active content scene belongs to that same group.
+    const activeGroup = findGroupForScene(sceneName);
     for (const [scene, indicator] of this.navIndicators) {
-      const isActive = scene === sceneName;
+      const itemGroup = findGroupForScene(scene);
+      const isActive = !!(
+        itemGroup &&
+        activeGroup &&
+        itemGroup.id === activeGroup.id
+      );
       indicator.setVisible(isActive);
       const bg = this.navBackgrounds.get(scene);
       const icon = this.navIcons.get(scene);
@@ -1336,35 +1522,42 @@ export class GameHUDScene extends Phaser.Scene {
       newlyUnlocked.map((tab) => NAV_TAB_TO_SCENE[tab]),
     );
 
-    // Update visibility for every nav item
-    for (const [tabId, sceneKey] of Object.entries(NAV_TAB_TO_SCENE) as Array<
-      [NavTabId, string]
-    >) {
-      const icon = this.navIcons.get(sceneKey);
-      const hitArea = this.navHitAreas.get(sceneKey);
-      const bg = this.navBackgrounds.get(sceneKey);
-      const indicator = this.navIndicators.get(sceneKey);
-      const badge = this.navBadges.get(sceneKey);
+    // A grouped nav icon is visible iff ANY scene in its group has its
+    // NavTabId unlocked (DiplomacyScene has no NavTabId — treat as always
+    // unlocked, mirroring the legacy behavior).
+    const isSceneUnlocked = (sceneKey: string): boolean => {
+      const tabId = SCENE_TO_NAV_TAB[sceneKey];
+      if (tabId === undefined) return true; // e.g. DiplomacyScene
+      return unlocked.has(tabId);
+    };
+
+    const activeGroup = findGroupForScene(this.activeContentScene);
+
+    for (const group of NAV_GROUPS) {
+      const primaryScene = group.scenes[0];
+      const icon = this.navIcons.get(primaryScene);
+      const hitArea = this.navHitAreas.get(primaryScene);
+      const bg = this.navBackgrounds.get(primaryScene);
+      const indicator = this.navIndicators.get(primaryScene);
+      const badge = this.navBadges.get(primaryScene);
 
       if (!icon || !hitArea) continue;
 
-      const isUnlocked = unlocked.has(tabId);
+      const groupUnlocked = group.scenes.some(isSceneUnlocked);
+      const isActive = activeGroup?.id === group.id;
 
-      if (isUnlocked) {
-        // Make visible
+      if (groupUnlocked) {
         icon.setAlpha(1);
-        if (bg) bg.setAlpha(sceneKey === this.activeContentScene ? 0.32 : 0.0);
-        if (indicator)
-          indicator.setVisible(sceneKey === this.activeContentScene);
+        if (bg) bg.setAlpha(isActive ? 0.32 : 0.0);
+        if (indicator) indicator.setVisible(isActive);
         if (badge) badge.setAlpha(1);
 
-        // Re-enable interaction if it was previously disabled due to locking
         if (!hitArea.input) {
           hitArea.setInteractive({ useHandCursor: true });
         }
 
-        // Unlock animation for newly revealed tabs
-        if (newlyUnlockedScenes.has(sceneKey)) {
+        // Unlock animation if any scene in this group was newly unlocked.
+        if (group.scenes.some((s) => newlyUnlockedScenes.has(s))) {
           icon.setScale(0.5);
           this.tweens.add({
             targets: icon,
@@ -1375,7 +1568,6 @@ export class GameHUDScene extends Phaser.Scene {
           });
         }
       } else {
-        // Hide: fully transparent, no interaction
         icon.setAlpha(0);
         if (bg) bg.setAlpha(0);
         if (indicator) indicator.setVisible(false);
@@ -1392,64 +1584,61 @@ export class GameHUDScene extends Phaser.Scene {
     const theme = getTheme();
     const state = gameStore.getState();
 
-    // Routes badge: red if no routes
-    const routesBadge = this.navBadges.get("RoutesScene");
-    if (routesBadge) {
-      routesBadge.setVisible(
-        state.phase === "planning" && state.activeRoutes.length === 0,
-      );
-      routesBadge.setFillStyle(theme.colors.loss);
-    }
-
-    // Fleet badge: yellow if unassigned ships or low condition
-    const fleetBadge = this.navBadges.get("FleetScene");
-    if (fleetBadge) {
-      const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
-      const avgCond =
-        state.fleet.length > 0
-          ? state.fleet.reduce((sum, s) => sum + s.condition, 0) /
-            state.fleet.length
-          : 100;
-      const needsAttention =
-        (unassigned.length > 0 && state.activeRoutes.length > 0) ||
-        (avgCond < 50 && state.fleet.length > 0);
-      fleetBadge.setVisible(state.phase === "planning" && needsAttention);
-      fleetBadge.setFillStyle(theme.colors.warning);
-    }
-
-    // Finance badge: red if cash negative
-    const financeBadge = this.navBadges.get("FinanceScene");
-    if (financeBadge) {
-      financeBadge.setVisible(state.phase === "planning" && state.cash < 0);
-      financeBadge.setFillStyle(theme.colors.loss);
-    }
-
-    // Contracts badge: yellow if available contracts to accept
-    const contractsBadge = this.navBadges.get("ContractsScene");
-    if (contractsBadge) {
-      const available = (state.contracts ?? []).filter(
-        (c) => c.status === "available",
-      );
-      contractsBadge.setVisible(
-        state.phase === "planning" && available.length > 0,
-      );
-      contractsBadge.setFillStyle(theme.colors.accent);
-    }
-
-    // Research badge: yellow if no active research and RP available
-    const researchBadge = this.navBadges.get("TechTreeScene");
-    if (researchBadge) {
-      const noResearch = !state.tech?.currentResearchId;
-      researchBadge.setVisible(state.phase === "planning" && noResearch);
-      researchBadge.setFillStyle(theme.colors.warning);
-    }
-
-    // Hide all badges during sim/review
+    // Hide all badges during sim/review.
     if (state.phase !== "planning") {
       for (const [, badge] of this.navBadges) {
         badge.setVisible(false);
       }
+      return;
     }
+
+    // Per-group urgency: a group's badge fires if ANY of its scenes has
+    // urgency. Color reflects the most severe scene (loss > warning > accent).
+    for (const group of NAV_GROUPS) {
+      const primaryScene = group.scenes[0];
+      const badge = this.navBadges.get(primaryScene);
+      if (!badge) continue;
+
+      let badgeColor: number | null = null;
+      for (const sceneKey of group.scenes) {
+        if (!hasSceneUrgency(sceneKey, state)) continue;
+        const sceneColor = this.urgencyColorForScene(sceneKey, theme);
+        if (
+          badgeColor === null ||
+          this.urgencySeverity(sceneColor, theme) <
+            this.urgencySeverity(badgeColor, theme)
+        ) {
+          badgeColor = sceneColor;
+        }
+      }
+
+      if (badgeColor !== null) {
+        badge.setFillStyle(badgeColor);
+        badge.setVisible(true);
+      } else {
+        badge.setVisible(false);
+      }
+    }
+  }
+
+  /** Color of the urgency dot for a given scene (loss/warning/accent). */
+  private urgencyColorForScene(sceneKey: string, theme = getTheme()): number {
+    switch (sceneKey) {
+      case "RoutesScene":
+      case "FinanceScene":
+        return theme.colors.loss;
+      case "ContractsScene":
+        return theme.colors.accent;
+      default:
+        return theme.colors.warning;
+    }
+  }
+
+  /** Lower number = higher severity. Used to pick the worst color across a group. */
+  private urgencySeverity(color: number, theme = getTheme()): number {
+    if (color === theme.colors.loss) return 0;
+    if (color === theme.colors.warning) return 1;
+    return 2;
   }
 
   private handleEndTurn(): void {
