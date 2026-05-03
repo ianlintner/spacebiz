@@ -18,7 +18,6 @@ export const SCENE_TO_NAV_TAB: Record<string, NavTabId> = {
   RoutesScene: "routes",
   FleetScene: "fleet",
   ContractsScene: "contracts",
-  MarketScene: "market",
   TechTreeScene: "research",
   FinanceScene: "finance",
   EmpireScene: "empires",

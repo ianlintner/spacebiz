@@ -341,8 +341,7 @@ function checkBankruptcy(
 
 function appendTurnReportLines(state: GameState, lines: string[]): GameState {
   if (lines.length === 0) return state;
-  const prevDigest =
-    (state.turnReport?.diplomacyDigest as string[] | undefined) ?? [];
+  const prevDigest = state.turnReport?.diplomacyDigest ?? [];
   return {
     ...state,
     turnReport: {
@@ -646,7 +645,9 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       event.requiresChoice && event.choices && event.choices.length > 0,
   );
 
-  // Apply each new event's effects
+  // Apply each new event's passive/structural effects immediately. For
+  // choice events, option-specific outcomes must live in `choices[].effects`;
+  // top-level `effects[]` fire before the player chooses.
   for (const event of newEvents) {
     nextState = applyEventEffects(event, nextState);
   }
@@ -816,17 +817,17 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
 
   // ----- Step 8b-iv: Refresh the available contract board -----
   {
-    const expiredContracts = expireAvailableContracts(
+    const contractsAfterExpiry = expireAvailableContracts(
       nextState.contracts,
       nextState.turn,
     );
     const generatedContracts = generateContracts(
-      { ...nextState, contracts: expiredContracts },
+      { ...nextState, contracts: contractsAfterExpiry },
       rng,
     );
     nextState = {
       ...nextState,
-      contracts: [...expiredContracts, ...generatedContracts],
+      contracts: [...contractsAfterExpiry, ...generatedContracts],
     };
     nextState = appendTurnReportLines(
       nextState,

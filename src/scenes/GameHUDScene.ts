@@ -71,12 +71,11 @@ import {
 } from "../game/nav/NavGroups.ts";
 
 /** Mapping from NavTabId to the Phaser scene key used for that nav item. */
-const NAV_TAB_TO_SCENE: Record<NavTabId, string> = {
+const NAV_TAB_TO_SCENE: Partial<Record<NavTabId, string>> = {
   map: "GalaxyMapScene",
   routes: "RoutesScene",
   fleet: "FleetScene",
   contracts: "ContractsScene",
-  market: "MarketScene",
   research: "TechTreeScene",
   finance: "FinanceScene",
   empires: "EmpireScene",
@@ -166,7 +165,6 @@ export class GameHUDScene extends Phaser.Scene {
     FleetScene: "Fleet Ops — assign ships and monitor condition",
     ContractsScene: "Contracts — accept mission cargo for bonus income",
     DiplomacyScene: "Foreign Relations — empires, rivals, and standing",
-    MarketScene: "Market Intel — compare prices and demand across worlds",
     TechTreeScene: "Research — choose technologies and track progress",
     FinanceScene: "Finance — review cashflow, loans, and net worth",
     EmpireScene: "Empires — diplomacy, borders, and trade policy",
@@ -184,7 +182,6 @@ export class GameHUDScene extends Phaser.Scene {
     "DiplomacyScene",
     "TechTreeScene",
     "FinanceScene",
-    "MarketScene",
     "EmpireScene",
     "CompetitionScene",
     "StationBuilderScene",
@@ -1084,9 +1081,6 @@ export class GameHUDScene extends Phaser.Scene {
         case "RoutesScene":
           audio.setPlanningSubstate("routes");
           break;
-        case "MarketScene":
-          audio.setPlanningSubstate("market");
-          break;
         case "FinanceScene":
           audio.setPlanningSubstate("finance");
           break;
@@ -1519,7 +1513,10 @@ export class GameHUDScene extends Phaser.Scene {
       state.unlockedNavTabs,
     );
     const newlyUnlockedScenes = new Set(
-      newlyUnlocked.map((tab) => NAV_TAB_TO_SCENE[tab]),
+      newlyUnlocked.flatMap((tab) => {
+        const scene = NAV_TAB_TO_SCENE[tab];
+        return scene ? [scene] : [];
+      }),
     );
 
     // A grouped nav icon is visible iff ANY scene in its group has its
