@@ -460,7 +460,7 @@ export class ContractsScene extends Phaser.Scene {
         reward: rewardSummary(c),
       };
     });
-    this.availableTable.setData(rows);
+    this.availableTable.setRows(rows);
     this.updateAcceptButton();
   }
 
@@ -632,7 +632,7 @@ export class ContractsScene extends Phaser.Scene {
         reward: rewardSummary(c),
       };
     });
-    this.activeTable.setData(rows);
+    this.activeTable.setRows(rows);
     this.updateAbandonButton();
   }
 
