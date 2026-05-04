@@ -695,32 +695,320 @@ canvas {
   color: var(--text);
 }
 
+/* ── Fullscreen ───────────────────────────────────────────── */
+
 .game-frame:fullscreen,
 .game-frame.is-browser-fullscreen {
+  position: relative; /* containing block for ::before starfield layer */
   width: 100vw;
   height: 100vh;
   height: 100dvh;
   border: 0;
   border-radius: 0;
-  background: #03060c;
+  background: #010308;
+  overflow: hidden;
 }
 
+/* Procedural starfield for the letterbox bars on ultra-wide displays.
+   Visible only where the game canvas doesn't cover — harmlessly hidden
+   behind the canvas on standard and MacBook aspect ratios. */
+.game-frame:fullscreen::before,
+.game-frame.is-browser-fullscreen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: #010308;
+  background-image:
+    /* Nebula atmosphere */
+    radial-gradient(
+      ellipse 90% 70% at 50% 50%,
+      rgba(8, 18, 65, 0.45),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 38% 55% at 12% 42%,
+      rgba(28, 8, 65, 0.32),
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 42% 48% at 87% 56%,
+      rgba(5, 28, 60, 0.3),
+      transparent 58%
+    ),
+    /* Star dots — white, blue-tinted, and warm, 1–2 px radius */
+    radial-gradient(circle at 3% 8%, #fff 0 1.5px, transparent 1.5px),
+    radial-gradient(circle at 2% 55%, #fff 0 2px, transparent 2px),
+    radial-gradient(
+      circle at 7% 25%,
+      rgba(255, 255, 255, 0.88) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 10% 70%,
+      rgba(255, 255, 255, 0.82) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 5% 88%,
+      rgba(255, 255, 255, 0.78) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 8% 45%,
+      rgba(255, 255, 255, 0.75) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 4% 15%,
+      rgba(180, 215, 255, 0.85) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 11% 62%,
+      rgba(255, 255, 255, 0.8) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 6% 35%,
+      rgba(255, 255, 255, 0.7) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 9% 80%,
+      rgba(150, 200, 255, 0.9) 0 2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 15% 12%,
+      rgba(255, 255, 255, 0.72) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 18% 45%,
+      rgba(180, 215, 255, 0.82) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 22% 78%,
+      rgba(255, 255, 255, 0.75) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 25% 30%,
+      rgba(255, 255, 255, 0.8) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(circle at 28% 60%, #fff 0 2px, transparent 2px),
+    radial-gradient(
+      circle at 14% 88%,
+      rgba(255, 240, 210, 0.78) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(255, 255, 255, 0.85) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 26% 50%,
+      rgba(180, 215, 255, 0.78) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 16% 70%,
+      rgba(255, 255, 255, 0.72) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 23% 5%,
+      rgba(255, 255, 255, 0.88) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 35% 15%,
+      rgba(255, 255, 255, 0.72) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 42% 72%,
+      rgba(180, 215, 255, 0.82) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 48% 38%,
+      rgba(255, 255, 255, 0.75) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(circle at 55% 85%, #fff 0 2px, transparent 2px),
+    radial-gradient(
+      circle at 60% 22%,
+      rgba(255, 255, 255, 0.78) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 65% 58%,
+      rgba(255, 240, 210, 0.75) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 38% 55%,
+      rgba(180, 215, 255, 0.8) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 52% 15%,
+      rgba(255, 255, 255, 0.72) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 58% 80%,
+      rgba(255, 255, 255, 0.82) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 45% 45%,
+      rgba(255, 255, 255, 0.68) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 72% 8%,
+      rgba(255, 255, 255, 0.85) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 78% 45%,
+      rgba(180, 215, 255, 0.8) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(circle at 75% 70%, #fff 0 2px, transparent 2px),
+    radial-gradient(
+      circle at 82% 25%,
+      rgba(255, 255, 255, 0.78) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 85% 55%,
+      rgba(255, 255, 255, 0.82) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 80% 88%,
+      rgba(255, 240, 210, 0.76) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 74% 35%,
+      rgba(255, 255, 255, 0.72) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 88% 15%,
+      rgba(180, 215, 255, 0.88) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 76% 60%,
+      rgba(255, 255, 255, 0.75) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(circle at 83% 80%, #fff 0 2px, transparent 2px),
+    radial-gradient(
+      circle at 92% 20%,
+      rgba(255, 255, 255, 0.82) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 96% 55%,
+      rgba(180, 215, 255, 0.88) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 90% 75%,
+      rgba(255, 255, 255, 0.75) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(circle at 94% 35%, #fff 0 2px, transparent 2px),
+    radial-gradient(
+      circle at 98% 12%,
+      rgba(255, 255, 255, 0.8) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 95% 80%,
+      rgba(255, 240, 210, 0.78) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 91% 48%,
+      rgba(255, 255, 255, 0.72) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 97% 65%,
+      rgba(180, 215, 255, 0.85) 0 1.5px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 93% 8%,
+      rgba(255, 255, 255, 0.88) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(circle at 99% 38%, #fff 0 2px, transparent 2px);
+  animation: sft-stars-twinkle 9s ease-in-out infinite;
+}
+
+@keyframes sft-stars-twinkle {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Hide the website chrome bar — no nav/title/buttons in fullscreen. */
+.game-frame:fullscreen .game-frame__hud,
+.game-frame.is-browser-fullscreen .game-frame__hud {
+  display: none;
+}
+
+/* Screen area sits above the starfield layer and is fully transparent so the
+   letterbox bars show the starfield behind them. */
 .game-frame:fullscreen .game-frame__screen,
 .game-frame.is-browser-fullscreen .game-frame__screen {
-  padding: 0.2rem;
+  position: relative;
+  z-index: 1;
+  padding: 0;
+  background: transparent;
 }
 
-/* Clear the .viewport base class's aspect-ratio: 16/9 in fullscreen so the
-   canvas can fill 16:10-ish MacBook panels without top/bottom letterboxing. */
+/* Hide the decorative corner brackets in fullscreen. */
+.game-frame:fullscreen .game-frame__screen::before,
+.game-frame:fullscreen .game-frame__screen::after,
+.game-frame.is-browser-fullscreen .game-frame__screen::before,
+.game-frame.is-browser-fullscreen .game-frame__screen::after {
+  display: none;
+}
+
+/* Viewport: fill the full screen, go transparent so the canvas and the
+   starfield behind it are the only things visible. */
 .game-frame:fullscreen .viewport,
 .game-frame.is-browser-fullscreen .viewport {
   aspect-ratio: auto;
-}
-
-.game-frame:fullscreen .viewport,
-.game-frame.is-browser-fullscreen .viewport {
   height: 100%;
   border-radius: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Hide the CRT scanline overlay inside the viewport in fullscreen. */
+.game-frame:fullscreen .viewport::before,
+.game-frame.is-browser-fullscreen .viewport::before {
+  display: none;
 }
 
 .signal-light {
