@@ -72,7 +72,7 @@ export class FleetScene extends Phaser.Scene {
       width: L.sidebarWidth,
       height: L.contentHeight,
     });
-    this.portrait.updatePortrait("ship", 0, "Select a Ship", []);
+    this.portrait.clear();
 
     // Content panel
     this.contentPanel = new Panel(this, {
