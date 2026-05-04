@@ -109,19 +109,26 @@ export function processContracts(state: GameState): Partial<GameState> {
 
     // Check if route still exists and has a ship assigned
     const linkedRoute = activeRoutes.find((r) => r.id === c.linkedRouteId);
-    const hasShip = linkedRoute
-      ? linkedRoute.assignedShipIds.length > 0
-      : false;
+    const hasShip = c.aiCompanyId
+      ? true
+      : linkedRoute
+        ? linkedRoute.assignedShipIds.length > 0
+        : false;
 
     let turnsWithoutShip = c.turnsWithoutShip;
-    if (!hasShip) {
+    if (c.aiCompanyId) {
+      turnsWithoutShip = 0;
+    } else if (!hasShip) {
       turnsWithoutShip++;
     } else {
       turnsWithoutShip = 0;
     }
 
     // Route was deleted or no ship for too long → fail
-    if (!linkedRoute || turnsWithoutShip >= CONTRACT_UNASSIGNED_SHIP_LIMIT) {
+    if (
+      (!linkedRoute && !c.aiCompanyId) ||
+      turnsWithoutShip >= CONTRACT_UNASSIGNED_SHIP_LIMIT
+    ) {
       const failResult = applyContractFailureToValues(
         c,
         reputation,

@@ -3,11 +3,16 @@ import { simulateTurn } from "../TurnSimulator.ts";
 import { SeededRNG } from "../../../utils/SeededRNG.ts";
 import {
   CargoType,
+  ContractStatus,
+  ContractType,
+  EmpireDisposition,
   ShipClass,
   PlanetType,
   EventCategory,
 } from "../../../data/types.ts";
 import type {
+  AICompany,
+  Contract,
   GameState,
   Ship,
   ActiveRoute,
@@ -87,6 +92,46 @@ function makeRoute(overrides: Partial<ActiveRoute> = {}): ActiveRoute {
     distance: 50,
     assignedShipIds: ["ship-1"],
     cargoType: CargoType.Food,
+    ...overrides,
+  };
+}
+
+function makeContract(overrides: Partial<Contract> = {}): Contract {
+  return {
+    id: "contract-passengerFerry-t1-test",
+    type: ContractType.PassengerFerry,
+    targetEmpireId: null,
+    originPlanetId: "planet-a",
+    destinationPlanetId: "planet-b",
+    cargoType: CargoType.Passengers,
+    durationTurns: 3,
+    turnsRemaining: 3,
+    rewardCash: 12000,
+    rewardReputation: 1,
+    rewardResearchPoints: 1,
+    rewardTariffReduction: null,
+    depositPaid: 1000,
+    status: ContractStatus.Available,
+    linkedRouteId: null,
+    turnsWithoutShip: 0,
+    ...overrides,
+  };
+}
+
+function makeAICompany(overrides: Partial<AICompany> = {}): AICompany {
+  return {
+    id: "ai-1",
+    name: "Nova Freight",
+    empireId: "emp-1",
+    cash: 100000,
+    fleet: [],
+    activeRoutes: [],
+    reputation: 50,
+    totalCargoDelivered: 0,
+    personality: "steadyHauler",
+    bankrupt: false,
+    ceoName: "Nova Freight",
+    ceoPortrait: { portraitId: "ceo-1", category: "human" },
     ...overrides,
   };
 }
@@ -377,6 +422,76 @@ describe("TurnSimulator", () => {
       expect(turnResult.eventsOccurred.length).toBeGreaterThanOrEqual(1);
       // Active events should include the newly fired events
       expect(result.activeEvents.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("refreshes the available contract board each turn", () => {
+      const state = makeGameState({
+        playerEmpireId: "emp-1",
+        unlockedEmpireIds: ["emp-1"],
+        galaxy: {
+          ...makeGameState().galaxy,
+          empires: [
+            {
+              id: "emp-1",
+              name: "Core Worlds",
+              color: 0x00aaff,
+              tariffRate: 0.1,
+              disposition: EmpireDisposition.Friendly,
+              homeSystemId: "sys-1",
+              leaderName: "Ari Vale",
+              leaderPortrait: { portraitId: "leader-1", category: "human" },
+            },
+          ],
+        },
+      });
+
+      const result = simulateTurn(state, new SeededRNG(7));
+
+      expect(
+        result.contracts.filter((c) => c.status === ContractStatus.Available)
+          .length,
+      ).toBeGreaterThan(0);
+      expect(
+        result.turnReport?.diplomacyDigest?.some((line) =>
+          line.includes("Contracts posted"),
+        ),
+      ).toBe(true);
+    });
+
+    it("persists AI contract claims made during AI simulation", () => {
+      const contract = makeContract({ type: ContractType.TradeAlliance });
+      const state = makeGameState({
+        contracts: [contract],
+        aiCompanies: [makeAICompany({ personality: "steadyHauler" })],
+      });
+
+      const candidateSeeds = [1, 2, 3, 4, 5, 6, 7, 8];
+      const result = candidateSeeds
+        .map((seed) => simulateTurn(state, new SeededRNG(seed)))
+        .find((candidate) => {
+          const claimed = candidate.contracts.find((c) => c.id === contract.id);
+          return (
+            claimed?.status === ContractStatus.Active &&
+            claimed.aiCompanyId === "ai-1"
+          );
+        });
+
+      expect(result).toBeDefined();
+      if (!result) return;
+      const claimed = result.contracts.find((c) => c.id === contract.id);
+
+      expect(claimed?.status).toBe(ContractStatus.Active);
+      expect(claimed?.aiCompanyId).toBe("ai-1");
+    });
+
+    it("surfaces empire event headlines in the turn report digest", () => {
+      const result = simulateTurn(makeGameState(), new SeededRNG(2));
+      const empireEvents = result.activeEvents.filter(
+        (event) => event.category === EventCategory.Empire,
+      );
+
+      expect(empireEvents.length).toBeGreaterThan(0);
+      expect(result.turnReport?.diplomacyDigest?.length).toBeGreaterThan(0);
     });
 
     it("calculates maintenance costs and includes them in the turn result", () => {

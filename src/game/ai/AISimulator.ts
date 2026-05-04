@@ -1,6 +1,7 @@
 import { ShipClass } from "../../data/types.ts";
 import type {
   AICompany,
+  Contract,
   GameState,
   Ship,
   MarketState,
@@ -55,6 +56,7 @@ export function simulateAITurns(
   rng: SeededRNG,
 ): {
   aiCompanies: AICompany[];
+  contracts: Contract[];
   marketUpdate: MarketState;
   summaries: AITurnSummary[];
 } {
@@ -236,6 +238,7 @@ export function simulateAITurns(
   // Merge updated contracts back into the state (caller receives via return)
   return {
     aiCompanies: finalCompanies,
+    contracts: currentContracts,
     marketUpdate: { ...marketState },
     summaries,
   };

@@ -41,14 +41,12 @@ function getTurnGrade(
   return { grade: "F", color: theme.colors.loss };
 }
 
-// Layout constants — see original commit for derivation rationale. The
-// numbers are reused inside relayout() so we declare them at module scope.
-const TR_GAP = 8;
-const TR_PL_H = 220;
-const TR_ROUTE_H = 152;
-const TR_AI_H = 152;
-const TR_BOTTOM_H = 72;
+// Row spacing inside the P&L list — unchanged by the tab refactor.
 const TR_PL_ROW_GAP = 20;
+// Height of the tab strip that replaces the old panel-stacking layout.
+const TR_TAB_H = 30;
+
+type TRTab = "financials" | "routes" | "rivals" | "world";
 
 export class TurnReportScene extends Phaser.Scene {
   // Backdrop + structural panels.
@@ -65,8 +63,6 @@ export class TurnReportScene extends Phaser.Scene {
   private marketPanel?: Panel;
   private fuelLabel?: Phaser.GameObjects.Text;
   private summaryLabel?: Phaser.GameObjects.Text;
-  private dipPanel?: Panel;
-  private dipPanelHeight = 0;
   private dipLines: Phaser.GameObjects.Text[] = [];
   private dipLineHeight = 18;
 
@@ -82,6 +78,11 @@ export class TurnReportScene extends Phaser.Scene {
   private plGradeLabel?: Phaser.GameObjects.Text;
   private plStreakBadge?: Phaser.GameObjects.Text;
   private plStreakRowY = 0;
+
+  // Tab state.
+  private activeTab: TRTab = "financials";
+  private tabBgs: Partial<Record<TRTab, Phaser.GameObjects.Rectangle>> = {};
+  private tabLabels: Partial<Record<TRTab, Phaser.GameObjects.Text>> = {};
 
   // Game-over button.
   private resultsButton?: Button;
@@ -166,13 +167,18 @@ export class TurnReportScene extends Phaser.Scene {
     void netColor; // acknowledged but not applicable via API
 
     // -----------------------------------------------------------------------
-    // P&L Panel (top of main content area)
+    // Shared panel Y: all tab panels start here (below the tab strip).
+    // Only one is visible at a time; setActiveTab() toggles visibility.
     // -----------------------------------------------------------------------
+    const panelY = L.contentTop + TR_TAB_H;
+    const panelH = L.contentHeight - TR_TAB_H;
+
+    // ── Financials tab ───────────────────────────────────────────────────────
     this.plPanel = new Panel(this, {
       x: L.mainContentLeft,
-      y: L.contentTop,
+      y: panelY,
       width: L.mainContentWidth,
-      height: TR_PL_H,
+      height: panelH,
       title: "Quarter Summary",
     });
     const plContent = this.plPanel.getContentArea();
@@ -434,18 +440,13 @@ export class TurnReportScene extends Phaser.Scene {
       }
     });
 
-    // -----------------------------------------------------------------------
-    // Route Performance (middle of main content area)
-    // -----------------------------------------------------------------------
+    // ── Routes tab ───────────────────────────────────────────────────────────
     const routePerf = lastTurn.routePerformance;
 
-    // Build planet name lookup for route labels
     const planetMap = new Map<string, string>();
     for (const planet of state.galaxy.planets) {
       planetMap.set(planet.id, planet.name);
     }
-
-    // Build route label lookup
     const routeLabelMap = new Map<string, string>();
     for (const route of state.activeRoutes) {
       const originName = planetMap.get(route.originPlanetId) ?? "???";
@@ -453,39 +454,29 @@ export class TurnReportScene extends Phaser.Scene {
       routeLabelMap.set(route.id, `${originName} > ${destName}`);
     }
 
-    const routeY = L.contentTop + TR_PL_H + TR_GAP;
     this.routePanel = new Panel(this, {
       x: L.mainContentLeft,
-      y: routeY,
+      y: panelY,
       width: L.mainContentWidth,
-      height: TR_ROUTE_H,
+      height: panelH,
       title: "Top Routes",
     });
 
     this.routeTableFrame = new ScrollFrame(this, {
       x: L.mainContentLeft + 10,
-      y: routeY + 38,
+      y: panelY + 38,
       width: L.mainContentWidth - 20,
-      height: TR_ROUTE_H - 44,
+      height: panelH - 44,
     });
     this.routeTable = new DataTable(this, {
       x: 0,
       y: 0,
       width: L.mainContentWidth - 20,
-      height: TR_ROUTE_H - 44,
+      height: panelH - 44,
       contentSized: true,
       columns: [
-        {
-          key: "route",
-          label: "Route",
-          width: 280,
-        },
-        {
-          key: "trips",
-          label: "Trips",
-          width: 70,
-          align: "right",
-        },
+        { key: "route", label: "Route", width: 280 },
+        { key: "trips", label: "Trips", width: 70, align: "right" },
         {
           key: "revenue",
           label: "Revenue",
@@ -506,8 +497,7 @@ export class TurnReportScene extends Phaser.Scene {
       ],
     });
 
-    // Top-routes panel is ~60px of content — show the best two so the rows
-    // don't overflow into "Rival Snapshot" below.
+    // Show all routes (tab has full height — no cap needed).
     const routeRows = routePerf
       .map((rp) => ({
         route: routeLabelMap.get(rp.routeId) ?? rp.routeId,
@@ -515,36 +505,32 @@ export class TurnReportScene extends Phaser.Scene {
         revenue: rp.revenue,
         margin: rp.revenue - rp.fuelCost,
       }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 2);
+      .sort((a, b) => b.revenue - a.revenue);
     this.routeTableFrame.setContent(this.routeTable);
     this.routeTable.setRows(routeRows);
 
-    // -----------------------------------------------------------------------
-    // AI Rivals Summary (below route performance)
-    // -----------------------------------------------------------------------
+    // ── Rivals tab ───────────────────────────────────────────────────────────
     const aiSummaries = lastTurn.aiSummaries ?? [];
-    const aiY = routeY + TR_ROUTE_H + TR_GAP;
     if (aiSummaries.length > 0) {
       this.aiPanel = new Panel(this, {
         x: L.mainContentLeft,
-        y: aiY,
+        y: panelY,
         width: L.mainContentWidth,
-        height: TR_AI_H,
+        height: panelH,
         title: "Rival Snapshot",
       });
 
       this.aiTableFrame = new ScrollFrame(this, {
         x: L.mainContentLeft + 10,
-        y: aiY + 38,
+        y: panelY + 38,
         width: L.mainContentWidth - 20,
-        height: TR_AI_H - 44,
+        height: panelH - 44,
       });
       this.aiTable = new DataTable(this, {
         x: 0,
         y: 0,
         width: L.mainContentWidth - 20,
-        height: TR_AI_H - 44,
+        height: panelH - 44,
         contentSized: true,
         columns: [
           { key: "name", label: "Company", width: 300 },
@@ -555,23 +541,12 @@ export class TurnReportScene extends Phaser.Scene {
             align: "right",
             format: (v) => formatCash(v as number),
           },
-          {
-            key: "routes",
-            label: "Routes",
-            width: 100,
-            align: "right",
-          },
-          {
-            key: "status",
-            label: "Status",
-            width: 160,
-          },
+          { key: "routes", label: "Routes", width: 100, align: "right" },
+          { key: "status", label: "Status", width: 160 },
         ],
       });
 
-      // Cap visible rivals to what physically fits inside TR_AI_H (~42px of
-      // content). Earlier code requested 5 rows and they spilled into the
-      // Market Changes panel below (QA: "End of Turn Summary Clutter").
+      // Show all rivals (tab has full height — no cap needed).
       const aiRows = aiSummaries
         .map((s) => ({
           name: s.companyName,
@@ -579,22 +554,17 @@ export class TurnReportScene extends Phaser.Scene {
           routes: s.routeCount,
           status: s.bankrupt ? "BANKRUPT" : "Active",
         }))
-        .sort((a, b) => b.cash - a.cash)
-        .slice(0, 2);
+        .sort((a, b) => b.cash - a.cash);
       this.aiTableFrame.setContent(this.aiTable);
       this.aiTable.setRows(aiRows);
     }
 
-    // -----------------------------------------------------------------------
-    // Bottom row: Market Changes (full width — ticker moved to global HUD)
-    // -----------------------------------------------------------------------
-    const bottomY = aiSummaries.length > 0 ? aiY + TR_AI_H + TR_GAP : aiY;
-
+    // ── World tab: Market Changes + Diplomatic Activity ──────────────────────
     this.marketPanel = new Panel(this, {
       x: L.mainContentLeft,
-      y: bottomY,
+      y: panelY,
       width: L.mainContentWidth,
-      height: TR_BOTTOM_H,
+      height: panelH,
       title: "Market Changes",
     });
     const mpContent = this.marketPanel.getContentArea();
@@ -646,32 +616,16 @@ export class TurnReportScene extends Phaser.Scene {
       this.marketPanel.add(this.summaryLabel);
     }
 
-    // -----------------------------------------------------------------------
-    // Diplomatic Activity (renders only when the simulator produced digest
-    // entries this turn). Wave 1 surfaces a simple bulleted list; richer
-    // formatting (icons, click-throughs to standing changes) ships in wave 2.
-    // -----------------------------------------------------------------------
+    // Diplomatic Activity lives inside the World tab (below Market Changes).
     const diplomacyDigest = state.turnReport?.diplomacyDigest ?? [];
     if (diplomacyDigest.length > 0) {
+      const mpContent = this.marketPanel!.getContentArea();
+      const dipStartY = mpContent.y + 48; // below fuel/cargo lines
       this.dipLineHeight = 18;
-      this.dipPanelHeight = Math.max(
-        56,
-        38 + diplomacyDigest.length * this.dipLineHeight + 8,
-      );
-      const dipY = bottomY + TR_BOTTOM_H + TR_GAP;
-      this.dipPanel = new Panel(this, {
-        x: L.mainContentLeft,
-        y: dipY,
-        width: L.mainContentWidth,
-        height: this.dipPanelHeight,
-        title: "Diplomatic Activity",
-      });
-      const dipPanel = this.dipPanel;
-      const dipContent = dipPanel.getContentArea();
       diplomacyDigest.forEach((line, idx) => {
         const lineLabel = this.add.text(
-          dipContent.x + 8,
-          dipContent.y + 4 + idx * this.dipLineHeight,
+          mpContent.x + 8,
+          dipStartY + idx * this.dipLineHeight,
           `• ${line}`,
           {
             fontSize: `${theme.fonts.body.size}px`,
@@ -679,21 +633,23 @@ export class TurnReportScene extends Phaser.Scene {
             color: colorToString(theme.colors.text),
           },
         );
-        dipPanel.add(lineLabel);
+        this.marketPanel!.add(lineLabel);
         this.dipLines.push(lineLabel);
       });
     }
 
+    // ── Tab strip ────────────────────────────────────────────────────────────
+    this.buildTabStrip(L.mainContentLeft, L.contentTop, L.mainContentWidth);
+    this.setActiveTab("financials");
+
     // -----------------------------------------------------------------------
-    // Quarter summary is non-blocking — players can navigate freely while it
-    // is open, and the persistent End Quarter button in the HUD advances the
-    // turn when they're ready. The only forced flow is GameOver.
+    // Quarter summary is non-blocking — players can navigate freely.
+    // The only forced flow is GameOver (View Results button).
     // -----------------------------------------------------------------------
     if (state.gameOver) {
-      const btnY = bottomY + TR_BOTTOM_H + TR_GAP;
       this.resultsButton = new Button(this, {
         x: L.gameWidth / 2 - 80,
-        y: btnY,
+        y: panelY + panelH + 8,
         width: 160,
         height: 40,
         label: "View Results",
@@ -702,7 +658,6 @@ export class TurnReportScene extends Phaser.Scene {
         },
       });
     } else {
-      // Ensure the rest of the HUD is unlocked for browsing.
       if (state.phase !== "planning") {
         gameStore.update({ phase: "planning" });
       }
@@ -710,6 +665,99 @@ export class TurnReportScene extends Phaser.Scene {
 
     this.relayout();
     attachReflowHandler(this, () => this.relayout());
+  }
+
+  private buildTabStrip(x: number, y: number, width: number): void {
+    const theme = getTheme();
+    const tabs: Array<{ id: TRTab; label: string }> = [
+      { id: "financials", label: "Financials" },
+      { id: "routes", label: "Routes" },
+      { id: "rivals", label: "Rivals" },
+      { id: "world", label: "World" },
+    ];
+    const tabW = Math.floor(width / tabs.length);
+
+    const strip = this.add.container(x, y);
+
+    const stripBg = this.add
+      .rectangle(0, 0, width, TR_TAB_H, theme.colors.headerBg, 0.9)
+      .setOrigin(0, 0);
+    strip.add(stripBg);
+
+    tabs.forEach(({ id, label }, i) => {
+      const tx = i * tabW;
+      const isActive = id === this.activeTab;
+
+      const bg = this.add
+        .rectangle(
+          tx,
+          0,
+          tabW,
+          TR_TAB_H,
+          isActive ? theme.colors.panelBg : theme.colors.headerBg,
+          isActive ? 1 : 0.6,
+        )
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true });
+
+      const indicator = this.add
+        .rectangle(tx, TR_TAB_H - 2, tabW, 2, theme.colors.accent)
+        .setOrigin(0, 0)
+        .setVisible(isActive);
+
+      const text = this.add
+        .text(tx + tabW / 2, TR_TAB_H / 2, label, {
+          fontSize: `${theme.fonts.caption.size}px`,
+          fontFamily: theme.fonts.caption.family,
+          color: colorToString(
+            isActive ? theme.colors.accent : theme.colors.textDim,
+          ),
+        })
+        .setOrigin(0.5, 0.5);
+
+      bg.on("pointerover", () => {
+        if (id !== this.activeTab) bg.setFillStyle(theme.colors.buttonHover);
+      });
+      bg.on("pointerout", () => {
+        if (id !== this.activeTab) {
+          bg.setFillStyle(theme.colors.headerBg);
+          bg.setAlpha(0.6);
+        }
+      });
+      bg.on("pointerup", () => this.setActiveTab(id));
+
+      this.tabBgs[id] = bg;
+      this.tabLabels[id] = text;
+      strip.add([bg, indicator, text]);
+    });
+  }
+
+  private setActiveTab(tab: TRTab): void {
+    const theme = getTheme();
+    this.activeTab = tab;
+
+    this.plPanel?.setVisible(tab === "financials");
+    this.routePanel?.setVisible(tab === "routes");
+    this.routeTableFrame?.setVisible(tab === "routes");
+    this.aiPanel?.setVisible(tab === "rivals");
+    this.aiTableFrame?.setVisible(tab === "rivals");
+    this.marketPanel?.setVisible(tab === "world");
+
+    // Update tab button highlight.
+    for (const [id, bg] of Object.entries(this.tabBgs) as Array<
+      [TRTab, Phaser.GameObjects.Rectangle]
+    >) {
+      const active = id === tab;
+      bg.setFillStyle(active ? theme.colors.panelBg : theme.colors.headerBg);
+      bg.setAlpha(active ? 1 : 0.6);
+    }
+    for (const [id, label] of Object.entries(this.tabLabels) as Array<
+      [TRTab, Phaser.GameObjects.Text]
+    >) {
+      label.setColor(
+        colorToString(id === tab ? theme.colors.accent : theme.colors.textDim),
+      );
+    }
   }
 
   private relayout(): void {
@@ -728,72 +776,64 @@ export class TurnReportScene extends Phaser.Scene {
     this.portrait?.setPosition(L.sidebarLeft, L.contentTop);
     this.portrait?.setSize(L.sidebarWidth, L.contentHeight);
 
-    // P&L panel.
+    // All tab panels share the same position — only one is visible at a time.
+    const panelY = L.contentTop + TR_TAB_H;
+    const panelH = L.contentHeight - TR_TAB_H;
+
+    // Financials panel.
     if (this.plPanel) {
-      this.plPanel.setPosition(L.mainContentLeft, L.contentTop);
-      this.plPanel.setSize(L.mainContentWidth, TR_PL_H);
+      this.plPanel.setPosition(L.mainContentLeft, panelY);
+      this.plPanel.setSize(L.mainContentWidth, panelH);
       const plContent = this.plPanel.getContentArea();
 
-      // Reposition row label/value pairs (panel-relative coords).
       for (let i = 0; i < this.plLabelTexts.length; i++) {
         const y = this.plRowYs[i];
         this.plLabelTexts[i].setPosition(plContent.x + 8, y);
         this.plValueTexts[i].setPosition(plContent.x + plContent.width - 8, y);
       }
-
-      // Separator line — re-anchor x and stretch to new content width.
       this.plSepLine?.setPosition(plContent.x + 8, this.plSepY);
       this.plSepLine?.setSize(plContent.width - 16, 1);
-
-      // Net profit row.
       this.plNetLabel?.setPosition(plContent.x + 8, this.plNetRowY);
       this.plNetValue?.setPosition(
         plContent.x + plContent.width - 8,
         this.plNetRowY,
       );
-
-      // Grade badge sits in the panel title bar (panel-relative coords).
       this.plGradeLabel?.setPosition(
         L.mainContentWidth - theme.spacing.md,
         theme.panel.titleHeight / 2,
       );
-
-      // Streak badge centered on content.
       this.plStreakBadge?.setPosition(
         plContent.x + plContent.width / 2,
         this.plStreakRowY,
       );
     }
 
-    // Top Routes panel + table.
-    const routeY = L.contentTop + TR_PL_H + TR_GAP;
+    // Routes panel + table.
     if (this.routePanel) {
-      this.routePanel.setPosition(L.mainContentLeft, routeY);
-      this.routePanel.setSize(L.mainContentWidth, TR_ROUTE_H);
+      this.routePanel.setPosition(L.mainContentLeft, panelY);
+      this.routePanel.setSize(L.mainContentWidth, panelH);
     }
     if (this.routeTableFrame) {
-      this.routeTableFrame.setPosition(L.mainContentLeft + 10, routeY + 38);
-      this.routeTableFrame.setSize(L.mainContentWidth - 20, TR_ROUTE_H - 44);
+      this.routeTableFrame.setPosition(L.mainContentLeft + 10, panelY + 38);
+      this.routeTableFrame.setSize(L.mainContentWidth - 20, panelH - 44);
     }
-    this.routeTable?.setSize(L.mainContentWidth - 20, TR_ROUTE_H - 44);
+    this.routeTable?.setSize(L.mainContentWidth - 20, panelH - 44);
 
-    // Rival Snapshot panel + table (optional).
-    const aiY = routeY + TR_ROUTE_H + TR_GAP;
+    // Rivals panel + table.
     if (this.aiPanel) {
-      this.aiPanel.setPosition(L.mainContentLeft, aiY);
-      this.aiPanel.setSize(L.mainContentWidth, TR_AI_H);
+      this.aiPanel.setPosition(L.mainContentLeft, panelY);
+      this.aiPanel.setSize(L.mainContentWidth, panelH);
     }
     if (this.aiTableFrame) {
-      this.aiTableFrame.setPosition(L.mainContentLeft + 10, aiY + 38);
-      this.aiTableFrame.setSize(L.mainContentWidth - 20, TR_AI_H - 44);
+      this.aiTableFrame.setPosition(L.mainContentLeft + 10, panelY + 38);
+      this.aiTableFrame.setSize(L.mainContentWidth - 20, panelH - 44);
     }
-    this.aiTable?.setSize(L.mainContentWidth - 20, TR_AI_H - 44);
+    this.aiTable?.setSize(L.mainContentWidth - 20, panelH - 44);
 
-    // Market Changes panel.
-    const bottomY = this.aiPanel ? aiY + TR_AI_H + TR_GAP : aiY;
+    // World panel (Market Changes + Diplomacy lines inline).
     if (this.marketPanel) {
-      this.marketPanel.setPosition(L.mainContentLeft, bottomY);
-      this.marketPanel.setSize(L.mainContentWidth, TR_BOTTOM_H);
+      this.marketPanel.setPosition(L.mainContentLeft, panelY);
+      this.marketPanel.setSize(L.mainContentWidth, panelH);
       const mpContent = this.marketPanel.getContentArea();
       this.fuelLabel?.setPosition(mpContent.x + 8, mpContent.y + 4);
       this.summaryLabel?.setPosition(
@@ -802,24 +842,7 @@ export class TurnReportScene extends Phaser.Scene {
       );
     }
 
-    // Diplomatic Activity panel (optional).
-    if (this.dipPanel) {
-      const dipY = bottomY + TR_BOTTOM_H + TR_GAP;
-      this.dipPanel.setPosition(L.mainContentLeft, dipY);
-      this.dipPanel.setSize(L.mainContentWidth, this.dipPanelHeight);
-      const dipContent = this.dipPanel.getContentArea();
-      for (let i = 0; i < this.dipLines.length; i++) {
-        this.dipLines[i].setPosition(
-          dipContent.x + 8,
-          dipContent.y + 4 + i * this.dipLineHeight,
-        );
-      }
-    }
-
-    // Game-over button.
-    if (this.resultsButton) {
-      const btnY = bottomY + TR_BOTTOM_H + TR_GAP;
-      this.resultsButton.setPosition(L.gameWidth / 2 - 80, btnY);
-    }
+    // Game-over button (below active panel).
+    this.resultsButton?.setPosition(L.gameWidth / 2 - 80, panelY + panelH + 8);
   }
 }
