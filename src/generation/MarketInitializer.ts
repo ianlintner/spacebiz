@@ -55,7 +55,7 @@ function createPlanetMarket(planet: Planet, rng: SeededRNG): PlanetMarket {
 
     if (cargoType === CargoType.Passengers) {
       // Use passenger volume to create meaningful demand differentials.
-      // High-volume worlds (Hub 100, Resort 80, Terran 80) become demand
+      // High-volume worlds (CoreWorld 100, LuxuryWorld 60, Manufacturing 50) become demand
       // hotspots; low-volume worlds (Research 15, Mining 20) have surplus.
       if (paxVolume >= 70) {
         // High demand destination — many people want to go here
