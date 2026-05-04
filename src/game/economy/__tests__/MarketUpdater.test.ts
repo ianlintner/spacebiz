@@ -51,7 +51,7 @@ function makeMarketState(overrides: Partial<MarketState> = {}): MarketState {
 
 describe("MarketUpdater", () => {
   describe("updateMarket", () => {
-    it("decays saturation by 15% (multiplies by 0.85)", () => {
+    it("decays saturation by 8% per turn (multiplies by 0.92)", () => {
       const market = makeMarketState({
         planetMarkets: {
           "planet-1": makePlanetMarket({
