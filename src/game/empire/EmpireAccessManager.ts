@@ -223,7 +223,9 @@ export function validateRouteCreation(
     }
   }
 
-  // System-pair cargo uniqueness: only one route per cargo type between any two systems.
+  // System-pair cargo uniqueness: per spec §5.1, each actor (player or AI independently)
+  // may operate at most one route per cargo type per system pair. This checks only the
+  // player's own routes — AI companies apply the same rule against their own routes separately.
   if (cargoType !== null) {
     const isDuplicate = hasDuplicateSystemPairCargo(
       state.activeRoutes,

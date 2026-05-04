@@ -375,6 +375,7 @@ function openAIRoute(
 
       // Find best cargo for this route
       for (const cargoType of cargoTypes) {
+        // Per spec §5.1: each AI applies the slot rule against its own routes independently.
         if (
           hasDuplicateSystemPairCargo(
             existingRoutes,

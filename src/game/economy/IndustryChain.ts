@@ -13,6 +13,8 @@ export function getInputCargo(planetType: PlanetType): CargoType | null {
   return PLANET_INDUSTRY_INPUT[planetType] ?? null;
 }
 
+// NOTE: returns only the primary output (produces[0]). Secondary outputs (e.g. Mining's Hazmat)
+// are not boosted. Safe today because no multi-output planet has an industry input requirement.
 export function getOutputCargo(planetType: PlanetType): CargoType | null {
   return PLANET_CARGO_PROFILES[planetType]?.produces[0] ?? null;
 }
