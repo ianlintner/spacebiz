@@ -265,13 +265,13 @@ export const RouteScope = {
 export type RouteScope = (typeof RouteScope)[keyof typeof RouteScope];
 
 export const PlanetType = {
-  Terran: "terran",
-  Industrial: "industrial",
-  Mining: "mining",
   Agricultural: "agricultural",
-  HubStation: "hubStation",
-  Resort: "resort",
-  Research: "research",
+  Mining: "mining",
+  TechWorld: "techWorld",
+  Manufacturing: "manufacturing",
+  LuxuryWorld: "luxuryWorld",
+  CoreWorld: "coreWorld",
+  Frontier: "frontier",
 } as const;
 export type PlanetType = (typeof PlanetType)[keyof typeof PlanetType];
 

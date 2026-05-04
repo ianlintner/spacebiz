@@ -41,7 +41,7 @@ function makePlanet(overrides: Partial<Planet> = {}): Planet {
     id: "planet-1",
     name: "Test Planet",
     systemId: "system-1",
-    type: PlanetType.Terran,
+    type: PlanetType.Frontier,
     x: 0,
     y: 0,
     population: 1000000,

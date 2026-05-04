@@ -754,9 +754,9 @@ export function drawPortrait(
 
   switch (type) {
     case "planet": {
-      const planetType = data?.planetType ?? "terran";
+      const planetType = data?.planetType ?? "frontier";
       switch (planetType) {
-        case "terran":
+        case "frontier":
           renderTerranPortrait(graphics, grid, seed);
           break;
         case "mining":
@@ -765,16 +765,16 @@ export function drawPortrait(
         case "agricultural":
           renderAgriculturalPortrait(graphics, grid, seed);
           break;
-        case "industrial":
+        case "manufacturing":
           renderIndustrialPortrait(graphics, grid, seed);
           break;
-        case "hubStation":
+        case "coreWorld":
           renderHubStationPortrait(graphics, grid, seed);
           break;
-        case "resort":
+        case "luxuryWorld":
           renderResortPortrait(graphics, grid, seed);
           break;
-        case "research":
+        case "techWorld":
           renderResearchPortrait(graphics, grid, seed);
           break;
       }

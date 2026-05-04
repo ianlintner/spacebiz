@@ -13,23 +13,23 @@ import {
 import { applyView3DResize } from "../view3d/applyView3DResize.ts";
 
 const PLANET_BASE_COLORS: Record<PlanetType, number> = {
-  terran: 0x4b86d6,
-  industrial: 0x9b8870,
-  mining: 0x8b8e97,
   agricultural: 0x68b45a,
-  hubStation: 0xf6b04f,
-  resort: 0xff7fd3,
-  research: 0x73ddff,
+  mining: 0x8b8e97,
+  techWorld: 0x73ddff,
+  manufacturing: 0x9b8870,
+  luxuryWorld: 0xff7fd3,
+  coreWorld: 0xf6b04f,
+  frontier: 0x4b86d6,
 };
 
 const PLANET_RADIUS_BY_TYPE: Record<PlanetType, number> = {
-  terran: 0.85,
-  industrial: 0.75,
-  mining: 0.55,
   agricultural: 0.7,
-  hubStation: 0.65,
-  resort: 0.65,
-  research: 0.6,
+  mining: 0.55,
+  techWorld: 0.6,
+  manufacturing: 0.75,
+  luxuryWorld: 0.65,
+  coreWorld: 0.85,
+  frontier: 0.65,
 };
 
 const SUN_RADIUS = 1.6;

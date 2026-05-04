@@ -22,6 +22,7 @@ import {
 } from "../routes/RouteManager.ts";
 import { calculatePrice } from "../economy/PriceCalculator.ts";
 import { updateMarket } from "../economy/MarketUpdater.ts";
+import { getActiveProducers } from "../economy/IndustryChain.ts";
 import {
   ageFleet,
   calculateMaintenanceCosts,
@@ -630,7 +631,20 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   );
 
   // ----- Step 7: Market evolution -----
-  const updatedMarket = updateMarket(nextState.market, rng);
+  const allRoutesForChain = [
+    ...nextState.activeRoutes,
+    ...nextState.aiCompanies.flatMap((ai) => ai.activeRoutes),
+  ];
+  const activeProducerIds = getActiveProducers(
+    nextState.galaxy.planets,
+    allRoutesForChain,
+  );
+  const updatedMarket = updateMarket(
+    nextState.market,
+    rng,
+    activeProducerIds,
+    nextState.galaxy.planets,
+  );
   nextState = { ...nextState, market: updatedMarket };
 
   // ----- Step 8: Events -----

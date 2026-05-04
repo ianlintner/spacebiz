@@ -636,6 +636,30 @@ export function removeCargoLocks(
 }
 
 /**
+ * Returns true when the given system pair already has a route for `cargoType`.
+ * The check is bidirectional: A→B and B→A are the same pair.
+ */
+export function hasDuplicateSystemPairCargo(
+  existingRoutes: ActiveRoute[],
+  planets: Planet[],
+  originSystemId: string,
+  destSystemId: string,
+  cargoType: CargoType,
+): boolean {
+  const planetById = new Map(planets.map((p) => [p.id, p]));
+  return existingRoutes.some((r) => {
+    if (r.cargoType !== cargoType) return false;
+    const rOriginSysId = planetById.get(r.originPlanetId)?.systemId;
+    const rDestSysId = planetById.get(r.destinationPlanetId)?.systemId;
+    if (!rOriginSysId || !rDestSysId) return false;
+    return (
+      (rOriginSysId === originSystemId && rDestSysId === destSystemId) ||
+      (rOriginSysId === destSystemId && rDestSysId === originSystemId)
+    );
+  });
+}
+
+/**
  * Create a new route.
  */
 export function createRoute(

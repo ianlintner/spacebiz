@@ -47,7 +47,7 @@ function makePlanet(
     id,
     name: `Planet ${id}`,
     systemId,
-    type: "terran",
+    type: "frontier",
     x,
     y,
     population: 1000,
