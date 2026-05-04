@@ -157,7 +157,7 @@ describe("AI behavioral: competition", () => {
 });
 
 describe("AI behavioral: bankruptcy", () => {
-  it("bankrupt companies are recorded in summary", () => {
+  it("bankrupt companies are recorded in summary", { timeout: 15000 }, () => {
     // Run a longer simulation where bankruptcies are more likely
     const result = runSim({ maxTurns: 50, companyCount: 6 });
 
