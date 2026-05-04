@@ -144,7 +144,9 @@ export class ContractsScene extends Phaser.Scene {
       width: L.sidebarWidth,
       height: L.contentHeight,
     });
-    this.portrait.updatePortrait("event", 0, "Contracts", [], {});
+    this.portrait.updatePortrait("event", 0, "Contracts", [], {
+      eventCategory: "opportunity",
+    });
 
     // ── Build tab content containers ──
     const availableContent = this.add.container(0, 0);
@@ -578,13 +580,19 @@ export class ContractsScene extends Phaser.Scene {
           this.selectedAvailableId = null;
           this.refreshAvailableTable();
           this.refreshActiveTable();
-          this.portrait.updatePortrait("event", 0, "Contract Accepted!", [
-            {
-              label: "Status",
-              value:
-                "Route created. Assign a ship to start fulfilling the contract.",
-            },
-          ]);
+          this.portrait.updatePortrait(
+            "event",
+            0,
+            "Contract Accepted!",
+            [
+              {
+                label: "Status",
+                value:
+                  "Route created. Assign a ship to start fulfilling the contract.",
+              },
+            ],
+            { eventCategory: "opportunity" },
+          );
         }
       },
     });
@@ -704,12 +712,18 @@ export class ContractsScene extends Phaser.Scene {
           this.selectedActiveId = null;
           this.refreshActiveTable();
           this.refreshAvailableTable();
-          this.portrait.updatePortrait("event", 0, "Contract Abandoned", [
-            {
-              label: "Status",
-              value: "The contract has been abandoned. Penalties applied.",
-            },
-          ]);
+          this.portrait.updatePortrait(
+            "event",
+            0,
+            "Contract Abandoned",
+            [
+              {
+                label: "Status",
+                value: "The contract has been abandoned. Penalties applied.",
+              },
+            ],
+            { eventCategory: "hazard" },
+          );
         }
       },
     });

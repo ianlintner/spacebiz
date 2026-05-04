@@ -22,6 +22,10 @@ import type {
 } from "../../../../src/data/types.ts";
 import { SHIP_TEMPLATES } from "../../../../src/data/constants.ts";
 import { getPlanetPortraitTextureKey } from "../../../../src/data/planetPortraits.ts";
+import {
+  getSystemPortraitTextureKey,
+  getEventPortraitTextureKey,
+} from "../../../../src/data/systemPortraits.ts";
 import { getPortraitTextureKey } from "../../../../src/data/portraits.ts";
 import { getLeaderTextureKey } from "../../../../src/data/empireLeaderPortraits.ts";
 import { portraitLoader } from "../../../../src/game/PortraitLoader.ts";
@@ -47,10 +51,9 @@ export interface PortraitPanelConfig {
 export class PortraitPanel extends Phaser.GameObjects.Container {
   private panel: Panel;
   private portraitGraphics: Phaser.GameObjects.Graphics;
-  private portraitMaskShape!: Phaser.GameObjects.Graphics;
   // Outer clip mask (world-space Graphics). Stored so setPosition/redraw can
-  // recompute its rect — both masks use viewTransform:'world' via applyClippingMask,
-  // so they must track the container's world position.
+  // recompute its rect — uses viewTransform:'world' via applyClippingMask,
+  // so it must track the container's world position.
   private clipMaskShape!: Phaser.GameObjects.Graphics;
   private portraitImage: Phaser.GameObjects.Image | null = null;
   private nameLabel: Label;
@@ -95,22 +98,8 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     this.portraitGraphics.setPosition(theme.spacing.sm, theme.spacing.sm);
     this.add(this.portraitGraphics);
 
-    // Image object for loaded planet portrait textures
-    // Created on demand in updatePortrait when a loaded texture is available
+    // Image object for loaded portrait textures — created on demand in updatePortrait
     this.portraitImage = null;
-
-    // Geometry mask to clip portrait within panel bounds. Uses applyClippingMask
-    // so the legacy Phaser 3 setMask path is reachable when the filters API
-    // isn't available (the optional chain alone silently no-ops).
-    this.portraitMaskShape = scene.make.graphics({});
-    this.portraitMaskShape.fillStyle(0xffffff, 1);
-    this.portraitMaskShape.fillRect(
-      config.x + theme.spacing.sm,
-      config.y + theme.spacing.sm,
-      this.portraitWidth,
-      this.portraitHeight,
-    );
-    applyClippingMask(this.portraitGraphics, this.portraitMaskShape);
 
     // Name label — below portrait area, centered, heading + accent
     const nameLabelY =
@@ -159,16 +148,16 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Override setPosition so that the world-space mask Graphics objects
-   * (portraitMaskShape and clipMaskShape) are recomputed when the container
-   * moves. Both masks use viewTransform:'world' via applyClippingMask, so their
+   * Override setPosition so that the world-space clip mask Graphics object
+   * (clipMaskShape) is recomputed when the container moves.
+   * It uses viewTransform:'world' via applyClippingMask, so its
    * fillRect coordinates must always equal the container's world position.
    */
   public setPosition(x?: number, y?: number, z?: number, w?: number): this {
     super.setPosition(x, y, z, w);
-    // Guard: redraw() references portraitMaskShape and clipMaskShape which are
-    // assigned after super() in the constructor — skip if not yet initialised.
-    if (this.portraitMaskShape && this.clipMaskShape) {
+    // Guard: redraw() references clipMaskShape which is assigned after
+    // super() in the constructor — skip if not yet initialised.
+    if (this.clipMaskShape) {
       this.redraw();
     }
     return this;
@@ -190,17 +179,7 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     // Reposition the portrait graphics origin (position is constant, no resize needed)
     this.portraitGraphics.setPosition(theme.spacing.sm, theme.spacing.sm);
 
-    // Update portrait mask shape (world-space coords — viewTransform:'world').
-    this.portraitMaskShape.clear();
-    this.portraitMaskShape.fillStyle(0xffffff, 1);
-    this.portraitMaskShape.fillRect(
-      this.x + theme.spacing.sm,
-      this.y + theme.spacing.sm,
-      this.portraitWidth,
-      this.portraitHeight,
-    );
-
-    // Update outer clip mask (also world-space).
+    // Update outer clip mask (world-space coords — viewTransform:'world').
     this.clipMaskShape.clear();
     this.clipMaskShape.fillStyle(0xffffff, 1);
     this.clipMaskShape.fillRect(
@@ -239,7 +218,7 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
   ): void {
     const theme = getTheme();
 
-    // Try loaded texture first (AI ship portrait, CEO portrait, or planet portrait)
+    // Try loaded texture first — explicit key wins, then type-specific lookups
     let usedImage = false;
     const explicitTexKey = data?.textureKey;
     const planetTexKey =
@@ -250,7 +229,20 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
       type === "ship" && data?.shipClass
         ? `ship-portrait-${data.shipClass}`
         : undefined;
-    const texKey = explicitTexKey ?? planetTexKey ?? shipPortraitKey;
+    const systemTexKey =
+      type === "system" && data?.starColor !== undefined
+        ? getSystemPortraitTextureKey(data.starColor)
+        : undefined;
+    const eventTexKey =
+      type === "event" && data?.eventCategory
+        ? getEventPortraitTextureKey(data.eventCategory)
+        : undefined;
+    const texKey =
+      explicitTexKey ??
+      planetTexKey ??
+      shipPortraitKey ??
+      systemTexKey ??
+      eventTexKey;
     if (texKey && this.scene.textures.exists(texKey)) {
       this.portraitGraphics.clear();
       this.portraitGraphics.setVisible(false);
@@ -260,7 +252,6 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
           theme.spacing.sm + this.portraitHeight / 2,
           texKey,
         );
-        applyClippingMask(this.portraitImage, this.portraitMaskShape);
         this.add(this.portraitImage);
       } else {
         this.portraitImage.setTexture(texKey);
