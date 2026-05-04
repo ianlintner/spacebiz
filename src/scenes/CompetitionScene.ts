@@ -180,6 +180,7 @@ export class CompetitionScene extends Phaser.Scene {
       width: content.width,
       height: viewHeight,
       contentSized: true,
+      autoFocus: true,
       columns: [
         { key: "name", label: "Company", width: 120 },
         { key: "empire", label: "Empire", width: 100 },

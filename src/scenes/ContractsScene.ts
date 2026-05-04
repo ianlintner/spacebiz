@@ -346,6 +346,7 @@ export class ContractsScene extends Phaser.Scene {
         },
       ],
       keyboardNavigation: false,
+      autoFocus: true,
       emptyStateText: "No active contracts",
       emptyStateHint: "Accept a contract from the Available tab.",
       onRowSelect: (_rowIndex, rowData) => {
