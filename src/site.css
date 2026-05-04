@@ -615,9 +615,9 @@ canvas {
 }
 
 .game-frame--hero {
-  /* Fill available viewport height, leave room for thin nav */
-  height: calc(100vh - var(--nav-height) - 2rem);
-  height: calc(100dvh - var(--nav-height) - 2rem);
+  /* Fill the full viewport below the nav — no bottom gap */
+  height: calc(100vh - var(--nav-height));
+  height: calc(100dvh - var(--nav-height));
   min-height: 360px;
 }
 
@@ -1047,7 +1047,7 @@ canvas {
 }
 
 .game-frame__screen--hero {
-  padding: clamp(0.3rem, 0.8vw, 0.5rem);
+  padding: 0;
 }
 
 .game-frame__screen::before,
@@ -1091,6 +1091,10 @@ canvas {
 .viewport--hero {
   height: 100%;
   aspect-ratio: auto;
+  border-radius: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
 }
 
 .viewport::before {
@@ -1112,9 +1116,6 @@ canvas {
 #game-container {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 #game-container canvas {
@@ -1482,7 +1483,7 @@ details[open] summary::after {
   }
 
   .game-frame__screen--hero {
-    padding: 0.25rem;
+    padding: 0;
   }
 
   .viewport--hero {
@@ -1494,7 +1495,6 @@ details[open] summary::after {
      */
     aspect-ratio: 4 / 3;
     max-height: calc(100dvh - var(--nav-height) - 5rem);
-    border-radius: 14px;
   }
 
   .site-header {
@@ -1585,7 +1585,7 @@ details[open] summary::after {
   }
 
   .game-frame__screen--hero {
-    padding: 0.15rem;
+    padding: 0;
   }
 
   .frame-caption--hero {
