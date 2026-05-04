@@ -664,8 +664,15 @@ function updateFooterYear(): void {
 // changes, but Phaser's FIT-mode layout still needs a refresh to recompute
 // the canvas display rect against the new container aspect. Skipping that
 // refresh leaves residual top/bottom letterboxing.
+//
+// `lastIsFullscreen` is part of the dedupe key because the ultra-wide cap
+// only applies in fullscreen — a maximised browser window and the same
+// monitor in fullscreen can report identical parent dims, but the virtual
+// game width must change between them or the cap doesn't take effect on
+// toggle.
 let lastSourceWidth = 0;
 let lastSourceHeight = 0;
+let lastIsFullscreen = false;
 const disposers: Array<() => void> = [];
 
 function resizeGameToViewport(): void {
@@ -689,12 +696,6 @@ function resizeGameToViewport(): void {
   const sourceWInt = Math.round(sourceW);
   const sourceHInt = Math.round(sourceH);
 
-  if (sourceWInt === lastSourceWidth && sourceHInt === lastSourceHeight) {
-    return;
-  }
-  lastSourceWidth = sourceWInt;
-  lastSourceHeight = sourceHInt;
-
   // On ultra-wide displays in fullscreen, cap the virtual game width so the
   // canvas fills no more than 2.2:1 AR. Phaser's FIT mode then centres the
   // canvas and leaves side bars whose CSS background shows the starfield.
@@ -705,6 +706,17 @@ function resizeGameToViewport(): void {
       .querySelector<HTMLElement>("[data-game-frame]")
       ?.classList.contains("is-browser-fullscreen") ??
       false);
+
+  if (
+    sourceWInt === lastSourceWidth &&
+    sourceHInt === lastSourceHeight &&
+    isFullscreen === lastIsFullscreen
+  ) {
+    return;
+  }
+  lastSourceWidth = sourceWInt;
+  lastSourceHeight = sourceHInt;
+  lastIsFullscreen = isFullscreen;
 
   let calcW = sourceW;
   let calcH = sourceH;
@@ -868,6 +880,7 @@ if (import.meta.hot) {
     activeGame = null;
     lastSourceWidth = 0;
     lastSourceHeight = 0;
+    lastIsFullscreen = false;
     while (disposers.length) {
       try {
         disposers.pop()?.();

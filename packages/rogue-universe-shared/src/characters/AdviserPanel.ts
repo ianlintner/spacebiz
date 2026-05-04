@@ -818,6 +818,36 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
   }
 
   /**
+   * Reposition the drawer's anchor (the open-state container origin).
+   *
+   * Callers pass the desired *open* x/y — the same x at which the panel
+   * body sits flush against the right edge of the viewport. Internally
+   * this updates `openX`, recomputes `closedX = openX + panelWidth`, and
+   * snaps the container to whichever of the two matches the current
+   * drawer state. Use this from a HUD relayout instead of `setPosition`,
+   * otherwise `openX`/`closedX` go stale on viewport changes and the
+   * close animation slides to the wrong spot (panel body stays partially
+   * on-screen instead of tucking away to a tab-only sliver).
+   */
+  setAnchor(openX: number, y: number): this {
+    this.openX = openX;
+    this.closedX = openX + this.panelWidth;
+    super.setPosition(this.drawerOpen ? this.openX : this.closedX, y);
+    // If a slide tween is in flight, redirect it to the new target so the
+    // animation completes against the updated geometry.
+    if (this.slideTween) {
+      this.slideTween.stop();
+      this.slideTween = null;
+      if (this.drawerOpen) {
+        this.slideOpen();
+      } else {
+        this.slideClosed();
+      }
+    }
+    return this;
+  }
+
+  /**
    * Resize the drawer body. The tab handle on the left edge keeps its
    * fixed `TAB_WIDTH`; only the panel-body geometry to its right reflows.
    *
@@ -875,10 +905,14 @@ export class AdviserPanel extends Phaser.GameObjects.Container {
       this.resizePanel(height);
     }
 
-    // Update closedX so the drawer continues to sit just off the right
-    // edge of its host viewport. Caller is expected to setPosition()
-    // before/after this if their anchor changes.
+    // Keep closedX = openX + width invariant after a width change so the
+    // drawer hides flush with the right edge.
     this.closedX = this.openX + width;
+    if (!this.drawerOpen && !this.slideTween) {
+      // Snap a settled-closed container to the new closedX immediately so
+      // it stays tucked off-screen after a width change.
+      super.setPosition(this.closedX, this.y);
+    }
     return this;
   }
 
