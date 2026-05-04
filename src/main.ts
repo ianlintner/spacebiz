@@ -680,19 +680,41 @@ function resizeGameToViewport(): void {
     return;
   }
 
-  // Prefer the canvas parent's bounding box. Reading window.innerWidth/Height
-  // includes scrollbar width on some browsers, which flips when the canvas
-  // resize itself toggles a page scrollbar — that's the feedback loop the
-  // source-dim dedupe below also breaks.
-  const parent = document.getElementById("game-container");
-  const parentRect = parent?.getBoundingClientRect();
-  const parentW = parentRect && parentRect.width > 0 ? parentRect.width : 0;
-  const parentH = parentRect && parentRect.height > 0 ? parentRect.height : 0;
-  const sourceW = parentW > 0 ? parentW : window.innerWidth || 1280;
-  const sourceH = parentH > 0 ? parentH : window.innerHeight || 720;
+  // Check fullscreen state first — it affects both source-dim reading and the
+  // ultra-wide cap below.
+  const isFullscreen =
+    document.fullscreenElement != null ||
+    (document
+      .querySelector<HTMLElement>("[data-game-frame]")
+      ?.classList.contains("is-browser-fullscreen") ??
+      false);
 
-  // Round to integers so sub-pixel reflows don't fire a resize per frame
-  // (browsers can report fractional getBoundingClientRect values).
+  // In fullscreen use window.innerWidth/Height (guaranteed integers that match
+  // what Phaser's ScaleManager reads from offsetWidth/offsetHeight). Reading
+  // game-container.getBoundingClientRect() instead travels through a
+  // flex-height CSS chain that can produce a fractional pixel different from
+  // offsetHeight, causing Phaser's FIT scale to leave a 1–2 px gap at the
+  // bottom or right edge.
+  //
+  // Outside fullscreen, prefer the canvas parent's bounding box so we track
+  // the actual container width (which can be narrower than the browser window
+  // when the game is embedded in a marketing column), and avoid the
+  // scrollbar-flicker feedback loop that window.innerWidth can trigger.
+  let sourceW: number;
+  let sourceH: number;
+  if (isFullscreen) {
+    sourceW = window.innerWidth || screen.width || 1280;
+    sourceH = window.innerHeight || screen.height || 720;
+  } else {
+    const parent = document.getElementById("game-container");
+    const parentRect = parent?.getBoundingClientRect();
+    const parentW = parentRect && parentRect.width > 0 ? parentRect.width : 0;
+    const parentH = parentRect && parentRect.height > 0 ? parentRect.height : 0;
+    sourceW = parentW > 0 ? parentW : window.innerWidth || 1280;
+    sourceH = parentH > 0 ? parentH : window.innerHeight || 720;
+  }
+
+  // Round to integers so sub-pixel reflows don't fire a resize per frame.
   const sourceWInt = Math.round(sourceW);
   const sourceHInt = Math.round(sourceH);
 
@@ -700,12 +722,6 @@ function resizeGameToViewport(): void {
   // canvas fills no more than 2.2:1 AR. Phaser's FIT mode then centres the
   // canvas and leaves side bars whose CSS background shows the starfield.
   const FULLSCREEN_ULTRAWIDE_RATIO = 2.2;
-  const isFullscreen =
-    document.fullscreenElement != null ||
-    (document
-      .querySelector<HTMLElement>("[data-game-frame]")
-      ?.classList.contains("is-browser-fullscreen") ??
-      false);
 
   if (
     sourceWInt === lastSourceWidth &&
@@ -755,6 +771,11 @@ function setupFullscreenControl(): void {
     toggle.textContent = isFullscreen ? "Exit Full Screen" : "Full Screen";
     toggle.setAttribute("aria-pressed", String(isFullscreen));
     frame.classList.toggle("is-browser-fullscreen", isFullscreen);
+    // Bust the dedupe cache so resizeGameToViewport always runs after a
+    // fullscreen transition, even if source dims happen to match (e.g. a
+    // maximised browser window entering fullscreen) or if the ResizeObserver
+    // already fired and set lastIsFullscreen to the new value.
+    lastIsFullscreen = !isFullscreen;
     window.requestAnimationFrame(resizeGameToViewport);
   };
 
