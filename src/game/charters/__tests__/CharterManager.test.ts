@@ -73,7 +73,7 @@ function makePlanet(id: string, systemId: string): Planet {
     id,
     name: id,
     systemId,
-    type: "terran",
+    type: "frontier",
     x: 0,
     y: 0,
     population: 1_000_000,

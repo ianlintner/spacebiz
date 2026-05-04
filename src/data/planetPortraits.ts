@@ -5,13 +5,13 @@ import type { PlanetType } from "./types.ts";
  * Images live at public/portraits/planets/planet-{type}.png.
  */
 export const PLANET_PORTRAIT_TYPES: readonly PlanetType[] = [
-  "terran",
-  "industrial",
-  "mining",
   "agricultural",
-  "hubStation",
-  "resort",
-  "research",
+  "mining",
+  "techWorld",
+  "manufacturing",
+  "luxuryWorld",
+  "coreWorld",
+  "frontier",
 ] as const;
 
 /** Get the Phaser texture key for a planet portrait. */

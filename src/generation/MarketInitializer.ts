@@ -10,6 +10,7 @@ import type {
 import {
   PLANET_CARGO_PROFILES,
   PLANET_PASSENGER_VOLUME,
+  PLANET_INDUSTRY_INPUT,
   BASE_CARGO_PRICES,
   BASE_FUEL_PRICE,
 } from "../data/constants.ts";
@@ -46,6 +47,8 @@ function createPlanetMarket(planet: Planet, rng: SeededRNG): PlanetMarket {
 
   const entries: Partial<Record<CargoTypeT, CargoMarketEntry>> = {};
 
+  const inputCargo = PLANET_INDUSTRY_INPUT[planet.type];
+
   for (const cargoType of ALL_CARGO_TYPES) {
     let baseSupply: number;
     let baseDemand: number;
@@ -67,6 +70,10 @@ function createPlanetMarket(planet: Planet, rng: SeededRNG): PlanetMarket {
         baseSupply = rng.nextFloat(50, 80);
         baseDemand = rng.nextFloat(10, 25);
       }
+    } else if (inputCargo !== null && cargoType === inputCargo) {
+      // Input cargo at its own producer world is a catalyst, not a market good
+      baseSupply = rng.nextFloat(5, 15);
+      baseDemand = rng.nextFloat(1, 5);
     } else if (producedSet.has(cargoType)) {
       // Planet produces this: high supply, low demand
       baseSupply = rng.nextFloat(60, 100);

@@ -44,33 +44,33 @@ export interface GalaxyData {
 
 // Planet type weights by orbital zone (inner / middle / outer)
 const INNER_WEIGHTS: [PlanetTypeT, number][] = [
-  [PlanetType.Mining, 35],
-  [PlanetType.Industrial, 30],
-  [PlanetType.Terran, 10],
+  [PlanetType.CoreWorld, 30],
+  [PlanetType.TechWorld, 25],
+  [PlanetType.Mining, 20],
+  [PlanetType.Manufacturing, 15],
   [PlanetType.Agricultural, 5],
-  [PlanetType.Research, 10],
-  [PlanetType.Resort, 5],
-  [PlanetType.HubStation, 5],
+  [PlanetType.LuxuryWorld, 3],
+  [PlanetType.Frontier, 2],
 ];
 
 const MIDDLE_WEIGHTS: [PlanetTypeT, number][] = [
-  [PlanetType.Terran, 30],
   [PlanetType.Agricultural, 25],
-  [PlanetType.Research, 20],
-  [PlanetType.Industrial, 10],
+  [PlanetType.Frontier, 20],
+  [PlanetType.TechWorld, 15],
+  [PlanetType.LuxuryWorld, 15],
+  [PlanetType.Manufacturing, 10],
+  [PlanetType.CoreWorld, 10],
   [PlanetType.Mining, 5],
-  [PlanetType.Resort, 5],
-  [PlanetType.HubStation, 5],
 ];
 
 const OUTER_WEIGHTS: [PlanetTypeT, number][] = [
-  [PlanetType.Resort, 25],
-  [PlanetType.HubStation, 25],
-  [PlanetType.Research, 15],
-  [PlanetType.Terran, 10],
-  [PlanetType.Agricultural, 10],
-  [PlanetType.Mining, 10],
-  [PlanetType.Industrial, 5],
+  [PlanetType.Frontier, 35],
+  [PlanetType.Agricultural, 20],
+  [PlanetType.Mining, 20],
+  [PlanetType.LuxuryWorld, 15],
+  [PlanetType.CoreWorld, 5],
+  [PlanetType.TechWorld, 3],
+  [PlanetType.Manufacturing, 2],
 ];
 
 const ALL_PLANET_TYPES: PlanetTypeT[] = Object.values(PlanetType);
@@ -716,20 +716,20 @@ export function generateGalaxy(
 
 function generatePopulation(rng: SeededRNG, type: PlanetTypeT): number {
   switch (type) {
-    case PlanetType.Terran:
+    case PlanetType.CoreWorld:
       return rng.nextInt(500000, 2000000);
-    case PlanetType.Industrial:
+    case PlanetType.Manufacturing:
       return rng.nextInt(200000, 800000);
-    case PlanetType.Mining:
-      return rng.nextInt(10000, 100000);
+    case PlanetType.TechWorld:
+      return rng.nextInt(100000, 500000);
+    case PlanetType.LuxuryWorld:
+      return rng.nextInt(30000, 200000);
     case PlanetType.Agricultural:
       return rng.nextInt(50000, 300000);
-    case PlanetType.HubStation:
-      return rng.nextInt(100000, 500000);
-    case PlanetType.Resort:
-      return rng.nextInt(30000, 200000);
-    case PlanetType.Research:
-      return rng.nextInt(5000, 50000);
+    case PlanetType.Mining:
+      return rng.nextInt(10000, 100000);
+    case PlanetType.Frontier:
+      return rng.nextInt(5000, 80000);
     default:
       return rng.nextInt(10000, 100000);
   }

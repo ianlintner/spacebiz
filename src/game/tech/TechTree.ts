@@ -73,9 +73,9 @@ export function calculateRPPerTurn(state: GameState): number {
     rp += 1;
   }
 
-  // Research planet bonus: +0.5 per route to/from research-type planets
+  // Tech world bonus: +0.5 per route to/from techWorld-type planets
   const researchPlanets = new Set(
-    state.galaxy.planets.filter((p) => p.type === "research").map((p) => p.id),
+    state.galaxy.planets.filter((p) => p.type === "techWorld").map((p) => p.id),
   );
   let researchRouteCount = 0;
   for (const route of state.activeRoutes) {

@@ -11,7 +11,7 @@ function makePlanet(overrides: Partial<Planet> = {}): Planet {
     id: "p-test",
     name: "Test",
     systemId: "s-test",
-    type: "terran",
+    type: "frontier",
     x: 0,
     y: 0,
     population: 1000,
