@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { updateMarket } from "../MarketUpdater.ts";
-import { CargoType } from "../../../data/types.ts";
+import { CargoType, PlanetType } from "../../../data/types.ts";
 import type {
   CargoType as CargoTypeT,
   MarketState,
   CargoMarketEntry,
   PlanetMarket,
+  Planet,
 } from "../../../data/types.ts";
 import { BASE_FUEL_PRICE } from "../../../data/constants.ts";
 import { SeededRNG } from "../../../utils/SeededRNG.ts";
@@ -156,5 +157,102 @@ describe("MarketUpdater", () => {
         originalSaturation,
       );
     });
+  });
+});
+
+describe("industry chain boost", () => {
+  it("doubles effective supply for active producer's output cargo", () => {
+    const unboostedMarket = makeMarketState({
+      planetMarkets: {
+        "tech-1": makePlanetMarket({
+          [CargoType.Technology]: { baseSupply: 50, baseDemand: 50 },
+        }),
+      },
+    });
+
+    const rng = new SeededRNG(42);
+    const noBoost = updateMarket(unboostedMarket, rng);
+    const noBoostPrice =
+      noBoost.planetMarkets["tech-1"][CargoType.Technology].currentPrice;
+
+    const rng2 = new SeededRNG(42);
+    const techPlanet: Planet = {
+      id: "tech-1",
+      name: "Tech 1",
+      systemId: "sys-1",
+      type: PlanetType.TechWorld,
+      x: 0,
+      y: 0,
+      population: 100000,
+    };
+    const boosted = updateMarket(unboostedMarket, rng2, new Set(["tech-1"]), [
+      techPlanet,
+    ]);
+    const boostedPrice =
+      boosted.planetMarkets["tech-1"][CargoType.Technology].currentPrice;
+
+    expect(boostedPrice).toBeLessThan(noBoostPrice);
+  });
+
+  it("boosts saturation decay for active producer's output cargo", () => {
+    const market = makeMarketState({
+      planetMarkets: {
+        "tech-1": makePlanetMarket({
+          [CargoType.Technology]: {
+            saturation: 0.8,
+            baseSupply: 50,
+            baseDemand: 50,
+          },
+        }),
+      },
+    });
+
+    const techPlanet: Planet = {
+      id: "tech-1",
+      name: "Tech 1",
+      systemId: "sys-1",
+      type: PlanetType.TechWorld,
+      x: 0,
+      y: 0,
+      population: 100000,
+    };
+
+    const rng = new SeededRNG(42);
+    const updated = updateMarket(market, rng, new Set(["tech-1"]), [
+      techPlanet,
+    ]);
+    const entry = updated.planetMarkets["tech-1"][CargoType.Technology];
+
+    // Boosted decay: 0.8 * (1 - 0.08 * 1.5) = 0.8 * 0.88 = 0.704
+    expect(entry.saturation).toBeCloseTo(0.8 * (1 - 0.08 * 1.5), 4);
+  });
+
+  it("does not boost non-output cargo at an active producer", () => {
+    const market = makeMarketState({
+      planetMarkets: {
+        "tech-1": makePlanetMarket({
+          [CargoType.Food]: { saturation: 0.8, baseSupply: 50, baseDemand: 50 },
+        }),
+      },
+    });
+
+    const techPlanet: Planet = {
+      id: "tech-1",
+      name: "Tech 1",
+      systemId: "sys-1",
+      type: PlanetType.TechWorld,
+      x: 0,
+      y: 0,
+      population: 100000,
+    };
+
+    const rng = new SeededRNG(42);
+    const updated = updateMarket(market, rng, new Set(["tech-1"]), [
+      techPlanet,
+    ]);
+    const foodEntry = updated.planetMarkets["tech-1"][CargoType.Food];
+
+    // Normal decay (no boost for Food at a TechWorld)
+    expect(foodEntry.saturation).toBeCloseTo(0.8 * 0.92, 4);
   });
 });
