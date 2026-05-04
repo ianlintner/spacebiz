@@ -14,6 +14,7 @@ import {
   attachReflowHandler,
   StationBuilderGrid,
   ROOM_COLORS,
+  GROUP_TAB_STRIP_HEIGHT,
 } from "../ui/index.ts";
 import type { CellEventPayload } from "../ui/StationBuilderGrid.ts";
 import {
@@ -285,30 +286,29 @@ export class StationBuilderScene extends Phaser.Scene {
    */
   private relayout(): void {
     const L = getLayout();
+    const contentTop = L.contentTop + GROUP_TAB_STRIP_HEIGHT;
+    const contentHeight = L.contentHeight - GROUP_TAB_STRIP_HEIGHT;
 
     // PortraitPanel: setPosition before setSize.
-    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
-    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+    this.portrait.setPosition(L.sidebarLeft, contentTop);
+    this.portrait.setSize(L.sidebarWidth, contentHeight);
 
     // Grid panel + grid widget.
-    this.gridPanel.setPosition(L.mainContentLeft, L.contentTop);
+    this.gridPanel.setPosition(L.mainContentLeft, contentTop);
     this.gridPanel.setSize(L.mainContentWidth, GRID_PANEL_HEIGHT);
     const gridArea = this.getGridArea();
     this.grid.setPosition(gridArea.x, gridArea.y);
     this.grid.setSize(gridArea.width, gridArea.height);
 
     // Palette panel.
-    const paletteY = L.contentTop + GRID_PANEL_HEIGHT + PANEL_GAP;
+    const paletteY = contentTop + GRID_PANEL_HEIGHT + PANEL_GAP;
     this.palettePanel.setPosition(L.mainContentLeft, paletteY);
     this.palettePanel.setSize(L.mainContentWidth, PALETTE_PANEL_HEIGHT);
 
     // Info panel.
     const infoY = paletteY + PALETTE_PANEL_HEIGHT + PANEL_GAP;
     const infoH =
-      L.contentHeight -
-      GRID_PANEL_HEIGHT -
-      PALETTE_PANEL_HEIGHT -
-      PANEL_GAP * 2;
+      contentHeight - GRID_PANEL_HEIGHT - PALETTE_PANEL_HEIGHT - PANEL_GAP * 2;
     this.infoPanel.setPosition(L.mainContentLeft, infoY);
     this.infoPanel.setSize(L.mainContentWidth, Math.max(infoH, 120));
 

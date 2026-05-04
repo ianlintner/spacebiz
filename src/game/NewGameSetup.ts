@@ -44,6 +44,7 @@ import {
   initializeHubWithTerminal,
 } from "./hub/HubManager.ts";
 import { generateAmbassadors } from "./diplomacy/AmbassadorGenerator.ts";
+import { generateContracts } from "./contracts/ContractGenerator.ts";
 
 export interface NewGameResult {
   state: GameState;
@@ -484,5 +485,6 @@ export function createNewGame(
     diplomacy,
   };
 
-  return { state, startingSystemOptions };
+  const contracts = generateContracts(state, rng);
+  return { state: { ...state, contracts }, startingSystemOptions };
 }

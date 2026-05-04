@@ -119,3 +119,9 @@ export const MAIN_CONTENT_WIDTH =
   MAX_CONTENT_WIDTH - SIDEBAR_WIDTH - CONTENT_GAP;
 export const FULL_CONTENT_LEFT = CONTENT_LEFT;
 export const FULL_CONTENT_WIDTH = MAX_CONTENT_WIDTH;
+
+/** Height of the horizontal group-tab strip shown in GameHUDScene when the
+ *  active content scene belongs to a multi-scene NavGroup (Empire, Ops).
+ *  Grouped scenes must offset their content by this amount so panels don't
+ *  render behind the strip. */
+export const GROUP_TAB_STRIP_HEIGHT = 28;
