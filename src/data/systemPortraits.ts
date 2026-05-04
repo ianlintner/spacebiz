@@ -13,14 +13,17 @@ const STAR_COLOR_MAP: Record<number, string> = {
   0xffaa44: "system-orange", // orange K-type
 };
 
-/** All system portrait texture keys (used for preloading). */
+/**
+ * System portrait texture keys used for preloading.
+ * system-purple exists as an asset but is not included here because no
+ * GalaxyGenerator star color maps to it; add an entry to STAR_COLOR_MAP first.
+ */
 export const SYSTEM_PORTRAIT_KEYS = [
   "system-yellow",
   "system-red",
   "system-blue",
   "system-white",
   "system-orange",
-  "system-purple",
 ] as const;
 export type SystemPortraitKey = (typeof SYSTEM_PORTRAIT_KEYS)[number];
 
