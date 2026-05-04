@@ -998,20 +998,20 @@ const portraitGallery: StyleguideSection = {
     );
     y += 24;
     const planetTypes: Array<{ label: string; planetType: string }> = [
-      { label: "Terran", planetType: "terran" },
+      { label: "Frontier", planetType: "frontier" },
       { label: "Mining", planetType: "mining" },
       { label: "Agri", planetType: "agricultural" },
-      { label: "Industrial", planetType: "industrial" },
-      { label: "Hub", planetType: "hubStation" },
-      { label: "Resort", planetType: "resort" },
-      { label: "Research", planetType: "research" },
+      { label: "Manufacturing", planetType: "manufacturing" },
+      { label: "Core", planetType: "coreWorld" },
+      { label: "Luxury", planetType: "luxuryWorld" },
+      { label: "Tech", planetType: "techWorld" },
     ];
     let x = 0;
     for (const { label, planetType } of planetTypes) {
       const g = scene.add.graphics();
       g.setPosition(x, y);
       drawPortrait(g, "planet", size, size, seed, {
-        planetType: planetType as "terran",
+        planetType: planetType as "frontier",
       });
       root.add(g);
       root.add(

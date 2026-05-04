@@ -111,7 +111,7 @@ function makePlanets(): Planet[] {
       id: "planet-a",
       name: "Planet A",
       systemId: "sys-1",
-      type: PlanetType.Terran,
+      type: PlanetType.Frontier,
       x: 110,
       y: 110,
       population: 1000000,

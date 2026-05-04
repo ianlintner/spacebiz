@@ -167,7 +167,7 @@ describe("SaveManager", () => {
               id: "p1",
               name: "Terra",
               systemId: "sys1",
-              type: "terran",
+              type: "frontier",
               x: 130,
               y: 230,
               population: 1000000,

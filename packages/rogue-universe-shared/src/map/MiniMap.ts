@@ -8,23 +8,23 @@ import type {
 import { getTheme, colorToString } from "@spacebiz/ui";
 
 const PLANET_TYPE_COLORS: Record<PlanetType, number> = {
-  terran: 0x4b86d6,
-  industrial: 0x9b8870,
-  mining: 0x8b8e97,
   agricultural: 0x68b45a,
-  hubStation: 0xf6b04f,
-  resort: 0xff7fd3,
-  research: 0x73ddff,
+  mining: 0x8b8e97,
+  techWorld: 0x73ddff,
+  manufacturing: 0x9b8870,
+  luxuryWorld: 0xff7fd3,
+  coreWorld: 0xf6b04f,
+  frontier: 0x4b86d6,
 };
 
 const PLANET_ZONE_RANK: Record<PlanetType, number> = {
   mining: 0,
-  industrial: 1,
-  terran: 2,
+  techWorld: 1,
+  manufacturing: 2,
   agricultural: 3,
-  research: 4,
-  resort: 5,
-  hubStation: 6,
+  luxuryWorld: 4,
+  frontier: 5,
+  coreWorld: 6,
 };
 
 export interface MiniMapConfig {

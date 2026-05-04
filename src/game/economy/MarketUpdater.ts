@@ -3,12 +3,16 @@ import type {
   CargoType as CargoTypeT,
   MarketState,
   CargoMarketEntry,
+  Planet,
   PlanetMarket,
   Trend,
 } from "../../data/types.ts";
 import {
   BASE_FUEL_PRICE,
   SATURATION_DECAY_RATE,
+  PLANET_CARGO_PROFILES,
+  INDUSTRY_INPUT_SUPPLY_MULTIPLIER,
+  INDUSTRY_INPUT_DECAY_MULTIPLIER,
 } from "../../data/constants.ts";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 import { calculatePrice } from "./PriceCalculator.ts";
@@ -19,23 +23,45 @@ const ALL_CARGO_TYPES: CargoTypeT[] = Object.values(CargoType);
  * Per-turn market update. Returns a new MarketState (does not mutate input).
  *
  * Steps:
- * 1. Decay saturation by SATURATION_DECAY_RATE (multiply by 1 - rate)
+ * 1. Decay saturation (boosted for active industry producer output)
  * 2. Random-walk trends with momentum
- * 3. Recalculate currentPrice for every entry
- * 4. Fluctuate fuel price with +-5% random walk, clamped to [50%, 150%] of BASE_FUEL_PRICE
+ * 3. Recalculate currentPrice (boosted supply for active industry producer output)
+ * 4. Fluctuate fuel price with +-0.5 walk, clamped to [50%, 150%] of BASE_FUEL_PRICE
+ *
+ * activeProducerIds: set of planet IDs whose industry input is active this turn.
+ * planets: the galaxy planet list, needed to look up planet type → output cargo.
+ * Both default to empty — omitting them disables the industry boost (used by tests
+ * that pre-date the feature).
  */
-export function updateMarket(market: MarketState, rng: SeededRNG): MarketState {
+export function updateMarket(
+  market: MarketState,
+  rng: SeededRNG,
+  activeProducerIds: Set<string> = new Set(),
+  planets: Planet[] = [],
+): MarketState {
+  const planetById = new Map(planets.map((p) => [p.id, p]));
   const newPlanetMarkets: Record<string, PlanetMarket> = {};
 
   for (const planetId of Object.keys(market.planetMarkets)) {
     const planetMarket = market.planetMarkets[planetId];
     const newEntries: Partial<Record<CargoTypeT, CargoMarketEntry>> = {};
 
+    const planet = planetById.get(planetId);
+    const isActiveProducer = activeProducerIds.has(planetId);
+    const outputCargo: CargoTypeT | null = planet
+      ? (PLANET_CARGO_PROFILES[planet.type]?.produces[0] ?? null)
+      : null;
+
     for (const cargoType of ALL_CARGO_TYPES) {
       const entry = planetMarket[cargoType];
 
-      // Step 1: Decay saturation
-      const newSaturation = entry.saturation * (1 - SATURATION_DECAY_RATE);
+      const isOutputCargo = isActiveProducer && cargoType === outputCargo;
+
+      // Step 1: Decay saturation (1.5× faster when input is active)
+      const decayRate = isOutputCargo
+        ? SATURATION_DECAY_RATE * INDUSTRY_INPUT_DECAY_MULTIPLIER
+        : SATURATION_DECAY_RATE;
+      const newSaturation = entry.saturation * (1 - decayRate);
 
       // Step 2: Random-walk trends
       const { trend: newTrend, momentum: newMomentum } = updateTrend(
@@ -44,7 +70,6 @@ export function updateMarket(market: MarketState, rng: SeededRNG): MarketState {
         rng,
       );
 
-      // Build updated entry (without price yet)
       const updatedEntry: CargoMarketEntry = {
         ...entry,
         saturation: newSaturation,
@@ -53,8 +78,17 @@ export function updateMarket(market: MarketState, rng: SeededRNG): MarketState {
         eventModifier: entry.eventModifier,
       };
 
-      // Step 3: Recalculate price
-      updatedEntry.currentPrice = calculatePrice(updatedEntry, cargoType);
+      // Step 3: Recalculate price — apply supply multiplier transiently for
+      // active producer output (baseSupply is not mutated; the boost only
+      // affects the recalculated currentPrice each turn).
+      const effectiveEntry: CargoMarketEntry = isOutputCargo
+        ? {
+            ...updatedEntry,
+            baseSupply:
+              updatedEntry.baseSupply * INDUSTRY_INPUT_SUPPLY_MULTIPLIER,
+          }
+        : updatedEntry;
+      updatedEntry.currentPrice = calculatePrice(effectiveEntry, cargoType);
 
       newEntries[cargoType] = updatedEntry;
     }

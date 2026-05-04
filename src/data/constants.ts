@@ -14,7 +14,7 @@ import {
 
 // ── Save Version ───────────────────────────────────────────────
 /** Increment when GameState shape changes in a save-incompatible way */
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 // ── Action Points ──────────────────────────────────────────────
 export const ACTION_POINTS_PER_TURN = 2;
@@ -588,50 +588,65 @@ export const PLANET_CARGO_PROFILES: Record<
   PlanetType,
   { produces: CargoType[]; demands: CargoType[] }
 > = {
-  [PlanetType.Terran]: {
-    produces: [CargoType.Technology, CargoType.Luxury],
-    demands: [CargoType.Food, CargoType.RawMaterials],
-  },
-  [PlanetType.Industrial]: {
-    produces: [CargoType.Technology],
-    demands: [CargoType.RawMaterials, CargoType.Food],
+  [PlanetType.Agricultural]: {
+    produces: [CargoType.Food],
+    demands: [],
   },
   [PlanetType.Mining]: {
     produces: [CargoType.RawMaterials, CargoType.Hazmat],
-    demands: [CargoType.Technology, CargoType.Food, CargoType.Medical],
+    demands: [],
   },
-  [PlanetType.Agricultural]: {
-    produces: [CargoType.Food],
-    demands: [CargoType.Technology, CargoType.Luxury],
+  [PlanetType.TechWorld]: {
+    produces: [CargoType.Technology],
+    demands: [],
   },
-  [PlanetType.HubStation]: {
+  [PlanetType.Manufacturing]: {
+    produces: [CargoType.Medical],
+    demands: [],
+  },
+  [PlanetType.LuxuryWorld]: {
+    produces: [CargoType.Luxury],
+    demands: [],
+  },
+  [PlanetType.CoreWorld]: {
     produces: [],
     demands: [
       CargoType.Food,
       CargoType.Technology,
       CargoType.Luxury,
       CargoType.Medical,
+      CargoType.Passengers,
+      CargoType.Hazmat,
     ],
   },
-  [PlanetType.Resort]: {
-    produces: [CargoType.Luxury],
-    demands: [CargoType.Food, CargoType.Medical],
-  },
-  [PlanetType.Research]: {
-    produces: [CargoType.Medical, CargoType.Technology],
-    demands: [CargoType.Food, CargoType.RawMaterials, CargoType.Luxury],
+  [PlanetType.Frontier]: {
+    produces: [],
+    demands: [CargoType.Food, CargoType.Medical, CargoType.Technology],
   },
 };
 
 export const PLANET_PASSENGER_VOLUME: Record<PlanetType, number> = {
-  [PlanetType.Terran]: 80,
-  [PlanetType.Industrial]: 50,
-  [PlanetType.Mining]: 20,
-  [PlanetType.Agricultural]: 20,
-  [PlanetType.HubStation]: 100,
-  [PlanetType.Resort]: 80,
-  [PlanetType.Research]: 15,
+  [PlanetType.Agricultural]: 15,
+  [PlanetType.Mining]: 15,
+  [PlanetType.TechWorld]: 40,
+  [PlanetType.Manufacturing]: 50,
+  [PlanetType.LuxuryWorld]: 60,
+  [PlanetType.CoreWorld]: 100,
+  [PlanetType.Frontier]: 25,
 };
+
+export const PLANET_INDUSTRY_INPUT: Record<PlanetType, CargoType | null> = {
+  [PlanetType.Agricultural]: null,
+  [PlanetType.Mining]: null,
+  [PlanetType.TechWorld]: CargoType.RawMaterials,
+  [PlanetType.Manufacturing]: CargoType.Passengers,
+  [PlanetType.LuxuryWorld]: CargoType.Food,
+  [PlanetType.CoreWorld]: null,
+  [PlanetType.Frontier]: null,
+};
+
+export const INDUSTRY_INPUT_SUPPLY_MULTIPLIER = 2.0;
+export const INDUSTRY_INPUT_DECAY_MULTIPLIER = 1.5;
 
 export const BASE_CARGO_PRICES: Record<CargoType, number> = {
   [CargoType.Passengers]: 65,

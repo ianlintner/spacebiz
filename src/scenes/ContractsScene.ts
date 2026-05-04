@@ -496,10 +496,10 @@ export class ContractsScene extends Phaser.Scene {
 
     this.portrait.updatePortrait(
       "planet",
-      dest ? (dest.type === "terran" ? 0 : 1) : 0,
+      dest ? (dest.type === "frontier" ? 0 : 1) : 0,
       contractTypeLabel(c.type),
       details,
-      { planetType: dest?.type ?? "terran" },
+      { planetType: dest?.type ?? "frontier" },
     );
   }
 
@@ -661,10 +661,10 @@ export class ContractsScene extends Phaser.Scene {
 
     this.portrait.updatePortrait(
       "planet",
-      dest ? (dest.type === "terran" ? 0 : 1) : 0,
+      dest ? (dest.type === "frontier" ? 0 : 1) : 0,
       contractTypeLabel(c.type),
       details,
-      { planetType: dest?.type ?? "terran" },
+      { planetType: dest?.type ?? "frontier" },
     );
   }
 

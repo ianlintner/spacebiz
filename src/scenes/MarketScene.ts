@@ -38,10 +38,10 @@ function planetTypeLabel(type: string): string {
   switch (type) {
     case "agricultural":
       return "agri.";
-    case "hubStation":
-      return "hub";
-    case "industrial":
-      return "industry";
+    case "coreWorld":
+      return "core";
+    case "techWorld":
+      return "tech";
     default:
       return type;
   }
@@ -75,7 +75,7 @@ export class MarketScene extends Phaser.Scene {
     });
     // Default state: no planet selected
     this.portrait.updatePortrait("planet", 0, "Galaxy Market", [], {
-      planetType: "terran",
+      planetType: "frontier",
     });
 
     // --- Main content panel ---

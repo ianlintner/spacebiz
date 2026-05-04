@@ -152,7 +152,7 @@ export class RoutesScene extends Phaser.Scene {
       depth: 0,
     });
     this.portrait.updatePortrait("planet", 0, "Route Command", [], {
-      planetType: "terran",
+      planetType: "frontier",
     });
 
     // ── Build tab content containers ──
@@ -1345,7 +1345,7 @@ export class RoutesScene extends Phaser.Scene {
         "Create a route from Route Finder, or use Create Route. Enter on a selected route opens the next useful step.",
       );
       this.portrait?.updatePortrait("planet", 0, "Route Command", [], {
-        planetType: "terran",
+        planetType: "frontier",
       });
       this.miniMap?.drawEmpty();
       return;

@@ -3,6 +3,11 @@ import { gameStore } from "../data/GameStore.ts";
 import { CargoType } from "../data/types.ts";
 import type { Planet, CargoMarketEntry } from "../data/types.ts";
 import {
+  getInputCargo,
+  getOutputCargo,
+  getActiveProducers,
+} from "../game/economy/IndustryChain.ts";
+import {
   getTheme,
   Panel,
   Label,
@@ -57,6 +62,7 @@ export class PlanetDetailScene extends Phaser.Scene {
   private contentPanel!: Panel;
   private infoLabel!: Label;
   private hintLabel!: Label;
+  private chainStatusLabel?: Label;
   private tableFrame!: ScrollFrame;
   private table!: DataTable;
   private createRouteButton!: Button;
@@ -129,6 +135,32 @@ export class PlanetDetailScene extends Phaser.Scene {
       color: theme.colors.textDim,
       maxWidth: 700,
     });
+
+    // Industry chain status (only for producer planets with an input requirement)
+    const inputCargo = getInputCargo(planet.type);
+    const outputCargo = getOutputCargo(planet.type);
+    if (inputCargo !== null && outputCargo !== null) {
+      const allRoutes = [
+        ...state.activeRoutes,
+        ...state.aiCompanies.flatMap((ai) => ai.activeRoutes),
+      ];
+      const activeProducers = getActiveProducers(
+        state.galaxy.planets,
+        allRoutes,
+      );
+      const isActive = activeProducers.has(planet.id);
+      const chainText = isActive
+        ? `Industry input: ${inputCargo} ✓ Active`
+        : `Industry input: ${inputCargo} ✗ Inactive — deliver ${inputCargo} to this system to boost ${outputCargo} output`;
+      this.chainStatusLabel = new Label(this, {
+        x: 0,
+        y: 0,
+        text: chainText,
+        style: "caption",
+        color: isActive ? theme.colors.profit : theme.colors.textDim,
+        maxWidth: 700,
+      });
+    }
 
     // Market data table
     this.tableFrame = new ScrollFrame(this, {
@@ -276,8 +308,16 @@ export class PlanetDetailScene extends Phaser.Scene {
     );
     this.hintLabel.setSize(contentArea.width, 36);
 
+    if (this.chainStatusLabel) {
+      this.chainStatusLabel.setPosition(
+        contentX + contentArea.x,
+        overlayY + contentArea.y + 56,
+      );
+      this.chainStatusLabel.setSize(contentArea.width, 28);
+    }
+
     // Market data table.
-    const tableY = overlayY + contentArea.y + 54;
+    const tableY = overlayY + contentArea.y + (this.chainStatusLabel ? 84 : 54);
     const tableWidth = contentArea.width;
     this.tableFrame.setPosition(contentX + contentArea.x, tableY);
     this.tableFrame.setSize(tableWidth, 320);

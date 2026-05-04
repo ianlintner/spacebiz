@@ -24,6 +24,7 @@ import {
   calculateDistance,
   calculateTripsPerTurn,
   calculateLicenseFee,
+  hasDuplicateSystemPairCargo,
 } from "../../routes/RouteManager.ts";
 import { calculatePrice } from "../../economy/PriceCalculator.ts";
 import { calculateShipValue } from "../../fleet/FleetManager.ts";
@@ -374,6 +375,18 @@ function openAIRoute(
 
       // Find best cargo for this route
       for (const cargoType of cargoTypes) {
+        // Per spec §5.1: each AI applies the slot rule against its own routes independently.
+        if (
+          hasDuplicateSystemPairCargo(
+            existingRoutes,
+            planets,
+            origin.systemId,
+            dest.systemId,
+            cargoType,
+          )
+        )
+          continue;
+
         const entry = destMarket[cargoType];
         const price = calculatePrice(entry, cargoType);
         const isPassenger = cargoType === CargoType.Passengers;

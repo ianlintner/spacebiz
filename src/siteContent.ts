@@ -55,13 +55,13 @@ const LABELS: Record<string, string> = {
   [CargoType.Luxury]: "Luxury Goods",
   [CargoType.Hazmat]: "Hazmat",
   [CargoType.Medical]: "Medical Supplies",
-  [PlanetType.Terran]: "Terran",
-  [PlanetType.Industrial]: "Industrial",
-  [PlanetType.Mining]: "Mining",
   [PlanetType.Agricultural]: "Agricultural",
-  [PlanetType.HubStation]: "Hub Station",
-  [PlanetType.Resort]: "Resort",
-  [PlanetType.Research]: "Research",
+  [PlanetType.Mining]: "Mining",
+  [PlanetType.TechWorld]: "Tech World",
+  [PlanetType.Manufacturing]: "Manufacturing",
+  [PlanetType.LuxuryWorld]: "Luxury World",
+  [PlanetType.CoreWorld]: "Core World",
+  [PlanetType.Frontier]: "Frontier",
 };
 
 function formatCurrency(value: number): string {

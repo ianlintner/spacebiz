@@ -27,7 +27,7 @@ const planets: Planet[] = [
     id: "planet-0-0-0",
     name: "Alpha",
     systemId: "system-0-0",
-    type: "terran",
+    type: "frontier",
     x: 10,
     y: 10,
     population: 100,

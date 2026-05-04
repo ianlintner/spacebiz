@@ -82,7 +82,7 @@ function makeMinimalState(overrides: Partial<GameState> = {}): GameState {
       id: "planet-1-1-0",
       name: "Earth",
       systemId: "sys-1",
-      type: PlanetType.Terran,
+      type: PlanetType.Frontier,
       x: 0,
       y: 0,
       population: 1_000_000,

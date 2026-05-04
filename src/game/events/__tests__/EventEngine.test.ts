@@ -54,7 +54,7 @@ function makeGalaxy(): GalaxyInfo {
       id: "planet-a1",
       name: "New Terra",
       systemId: "sys-alpha",
-      type: PlanetType.Terran,
+      type: PlanetType.Frontier,
       x: 120,
       y: 110,
       population: 1_000_000,
