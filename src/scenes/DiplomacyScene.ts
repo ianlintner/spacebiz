@@ -21,6 +21,7 @@ import {
   createStarfield,
   getLayout,
   getTheme,
+  GROUP_TAB_STRIP_HEIGHT,
 } from "../ui/index.ts";
 import type { StandingTierName } from "../game/diplomacy/StandingTiers.ts";
 import {
@@ -190,21 +191,23 @@ export class DiplomacyScene extends Phaser.Scene {
 
   private relayout(): void {
     const L = getLayout();
+    const contentTop = L.contentTop + GROUP_TAB_STRIP_HEIGHT;
+    const contentHeight = L.contentHeight - GROUP_TAB_STRIP_HEIGHT;
 
-    // Header heading + counter.
-    this.headingLabel.setPosition(L.mainContentLeft, L.contentTop - 28);
+    // Header heading + counter sit just above the panels.
+    this.headingLabel.setPosition(L.mainContentLeft, contentTop - 28);
     this.headerCounter.setPosition(
       L.mainContentLeft + L.mainContentWidth - 8,
-      L.contentTop - 28,
+      contentTop - 28,
     );
 
     // Target table panel.
     const tableW = Math.floor(L.mainContentWidth * 0.55);
-    this.targetTablePanel.setPosition(L.mainContentLeft, L.contentTop);
-    this.targetTablePanel.setSize(tableW, L.contentHeight);
+    this.targetTablePanel.setPosition(L.mainContentLeft, contentTop);
+    this.targetTablePanel.setSize(tableW, contentHeight);
     const tableContent = this.targetTablePanel.getContentArea();
     const tableAbsX = L.mainContentLeft + tableContent.x;
-    const tableAbsY = L.contentTop + tableContent.y;
+    const tableAbsY = contentTop + tableContent.y;
     this.targetTableFrame.setPosition(tableAbsX, tableAbsY);
     this.targetTableFrame.setSize(tableContent.width, tableContent.height - 16);
     this.targetTable.setSize(tableContent.width, tableContent.height - 16);
@@ -212,11 +215,11 @@ export class DiplomacyScene extends Phaser.Scene {
     // Action panel.
     const panelX = L.mainContentLeft + tableW + 8;
     const panelW = L.mainContentWidth - tableW - 8;
-    this.actionPanel.setPosition(panelX, L.contentTop);
-    this.actionPanel.setSize(panelW, L.contentHeight);
+    this.actionPanel.setPosition(panelX, contentTop);
+    this.actionPanel.setSize(panelW, contentHeight);
     const actionContent = this.actionPanel.getContentArea();
     const actionAbsX = panelX + actionContent.x;
-    const actionAbsY = L.contentTop + actionContent.y;
+    const actionAbsY = contentTop + actionContent.y;
     this.actionStatusLabel.setPosition(actionAbsX, actionAbsY);
     this.actionStatusLabel.setSize(actionContent.width, 24);
     this.queuedSummary.setPosition(

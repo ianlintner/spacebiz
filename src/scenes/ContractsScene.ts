@@ -22,6 +22,7 @@ import {
   getCargoIconKey,
   getCargoColor,
   attachReflowHandler,
+  GROUP_TAB_STRIP_HEIGHT,
 } from "../ui/index.ts";
 import {
   acceptContract,
@@ -380,19 +381,22 @@ export class ContractsScene extends Phaser.Scene {
 
   private relayout(): void {
     const L = getLayout();
+    const tabH = GROUP_TAB_STRIP_HEIGHT;
+    const contentTop = L.contentTop + tabH;
+    const contentHeight = L.contentHeight - tabH;
 
     // PortraitPanel: setPosition before setSize.
-    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
-    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+    this.portrait.setPosition(L.sidebarLeft, contentTop);
+    this.portrait.setSize(L.sidebarWidth, contentHeight);
 
     // Main panel.
-    this.mainPanel.setPosition(L.mainContentLeft, L.contentTop);
-    this.mainPanel.setSize(L.mainContentWidth, L.contentHeight);
+    this.mainPanel.setPosition(L.mainContentLeft, contentTop);
+    this.mainPanel.setSize(L.mainContentWidth, contentHeight);
 
     // Tab strip below panel title.
     this.tabGroup.setPosition(
       L.mainContentLeft,
-      L.contentTop + PANEL_TITLE_HEIGHT,
+      contentTop + PANEL_TITLE_HEIGHT,
     );
     this.tabGroup.setSize(L.mainContentWidth, this.tabGroup.height);
 
@@ -400,7 +404,7 @@ export class ContractsScene extends Phaser.Scene {
     // containers are relative to the container origin (set by TabGroup).
     const contentInnerW = L.mainContentWidth - CONTENT_INNER_INSET * 2;
     const tableHeight =
-      L.contentHeight -
+      contentHeight -
       PANEL_TITLE_HEIGHT -
       TAB_BAR_HEIGHT -
       SUMMARY_HEIGHT -

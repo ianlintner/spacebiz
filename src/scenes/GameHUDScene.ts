@@ -9,6 +9,7 @@ import {
   FloatingText,
   AdviserPanel,
   attachReflowHandler,
+  GROUP_TAB_STRIP_HEIGHT,
 } from "../ui/index.ts";
 import { colorToString } from "@spacebiz/ui";
 import { SettingsPanel } from "../ui/SettingsPanel.ts";
@@ -1148,10 +1149,10 @@ export class GameHUDScene extends Phaser.Scene {
     }
     this.tabStrip.setVisible(true);
 
-    const stripHeight = 28;
+    const stripHeight = GROUP_TAB_STRIP_HEIGHT;
     const stripTop = L.hudTopBarHeight;
-    const stripLeft = L.navSidebarWidth + 12;
-    const stripWidth = L.gameWidth - stripLeft - 12;
+    const stripLeft = L.sidebarLeft;
+    const stripWidth = L.maxContentWidth;
 
     // Translucent background — keeps scene content visible behind tabs but
     // creates a clear "this is chrome" affordance.

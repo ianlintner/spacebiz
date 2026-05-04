@@ -12,6 +12,7 @@ import {
   createStarfield,
   getLayout,
   attachReflowHandler,
+  GROUP_TAB_STRIP_HEIGHT,
 } from "../ui/index.ts";
 import {
   getIntelTier,
@@ -231,19 +232,21 @@ export class CompetitionScene extends Phaser.Scene {
   private relayout(): void {
     const theme = getTheme();
     const L = getLayout();
+    const contentTop = L.contentTop + GROUP_TAB_STRIP_HEIGHT;
+    const contentHeight = L.contentHeight - GROUP_TAB_STRIP_HEIGHT;
 
     // PortraitPanel: setPosition triggers mask refresh, then setSize.
-    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
-    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+    this.portrait.setPosition(L.sidebarLeft, contentTop);
+    this.portrait.setSize(L.sidebarWidth, contentHeight);
 
     // Content panel.
-    this.contentPanel.setPosition(L.mainContentLeft, L.contentTop);
-    this.contentPanel.setSize(L.mainContentWidth, L.contentHeight);
+    this.contentPanel.setPosition(L.mainContentLeft, contentTop);
+    this.contentPanel.setSize(L.mainContentWidth, contentHeight);
 
     // Re-read content area after panel resize to get fresh inset coords.
     const content = this.contentPanel.getContentArea();
     const absX = L.mainContentLeft + content.x;
-    const absY = L.contentTop + content.y;
+    const absY = contentTop + content.y;
 
     // Tab strip.
     this.tabGroup.setPosition(absX, absY);

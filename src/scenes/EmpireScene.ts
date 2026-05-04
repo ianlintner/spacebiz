@@ -12,6 +12,7 @@ import {
   createStarfield,
   getLayout,
   attachReflowHandler,
+  GROUP_TAB_STRIP_HEIGHT,
 } from "../ui/index.ts";
 import { TARIFF_DIPLOMATIC_MULTIPLIER } from "../data/constants.ts";
 
@@ -159,19 +160,21 @@ export class EmpireScene extends Phaser.Scene {
 
   private relayout(): void {
     const L = getLayout();
+    const contentTop = L.contentTop + GROUP_TAB_STRIP_HEIGHT;
+    const contentHeight = L.contentHeight - GROUP_TAB_STRIP_HEIGHT;
 
     // PortraitPanel: setPosition before setSize.
-    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
-    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+    this.portrait.setPosition(L.sidebarLeft, contentTop);
+    this.portrait.setSize(L.sidebarWidth, contentHeight);
 
     // Content panel.
-    this.contentPanel.setPosition(L.mainContentLeft, L.contentTop);
-    this.contentPanel.setSize(L.mainContentWidth, L.contentHeight);
+    this.contentPanel.setPosition(L.mainContentLeft, contentTop);
+    this.contentPanel.setSize(L.mainContentWidth, contentHeight);
 
     // Re-read content area after panel resize.
     const content = this.contentPanel.getContentArea();
     const absX = L.mainContentLeft + content.x;
-    const absY = L.contentTop + content.y;
+    const absY = contentTop + content.y;
 
     const toolbarH = 32;
 

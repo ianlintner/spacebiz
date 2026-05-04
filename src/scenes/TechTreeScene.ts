@@ -13,6 +13,7 @@ import {
   ProgressBar,
   Modal,
   attachReflowHandler,
+  GROUP_TAB_STRIP_HEIGHT,
 } from "../ui/index.ts";
 import { TechTreeGrid, BRANCH_LABELS } from "../ui/TechTreeGrid.ts";
 import {
@@ -167,19 +168,21 @@ export class TechTreeScene extends Phaser.Scene {
 
   private relayout(): void {
     const L = getLayout();
+    const contentTop = L.contentTop + GROUP_TAB_STRIP_HEIGHT;
+    const contentHeight = L.contentHeight - GROUP_TAB_STRIP_HEIGHT;
 
     // PortraitPanel: setPosition before setSize.
-    this.portrait.setPosition(L.sidebarLeft, L.contentTop);
-    this.portrait.setSize(L.sidebarWidth, L.contentHeight);
+    this.portrait.setPosition(L.sidebarLeft, contentTop);
+    this.portrait.setSize(L.sidebarWidth, contentHeight);
 
     // Main panel.
-    this.mainPanel.setPosition(L.mainContentLeft, L.contentTop);
-    this.mainPanel.setSize(L.mainContentWidth, L.contentHeight);
+    this.mainPanel.setPosition(L.mainContentLeft, contentTop);
+    this.mainPanel.setSize(L.mainContentWidth, contentHeight);
 
     const panelX = L.mainContentLeft;
-    const panelY = L.contentTop;
+    const panelY = contentTop;
     const panelW = L.mainContentWidth;
-    const panelH = L.contentHeight;
+    const panelH = contentHeight;
 
     // Status / current-research text — reposition only.
     this.rpStatusText.setPosition(panelX + 16, panelY + 44);
