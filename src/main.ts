@@ -695,7 +695,24 @@ function resizeGameToViewport(): void {
   lastSourceWidth = sourceWInt;
   lastSourceHeight = sourceHInt;
 
-  const size = calculateGameSize(sourceW, sourceH);
+  // On ultra-wide displays in fullscreen, cap the virtual game width so the
+  // canvas fills no more than 2.2:1 AR. Phaser's FIT mode then centres the
+  // canvas and leaves side bars whose CSS background shows the starfield.
+  const FULLSCREEN_ULTRAWIDE_RATIO = 2.2;
+  const isFullscreen =
+    document.fullscreenElement != null ||
+    (document
+      .querySelector<HTMLElement>("[data-game-frame]")
+      ?.classList.contains("is-browser-fullscreen") ??
+      false);
+
+  let calcW = sourceW;
+  let calcH = sourceH;
+  if (isFullscreen && calcW / calcH > FULLSCREEN_ULTRAWIDE_RATIO) {
+    calcW = calcH * FULLSCREEN_ULTRAWIDE_RATIO;
+  }
+
+  const size = calculateGameSize(calcW, calcH);
   updateLayout(size.width, size.height);
   activeGame.scale.resize(size.width, size.height);
   // Force Phaser to recompute the FIT-scaled display rect against the new
