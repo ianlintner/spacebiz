@@ -15,6 +15,7 @@ import type {
   InterEmpireCargoLock,
 } from "../../../data/types.ts";
 import { initAdviserState } from "../../adviser/AdviserEngine.ts";
+import { createNewGame } from "../../NewGameSetup.ts";
 
 function makeEmpire(id: string, homeSystemId: string): Empire {
   return {
@@ -436,6 +437,121 @@ describe("Empire Access", () => {
         state,
       );
       expect(result).toContain("banned");
+    });
+  });
+
+  describe("validateRouteCreation — system-pair cargo uniqueness", () => {
+    function makeMinimalState(
+      routes: import("../../../data/types.ts").ActiveRoute[],
+    ): import("../../../data/types.ts").GameState {
+      const { state } = createNewGame(1, "Test Corp", "quick");
+      const sys1: import("../../../data/types.ts").StarSystem = {
+        id: "test-sys-1",
+        name: "System Alpha",
+        sectorId: "s1",
+        empireId: state.galaxy.empires[0]?.id ?? "emp1",
+        x: 0,
+        y: 0,
+        starColor: 0xffffff,
+      };
+      const sys2: import("../../../data/types.ts").StarSystem = {
+        id: "test-sys-2",
+        name: "System Beta",
+        sectorId: "s1",
+        empireId: state.galaxy.empires[0]?.id ?? "emp1",
+        x: 100,
+        y: 0,
+        starColor: 0xffffff,
+      };
+      const planet1: import("../../../data/types.ts").Planet = {
+        id: "tp-1",
+        name: "Alpha Prime",
+        systemId: "test-sys-1",
+        type: "agricultural" as import("../../../data/types.ts").PlanetType,
+        x: 0,
+        y: 0,
+        population: 100000,
+      };
+      const planet2: import("../../../data/types.ts").Planet = {
+        id: "tp-2",
+        name: "Beta Prime",
+        systemId: "test-sys-2",
+        type: "coreWorld" as import("../../../data/types.ts").PlanetType,
+        x: 100,
+        y: 0,
+        population: 500000,
+      };
+      return {
+        ...state,
+        activeRoutes: routes,
+        galaxy: {
+          ...state.galaxy,
+          systems: [...state.galaxy.systems, sys1, sys2],
+          planets: [...state.galaxy.planets, planet1, planet2],
+        },
+      };
+    }
+
+    it("blocks a second Food route between the same system pair", () => {
+      const existingFoodRoute: import("../../../data/types.ts").ActiveRoute = {
+        id: "existing-1",
+        originPlanetId: "tp-1",
+        destinationPlanetId: "tp-2",
+        distance: 100,
+        assignedShipIds: [],
+        cargoType: "food" as import("../../../data/types.ts").CargoType,
+      };
+      const state = makeMinimalState([existingFoodRoute]);
+
+      const error = validateRouteCreation(
+        "tp-1",
+        "tp-2",
+        "food" as import("../../../data/types.ts").CargoType,
+        state,
+      );
+      expect(error).toMatch(/system pair.*food/i);
+    });
+
+    it("allows a second route between the same system pair with different cargo", () => {
+      const existingFoodRoute: import("../../../data/types.ts").ActiveRoute = {
+        id: "existing-1",
+        originPlanetId: "tp-1",
+        destinationPlanetId: "tp-2",
+        distance: 100,
+        assignedShipIds: [],
+        cargoType: "food" as import("../../../data/types.ts").CargoType,
+      };
+      const state = makeMinimalState([existingFoodRoute]);
+
+      const error = validateRouteCreation(
+        "tp-1",
+        "tp-2",
+        "technology" as import("../../../data/types.ts").CargoType,
+        state,
+      );
+      if (error) {
+        expect(error).not.toMatch(/system pair/i);
+      }
+    });
+
+    it("blocks a Food route even when origin and destination are swapped (bidirectional)", () => {
+      const existingFoodRoute: import("../../../data/types.ts").ActiveRoute = {
+        id: "existing-1",
+        originPlanetId: "tp-2",
+        destinationPlanetId: "tp-1",
+        distance: 100,
+        assignedShipIds: [],
+        cargoType: "food" as import("../../../data/types.ts").CargoType,
+      };
+      const state = makeMinimalState([existingFoodRoute]);
+
+      const error = validateRouteCreation(
+        "tp-1",
+        "tp-2",
+        "food" as import("../../../data/types.ts").CargoType,
+        state,
+      );
+      expect(error).toMatch(/system pair.*food/i);
     });
   });
 });

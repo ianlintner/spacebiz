@@ -16,6 +16,7 @@ import {
 } from "../tech/TechEffects.ts";
 import { getRouteSlotBonus } from "../hub/HubBonusCalculator.ts";
 import { findPath } from "../routes/HyperlaneRouter.ts";
+import { hasDuplicateSystemPairCargo } from "../routes/RouteManager.ts";
 
 // ---------------------------------------------------------------------------
 // Empire Access Helpers
@@ -219,6 +220,20 @@ export function validateRouteCreation(
       getRouteSlotBonus(state.stationHub);
     if (available - empireRoutes <= 0) {
       return "No available empire route slots";
+    }
+  }
+
+  // System-pair cargo uniqueness: only one route per cargo type between any two systems.
+  if (cargoType !== null) {
+    const isDuplicate = hasDuplicateSystemPairCargo(
+      state.activeRoutes,
+      planets,
+      originPlanet.systemId,
+      destinationPlanet.systemId,
+      cargoType,
+    );
+    if (isDuplicate) {
+      return `System pair already has a ${cargoType} route`;
     }
   }
 
