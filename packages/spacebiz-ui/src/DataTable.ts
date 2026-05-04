@@ -453,6 +453,20 @@ export class DataTable extends Phaser.GameObjects.Container {
     }
     this.selectedRowIndicator = null;
     this.renderBody();
+
+    // Auto-select first row if autoFocus is enabled and table just became non-empty
+    if (
+      this.tableConfig.autoFocus &&
+      this.rows.length > 0 &&
+      this.selectedRowIndex < 0
+    ) {
+      this.selectedRowIndex = 0;
+      const firstRow = this.renderedRows[0];
+      if (firstRow) {
+        this.tableConfig.onRowSelect?.(0, firstRow);
+      }
+    }
+
     if (!this.contentSized) {
       // Force the clipping mask back to the current world position. setRows
       // is typically called from a filter change or tab switch, both of

@@ -284,6 +284,7 @@ export class DiplomacyScene extends Phaser.Scene {
         { key: "standing", label: "#", width: 30, align: "right" },
         { key: "tags", label: "Tags", width: 140 },
       ],
+      autoFocus: true,
       onRowSelect: (_idx, row) => {
         const kind = row["rowKind"] as "empire" | "rival";
         const id = row["id"] as string;
