@@ -52,6 +52,14 @@ describe("getInputCargo", () => {
   it("returns null for CoreWorld (consumer)", () => {
     expect(getInputCargo(PlanetType.CoreWorld)).toBeNull();
   });
+
+  it("returns null for Mining (no input)", () => {
+    expect(getInputCargo(PlanetType.Mining)).toBeNull();
+  });
+
+  it("returns null for Frontier (no input)", () => {
+    expect(getInputCargo(PlanetType.Frontier)).toBeNull();
+  });
 });
 
 describe("getOutputCargo", () => {
@@ -65,6 +73,22 @@ describe("getOutputCargo", () => {
 
   it("returns null for CoreWorld (no output)", () => {
     expect(getOutputCargo(PlanetType.CoreWorld)).toBeNull();
+  });
+
+  it("returns RawMaterials for Mining (Hazmat is secondary)", () => {
+    expect(getOutputCargo(PlanetType.Mining)).toBe(CargoType.RawMaterials);
+  });
+
+  it("returns Medical for Manufacturing", () => {
+    expect(getOutputCargo(PlanetType.Manufacturing)).toBe(CargoType.Medical);
+  });
+
+  it("returns Luxury for LuxuryWorld", () => {
+    expect(getOutputCargo(PlanetType.LuxuryWorld)).toBe(CargoType.Luxury);
+  });
+
+  it("returns null for Frontier (no output)", () => {
+    expect(getOutputCargo(PlanetType.Frontier)).toBeNull();
   });
 });
 
