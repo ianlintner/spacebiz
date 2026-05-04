@@ -529,9 +529,7 @@ describe("Empire Access", () => {
         "technology" as import("../../../data/types.ts").CargoType,
         state,
       );
-      if (error) {
-        expect(error).not.toMatch(/system pair/i);
-      }
+      expect(error).not.toMatch(/system pair/i);
     });
 
     it("blocks a Food route even when origin and destination are swapped (bidirectional)", () => {
