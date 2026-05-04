@@ -343,8 +343,21 @@ export class GalaxySetupScene extends Phaser.Scene {
           category: chosenPortrait.category,
         };
         gameStore.setState(this.currentState);
-        // Ensure the chosen CEO portrait is loaded before GameHUDScene starts
-        // so the HUD top-bar portrait is ready immediately.
+
+        // Fast path — `updatePortraitPreview` pre-loaded the chosen portrait
+        // when the user navigated to it during setup, so the texture is
+        // virtually always already in the TextureManager by the time Launch
+        // is clicked. Skip the loading overlay in that case so users don't
+        // see a single-frame veil flash that reads as a page reload before
+        // the HUD comes up.
+        const portraitKey = getPortraitTextureKey(chosenPortrait.id);
+        if (this.textures.exists(portraitKey)) {
+          this.scene.start("GameHUDScene");
+          return;
+        }
+
+        // Slow path — portrait was never previewed (rare). Show the overlay
+        // so the user gets feedback while the WebP fetch completes.
         withLoadingOverlay(
           this,
           portraitLoader.ensureCeoPortrait(this, chosenPortrait.id),

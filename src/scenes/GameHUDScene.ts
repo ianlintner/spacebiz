@@ -874,15 +874,18 @@ export class GameHUDScene extends Phaser.Scene {
     }
 
     // ── Adviser drawer (upper-right, anchored to right edge) ──
+    // setSize first so panelWidth tracks any width change; setAnchor then
+    // recomputes openX/closedX and snaps the container to whichever
+    // position matches the current drawer state (open vs. tab-only).
     const advPanelW = 220;
     const advTabW = 36;
     const advPanelX = L.gameWidth - advTabW - advPanelW - 8;
     const advPanelY = L.hudTopBarHeight + 8;
-    this.adviserPanel.setPosition(advPanelX, advPanelY);
     // Height is content-driven inside AdviserPanel; pass 0 to keep the
     // current internal panelHeight (the override skips heights below the
     // content-driven minimum).
     this.adviserPanel.setSize(advPanelW, 0);
+    this.adviserPanel.setAnchor(advPanelX, advPanelY);
 
     // Tab strip repositions on resize (strip is already visible/hidden by
     // rebuildTabStrip; here we only need to reflow positions).
