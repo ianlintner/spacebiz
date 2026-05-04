@@ -57,11 +57,17 @@ export class TechTreeScene extends Phaser.Scene {
       width: L.sidebarWidth,
       height: L.contentHeight,
     });
-    this.portrait.updatePortrait("event", 0, "Research Lab", [
-      { label: "Info", value: "Select a technology to view details." },
-      { label: "", value: "Research provides route slots," },
-      { label: "", value: "cost reductions, and special abilities." },
-    ]);
+    this.portrait.updatePortrait(
+      "event",
+      0,
+      "Research Lab",
+      [
+        { label: "Info", value: "Select a technology to view details." },
+        { label: "", value: "Research provides route slots," },
+        { label: "", value: "cost reductions, and special abilities." },
+      ],
+      { eventCategory: "opportunity" },
+    );
 
     // Main panel
     this.mainPanel = new Panel(this, {
@@ -252,7 +258,9 @@ export class TechTreeScene extends Phaser.Scene {
       { label: "Effect", value: tech.description },
     ];
 
-    this.portrait.updatePortrait("event", 0, tech.name, details, {});
+    this.portrait.updatePortrait("event", 0, tech.name, details, {
+      eventCategory: "opportunity",
+    });
   }
 
   private updateResearchButton(): void {

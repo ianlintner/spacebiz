@@ -20,6 +20,13 @@ import {
   getRoomPortraitTextureKey,
   getRoomPortraitAssetUrls,
 } from "../data/roomPortraits.ts";
+import {
+  SYSTEM_PORTRAIT_KEYS,
+  EVENT_PORTRAIT_CATEGORIES,
+  getSystemPortraitAssetUrls,
+  getEventPortraitTextureKey,
+  getEventPortraitAssetUrls,
+} from "../data/systemPortraits.ts";
 import { generateAdviserSpritesheet } from "@rogue-universe/shared";
 
 export class BootScene extends Phaser.Scene {
@@ -64,6 +71,19 @@ export class BootScene extends Phaser.Scene {
       this.load.image(
         getRoomPortraitTextureKey(rtype),
         getRoomPortraitAssetUrls(rtype),
+      );
+    }
+
+    // System portraits (6 star types) — shown in SystemMapScene sidebar
+    for (const key of SYSTEM_PORTRAIT_KEYS) {
+      this.load.image(key, getSystemPortraitAssetUrls(key));
+    }
+
+    // Event portraits (5 categories) — shown in TechTree, TurnReport, Finance, Contracts
+    for (const cat of EVENT_PORTRAIT_CATEGORIES) {
+      this.load.image(
+        getEventPortraitTextureKey(cat),
+        getEventPortraitAssetUrls(cat),
       );
     }
 
