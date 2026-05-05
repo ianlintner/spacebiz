@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
-import { ContractStatus, ContractType } from "../data/types.ts";
+import { ContractStatus, ContractType, ShipClass } from "../data/types.ts";
 import type {
   Contract,
   ContractType as ContractTypeValue,
@@ -23,6 +23,7 @@ import {
   getCargoColor,
   attachReflowHandler,
   GROUP_TAB_STRIP_HEIGHT,
+  DEPTH_MODAL,
 } from "../ui/index.ts";
 import {
   acceptContract,
@@ -32,6 +33,8 @@ import {
   getAvailableRouteSlots,
   getUsedRouteSlots,
 } from "../game/routes/RouteManager.ts";
+import { SHIP_TEMPLATES } from "../data/constants.ts";
+import { buyShip } from "../game/fleet/FleetManager.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -112,6 +115,7 @@ const CONTENT_INNER_INSET = 12;
 // ---------------------------------------------------------------------------
 
 export class ContractsScene extends Phaser.Scene {
+  private ui!: SceneUiDirector;
   private portrait!: PortraitPanel;
   private mainPanel!: Panel;
   private tabGroup!: TabGroup;
