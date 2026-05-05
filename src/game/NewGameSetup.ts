@@ -4,6 +4,7 @@ import { initializeMarkets } from "../generation/MarketInitializer.ts";
 import { ShipClass, AIPersonality, GalaxyShape } from "../data/types.ts";
 import type {
   GameState,
+  Planet,
   Ship,
   StarSystem,
   StorytellerState,
@@ -169,6 +170,8 @@ function createAICompanies(
   count: number,
   playerEmpireId: string,
   rng: SeededRNG,
+  systems: StarSystem[],
+  planets: Planet[],
 ): AICompany[] {
   const companies: AICompany[] = [];
   const usedNames = new Set<string>();
@@ -235,6 +238,13 @@ function createAICompanies(
     };
     const aiFleet: Ship[] = [starterShip];
 
+    const empireSystems = systems.filter((s) => s.empireId === empireId);
+    const empireSystemId =
+      empireSystems[i % Math.max(1, empireSystems.length)]?.id;
+    const homeworldPlanetId = planets.find(
+      (p) => p.systemId === empireSystemId,
+    )?.id;
+
     const company: AICompany = {
       id: `ai-${i}`,
       name,
@@ -248,6 +258,7 @@ function createAICompanies(
       bankrupt: false,
       ceoName: generateCEOName(rng),
       ceoPortrait: pickRandomPortrait(rng),
+      homeworldPlanetId,
     };
 
     companies.push(company);
@@ -319,7 +330,14 @@ export function createNewGame(
     config.aiCompanyCount,
     playerEmpireId,
     rng,
+    galaxyData.systems,
+    galaxyData.planets,
   );
+
+  // Player homeworld: first planet in the default starting system.
+  const playerHomeworldPlanetId = galaxyData.planets.find(
+    (p) => p.systemId === (startingSystemOptions[0]?.id ?? ""),
+  )?.id;
 
   // Phase 3: Empire access — home + N adjacent empires
   const adjacentEmpires = findAdjacentEmpires(
@@ -483,6 +501,7 @@ export function createNewGame(
     ),
     charters: playerCharters,
     diplomacy,
+    homeworldPlanetId: playerHomeworldPlanetId,
   };
 
   const contracts = generateContracts(state, rng);

@@ -64,6 +64,7 @@ import {
   getEmpireForPlanet,
   checkTradePolicyViolation,
 } from "../game/empire/EmpireAccessManager.ts";
+import type { GalaxyMapScene } from "./GalaxyMapScene.ts";
 
 function formatCash(n: number): string {
   const sign = n < 0 ? "-" : "";
@@ -661,6 +662,10 @@ export class RoutesScene extends Phaser.Scene {
       onRowSelect: (_rowIndex, rowData) => {
         this.selectedRouteId = rowData["id"] as string;
         this.updateSelectedRouteUi();
+        const galaxyScene = this.scene.get(
+          "GalaxyMapScene",
+        ) as GalaxyMapScene | null;
+        galaxyScene?.focusRoute?.(this.selectedRouteId);
       },
     });
     this.routeScrollFrame.setContent(this.routeTable);

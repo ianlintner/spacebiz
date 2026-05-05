@@ -872,6 +872,8 @@ export interface AICompany {
   activeNarrativeEffects?: ActiveAINarrativeEffect[];
   /** Charters held by this AI company. Optional for v6-save compat. */
   charters?: Charter[];
+  /** Planet id where this company was founded / maintains its HQ. Optional for save compat. */
+  homeworldPlanetId?: string;
 }
 
 // ── Contract types ─────────────────────────────────────────
@@ -1257,6 +1259,9 @@ export interface GameState {
   activeAuctions?: CharterAuction[];
 
   diplomacy?: DiplomacyState;
+
+  /** Planet id of the player's company HQ / homeworld. Optional for save compat. */
+  homeworldPlanetId?: string;
 
   /**
    * Optional per-turn report bag, populated during simulation and read by the

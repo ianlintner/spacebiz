@@ -64,7 +64,6 @@ export class TurnReportScene extends Phaser.Scene {
   private fuelLabel?: Phaser.GameObjects.Text;
   private summaryLabel?: Phaser.GameObjects.Text;
   private dipLines: Phaser.GameObjects.Text[] = [];
-  private dipLineHeight = 18;
 
   // P&L panel children (panel-relative coordinates).
   private plLabelTexts: Phaser.GameObjects.Text[] = [];
@@ -622,23 +621,20 @@ export class TurnReportScene extends Phaser.Scene {
     const diplomacyDigest = state.turnReport?.diplomacyDigest ?? [];
     if (diplomacyDigest.length > 0) {
       const mpContent = this.marketPanel!.getContentArea();
-      const dipStartY = mpContent.y + 48; // below fuel/cargo lines
-      this.dipLineHeight = 18;
-      diplomacyDigest.forEach((line, idx) => {
-        const lineLabel = this.add.text(
-          mpContent.x + 8,
-          dipStartY + idx * this.dipLineHeight,
-          `• ${line}`,
-          {
-            fontSize: `${theme.fonts.body.size}px`,
-            fontFamily: theme.fonts.body.family,
-            color: colorToString(theme.colors.text),
-            wordWrap: { width: mpContent.width - 16 },
-          },
-        );
+      // Accumulate Y from each text's actual rendered height so wrapped
+      // multi-line items don't overlap the bullet below them.
+      let dipCy = mpContent.y + 48; // below fuel/cargo lines
+      for (const line of diplomacyDigest) {
+        const lineLabel = this.add.text(mpContent.x + 8, dipCy, `• ${line}`, {
+          fontSize: `${theme.fonts.body.size}px`,
+          fontFamily: theme.fonts.body.family,
+          color: colorToString(theme.colors.text),
+          wordWrap: { width: mpContent.width - 16 },
+        });
         this.marketPanel!.add(lineLabel);
         this.dipLines.push(lineLabel);
-      });
+        dipCy += lineLabel.height + 4;
+      }
     }
 
     // ── Tab strip ────────────────────────────────────────────────────────────

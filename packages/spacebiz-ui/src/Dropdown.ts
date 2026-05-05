@@ -22,6 +22,8 @@ export interface DropdownConfig {
   onChange?: (value: string, index: number) => void;
   /** Font size override (default: theme body size) */
   fontSize?: number;
+  /** Max rows visible before scrolling (default: 8) */
+  maxVisible?: number;
 }
 
 export class Dropdown
@@ -38,16 +40,20 @@ export class Dropdown
   private highlightedIndex = -1;
   private dropdownOpen = false;
   private overlayObjects: Phaser.GameObjects.GameObject[] = [];
-  private optionBgs: Phaser.GameObjects.Rectangle[] = [];
+  /** Keyed by option index, only populated for currently visible rows. */
+  private optionBgsMap = new Map<number, Phaser.GameObjects.Rectangle>();
   private onChangeFn?: (value: string, index: number) => void;
   private widthPx: number;
   private heightPx: number;
   private fontSize: number;
+  private maxVisible: number;
+  /** Index of the first visible option row. */
+  private scrollTop = 0;
   private isFocused = false;
   private focusManager: FocusManager | null = null;
   private keyHandler: ((event: KeyboardEvent) => void) | null = null;
-  /** Click-away listener registered on the canvas */
   private canvasClickHandler: ((e: MouseEvent) => void) | null = null;
+  private wheelHandler: ((e: WheelEvent) => void) | null = null;
 
   constructor(scene: Phaser.Scene, config: DropdownConfig) {
     super(scene, config.x, config.y);
@@ -59,6 +65,7 @@ export class Dropdown
     this.widthPx = config.width;
     this.heightPx = config.height ?? 36;
     this.fontSize = config.fontSize ?? theme.fonts.body.size;
+    this.maxVisible = config.maxVisible ?? 8;
 
     // Background
     this.bg = scene.add
@@ -176,16 +183,18 @@ export class Dropdown
     if (!this.isFocused || !this.visible) return;
     if (this.dropdownOpen) {
       if (event.code === "ArrowDown") {
-        this.setHighlight(
+        const next =
           (this.highlightedIndex + 1 + this.options.length) %
-            this.options.length,
-        );
+          this.options.length;
+        this.setHighlight(next);
+        this.ensureVisible(next);
         event.preventDefault();
       } else if (event.code === "ArrowUp") {
-        this.setHighlight(
+        const prev =
           (this.highlightedIndex - 1 + this.options.length) %
-            this.options.length,
-        );
+          this.options.length;
+        this.setHighlight(prev);
+        this.ensureVisible(prev);
         event.preventDefault();
       } else if (event.code === "Enter" || event.code === "Space") {
         if (this.highlightedIndex >= 0) {
@@ -207,18 +216,36 @@ export class Dropdown
     }
   }
 
+  /** Scroll `scrollTop` so that `index` is within the visible window. */
+  private ensureVisible(index: number): void {
+    const visibleEnd = this.scrollTop + this.maxVisible - 1;
+    if (index < this.scrollTop) {
+      this.scrollTop = index;
+      this.renderDropdownItems();
+      this.setHighlight(index);
+    } else if (index > visibleEnd) {
+      this.scrollTop = index - this.maxVisible + 1;
+      this.renderDropdownItems();
+      this.setHighlight(index);
+    }
+  }
+
   private setHighlight(index: number): void {
     const theme = getTheme();
-    if (this.highlightedIndex >= 0 && this.optionBgs[this.highlightedIndex]) {
-      this.optionBgs[this.highlightedIndex].setFillStyle(
-        this.highlightedIndex === this.selectedIndex
-          ? theme.colors.buttonHover
-          : theme.colors.headerBg,
-      );
+    if (this.highlightedIndex >= 0) {
+      const prev = this.optionBgsMap.get(this.highlightedIndex);
+      if (prev) {
+        prev.setFillStyle(
+          this.highlightedIndex === this.selectedIndex
+            ? theme.colors.buttonHover
+            : theme.colors.headerBg,
+        );
+      }
     }
     this.highlightedIndex = index;
-    if (index >= 0 && this.optionBgs[index]) {
-      this.optionBgs[index].setFillStyle(theme.colors.rowHover);
+    const curr = this.optionBgsMap.get(index);
+    if (curr) {
+      curr.setFillStyle(theme.colors.rowHover);
     }
   }
 
@@ -248,17 +275,119 @@ export class Dropdown
     if (this.dropdownOpen) return;
     this.dropdownOpen = true;
     playUiSfx("ui_click");
-    this.optionBgs = [];
+
+    // Centre the window on the selected item, clamped to valid range.
+    const maxTop = Math.max(0, this.options.length - this.maxVisible);
+    this.scrollTop = Math.max(
+      0,
+      Math.min(maxTop, this.selectedIndex - Math.floor(this.maxVisible / 2)),
+    );
+
+    this.renderDropdownItems();
+    this.highlightedIndex = -1;
+    this.setHighlight(this.selectedIndex);
+
+    // Mouse-wheel scrolling.
+    const canvas = this.scene.game.canvas;
+    this.wheelHandler = (e: WheelEvent) => {
+      if (!this.dropdownOpen) return;
+      const delta = e.deltaY > 0 ? 1 : -1;
+      const newTop = Math.max(
+        0,
+        Math.min(
+          Math.max(0, this.options.length - this.maxVisible),
+          this.scrollTop + delta,
+        ),
+      );
+      if (newTop !== this.scrollTop) {
+        this.scrollTop = newTop;
+        const prevHighlight = this.highlightedIndex;
+        this.renderDropdownItems();
+        // Re-apply highlight if still visible, else clear it.
+        if (
+          prevHighlight >= this.scrollTop &&
+          prevHighlight < this.scrollTop + this.maxVisible
+        ) {
+          this.setHighlight(prevHighlight);
+        } else {
+          this.highlightedIndex = -1;
+        }
+        e.preventDefault();
+      }
+    };
+    canvas.addEventListener("wheel", this.wheelHandler, { passive: false });
+
+    // Click-away listener — delayed so the current click doesn't fire it.
+    const worldPos = this.getWorldTransformMatrix();
+    const visibleRows = Math.min(this.maxVisible, this.options.length);
+    this.scene.time.delayedCall(50, () => {
+      this.canvasClickHandler = (e: MouseEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const clickX = (e.clientX - rect.left) * scaleX;
+        const clickY = (e.clientY - rect.top) * scaleY;
+
+        const menuTop = worldPos.ty + this.heightPx;
+        const menuBottom = menuTop + visibleRows * this.heightPx;
+        const menuLeft = worldPos.tx;
+        const menuRight = worldPos.tx + this.widthPx;
+        const triggerTop = worldPos.ty;
+
+        if (
+          clickX < menuLeft ||
+          clickX > menuRight ||
+          clickY < triggerTop ||
+          clickY > menuBottom
+        ) {
+          this.closeDropdown();
+        }
+      };
+      canvas.addEventListener("pointerdown", this.canvasClickHandler);
+    });
+  }
+
+  /**
+   * (Re-)render the visible window of option rows. Destroys any existing
+   * overlay objects first, then creates rows for
+   * [scrollTop, scrollTop + maxVisible).
+   */
+  private renderDropdownItems(): void {
+    for (const obj of this.overlayObjects) {
+      obj.destroy();
+    }
+    this.overlayObjects = [];
+    this.optionBgsMap.clear();
 
     const theme = getTheme();
     const optH = this.heightPx;
     const worldPos = this.getWorldTransformMatrix();
+    const visibleCount = Math.min(this.maxVisible, this.options.length);
+    const end = Math.min(this.scrollTop + visibleCount, this.options.length);
 
-    // Options render below the dropdown trigger in screen space.
-    // We use the scene's add methods and position them globally.
-    for (let i = 0; i < this.options.length; i++) {
+    // Up-scroll indicator
+    if (this.scrollTop > 0) {
+      const indY = worldPos.ty + this.heightPx - Math.floor(optH * 0.35);
+      const ind = this.scene.add
+        .text(
+          worldPos.tx + Math.floor(this.widthPx / 2),
+          indY,
+          `\u25B2 ${this.scrollTop} more`,
+          {
+            fontSize: `${Math.max(9, this.fontSize - 3)}px`,
+            fontFamily: theme.fonts.body.family,
+            color: colorToString(theme.colors.textDim),
+          },
+        )
+        .setOrigin(0.5, 1)
+        .setDepth(1003);
+      this.overlayObjects.push(ind);
+    }
+
+    for (let i = this.scrollTop; i < end; i++) {
+      const renderRow = i - this.scrollTop;
       const opt = this.options[i];
-      const optY = worldPos.ty + this.heightPx + i * optH;
+      const optY = worldPos.ty + this.heightPx + renderRow * optH;
       const isSelected = i === this.selectedIndex;
 
       const optBg = this.scene.add
@@ -272,7 +401,7 @@ export class Dropdown
         .setOrigin(0, 0)
         .setDepth(1000);
       this.overlayObjects.push(optBg);
-      this.optionBgs.push(optBg);
+      this.optionBgsMap.set(i, optBg);
 
       const optBorder = this.scene.add
         .rectangle(worldPos.tx, optY, this.widthPx, optH)
@@ -319,47 +448,35 @@ export class Dropdown
         );
       });
 
-      const selectIdx = i; // capture
+      const selectIdx = i;
       optBg.on("pointerdown", () => {
         this.commitSelection(selectIdx);
       });
     }
 
-    // Start keyboard highlight on the currently selected option.
-    this.highlightedIndex = -1;
-    this.setHighlight(this.selectedIndex);
-
-    // Close when clicking outside — use a delayed listener so the current
-    // click doesn't immediately fire it.
-    this.scene.time.delayedCall(50, () => {
-      const canvas = this.scene.game.canvas;
-      this.canvasClickHandler = (e: MouseEvent) => {
-        // Check if click is outside the dropdown overlay area
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const clickX = (e.clientX - rect.left) * scaleX;
-        const clickY = (e.clientY - rect.top) * scaleY;
-
-        const menuTop = worldPos.ty + this.heightPx;
-        const menuBottom = menuTop + this.options.length * optH;
-        const menuLeft = worldPos.tx;
-        const menuRight = worldPos.tx + this.widthPx;
-
-        // Also include the trigger button area
-        const triggerTop = worldPos.ty;
-
-        if (
-          clickX < menuLeft ||
-          clickX > menuRight ||
-          clickY < triggerTop ||
-          clickY > menuBottom
-        ) {
-          this.closeDropdown();
-        }
-      };
-      canvas.addEventListener("pointerdown", this.canvasClickHandler);
-    });
+    // Down-scroll indicator
+    const remaining = this.options.length - end;
+    if (remaining > 0) {
+      const indY =
+        worldPos.ty +
+        this.heightPx +
+        visibleCount * optH +
+        Math.floor(optH * 0.35);
+      const ind = this.scene.add
+        .text(
+          worldPos.tx + Math.floor(this.widthPx / 2),
+          indY,
+          `\u25BC ${remaining} more`,
+          {
+            fontSize: `${Math.max(9, this.fontSize - 3)}px`,
+            fontFamily: theme.fonts.body.family,
+            color: colorToString(theme.colors.textDim),
+          },
+        )
+        .setOrigin(0.5, 0)
+        .setDepth(1003);
+      this.overlayObjects.push(ind);
+    }
   }
 
   private closeDropdown(): void {
@@ -370,7 +487,7 @@ export class Dropdown
       obj.destroy();
     }
     this.overlayObjects = [];
-    this.optionBgs = [];
+    this.optionBgsMap.clear();
     this.highlightedIndex = -1;
 
     if (this.canvasClickHandler) {
@@ -379,6 +496,11 @@ export class Dropdown
         this.canvasClickHandler,
       );
       this.canvasClickHandler = null;
+    }
+
+    if (this.wheelHandler) {
+      this.scene.game.canvas.removeEventListener("wheel", this.wheelHandler);
+      this.wheelHandler = null;
     }
 
     const theme = getTheme();

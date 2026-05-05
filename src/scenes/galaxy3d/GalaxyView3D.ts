@@ -230,6 +230,11 @@ export class GalaxyView3D {
     this.rebuildRouteLines(trafficVisuals);
   }
 
+  /** Set CSS opacity on the 3D canvas (0 = invisible, 1 = fully opaque). */
+  setCanvasOpacity(opacity: number): void {
+    this.canvas.style.opacity = String(Math.max(0, Math.min(1, opacity)));
+  }
+
   /** Toggle the empire territory bubbles. */
   setEmpireHalosVisible(visible: boolean): void {
     for (const halo of this.empireHalos.values()) {
@@ -311,6 +316,53 @@ export class GalaxyView3D {
     );
     this.cameraYaw = 0;
     this.cameraPitch = Math.PI * 0.3;
+    this.applyCameraOrbit();
+  }
+
+  /**
+   * Pan and zoom the camera to center a system in view.
+   * Returns false if the system is not found in the galaxy.
+   */
+  focusOnSystem(systemId: string): boolean {
+    const pos = this.getSystemWorldPosition(systemId);
+    if (!pos) return false;
+    this.focusWorldPoint(pos);
+    return true;
+  }
+
+  /**
+   * Pan and zoom the camera to the midpoint of a route's curve.
+   * Returns false if the route is not found.
+   */
+  focusOnRoute(routeId: string): boolean {
+    const curve = this.getRouteCurve(routeId);
+    if (!curve) return false;
+    const mid = new THREE.Vector3();
+    curve.getPointAt(0.5, mid);
+    this.focusWorldPoint({ x: mid.x, y: mid.y, z: mid.z });
+    return true;
+  }
+
+  /**
+   * Aim the camera at a world-space point and zoom contextually so
+   * the galaxy still reads as a whole rather than filling the frame
+   * with a single star.
+   */
+  private focusWorldPoint(pos: Vec3): void {
+    // Compute yaw angle to face the point horizontally (y is up in THREE).
+    const yaw = Math.atan2(pos.x, pos.z);
+    // Allow ±π for programmatic focus (vs the user ±π/2 pan limit).
+    this.cameraYaw = Math.max(-Math.PI, Math.min(Math.PI, yaw));
+    // Default orbit elevation — comfortable framing angle.
+    this.cameraPitch = Math.PI * 0.32;
+    // Distance: keep galaxy context while zooming toward the target.
+    const dist = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+    const halfExtent = this.getGalaxyHalfExtent();
+    const targetDist = Math.max(
+      this.cameraDistanceMin,
+      Math.min(this.cameraDistanceMax, halfExtent * 0.9 + dist * 0.4),
+    );
+    this.cameraDistance = targetDist;
     this.applyCameraOrbit();
   }
 

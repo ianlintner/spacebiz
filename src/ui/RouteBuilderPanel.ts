@@ -89,7 +89,7 @@ export function openRouteBuilder(
     alpha: 0.68,
     color: theme.colors.modalOverlay,
     closeOnPointerUp: false,
-    activationDelayMs: 120,
+    activationDelayMs: 700,
     onPointerUp: () => {
       options.onCancel?.();
       layer.destroy();
@@ -146,7 +146,6 @@ export class RouteBuilderPanel {
   private fieldValues = new Map<FieldKey, Label>();
   private fieldArrows = new Map<FieldKey, { left: Button; right: Button }>();
   private statsTitle!: Label;
-  private mktTitle!: Label;
   private pickerHint!: Label;
   private confirmButton!: Button;
   private cancelButton!: Button;
@@ -154,13 +153,6 @@ export class RouteBuilderPanel {
   private pickerMap: RoutePickerMap | null = null;
   private nextClickSlot: "origin" | "destination" = "origin";
   private hoveredPlanetId: string | null = null;
-  // Market Intel labels
-  private mktOriginPriceValue!: Label;
-  private mktDestPriceValue!: Label;
-  private mktOriginSupplyValue!: Label;
-  private mktDestDemandValue!: Label;
-  private mktTrendValue!: Label;
-  private mktSaturationValue!: Label;
 
   constructor(
     scene: Phaser.Scene,
@@ -170,25 +162,35 @@ export class RouteBuilderPanel {
     this.scene = scene;
     this.layer = layer;
     this.options = options;
-    this.planets = [...gameStore.getState().galaxy.planets];
+    this.planets = [...gameStore.getState().galaxy.planets].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
     this.autoBuy = options.allowAutoBuy ?? true;
 
     const L = getLayout();
-    // Clamp panel size to viewport so it never overflows on smaller screens.
-    // Wider than the legacy modal so the interactive picker map can live in
-    // a right column without crowding the field selectors on the left.
-    this.panelWidth = Math.min(900, Math.max(420, L.gameWidth - 64));
-    this.panelHeight = Math.min(720, Math.max(500, L.gameHeight - 80));
+    // Fit comfortably within the viewport with room for the HUD bars.
+    // Width cap at 780 leaves visible context on both sides; height cap at 580
+    // keeps the panel inside the content area on 720-tall canvases.
+    this.panelWidth = Math.min(700, Math.max(400, L.gameWidth - 80));
+    this.panelHeight = Math.min(500, Math.max(380, L.contentHeight - 48));
     this.panelX = Math.floor((L.gameWidth - this.panelWidth) / 2);
-    this.panelY = Math.floor((L.gameHeight - this.panelHeight) / 2);
+    this.panelY = Math.floor(
+      L.contentTop + (L.contentHeight - this.panelHeight) / 2,
+    );
 
     this.originIndex = this.getInitialOriginIndex();
     this.destinationIndex = this.getInitialDestinationIndex();
     this.cargoIndex = this.getInitialCargoIndex();
+    // Auto-select best cargo after we know origin+destination (deferred to
+    // after panel construction so calculateDistance can run; overrides the
+    // initial cargo index if a valid route is already pre-filled).
+    const hasPrefill = !!(
+      options.initialOriginPlanetId && options.initialDestinationPlanetId
+    );
 
     this.fieldOrder = options.lockOrigin
-      ? ["destination", "cargo", "ship", "autoBuy"]
-      : ["origin", "destination", "cargo", "ship", "autoBuy"];
+      ? ["destination", "ship", "autoBuy"]
+      : ["origin", "destination", "ship", "autoBuy"];
 
     this.panel = new Panel(scene, {
       x: this.panelX,
@@ -224,13 +226,13 @@ export class RouteBuilderPanel {
 
     let rowY = content.y + 66;
     this.createFieldRow("origin", "Origin", rowY, !options.lockOrigin);
-    rowY += 46;
+    rowY += 38;
     this.createFieldRow("destination", "Destination", rowY, true);
-    rowY += 46;
-    this.createFieldRow("cargo", "Cargo", rowY, true);
-    rowY += 46;
+    rowY += 38;
+    this.createFieldRow("cargo", "Cargo", rowY, false);
+    rowY += 38;
     this.createFieldRow("ship", "Ship", rowY, true);
-    rowY += 56;
+    rowY += 48;
 
     // Wire field value labels to named properties for refreshUi()
     this.originValue = this.fieldValues.get("origin")!;
@@ -261,7 +263,7 @@ export class RouteBuilderPanel {
     this.autoBuyButton.setDepth(DEPTH_MODAL);
     layer.track(this.autoBuyButton);
 
-    rowY += 58;
+    rowY += 44;
 
     this.statsTitle = new Label(scene, {
       x: this.panelX + content.x,
@@ -273,58 +275,33 @@ export class RouteBuilderPanel {
     this.statsTitle.setDepth(DEPTH_MODAL);
     layer.track(this.statsTitle);
 
-    rowY += 30;
+    rowY += 22;
     this.distanceValue = this.createSummaryLabel(content.x, rowY);
-    rowY += 24;
+    rowY += 20;
     this.recommendationValue = this.createSummaryLabel(content.x, rowY);
-    rowY += 24;
+    rowY += 20;
     this.statusValue = this.createSummaryLabel(
       content.x,
       rowY,
       getTheme().colors.textDim,
     );
-    rowY += 32;
+    rowY += 22;
     this.revenueValue = this.createSummaryLabel(content.x, rowY);
-    rowY += 24;
+    rowY += 20;
     this.fuelValue = this.createSummaryLabel(content.x, rowY);
-    rowY += 24;
+    rowY += 20;
     this.profitValue = this.createSummaryLabel(content.x, rowY);
-    rowY += 36;
 
-    // ── Market Intel section ──────────────────────────────────
-    this.mktTitle = new Label(scene, {
-      x: this.panelX + content.x,
-      y: this.panelY + rowY,
-      text: "Market Intel",
-      style: "body",
-      color: getTheme().colors.accent,
-    });
-    this.mktTitle.setDepth(DEPTH_MODAL);
-    layer.track(this.mktTitle);
-    rowY += 26;
-
-    this.mktOriginPriceValue = this.createSummaryLabel(content.x, rowY);
-    rowY += 22;
-    this.mktDestPriceValue = this.createSummaryLabel(content.x, rowY);
-    rowY += 22;
-    this.mktOriginSupplyValue = this.createSummaryLabel(content.x, rowY);
-    rowY += 22;
-    this.mktDestDemandValue = this.createSummaryLabel(content.x, rowY);
-    rowY += 22;
-    this.mktTrendValue = this.createSummaryLabel(content.x, rowY);
-    rowY += 22;
-    this.mktSaturationValue = this.createSummaryLabel(content.x, rowY);
-
-    // Interactive picker map: right column. The left column holds the field
-    // selectors (origin/dest/cargo/ship) which extend to roughly x=520; the
-    // map starts at x≈540 and runs to the inside edge of the panel.
+    // Interactive picker map: right column. Left column (fields + stats) needs
+    // ~420px; the right column gets whatever remains. On wider panels this
+    // gives the map more room to breathe.
     const pickerMapPadding = 16;
-    const pickerColumnLeft = 540;
+    const pickerColumnLeft = Math.min(460, Math.floor(this.panelWidth * 0.6));
     const pickerMapWidth = Math.max(
-      220,
+      160,
       this.panelWidth - pickerColumnLeft - pickerMapPadding,
     );
-    const pickerMapHeight = Math.min(360, this.panelHeight - 220);
+    const pickerMapHeight = Math.min(240, this.panelHeight - 260);
     const pickerMapX = this.panelX + pickerColumnLeft;
     const pickerMapY = this.panelY + content.y + 70;
     this.pickerMap = new RoutePickerMap({
@@ -397,6 +374,7 @@ export class RouteBuilderPanel {
     scene.input.keyboard?.on("keydown", this.keyHandler);
     layer.onDestroy(() => this.destroy());
 
+    if (hasPrefill) this.autoSelectBestCargo();
     this.refreshUi();
   }
 
@@ -441,9 +419,9 @@ export class RouteBuilderPanel {
     // mirrors the constructor's `rowY` accumulator exactly.
     const rowOffsets: Array<{ field: FieldKey; rowY: number }> = [
       { field: "origin", rowY: content.y + 66 },
-      { field: "destination", rowY: content.y + 66 + 46 },
-      { field: "cargo", rowY: content.y + 66 + 46 * 2 },
-      { field: "ship", rowY: content.y + 66 + 46 * 3 },
+      { field: "destination", rowY: content.y + 66 + 38 },
+      { field: "cargo", rowY: content.y + 66 + 38 * 2 },
+      { field: "ship", rowY: content.y + 66 + 38 * 3 },
     ];
     const contentX = 16;
     for (const { field, rowY } of rowOffsets) {
@@ -464,37 +442,23 @@ export class RouteBuilderPanel {
       this.cargoIcon.setPosition(cargoRow.x - 22, cargoRow.y + 8);
     }
 
-    // Auto-buy / preview / market intel column (left).
-    let rowY = content.y + 66 + 46 * 3 + 56; // ship row + 56 spacer
+    // Auto-buy / preview column (left).
+    let rowY = content.y + 66 + 38 * 3 + 48; // ship row + 48 spacer
     place(this.autoBuyButton, rowY);
-    rowY += 58;
+    rowY += 44;
     place(this.statsTitle, rowY);
-    rowY += 30;
+    rowY += 22;
     place(this.distanceValue, rowY);
-    rowY += 24;
+    rowY += 20;
     place(this.recommendationValue, rowY);
-    rowY += 24;
+    rowY += 20;
     place(this.statusValue, rowY);
-    rowY += 32;
+    rowY += 22;
     place(this.revenueValue, rowY);
-    rowY += 24;
+    rowY += 20;
     place(this.fuelValue, rowY);
-    rowY += 24;
+    rowY += 20;
     place(this.profitValue, rowY);
-    rowY += 36;
-    place(this.mktTitle, rowY);
-    rowY += 26;
-    place(this.mktOriginPriceValue, rowY);
-    rowY += 22;
-    place(this.mktDestPriceValue, rowY);
-    rowY += 22;
-    place(this.mktOriginSupplyValue, rowY);
-    rowY += 22;
-    place(this.mktDestDemandValue, rowY);
-    rowY += 22;
-    place(this.mktTrendValue, rowY);
-    rowY += 22;
-    place(this.mktSaturationValue, rowY);
 
     // Picker hint anchored to the picker-map column. The picker map itself
     // currently has no `setBounds` API (it locks `x/y/width/height` at
@@ -662,6 +626,57 @@ export class RouteBuilderPanel {
     return options[this.shipOptionIndex]?.id ?? null;
   }
 
+  private autoSelectBestCargo(): void {
+    const origin = this.getSelectedOrigin();
+    const destination = this.getSelectedDestination();
+    if (!origin || !destination || origin.id === destination.id) return;
+    const state = gameStore.getState();
+    const distance = calculateDistance(
+      origin,
+      destination,
+      state.galaxy.systems,
+      state.hyperlanes,
+      state.borderPorts,
+    );
+    const refShip: PreviewShip = {
+      id: null,
+      name: "ref",
+      cargoCapacity: 80,
+      passengerCapacity: 40,
+      speed: 1,
+      fuelEfficiency: 1,
+    };
+    let bestCargo: CargoTypeValue | null = null;
+    let bestProfit = -Infinity;
+    for (const c of CARGO_VALUES) {
+      try {
+        const r = createRoute(origin.id, destination.id, distance, c);
+        const rev = estimateRouteRevenue(
+          r,
+          refShip as Ship,
+          state.market,
+          state,
+        );
+        const fuel = estimateRouteFuelCost(
+          r,
+          refShip as Ship,
+          state.market.fuelPrice,
+        );
+        const profit = rev - fuel;
+        if (profit > bestProfit) {
+          bestProfit = profit;
+          bestCargo = c;
+        }
+      } catch {
+        // skip invalid cargo types for this route
+      }
+    }
+    if (bestCargo) {
+      const idx = CARGO_VALUES.indexOf(bestCargo);
+      if (idx >= 0) this.cargoIndex = idx;
+    }
+  }
+
   private changeField(field: FieldKey, delta: number): void {
     if (field === "origin") {
       this.originIndex = wrapIndex(
@@ -686,11 +701,11 @@ export class RouteBuilderPanel {
           this.planets.length,
         );
       }
+      this.autoSelectBestCargo();
     } else if (field === "destination") {
       const nextIndex = this.findNextDestinationIndex(delta);
       this.destinationIndex = nextIndex;
-    } else if (field === "cargo") {
-      this.cargoIndex = wrapIndex(this.cargoIndex + delta, CARGO_VALUES.length);
+      this.autoSelectBestCargo();
     } else if (field === "ship") {
       const shipOptions = this.getShipSelectionOptions();
       this.shipOptionIndex = wrapIndex(
@@ -757,8 +772,16 @@ export class RouteBuilderPanel {
 
     const preview = this.buildPreview();
 
+    const adviserHint = this.buildAdviserHint();
     this.distanceValue.setText(`Distance: ${preview.distanceLabel}`);
-    this.recommendationValue.setText(`Ship plan: ${preview.shipLabel}`);
+    this.recommendationValue.setText(adviserHint.text);
+    this.recommendationValue.setLabelColor(
+      adviserHint.text === ""
+        ? theme.colors.textDim
+        : adviserHint.isOnBest
+          ? theme.colors.profit
+          : theme.colors.accent,
+    );
     this.statusValue.setText(preview.statusLabel);
     this.revenueValue.setText(`Est. revenue: ${preview.revenueLabel}`);
     this.fuelValue.setText(`Est. fuel: ${preview.fuelLabel}`);
@@ -770,16 +793,6 @@ export class RouteBuilderPanel {
           ? theme.colors.profit
           : theme.colors.loss,
     );
-
-    // Market Intel
-    const mkt = this.buildMarketIntel();
-    this.mktOriginPriceValue.setText(mkt.originPrice);
-    this.mktDestPriceValue.setText(mkt.destPrice);
-    this.mktOriginSupplyValue.setText(mkt.originSupply);
-    this.mktDestDemandValue.setText(mkt.destDemand);
-    this.mktTrendValue.setText(mkt.trend);
-    this.mktSaturationValue.setText(mkt.saturation);
-    this.mktSaturationValue.setLabelColor(mkt.saturationColor);
 
     for (const [field, label] of this.fieldLabels) {
       const isActive = this.fieldOrder[this.focusedFieldIndex] === field;
@@ -817,6 +830,7 @@ export class RouteBuilderPanel {
       // Origin is locked — clicks only set destination
       if (planetIndex !== this.originIndex) {
         this.destinationIndex = planetIndex;
+        this.autoSelectBestCargo();
       }
       this.refreshUi();
       return;
@@ -832,6 +846,7 @@ export class RouteBuilderPanel {
         );
       }
       this.nextClickSlot = "destination";
+      this.autoSelectBestCargo();
     } else {
       if (planetIndex === this.originIndex) {
         // Clicking origin again resets — treat next click as origin
@@ -840,6 +855,7 @@ export class RouteBuilderPanel {
       }
       this.destinationIndex = planetIndex;
       this.nextClickSlot = "origin";
+      this.autoSelectBestCargo();
     }
     this.refreshUi();
   }
@@ -979,77 +995,67 @@ export class RouteBuilderPanel {
     };
   }
 
-  private buildMarketIntel(): {
-    originPrice: string;
-    destPrice: string;
-    originSupply: string;
-    destDemand: string;
-    trend: string;
-    saturation: string;
-    saturationColor: number;
+  private buildAdviserHint(): {
+    text: string;
+    isOnBest: boolean;
   } {
-    const theme = getTheme();
     const origin = this.getSelectedOrigin();
     const destination = this.getSelectedDestination();
-    const cargo = this.getSelectedCargo();
-    const state = gameStore.getState();
-
-    const noData = {
-      originPrice: "Origin price: —",
-      destPrice: "Destination price: —",
-      originSupply: "Origin supply: —",
-      destDemand: "Destination demand: —",
-      trend: "Trend: —",
-      saturation: "Destination saturation: —",
-      saturationColor: theme.colors.textDim,
-    };
-
     if (!origin || !destination || origin.id === destination.id) {
-      return noData;
+      return { text: "", isOnBest: false };
     }
-
-    const originMarket = state.market.planetMarkets[origin.id];
-    const destMarket = state.market.planetMarkets[destination.id];
-
-    if (!originMarket || !destMarket) {
-      return noData;
-    }
-
-    const originEntry = originMarket[cargo];
-    const destEntry = destMarket[cargo];
-
-    if (!originEntry || !destEntry) {
-      return noData;
-    }
-
-    const trendArrow =
-      destEntry.trend === "rising"
-        ? "\u25B2 rising"
-        : destEntry.trend === "falling"
-          ? "\u25BC falling"
-          : "\u2500 stable";
-
-    const satPct = Math.round(destEntry.saturation * 100);
-    let saturationColor: number;
-    if (satPct >= 80) {
-      saturationColor = theme.colors.loss;
-    } else if (satPct >= 50) {
-      saturationColor = theme.colors.accent;
-    } else {
-      saturationColor = theme.colors.profit;
-    }
-
-    const satBar = buildSaturationBar(destEntry.saturation);
-
-    return {
-      originPrice: `Origin price: ${formatCash(originEntry.currentPrice)}`,
-      destPrice: `Destination price: ${formatCash(destEntry.currentPrice)}`,
-      originSupply: `Origin  supply: ${Math.round(originEntry.baseSupply)}  demand: ${Math.round(originEntry.baseDemand)}`,
-      destDemand: `Dest  supply: ${Math.round(destEntry.baseSupply)}  demand: ${Math.round(destEntry.baseDemand)}`,
-      trend: `Dest trend: ${trendArrow}`,
-      saturation: `Dest saturation: ${satPct}%  ${satBar}`,
-      saturationColor,
+    const state = gameStore.getState();
+    const distance = calculateDistance(
+      origin,
+      destination,
+      state.galaxy.systems,
+      state.hyperlanes,
+      state.borderPorts,
+    );
+    const refShip: PreviewShip = {
+      id: null,
+      name: "ref",
+      cargoCapacity: 80,
+      passengerCapacity: 40,
+      speed: 1,
+      fuelEfficiency: 1,
     };
+
+    let bestCargo: CargoTypeValue | null = null;
+    let bestProfit = -Infinity;
+    for (const c of CARGO_VALUES) {
+      try {
+        const r = createRoute(origin.id, destination.id, distance, c);
+        const rev = estimateRouteRevenue(
+          r,
+          refShip as Ship,
+          state.market,
+          state,
+        );
+        const fuel = estimateRouteFuelCost(
+          r,
+          refShip as Ship,
+          state.market.fuelPrice,
+        );
+        const profit = rev - fuel;
+        if (profit > bestProfit) {
+          bestProfit = profit;
+          bestCargo = c;
+        }
+      } catch {
+        // Skip cargo types that fail validation
+      }
+    }
+
+    if (!bestCargo) return { text: "", isOnBest: false };
+
+    const selectedCargo = this.getSelectedCargo();
+    const isOnBest = selectedCargo === bestCargo;
+    const bestLabel = humanizeCargoType(bestCargo);
+    const text = isOnBest
+      ? `★ Adviser: ${bestLabel} selected — highest margin for this route`
+      : `★ Adviser: ${bestLabel} has better margins for this route`;
+    return { text, isOnBest };
   }
 
   private getPreviewShip(cargoType: CargoTypeValue): PreviewShip | null {
@@ -1377,12 +1383,6 @@ function templateToPreviewShip(template: ShipTemplate): PreviewShip {
 function wrapIndex(index: number, length: number): number {
   if (length <= 0) return 0;
   return ((index % length) + length) % length;
-}
-
-/** Build a simple ASCII saturation bar (10 segments) */
-function buildSaturationBar(saturation: number): string {
-  const filled = Math.round(Math.min(1, Math.max(0, saturation)) * 10);
-  return "[" + "\u2588".repeat(filled) + "\u2591".repeat(10 - filled) + "]";
 }
 
 function formatCash(value: number): string {

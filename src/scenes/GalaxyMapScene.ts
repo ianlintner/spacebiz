@@ -5,6 +5,8 @@ import {
   getTheme,
   colorToString,
   Label,
+  Tooltip,
+  Dropdown,
   getLayout,
   getShipColor,
   getShipIconKey,
@@ -12,8 +14,10 @@ import {
   getShipMapAnimKey,
   attachReflowHandler,
   GalaxySidebarPanel,
+  SceneUiDirector,
 } from "../ui/index.ts";
 import type { GalaxySidebarData } from "../ui/index.ts";
+import { openRouteBuilder } from "../ui/RouteBuilderPanel.ts";
 import {
   getEmpireFlagKey,
   generateEmpireFlags,
@@ -81,6 +85,14 @@ interface LayerToggleButton {
   setOn: (on: boolean) => void;
 }
 
+interface HQMarker {
+  systemId: string;
+  companyName: string;
+  isPlayer: boolean;
+  dot: Phaser.GameObjects.Arc;
+  label: Phaser.GameObjects.Text;
+}
+
 const VIZ_TOP_STRIP = 60;
 const VIZ_BOTTOM_STRIP = 60; // layer toggle row height
 const TOGGLE_ROW_GAP = 8;
@@ -107,6 +119,26 @@ export class GalaxyMapScene extends Phaser.Scene {
   private layerToggles: LayerToggleButton[] = [];
   private companyFilterButton: LayerToggleButton | null = null;
   private sidebar: GalaxySidebarPanel | null = null;
+
+  // ── System highlight ring ─────────────────────────────────────────────────
+  private highlightedSystemId: string | null = null;
+  private highlightRing: Phaser.GameObjects.Arc | null = null;
+
+  // ── Company HQ icons (projected each frame like the highlight ring) ────────
+  private hqMarkers: HQMarker[] = [];
+
+  // ── Route-builder selection mode ──────────────────────────────────────────
+  private ui!: SceneUiDirector;
+  private routeOriginSystemId: string | null = null;
+  private routeOriginRing: Phaser.GameObjects.Arc | null = null;
+  private holdTimerEvent: Phaser.Time.TimerEvent | null = null;
+  private holdFired = false;
+
+  // ── Navigation dropdown (top-strip, right side) ───────────────────────────
+  private navDropdown: Dropdown | null = null;
+
+  // ── Scene-level tooltip (shared by system/empire markers) ─────────────────
+  private mapTooltip: Tooltip | null = null;
 
   // ── Reflow-tracked overlay chrome ─────────────────────────────────────────
   // Cached so relayout() can reposition without rebuilding the world.
@@ -138,6 +170,8 @@ export class GalaxyMapScene extends Phaser.Scene {
     const state = gameStore.getState();
     const { systems, empires } = state.galaxy;
 
+    this.ui = new SceneUiDirector(this);
+
     // Pre-generate empire flag textures so we can use them in 2D overlays.
     generateEmpireFlags(this, empires, state.seed);
 
@@ -168,8 +202,13 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.lastHyperlanesRef = state.hyperlanes ?? null;
     this.lastBorderPortsRef = state.borderPorts ?? null;
 
+    // Create the shared tooltip before building markers so attachments work.
+    this.mapTooltip = new Tooltip(this, { showDelay: 400, maxWidth: 280 });
+    this.mapTooltip.setDepth(2000);
+
     this.buildSystemMarkers(state);
     this.buildEmpireMarkers(state);
+    this.buildHQMarkers(state);
     this.rebuildTrafficShips(state, initialVisuals);
     this.installCameraInput();
     this.installInfoCardDismiss();
@@ -280,6 +319,17 @@ export class GalaxyMapScene extends Phaser.Scene {
         this.companyFilterButton = null;
       }
       this.destroyInfoCard();
+      this.highlightRing?.destroy();
+      this.highlightRing = null;
+      this.highlightedSystemId = null;
+      this.navDropdown?.destroy();
+      this.navDropdown = null;
+      this.mapTooltip?.destroy();
+      this.mapTooltip = null;
+      this.routeOriginRing?.destroy();
+      this.routeOriginRing = null;
+      this.holdTimerEvent?.remove();
+      this.holdTimerEvent = null;
       this.view3D?.destroy();
       this.view3D = null;
     };
@@ -287,11 +337,267 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.events.once("destroy", cleanup);
   }
 
+  /**
+   * Place a pulsing accent ring at a system's projected screen position.
+   * Call with `null` to clear the highlight.
+   */
+  highlightSystem(systemId: string | null): void {
+    if (this.highlightRing) {
+      this.highlightRing.destroy();
+      this.highlightRing = null;
+    }
+    this.highlightedSystemId = systemId;
+    if (!systemId) return;
+    const theme = getTheme();
+    this.highlightRing = this.add
+      .arc(0, 0, 22, 0, 360, false, theme.colors.accent, 0)
+      .setStrokeStyle(2, theme.colors.accent, 0.9)
+      .setDepth(55);
+    // Pulse tween — yoyo scale to draw attention.
+    this.tweens.add({
+      targets: this.highlightRing,
+      scaleX: 1.35,
+      scaleY: 1.35,
+      alpha: 0.6,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.InOut",
+    });
+  }
+
+  /**
+   * Focus the 3D camera on a system and place a highlight ring on it.
+   */
+  focusSystem(systemId: string): void {
+    this.view3D?.focusOnSystem(systemId);
+    this.highlightSystem(systemId);
+  }
+
+  /**
+   * Focus the 3D camera on a route's midpoint.
+   * Clears any existing system highlight since we're now looking at a route.
+   */
+  focusRoute(routeId: string): void {
+    this.view3D?.focusOnRoute(routeId);
+    this.highlightSystem(null);
+  }
+
   override update(_time: number, delta: number): void {
     if (!this.view3D) return;
     this.updateSystemMarkers();
     this.updateEmpireMarkers();
     this.updateTrafficShips(delta);
+    this.updateHighlightRing();
+    this.updateRouteOriginRing();
+    this.updateHQMarkers();
+  }
+
+  private updateHighlightRing(): void {
+    if (!this.highlightRing || !this.highlightedSystemId || !this.view3D)
+      return;
+    const world = this.view3D.getSystemWorldPosition(this.highlightedSystemId);
+    if (!world) {
+      this.highlightRing.setVisible(false);
+      return;
+    }
+    const proj = this.view3D.projectToScreenDesign(world);
+    this.highlightRing.setVisible(proj.visible);
+    if (proj.visible) {
+      this.highlightRing.setPosition(proj.x, proj.y);
+    }
+  }
+
+  /**
+   * Called on hold-click (~450 ms) of an accessible system hitbox.
+   * First hold sets the route origin; second hold on a different system opens
+   * the route builder directly (without requiring a separate click).
+   */
+  private handleSystemHold(systemId: string): void {
+    if (!this.routeOriginSystemId) {
+      this.setRouteOrigin(systemId);
+    } else if (this.routeOriginSystemId !== systemId) {
+      this.openRouteBuilderFor(this.routeOriginSystemId, systemId);
+    }
+  }
+
+  private setRouteOrigin(systemId: string): void {
+    const theme = getTheme();
+    this.routeOriginRing?.destroy();
+    this.routeOriginSystemId = systemId;
+    this.routeOriginRing = this.add
+      .arc(0, 0, 20, 0, 360, false, theme.colors.profit, 0)
+      .setStrokeStyle(2, theme.colors.profit, 0.9)
+      .setDepth(56)
+      .setVisible(false);
+    this.tweens.add({
+      targets: this.routeOriginRing,
+      scaleX: 1.25,
+      scaleY: 1.25,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.InOut",
+    });
+    this.hudHintText?.setText(
+      "Hold to set origin · Click another star to create route\nEsc to cancel",
+    );
+
+    // Escape key cancels selection.
+    this.input.keyboard?.once("keydown-ESC", () => this.clearRouteSelection());
+  }
+
+  clearRouteSelection(): void {
+    this.routeOriginRing?.destroy();
+    this.routeOriginRing = null;
+    this.routeOriginSystemId = null;
+    this.hudHintText?.setText(
+      "Hold a star to start a route · Click to view system\nScroll to zoom · Drag to pan",
+    );
+  }
+
+  private updateRouteOriginRing(): void {
+    if (!this.routeOriginRing || !this.routeOriginSystemId || !this.view3D)
+      return;
+    const world = this.view3D.getSystemWorldPosition(this.routeOriginSystemId);
+    if (!world) {
+      this.routeOriginRing.setVisible(false);
+      return;
+    }
+    const proj = this.view3D.projectToScreenDesign(world);
+    this.routeOriginRing.setVisible(proj.visible);
+    if (proj.visible) this.routeOriginRing.setPosition(proj.x, proj.y);
+  }
+
+  private openRouteBuilderFor(
+    originSystemId: string,
+    destSystemId: string,
+  ): void {
+    const state = gameStore.getState();
+    const { planets } = state.galaxy;
+
+    const originPlanet = planets.find((p) => p.systemId === originSystemId);
+    const destPlanet = planets.find((p) => p.systemId === destSystemId);
+
+    this.clearRouteSelection();
+
+    // Dim the 3D canvas so the modal reads cleanly over it.
+    this.view3D?.setCanvasOpacity(0.15);
+    const restoreOpacity = (): void => {
+      this.view3D?.setCanvasOpacity(1);
+    };
+
+    openRouteBuilder(this, {
+      ui: this.ui,
+      title: "New Trade Route",
+      initialOriginPlanetId: originPlanet?.id,
+      initialDestinationPlanetId: destPlanet?.id,
+      allowAutoBuy: true,
+      onComplete: (_result) => {
+        restoreOpacity();
+        // Rebuild route traffic visuals so newly created route appears.
+        const fresh = gameStore.getState();
+        const visuals = buildGalaxyRouteTrafficVisuals(fresh);
+        this.view3D?.setRoutes(visuals);
+        this.routeTrafficStateKey = buildGalaxyRouteTrafficStateKey(fresh);
+      },
+      onCancel: () => {
+        restoreOpacity();
+      },
+    });
+  }
+
+  private buildHQMarkers(state: GameState): void {
+    for (const m of this.hqMarkers) {
+      m.dot.destroy();
+      m.label.destroy();
+    }
+    this.hqMarkers = [];
+
+    const theme = getTheme();
+    const { systems, planets } = state.galaxy;
+
+    const resolveSystem = (planetId: string | undefined): string | null => {
+      if (!planetId) return null;
+      return planets.find((p) => p.id === planetId)?.systemId ?? null;
+    };
+
+    const entries: { systemId: string; name: string; isPlayer: boolean }[] = [];
+
+    const playerSystemId = resolveSystem(state.homeworldPlanetId);
+    if (playerSystemId && systems.find((s) => s.id === playerSystemId)) {
+      entries.push({
+        systemId: playerSystemId,
+        name: state.companyName,
+        isPlayer: true,
+      });
+    }
+
+    for (const ai of state.aiCompanies) {
+      if (ai.bankrupt) continue;
+      const sysId = resolveSystem(ai.homeworldPlanetId);
+      if (!sysId || !systems.find((s) => s.id === sysId)) continue;
+      if (entries.some((e) => e.systemId === sysId && !e.isPlayer)) continue;
+      entries.push({ systemId: sysId, name: ai.name, isPlayer: false });
+    }
+
+    const PLAYER_COLOR = theme.colors.accent;
+    const AI_COLOR = 0x888888;
+
+    for (const entry of entries) {
+      const color = entry.isPlayer ? PLAYER_COLOR : AI_COLOR;
+      const dot = this.add
+        .arc(0, 0, 5, 0, 360, false, color, 0.9)
+        .setDepth(60)
+        .setVisible(false);
+      const labelText = entry.isPlayer ? `⌂ ${entry.name}` : `⌂ ${entry.name}`;
+      const label = this.add
+        .text(0, 0, labelText, {
+          fontSize: "9px",
+          fontFamily: theme.fonts.caption.family,
+          color: entry.isPlayer
+            ? colorToString(PLAYER_COLOR)
+            : colorToString(AI_COLOR),
+        })
+        .setDepth(61)
+        .setVisible(false);
+
+      if (this.mapTooltip) {
+        const tooltipText = entry.isPlayer
+          ? `${entry.name}\n(Your HQ)`
+          : `${entry.name} HQ`;
+        this.mapTooltip.attachTo(dot, tooltipText);
+        this.mapTooltip.attachTo(label, tooltipText);
+      }
+
+      this.hqMarkers.push({
+        systemId: entry.systemId,
+        companyName: entry.name,
+        isPlayer: entry.isPlayer,
+        dot,
+        label,
+      });
+    }
+  }
+
+  private updateHQMarkers(): void {
+    if (!this.view3D) return;
+    for (const m of this.hqMarkers) {
+      const world = this.view3D.getSystemWorldPosition(m.systemId);
+      if (!world) {
+        m.dot.setVisible(false);
+        m.label.setVisible(false);
+        continue;
+      }
+      const proj = this.view3D.projectToScreenDesign(world);
+      const vis = proj.visible;
+      m.dot.setVisible(vis);
+      m.label.setVisible(vis);
+      if (vis) {
+        m.dot.setPosition(proj.x, proj.y - 14);
+        m.label.setPosition(proj.x + 8, proj.y - 20);
+      }
+    }
   }
 
   private computeVizRect(L: ReturnType<typeof getLayout>): {
@@ -339,6 +645,15 @@ export class GalaxyMapScene extends Phaser.Scene {
       L.mainContentLeft + L.mainContentWidth - 16,
       hudLabelTop,
     );
+
+    // Reposition the nav dropdown to stay centered in the top strip.
+    if (this.navDropdown) {
+      const navW = 180;
+      const navX = Math.floor(
+        L.mainContentLeft + L.mainContentWidth / 2 - navW / 2,
+      );
+      this.navDropdown.setPosition(navX, hudLabelTop - 2);
+    }
 
     // Layer toggle row — reposition existing buttons sequentially.
     const rowY = L.contentTop + L.contentHeight - 56;
@@ -434,7 +749,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       .text(
         L.mainContentLeft + L.mainContentWidth - 16,
         hudLabelTop,
-        "Scroll to zoom · Drag to pan\nClick a star to view its system\nLines = active trade routes",
+        "Scroll to zoom · Drag to pan · Hold a star to start a route\nClick a star to view its system · Lines = active trade routes",
         {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
@@ -448,6 +763,28 @@ export class GalaxyMapScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setAlpha(0.85)
       .setDepth(901);
+
+    // Navigation dropdown — alphabetically sorted system list, placed in the
+    // centre of the top HUD strip so it doesn't crowd left/right info panels.
+    const navDropdownWidth = 180;
+    const navDropdownX = Math.floor(
+      L.mainContentLeft + L.mainContentWidth / 2 - navDropdownWidth / 2,
+    );
+    const navDropdownY = hudLabelTop - 2;
+    const systems = [...state.galaxy.systems].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    this.navDropdown = new Dropdown(this, {
+      x: navDropdownX,
+      y: navDropdownY,
+      width: navDropdownWidth,
+      height: 32,
+      options: systems.map((s) => ({ value: s.id, label: s.name })),
+      onChange: (value) => {
+        this.focusSystem(value);
+      },
+    });
+    this.navDropdown.setDepth(910);
   }
 
   /**
@@ -750,9 +1087,37 @@ export class GalaxyMapScene extends Phaser.Scene {
           .setDepth(50);
       }
 
+      // Tooltip: show system name + empire, with lock status if inaccessible.
+      if (this.mapTooltip) {
+        let tipText = `${sys.name} · ${empire?.name ?? "Frontier"}`;
+        if (!accessible) tipText += "\n[Locked — empire access required]";
+        this.mapTooltip.attachTo(hitbox, tipText);
+      }
+
+      hitbox.on("pointerdown", () => {
+        this.holdFired = false;
+        this.holdTimerEvent?.remove();
+        if (!accessible) return;
+        this.holdTimerEvent = this.time.delayedCall(450, () => {
+          this.holdFired = true;
+          this.handleSystemHold(sys.id);
+        });
+      });
+
       hitbox.on("pointerup", () => {
+        this.holdTimerEvent?.remove();
+        this.holdTimerEvent = null;
+        if (this.holdFired) {
+          this.holdFired = false;
+          return;
+        }
         getAudioDirector().sfx("map_star_select");
         if (accessible) {
+          // Route-selection mode: first click after hold sets destination.
+          if (this.routeOriginSystemId && this.routeOriginSystemId !== sys.id) {
+            this.openRouteBuilderFor(this.routeOriginSystemId, sys.id);
+            return;
+          }
           const hud = this.scene.get("GameHUDScene") as GameHUDScene;
           hud.switchContentScene("SystemMapScene", { systemId: sys.id });
           return;
@@ -771,6 +1136,12 @@ export class GalaxyMapScene extends Phaser.Scene {
           state,
           false,
         );
+      });
+
+      hitbox.on("pointerout", () => {
+        this.holdTimerEvent?.remove();
+        this.holdTimerEvent = null;
+        this.holdFired = false;
       });
 
       this.systemMarkers.push({
@@ -823,6 +1194,13 @@ export class GalaxyMapScene extends Phaser.Scene {
         .setOrigin(0.5, 0.5)
         .setAlpha(accessible ? 0.32 : 0.24)
         .setDepth(45);
+
+      // Tooltip on empire label showing political summary.
+      if (this.mapTooltip) {
+        const tipText = `${emp.name}\nDisposition: ${emp.disposition}\nTariff: ${Math.round(emp.tariffRate * 100)}%`;
+        this.mapTooltip.attachTo(nameText, tipText);
+      }
+
       this.empireMarkers.push({ empire: emp, nameText });
     }
   }
