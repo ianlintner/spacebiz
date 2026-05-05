@@ -578,6 +578,7 @@ export class TurnReportScene extends Phaser.Scene {
       fontSize: `${theme.fonts.body.size}px`,
       fontFamily: theme.fonts.body.family,
       color: colorToString(theme.colors.text),
+      wordWrap: { width: mpContent.width / 2 - 8 },
     });
     this.marketPanel.add(this.fuelLabel);
 
@@ -610,6 +611,7 @@ export class TurnReportScene extends Phaser.Scene {
           fontSize: `${theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.caption.family,
           color: colorToString(theme.colors.textDim),
+          wordWrap: { width: mpContent.width / 2 - 8 },
         },
       );
       this.summaryLabel.setOrigin(1, 0);
@@ -631,6 +633,7 @@ export class TurnReportScene extends Phaser.Scene {
             fontSize: `${theme.fonts.body.size}px`,
             fontFamily: theme.fonts.body.family,
             color: colorToString(theme.colors.text),
+            wordWrap: { width: mpContent.width - 16 },
           },
         );
         this.marketPanel!.add(lineLabel);

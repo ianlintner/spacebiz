@@ -59,6 +59,7 @@ const SWATCH_SIZE = 10;
  * Phaser's built-in `Container.setData(key, value)` from its DataManager.
  */
 export class GalaxySidebarPanel extends Phaser.GameObjects.Container {
+  private panelWidth: number;
   private panelHeight: number;
   private currentData: GalaxySidebarData | null = null;
 
@@ -73,6 +74,7 @@ export class GalaxySidebarPanel extends Phaser.GameObjects.Container {
 
   constructor(scene: Phaser.Scene, config: GalaxySidebarPanelConfig) {
     super(scene, config.x, config.y);
+    this.panelWidth = config.width;
     this.panelHeight = config.height;
 
     const theme = getTheme();
@@ -129,6 +131,7 @@ export class GalaxySidebarPanel extends Phaser.GameObjects.Container {
 
   override setSize(width: number, height: number): this {
     super.setSize(width, height);
+    this.panelWidth = width;
     this.panelHeight = height;
     this.bg.setSize(width, height);
     this.empiresHeader.setPosition(SWATCH_X, this.empiresHeaderY());
@@ -183,6 +186,7 @@ export class GalaxySidebarPanel extends Phaser.GameObjects.Container {
       this.empireRowObjects.push(swatch);
 
       const lockSuffix = emp.accessible ? "" : " 🔒";
+      const rowTextWidth = this.panelWidth - ROW_LABEL_X - 8;
       const text = this.scene.add
         .text(
           ROW_LABEL_X,
@@ -194,6 +198,7 @@ export class GalaxySidebarPanel extends Phaser.GameObjects.Container {
             color: colorToString(
               emp.accessible ? theme.colors.text : theme.colors.textDim,
             ),
+            wordWrap: { width: rowTextWidth },
           },
         )
         .setAlpha(emp.accessible ? 1 : 0.6);
