@@ -450,6 +450,11 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     const rowSpacing = this.statRowSpacing;
     const leftX = theme.spacing.md;
     const rightX = this.panelWidth - theme.spacing.md;
+    // Reserve enough width for the longest label ("Condition", ~65 px at
+    // 12 px monospace). Values are capped to the space right of this column
+    // so they never bleed leftward into label text.
+    const LABEL_RESERVE = 72;
+    const maxValueWidth = rightX - leftX - LABEL_RESERVE;
     // Cap how many rows we draw so stats can't extend past the panel into
     // whatever sits below it (e.g. the routes-screen minimap). The clipping
     // mask is the visual safety net; this is the layout-time guard.
@@ -466,7 +471,24 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
       const stat = visibleStats[i];
       const rowY = startY + i * rowSpacing;
 
-      // Label (left-aligned, caption style, textDim)
+      if (!stat.label) {
+        // Empty-label rows are continuation/description text — render
+        // full-width and left-aligned so they read naturally.
+        const valueObj = new Label(this.scene, {
+          x: leftX,
+          y: rowY,
+          text: stat.value,
+          style: "caption",
+          color: theme.colors.textDim,
+          maxWidth: rightX - leftX,
+        });
+        this.scene.children.remove(valueObj);
+        this.add(valueObj);
+        this.statLabels.push(valueObj);
+        continue;
+      }
+
+      // Two-column row: label left, value right-aligned within its column.
       const labelObj = new Label(this.scene, {
         x: leftX,
         y: rowY,
@@ -478,13 +500,13 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
       this.add(labelObj);
       this.statLabels.push(labelObj);
 
-      // Value (right-aligned, caption style, text/accent color)
       const valueObj = new Label(this.scene, {
         x: rightX,
         y: rowY,
         text: stat.value,
         style: "caption",
         color: theme.colors.text,
+        maxWidth: maxValueWidth,
       });
       valueObj.setOrigin(1, 0);
       this.scene.children.remove(valueObj);

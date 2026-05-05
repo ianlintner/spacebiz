@@ -681,6 +681,7 @@ export class DiplomacyScene extends Phaser.Scene {
         fontFamily: theme.fonts.caption.family,
         fontSize: "12px",
         color: colorToHex(theme.colors.textDim),
+        wordWrap: { width: contentWidth - 16 },
       });
       this.tagDetailLabels.push(hint);
       nextY += hint.height + 4;
@@ -830,6 +831,7 @@ export class DiplomacyScene extends Phaser.Scene {
         fontSize: "12px",
         color: colorToHex(theme.colors.text),
         fontStyle: "italic",
+        wordWrap: { width: maxWidth },
       });
       this.tagDetailLabels.push(lbl);
       y += lbl.height + 2;
