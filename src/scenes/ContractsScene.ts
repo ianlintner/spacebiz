@@ -544,7 +544,7 @@ export class ContractsScene extends Phaser.Scene {
         body: "You have no free route slots. Delete an existing route or research technology to unlock more slots.",
         okText: "OK",
         onOk: () => {},
-      });
+      }).show();
       return;
     }
 
@@ -600,7 +600,7 @@ export class ContractsScene extends Phaser.Scene {
           );
         }
       },
-    });
+    }).show();
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -731,6 +731,6 @@ export class ContractsScene extends Phaser.Scene {
           );
         }
       },
-    });
+    }).show();
   }
 }

@@ -120,7 +120,6 @@ interface TargetRow {
  * Lobby and propose-non-compete need multi-target pickers and ship in v2.
  */
 export class DiplomacyScene extends Phaser.Scene {
-  private headingLabel!: Label;
   private targetTablePanel!: Panel;
   private targetTableFrame!: ScrollFrame;
   private targetTable!: DataTable;
@@ -141,7 +140,6 @@ export class DiplomacyScene extends Phaser.Scene {
    */
   private requestedPortraitTexture: string | null = null;
   private actionStatusLabel!: Label;
-  private headerCounter!: Label;
   private queuedSummary!: Label;
   private selection: Selection = null;
   private mode: PanelMode = { kind: "list" };
@@ -163,7 +161,6 @@ export class DiplomacyScene extends Phaser.Scene {
     const L = getLayout();
     createStarfield(this);
 
-    this.buildHeader(L);
     this.buildTargetTable(L);
     this.buildActionPanel(L);
     this.relayout();
@@ -194,27 +191,20 @@ export class DiplomacyScene extends Phaser.Scene {
     const contentTop = L.contentTop + GROUP_TAB_STRIP_HEIGHT;
     const contentHeight = L.contentHeight - GROUP_TAB_STRIP_HEIGHT;
 
-    // Header heading + counter sit just above the panels.
-    this.headingLabel.setPosition(L.mainContentLeft, contentTop - 28);
-    this.headerCounter.setPosition(
-      L.mainContentLeft + L.mainContentWidth - 8,
-      contentTop - 28,
-    );
-
-    // Target table panel.
-    const tableW = Math.floor(L.mainContentWidth * 0.55);
-    this.targetTablePanel.setPosition(L.mainContentLeft, contentTop);
+    // Target table panel — uses full content width (no portrait sidebar).
+    const tableW = Math.floor(L.fullContentWidth * 0.55);
+    this.targetTablePanel.setPosition(L.fullContentLeft, contentTop);
     this.targetTablePanel.setSize(tableW, contentHeight);
     const tableContent = this.targetTablePanel.getContentArea();
-    const tableAbsX = L.mainContentLeft + tableContent.x;
+    const tableAbsX = L.fullContentLeft + tableContent.x;
     const tableAbsY = contentTop + tableContent.y;
     this.targetTableFrame.setPosition(tableAbsX, tableAbsY);
     this.targetTableFrame.setSize(tableContent.width, tableContent.height - 16);
     this.targetTable.setSize(tableContent.width, tableContent.height - 16);
 
     // Action panel.
-    const panelX = L.mainContentLeft + tableW + 8;
-    const panelW = L.mainContentWidth - tableW - 8;
+    const panelX = L.fullContentLeft + tableW + 8;
+    const panelW = L.fullContentWidth - tableW - 8;
     this.actionPanel.setPosition(panelX, contentTop);
     this.actionPanel.setSize(panelW, contentHeight);
     const actionContent = this.actionPanel.getContentArea();
@@ -231,33 +221,17 @@ export class DiplomacyScene extends Phaser.Scene {
 
   // ─── Layout builders ────────────────────────────────────────────────────
 
-  private buildHeader(L: ReturnType<typeof getLayout>): void {
-    this.headingLabel = new Label(this, {
-      x: L.mainContentLeft,
-      y: L.contentTop - 28,
-      text: "Foreign Relations",
-      style: "heading",
-    });
-    this.headerCounter = new Label(this, {
-      x: L.mainContentLeft + L.mainContentWidth - 8,
-      y: L.contentTop - 28,
-      text: "Actions: 0/2",
-      style: "caption",
-    });
-    this.headerCounter.setOrigin(1, 0);
-  }
-
   private buildTargetTable(L: ReturnType<typeof getLayout>): void {
-    const tableW = Math.floor(L.mainContentWidth * 0.55);
+    const tableW = Math.floor(L.fullContentWidth * 0.55);
     this.targetTablePanel = new Panel(this, {
-      x: L.mainContentLeft,
+      x: L.fullContentLeft,
       y: L.contentTop,
       width: tableW,
       height: L.contentHeight,
       title: "Targets",
     });
     const content = this.targetTablePanel.getContentArea();
-    const absX = L.mainContentLeft + content.x;
+    const absX = L.fullContentLeft + content.x;
     const absY = L.contentTop + content.y;
 
     this.targetTableFrame = new ScrollFrame(this, {
@@ -273,7 +247,7 @@ export class DiplomacyScene extends Phaser.Scene {
       height: content.height - 16,
       contentSized: true,
       columns: [
-        { key: "type", label: "Type", width: 50 },
+        { key: "type", label: "Type", width: 75 },
         { key: "name", label: "Name", width: 140 },
         {
           key: "tier",
@@ -299,9 +273,9 @@ export class DiplomacyScene extends Phaser.Scene {
 
   private buildActionPanel(L: ReturnType<typeof getLayout>): void {
     const panelX =
-      L.mainContentLeft + Math.floor(L.mainContentWidth * 0.55) + 8;
+      L.fullContentLeft + Math.floor(L.fullContentWidth * 0.55) + 8;
     const panelW =
-      L.mainContentWidth - Math.floor(L.mainContentWidth * 0.55) - 8;
+      L.fullContentWidth - Math.floor(L.fullContentWidth * 0.55) - 8;
     this.actionPanel = new Panel(this, {
       x: panelX,
       y: L.contentTop,
@@ -342,13 +316,8 @@ export class DiplomacyScene extends Phaser.Scene {
     const d = state.diplomacy ?? EMPTY_DIPLOMACY_STATE;
     const cap = getPerTurnCap(state);
     const used = d.queuedActions.length;
-    this.headerCounter.setText(`Actions: ${used}/${cap}`);
-    const theme = getTheme();
-    this.headerCounter.setColor(
-      used >= cap
-        ? colorToHex(theme.colors.warning)
-        : colorToHex(theme.colors.textDim),
-    );
+    const suffix = used >= cap ? ` ⚠ ${used}/${cap}` : ` ${used}/${cap}`;
+    this.actionPanel.setTitle(`Actions${suffix}`);
   }
 
   private refreshTargetTable(state: GameState): void {
@@ -916,11 +885,11 @@ export class DiplomacyScene extends Phaser.Scene {
   } {
     const L = getLayout();
     const panelX =
-      L.mainContentLeft + Math.floor(L.mainContentWidth * 0.55) + 8;
+      L.fullContentLeft + Math.floor(L.fullContentWidth * 0.55) + 8;
     const content = this.actionPanel.getContentArea();
     return {
       absX: panelX + content.x,
-      absY: L.contentTop + content.y + 28,
+      absY: L.contentTop + GROUP_TAB_STRIP_HEIGHT + content.y,
       contentWidth: content.width,
     };
   }
