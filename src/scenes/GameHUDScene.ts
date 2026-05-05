@@ -10,6 +10,7 @@ import {
   AdviserPanel,
   attachReflowHandler,
   GROUP_TAB_STRIP_HEIGHT,
+  DEPTH_MODAL,
 } from "../ui/index.ts";
 import { colorToString } from "@spacebiz/ui";
 import { SettingsPanel } from "../ui/SettingsPanel.ts";
@@ -1685,7 +1686,8 @@ export class GameHUDScene extends Phaser.Scene {
         this.endTurnModal = null;
       },
     });
-    this.endTurnModal.setDepth(500);
+    this.endTurnModal.setDepth(DEPTH_MODAL);
+    this.endTurnModal.show();
   }
 
   private buildTickerItems(state: GameState) {
