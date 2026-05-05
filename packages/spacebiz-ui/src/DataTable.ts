@@ -446,6 +446,9 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.hideRowTooltip();
     this.rows = [...rows];
     this.scrollY = 0;
+    // Capture before renderBody() — renderBody sets selectedRowIndex to 0 when
+    // autoFocus is true, so checking it afterwards would always be false.
+    const wasUnselected = this.selectedRowIndex < 0;
     if (this.rows.length === 0) {
       this.selectedRowIndex = -1;
     } else if (this.selectedRowIndex >= this.rows.length) {
@@ -454,13 +457,13 @@ export class DataTable extends Phaser.GameObjects.Container {
     this.selectedRowIndicator = null;
     this.renderBody();
 
-    // Auto-select first row if autoFocus is enabled and table just became non-empty
+    // Fire onRowSelect for the auto-selected first row so detail panels update.
     if (
       this.tableConfig.autoFocus &&
+      wasUnselected &&
       this.rows.length > 0 &&
-      this.selectedRowIndex < 0
+      this.selectedRowIndex === 0
     ) {
-      this.selectedRowIndex = 0;
       const firstRow = this.renderedRows[0];
       if (firstRow) {
         this.tableConfig.onRowSelect?.(0, firstRow);
