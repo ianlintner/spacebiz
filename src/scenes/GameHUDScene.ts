@@ -27,6 +27,7 @@ import type {
 import { TUTORIAL_STEPS } from "../game/adviser/TutorialDefinitions.ts";
 import type { GameState } from "../data/types.ts";
 import { generateTickerFeed } from "../generation/news/tickerFeed.ts";
+import { generateOpeningFeed } from "../generation/news/openingFeed.ts";
 
 /**
  * Compact "Charters: 3 (2P/1F) · Upkeep: §2,400" string for the HUD.
@@ -1692,7 +1693,7 @@ export class GameHUDScene extends Phaser.Scene {
 
   private buildTickerItems(state: GameState) {
     const lastTurn = state.history[state.history.length - 1];
-    if (!lastTurn) return [];
+    if (!lastTurn) return generateOpeningFeed(state);
     return generateTickerFeed(state, lastTurn);
   }
 

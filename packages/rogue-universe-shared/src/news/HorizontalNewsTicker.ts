@@ -20,7 +20,11 @@ function buildMarqueeString(items: TickerItem[]): string {
 
 /**
  * Persistent horizontal news crawl rendered in GameHUDScene's ticker strip.
- * Items scroll right-to-left at a constant speed, looping continuously.
+ * Items scroll right-to-left at a constant speed, cycling continuously.
+ *
+ * Non-interrupting update model: calling updateItems() while scrolling queues
+ * the new items for the next natural cycle boundary. The currently visible
+ * text is never reset mid-scroll.
  */
 export class HorizontalNewsTicker {
   private readonly scene: Phaser.Scene;
@@ -29,6 +33,10 @@ export class HorizontalNewsTicker {
   private width: number;
   private height: number;
   private lastItems: TickerItem[] = [];
+
+  /** Items queued to replace lastItems at the next cycle boundary. */
+  private scheduledItems: TickerItem[] | null = null;
+  private destroyed = false;
 
   private maskShape: Phaser.GameObjects.Graphics | null = null;
   private marqueeText: Phaser.GameObjects.Text | null = null;
@@ -60,7 +68,7 @@ export class HorizontalNewsTicker {
 
   /**
    * Resize the ticker viewport in place. Mask + scroll geometry are
-   * rebuilt against the new bounds; existing items keep scrolling.
+   * rebuilt against the new bounds; the most up-to-date content is used.
    */
   setSize(width: number, height: number): this {
     this.width = width;
@@ -79,13 +87,35 @@ export class HorizontalNewsTicker {
 
   private rebuild(): void {
     this.buildMask();
-    if (this.lastItems.length > 0 || this.marqueeText) {
-      this.updateItems(this.lastItems);
+    if (this.marqueeText || this.lastItems.length > 0) {
+      // Position/size changed — must restart with the most current content.
+      const items = this.scheduledItems ?? this.lastItems;
+      this.scrollTween?.stop();
+      this.scrollTween = null;
+      this.beginCycle(items);
     }
   }
 
+  /**
+   * Supply a new set of ticker items.
+   *
+   * If the ticker is currently mid-scroll the items are queued and will take
+   * effect at the end of the current pass. The visible text is never reset.
+   */
   updateItems(items: TickerItem[]): void {
+    if (this.scrollTween && this.marqueeText) {
+      this.scheduledItems = items;
+      return;
+    }
+    this.beginCycle(items);
+  }
+
+  private beginCycle(items: TickerItem[]): void {
+    if (this.destroyed) return;
+
     this.lastItems = items;
+    this.scheduledItems = null;
+
     this.scrollTween?.stop();
     this.scrollTween = null;
     this.marqueeText?.destroy();
@@ -94,7 +124,6 @@ export class HorizontalNewsTicker {
     const theme = getTheme();
     const text = buildMarqueeString(items);
 
-    // Determine color from first item, fall back to textDim.
     const firstColor =
       items.length > 0
         ? (items[0].color ?? theme.colors.textDim)
@@ -129,23 +158,22 @@ export class HorizontalNewsTicker {
     const totalTravel = this.width + textWidth;
     const duration = (totalTravel / SCROLL_SPEED) * 1000;
 
-    // Scroll from right edge to fully off-screen left, then repeat.
     this.scrollTween = this.scene.tweens.add({
       targets: this.marqueeText,
       x: this.x - textWidth,
       duration,
       ease: "Linear",
-      repeat: -1,
-      onRepeat: () => {
-        // Reset to right edge for next cycle.
-        if (this.marqueeText) {
-          this.marqueeText.setX(this.x + this.width);
-        }
+      onComplete: () => {
+        this.scrollTween = null;
+        if (this.destroyed) return;
+        const nextItems = this.scheduledItems ?? this.lastItems;
+        this.beginCycle(nextItems);
       },
     });
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.scrollTween?.stop();
     this.scrollTween = null;
     this.marqueeText?.destroy();
