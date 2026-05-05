@@ -90,10 +90,6 @@ function formatCash(amount: number): string {
   return "\u00A7" + Math.round(amount).toLocaleString("en-US");
 }
 
-/** Delay before surfacing the new-game adviser welcome, so the HUD has
- * fully rendered before the drawer slides in. */
-const ADVISER_ONBOARD_DELAY_MS = 700;
-
 function fitImageCover(
   image: Phaser.GameObjects.Image,
   width: number,
@@ -726,11 +722,7 @@ export class GameHUDScene extends Phaser.Scene {
       this.updateAdviserBadge(pendingMsgs.length);
     }
 
-    // Fire initial tutorial trigger — surfaces the welcome step via the
-    // adviser drawer (route-building onboarding).
-    this.time.delayedCall(ADVISER_ONBOARD_DELAY_MS, () => {
-      this.fireTutorialTrigger("newGame");
-    });
+    // Rex adviser auto-open on new game is disabled for now.
 
     // ── State Subscription ───────────────────────────────────
     gameStore.on("stateChanged", this.stateListener);

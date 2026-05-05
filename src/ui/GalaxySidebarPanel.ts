@@ -146,11 +146,23 @@ export class GalaxySidebarPanel extends Phaser.GameObjects.Container {
   /** Populate the panel with the latest galaxy state. */
   setSidebarData(data: GalaxySidebarData): this {
     this.currentData = data;
+    const theme = getTheme();
+    const charWidth = theme.fonts.caption.size * 0.6;
+    const availW = this.panelWidth - SWATCH_X - 8;
+    const prefix = "Player Empire: ";
+    const maxNameChars = Math.max(
+      4,
+      Math.floor(availW / charWidth) - prefix.length,
+    );
+    const empName =
+      data.playerEmpireName.length > maxNameChars
+        ? data.playerEmpireName.slice(0, maxNameChars - 1) + "…"
+        : data.playerEmpireName;
     const stats = [
       `Systems: ${data.systemCount}`,
       `Empires: ${data.empireCount}`,
       `Hyperlanes: ${data.hyperlaneCount}`,
-      `Player Empire: ${data.playerEmpireName}`,
+      `${prefix}${empName}`,
     ];
     for (let i = 0; i < this.statLabels.length; i++) {
       this.statLabels[i].setText(stats[i] ?? "");
