@@ -20,6 +20,7 @@ import {
   getShipColor,
   getShipLabel,
   attachReflowHandler,
+  DEPTH_MODAL,
 } from "../ui/index.ts";
 import {
   buyShip,
@@ -316,6 +317,7 @@ export class FleetScene extends Phaser.Scene {
         title: "Buy Ship",
       }),
     );
+    buyPanel.setDepth(DEPTH_MODAL);
 
     const content = buyPanel.getContentArea();
 
@@ -362,6 +364,7 @@ export class FleetScene extends Phaser.Scene {
         },
       }),
     );
+    list.setDepth(DEPTH_MODAL);
 
     const shipClasses = Object.values(ShipClass) as ShipClassType[];
     for (const sc of shipClasses) {
@@ -404,17 +407,19 @@ export class FleetScene extends Phaser.Scene {
     }
 
     // Close button for buy panel
-    layer.track(
-      new Button(this, {
-        x: panelX + panelW - content.x - 100,
-        y: panelY + panelH - 50,
-        width: 100,
-        label: "Close",
-        onClick: () => {
-          layer.destroy();
-        },
-      }),
-    );
+    layer
+      .track(
+        new Button(this, {
+          x: panelX + panelW - content.x - 100,
+          y: panelY + panelH - 50,
+          width: 100,
+          label: "Close",
+          onClick: () => {
+            layer.destroy();
+          },
+        }),
+      )
+      .setDepth(DEPTH_MODAL);
   }
 
   private confirmSellShip(): void {
