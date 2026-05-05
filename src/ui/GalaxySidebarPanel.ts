@@ -186,24 +186,49 @@ export class GalaxySidebarPanel extends Phaser.GameObjects.Container {
       this.empireRowObjects.push(swatch);
 
       const lockSuffix = emp.accessible ? "" : " 🔒";
+      // Two separate nodes so stats always sit at a fixed offset regardless
+      // of name length. Name is truncated to one line instead of wrapping.
       const rowTextWidth = this.panelWidth - ROW_LABEL_X - 8;
-      const text = this.scene.add
+      // 12px monospace: ~7.2 px/char. Subtract lock suffix chars so the
+      // combined name + lock glyph never exceeds the available column.
+      const charWidth = theme.fonts.caption.size * 0.6;
+      const maxNameChars = Math.max(
+        4,
+        Math.floor(rowTextWidth / charWidth) - lockSuffix.length,
+      );
+      const displayName =
+        emp.name.length > maxNameChars
+          ? emp.name.slice(0, maxNameChars - 1) + "…"
+          : emp.name;
+      const textColor = colorToString(
+        emp.accessible ? theme.colors.text : theme.colors.textDim,
+      );
+      const alpha = emp.accessible ? 1 : 0.6;
+
+      const nameText = this.scene.add
+        .text(ROW_LABEL_X, cy, `${displayName}${lockSuffix}`, {
+          fontSize: `${theme.fonts.caption.size}px`,
+          fontFamily: theme.fonts.caption.family,
+          color: textColor,
+        })
+        .setAlpha(alpha);
+      this.add(nameText);
+      this.empireRowObjects.push(nameText);
+
+      const statsText = this.scene.add
         .text(
           ROW_LABEL_X,
-          cy,
-          `${emp.name}${lockSuffix}\n${emp.systemCount} systems · ${Math.round(emp.tariffRate * 100)}% tariff`,
+          cy + 15,
+          `${emp.systemCount} systems · ${Math.round(emp.tariffRate * 100)}% tariff`,
           {
             fontSize: `${theme.fonts.caption.size}px`,
             fontFamily: theme.fonts.caption.family,
-            color: colorToString(
-              emp.accessible ? theme.colors.text : theme.colors.textDim,
-            ),
-            wordWrap: { width: rowTextWidth },
+            color: colorToString(theme.colors.textDim),
           },
         )
-        .setAlpha(emp.accessible ? 1 : 0.6);
-      this.add(text);
-      this.empireRowObjects.push(text);
+        .setAlpha(alpha);
+      this.add(statsText);
+      this.empireRowObjects.push(statsText);
 
       cy += EMPIRE_ROW_HEIGHT;
     }

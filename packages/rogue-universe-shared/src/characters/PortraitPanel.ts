@@ -451,10 +451,17 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     const leftX = theme.spacing.md;
     const rightX = this.panelWidth - theme.spacing.md;
     // Reserve enough width for the longest label ("Condition", ~65 px at
-    // 12 px monospace). Values are capped to the space right of this column
-    // so they never bleed leftward into label text.
+    // 12 px monospace). Values are capped to the right portion of this space.
     const LABEL_RESERVE = 72;
-    const maxValueWidth = rightX - leftX - LABEL_RESERVE;
+    // Rows are single-line (20 px spacing). Truncate strings to fit their
+    // column rather than wrapping, which would cause row overlap.
+    const charWidth = theme.fonts.caption.size * 0.6; // monospace: width ≈ 60% of size
+    const maxValueChars = Math.max(
+      4,
+      Math.floor((rightX - leftX - LABEL_RESERVE) / charWidth),
+    );
+    const maxFullChars = Math.max(4, Math.floor((rightX - leftX) / charWidth));
+
     // Cap how many rows we draw so stats can't extend past the panel into
     // whatever sits below it (e.g. the routes-screen minimap). The clipping
     // mask is the visual safety net; this is the layout-time guard.
@@ -472,15 +479,14 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
       const rowY = startY + i * rowSpacing;
 
       if (!stat.label) {
-        // Empty-label rows are continuation/description text — render
-        // full-width and left-aligned so they read naturally.
+        // Empty-label rows are continuation/description text — full-width
+        // left-aligned. Truncate to keep them single-line.
         const valueObj = new Label(this.scene, {
           x: leftX,
           y: rowY,
-          text: stat.value,
+          text: truncateEllipsis(stat.value, maxFullChars),
           style: "caption",
           color: theme.colors.textDim,
-          maxWidth: rightX - leftX,
         });
         this.scene.children.remove(valueObj);
         this.add(valueObj);
@@ -488,7 +494,8 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
         continue;
       }
 
-      // Two-column row: label left, value right-aligned within its column.
+      // Two-column row: label left, value right-aligned and truncated so it
+      // never bleeds into the label column.
       const labelObj = new Label(this.scene, {
         x: leftX,
         y: rowY,
@@ -503,10 +510,9 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
       const valueObj = new Label(this.scene, {
         x: rightX,
         y: rowY,
-        text: stat.value,
+        text: truncateEllipsis(stat.value, maxValueChars),
         style: "caption",
         color: theme.colors.text,
-        maxWidth: maxValueWidth,
       });
       valueObj.setOrigin(1, 0);
       this.scene.children.remove(valueObj);
@@ -538,4 +544,10 @@ function formatNumber(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
+}
+
+/** Truncate text to maxChars with a trailing ellipsis if needed. */
+function truncateEllipsis(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return text.slice(0, Math.max(1, maxChars - 1)) + "…";
 }

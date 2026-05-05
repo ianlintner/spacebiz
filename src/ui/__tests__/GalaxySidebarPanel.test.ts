@@ -62,8 +62,8 @@ describe("GalaxySidebarPanel", () => {
     // + (1 swatch + 1 text) per visible empire row.
     const childCount = panel.list.length;
     // 1 (bg) + 1 (title) + 4 (stats) + 1 (empires header) = 7 chrome
-    // 3 empires * 2 row objects = 6 dynamic
-    expect(childCount).toBe(7 + 6);
+    // 3 empires * 3 row objects (swatch + nameText + statsText) = 9 dynamic
+    expect(childCount).toBe(7 + 9);
   }, 15000);
 
   it("setSize re-flows the row clamp so a small height shows fewer rows", async () => {
@@ -110,8 +110,8 @@ describe("GalaxySidebarPanel", () => {
     const afterCount = panel.list.length;
 
     expect(afterCount).toBeLessThan(beforeCount);
-    // 7 chrome + 2 dynamic for the single row = 9
-    expect(afterCount).toBe(9);
+    // 7 chrome + 3 dynamic for the single row (swatch + nameText + statsText) = 10
+    expect(afterCount).toBe(10);
   }, 15000);
 
   it("setSize updates the background rectangle dimensions", async () => {
