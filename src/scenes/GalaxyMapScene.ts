@@ -64,6 +64,12 @@ interface TrafficShip {
   t: number;
   speed: number;
   dir: 1 | -1;
+  /** Base display size (px) used as reference for zoom scaling. */
+  baseSize: number;
+  /** Whether the ship is currently docked/waiting at a terminus. */
+  waiting: boolean;
+  /** Seconds remaining in the current wait. */
+  waitRemaining: number;
 }
 
 interface LayerToggleButton {
@@ -958,7 +964,7 @@ export class GalaxyMapScene extends Phaser.Scene {
 
       for (let i = 0; i < visual.visibleUnits; i++) {
         const ship = visual.assignedShips[i % visual.assignedShips.length];
-        const sprite = this.createShipSprite(ship);
+        const { sprite, baseSize } = this.createShipSprite(ship);
         if (!this.showShips) {
           (
             sprite as Phaser.GameObjects.GameObject & {
@@ -971,20 +977,24 @@ export class GalaxyMapScene extends Phaser.Scene {
           ship,
           ownerId: visual.ownerId,
           sprite,
+          baseSize,
           t: i / Math.max(1, visual.visibleUnits),
-          speed: 0.018 + Math.random() * 0.012,
-          dir: 1,
+          speed: 0.012 + Math.random() * 0.01,
+          dir: Math.random() < 0.5 ? 1 : -1,
+          waiting: false,
+          waitRemaining: 0,
         });
       }
     }
   }
 
-  private createShipSprite(
-    ship: Ship,
-  ):
-    | Phaser.GameObjects.Sprite
-    | Phaser.GameObjects.Image
-    | Phaser.GameObjects.Arc {
+  private createShipSprite(ship: Ship): {
+    sprite:
+      | Phaser.GameObjects.Sprite
+      | Phaser.GameObjects.Image
+      | Phaser.GameObjects.Arc;
+    baseSize: number;
+  } {
     const tint = getShipColor(ship.class);
     const mapKey = getShipMapKey(ship.class);
     const animKey = getShipMapAnimKey(ship.class);
@@ -993,20 +1003,26 @@ export class GalaxyMapScene extends Phaser.Scene {
     if (mapKey && animKey && this.textures.exists(mapKey)) {
       const sprite = this.add
         .sprite(0, 0, mapKey, "1")
-        .setDisplaySize(20, 20)
-        .setTint(tint)
-        .setDepth(40);
-      sprite.play(animKey);
-      return sprite;
-    }
-    if (iconKey && this.textures.exists(iconKey)) {
-      return this.add
-        .image(0, 0, iconKey)
         .setDisplaySize(14, 14)
         .setTint(tint)
         .setDepth(40);
+      sprite.play(animKey);
+      return { sprite, baseSize: 14 };
     }
-    return this.add.circle(0, 0, 2.5, tint, 0.85).setDepth(40);
+    if (iconKey && this.textures.exists(iconKey)) {
+      return {
+        sprite: this.add
+          .image(0, 0, iconKey)
+          .setDisplaySize(10, 10)
+          .setTint(tint)
+          .setDepth(40),
+        baseSize: 10,
+      };
+    }
+    return {
+      sprite: this.add.circle(0, 0, 2, tint, 0.85).setDepth(40),
+      baseSize: 2,
+    };
   }
 
   private updateTrafficShips(delta: number): void {
@@ -1016,6 +1032,19 @@ export class GalaxyMapScene extends Phaser.Scene {
     const tmp = this.tmpWorld;
     const tmpNext = this.tmpWorldNext;
     const filter = this.companyFilter;
+
+    // Zoom-based scale: ships shrink as you pull back, grow as you zoom in.
+    const camDist = v3.getCameraDistance();
+    const halfExtent = v3.getGalaxyHalfExtent();
+    const zoomMin = halfExtent * 0.6; // closest possible
+    const zoomMax = halfExtent * 8; // furthest possible
+    const zoomT = Math.max(
+      0,
+      Math.min(1, (camDist - zoomMin) / (zoomMax - zoomMin)),
+    );
+    // scale ranges from 2.0 at max zoom-in to 0.6 at max zoom-out
+    const zoomScale = 2.0 - zoomT * 1.4;
+
     for (const ts of this.trafficShips) {
       const curve = v3.getRouteCurve(ts.routeId);
       const sprite = ts.sprite as Phaser.GameObjects.GameObject & {
@@ -1023,6 +1052,8 @@ export class GalaxyMapScene extends Phaser.Scene {
         setVisible?: (v: boolean) => unknown;
         setRotation?: (r: number) => unknown;
         setAlpha?: (a: number) => unknown;
+        setDisplaySize?: (w: number, h: number) => unknown;
+        setRadius?: (r: number) => unknown;
       };
       // Layer toggle: ship layer off → fully hidden, no further work.
       if (!this.showShips) {
@@ -1033,14 +1064,33 @@ export class GalaxyMapScene extends Phaser.Scene {
         sprite.setVisible?.(false);
         continue;
       }
-      ts.t += ts.speed * ts.dir * dt;
-      if (ts.t >= 1) {
-        ts.t = 1;
-        ts.dir = -1;
-      } else if (ts.t <= 0) {
-        ts.t = 0;
-        ts.dir = 1;
+
+      // Wait countdown: ship docked at terminus.
+      if (ts.waiting) {
+        ts.waitRemaining -= dt;
+        if (ts.waitRemaining <= 0) {
+          ts.waiting = false;
+          ts.waitRemaining = 0;
+        }
+      } else {
+        ts.t += ts.speed * ts.dir * dt;
+        if (ts.t >= 1) {
+          ts.t = 1;
+          ts.dir = -1;
+          if (Math.random() < 0.45) {
+            ts.waiting = true;
+            ts.waitRemaining = 0.8 + Math.random() * 2.5;
+          }
+        } else if (ts.t <= 0) {
+          ts.t = 0;
+          ts.dir = 1;
+          if (Math.random() < 0.45) {
+            ts.waiting = true;
+            ts.waitRemaining = 0.8 + Math.random() * 2.5;
+          }
+        }
       }
+
       curve.getPointAt(ts.t, tmp);
       const lookT = Math.min(1, Math.max(0, ts.t + 0.02 * ts.dir));
       curve.getPointAt(lookT, tmpNext);
@@ -1057,6 +1107,12 @@ export class GalaxyMapScene extends Phaser.Scene {
       sprite.setRotation?.(
         Math.atan2(projNext.y - proj.y, projNext.x - proj.x),
       );
+
+      // Apply zoom-dependent size each frame.
+      const scaled = ts.baseSize * zoomScale;
+      sprite.setDisplaySize?.(scaled, scaled);
+      sprite.setRadius?.(Math.max(1, scaled * 0.5));
+
       // Filter ghosting: non-matching ships drop to a low alpha but remain
       // visible so the player can see they're still flying — full hide is
       // via the Ships layer toggle.
@@ -1151,18 +1207,30 @@ export class GalaxyMapScene extends Phaser.Scene {
     const container = this.add.container(screenX + 20, screenY - 20);
     container.setDepth(950);
     const cardW = 260;
+    // Each text line is caption size (12px). ~7.2px/char for monospace-like fonts.
+    // Subtract 20px (10px left pad + 10px right margin) from cardW for usable text.
+    const maxLineChars = Math.floor(
+      (cardW - 20) / (theme.fonts.caption.size * 0.6),
+    );
+    const truncLine = (s: string) =>
+      s.length > maxLineChars ? s.slice(0, maxLineChars - 1) + "…" : s;
+
     const lines: string[] = [name];
     if (empire) {
-      lines.push(`Leader: ${empire.leaderName}`);
-      lines.push(`Disposition: ${empire.disposition}`);
+      lines.push(truncLine(`Leader: ${empire.leaderName}`));
+      lines.push(truncLine(`Disposition: ${empire.disposition}`));
       lines.push(`Tariff: ${Math.round(empire.tariffRate * 100)}%`);
       const policy = state.empireTradePolicies[empire.id];
       if (policy) {
         if (policy.bannedImports.length > 0) {
-          lines.push(`Import Ban: ${policy.bannedImports.join(", ")}`);
+          lines.push(
+            truncLine(`Import Ban: ${policy.bannedImports.join(", ")}`),
+          );
         }
         if (policy.bannedExports.length > 0) {
-          lines.push(`Export Ban: ${policy.bannedExports.join(", ")}`);
+          lines.push(
+            truncLine(`Export Ban: ${policy.bannedExports.join(", ")}`),
+          );
         }
         if (policy.tariffSurcharge > 0) {
           lines.push(

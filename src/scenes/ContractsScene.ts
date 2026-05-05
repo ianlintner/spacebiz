@@ -32,6 +32,7 @@ import {
 import {
   getAvailableRouteSlots,
   getUsedRouteSlots,
+  assignShipToRoute,
 } from "../game/routes/RouteManager.ts";
 import { SHIP_TEMPLATES } from "../data/constants.ts";
 import { buyShip } from "../game/fleet/FleetManager.ts";
@@ -720,6 +721,21 @@ export class ContractsScene extends Phaser.Scene {
                   };
                 }
               }
+
+              // Assign the first idle ship to the new route.
+              const linkedRouteId = nextState.contracts.find(
+                (ct) => ct.id === c.id,
+              )?.linkedRouteId;
+              const idleShip = nextState.fleet.find((s) => !s.assignedRouteId);
+              if (idleShip && linkedRouteId) {
+                const { fleet: f2, routes: r2 } = assignShipToRoute(
+                  idleShip.id,
+                  linkedRouteId,
+                  nextState.fleet,
+                  nextState.activeRoutes,
+                );
+                nextState = { ...nextState, fleet: f2, activeRoutes: r2 };
+              }
             }
 
             gameStore.setState(nextState);
@@ -764,10 +780,10 @@ export class ContractsScene extends Phaser.Scene {
   private refreshActiveTable(): void {
     const state = gameStore.getState();
     const active = state.contracts.filter(
-      (c) => c.status === ContractStatus.Active,
+      (c) => c.status === ContractStatus.Active && !c.aiCompanyId,
     );
     const completed = state.contracts.filter(
-      (c) => c.status === ContractStatus.Completed,
+      (c) => c.status === ContractStatus.Completed && !c.aiCompanyId,
     ).length;
     this.activeSummary.setText(
       `${active.length} active \u2022 ${completed} completed`,
