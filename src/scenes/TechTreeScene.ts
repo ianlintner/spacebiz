@@ -299,7 +299,7 @@ export class TechTreeScene extends Phaser.Scene {
         ].join("\n"),
         okText: "Switch",
         onOk: () => this.applyResearch(tech.id),
-      });
+      }).show();
     } else {
       this.applyResearch(tech.id);
     }

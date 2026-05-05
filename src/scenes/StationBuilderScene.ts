@@ -628,7 +628,7 @@ export class StationBuilderScene extends Phaser.Scene {
         this.refreshAfterAction();
       },
       onCancel: () => {},
-    });
+    }).show();
   }
 
   private confirmUpgrade(hub: StationHub): void {
@@ -652,7 +652,7 @@ export class StationBuilderScene extends Phaser.Scene {
         this.refreshAfterAction();
       },
       onCancel: () => {},
-    });
+    }).show();
   }
 
   // ── Info panel display helpers ──
@@ -914,6 +914,6 @@ export class StationBuilderScene extends Phaser.Scene {
         this.refreshAfterAction();
       },
       onCancel: () => {},
-    });
+    }).show();
   }
 }
