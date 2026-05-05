@@ -137,7 +137,7 @@ export class ContractsScene extends Phaser.Scene {
   create(): void {
     this.selectedAvailableId = null;
     this.selectedActiveId = null;
-    new SceneUiDirector(this);
+    this.ui = new SceneUiDirector(this);
     const L = getLayout();
 
     createStarfield(this);
