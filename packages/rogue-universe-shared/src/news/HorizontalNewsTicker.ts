@@ -111,9 +111,18 @@ export class HorizontalNewsTicker {
     this.marqueeText.setDepth(300);
 
     // Apply mask so text doesn't bleed outside the strip.
+    // Phaser 4: prefer the filter API; fall back to setMask for Canvas renderer.
     if (this.maskShape) {
-      const geomMask = this.maskShape.createGeometryMask();
-      this.marqueeText.setMask(geomMask);
+      const textWithFilters = this.marqueeText as unknown as {
+        filters?: {
+          internal: { addMask(shape: Phaser.GameObjects.Graphics): void };
+        };
+      };
+      if (textWithFilters.filters?.internal?.addMask) {
+        textWithFilters.filters.internal.addMask(this.maskShape);
+      } else {
+        this.marqueeText.setMask(this.maskShape.createGeometryMask());
+      }
     }
 
     const textWidth = this.marqueeText.width;
