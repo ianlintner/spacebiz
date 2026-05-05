@@ -568,43 +568,193 @@ export class ContractsScene extends Phaser.Scene {
     // The backend logic is fully implemented; only the UI modal is pending.
     // ───────────────────────────────────────────────────────────────────────
 
-    new Modal(this, {
-      title: "Accept Contract?",
-      body: [
-        contractTypeLabel(c.type),
-        `Route: ${origin?.name ?? "?"} \u2192 ${dest?.name ?? "?"}`,
-        `Cargo: ${getCargoLabel(c.cargoType)}`,
-        `Duration: ${c.durationTurns} turns`,
-        `Deposit: ${formatCash(c.depositPaid)}`,
-        `Reward: ${rewardSummary(c)}`,
-        "",
-        "A route will be created automatically. Assign a ship to begin.",
-      ].join("\n"),
-      okText: "Accept",
-      onOk: () => {
-        const freshState = gameStore.getState();
-        const patch = acceptContract(c.id, freshState);
-        if (patch) {
-          gameStore.setState({ ...freshState, ...patch });
-          this.selectedAvailableId = null;
-          this.refreshAvailableTable();
-          this.refreshActiveTable();
-          this.portrait.updatePortrait(
-            "event",
-            0,
-            "Contract Accepted!",
-            [
-              {
-                label: "Status",
-                value:
-                  "Route created. Assign a ship to start fulfilling the contract.",
-              },
-            ],
-            { eventCategory: "opportunity" },
-          );
-        }
-      },
-    }).show();
+    const theme = getTheme();
+    const L = getLayout();
+
+    let autoBuyChecked = true;
+
+    const layer = this.ui.openLayer({ key: "accept-contract" });
+    layer.createOverlay({
+      alpha: 0.6,
+      color: theme.colors.modalOverlay,
+      closeOnPointerUp: false,
+    });
+
+    const panelW = 480;
+    const panelH = 340;
+    const panelX = (L.gameWidth - panelW) / 2;
+    const panelY = (L.gameHeight - panelH) / 2;
+
+    layer
+      .track(
+        new Panel(this, {
+          x: panelX,
+          y: panelY,
+          width: panelW,
+          height: panelH,
+          title: "Accept Contract?",
+        }),
+      )
+      .setDepth(DEPTH_MODAL);
+
+    layer
+      .track(
+        this.add.text(
+          panelX + 16,
+          panelY + 50,
+          [
+            contractTypeLabel(c.type),
+            `Route: ${origin?.name ?? "?"} \u2192 ${dest?.name ?? "?"}`,
+            `Cargo: ${getCargoLabel(c.cargoType)}`,
+            `Duration: ${c.durationTurns} turns`,
+            `Deposit: ${formatCash(c.depositPaid)}`,
+            `Reward: ${rewardSummary(c)}`,
+          ].join("\n"),
+          {
+            fontSize: `${theme.fonts.body.size}px`,
+            fontFamily: theme.fonts.body.family,
+            color: colorToString(theme.color.text.primary),
+            lineSpacing: 4,
+            wordWrap: { width: panelW - 32 },
+          },
+        ),
+      )
+      .setDepth(DEPTH_MODAL);
+
+    // Checkbox \u2014 "Auto-buy cheapest ship if none idle".
+    const cbY = panelY + panelH - 88;
+    const cbSize = 16;
+
+    const checkBg = layer
+      .track(
+        this.add
+          .rectangle(panelX + 16 + cbSize / 2, cbY + cbSize / 2, cbSize, cbSize)
+          .setStrokeStyle(1, theme.color.accent.primary)
+          .setFillStyle(theme.color.surface.default)
+          .setInteractive({ useHandCursor: true }),
+      )
+      .setDepth(DEPTH_MODAL);
+
+    const checkMark = layer
+      .track(
+        this.add
+          .text(panelX + 16 + cbSize / 2, cbY + cbSize / 2, "\u2713", {
+            fontSize: "13px",
+            fontFamily: theme.fonts.body.family,
+            color: colorToString(theme.color.accent.primary),
+          })
+          .setOrigin(0.5),
+      )
+      .setDepth(DEPTH_MODAL)
+      .setVisible(autoBuyChecked);
+
+    const cbLabel = layer
+      .track(
+        this.add
+          .text(
+            panelX + 16 + cbSize + 8,
+            cbY,
+            "Auto-buy cheapest ship if none idle",
+            {
+              fontSize: `${theme.fonts.body.size}px`,
+              fontFamily: theme.fonts.body.family,
+              color: colorToString(theme.color.text.primary),
+            },
+          )
+          .setInteractive({ useHandCursor: true }),
+      )
+      .setDepth(DEPTH_MODAL);
+
+    const toggleCheckbox = () => {
+      autoBuyChecked = !autoBuyChecked;
+      checkMark.setVisible(autoBuyChecked);
+      checkBg.setStrokeStyle(
+        1,
+        autoBuyChecked ? theme.color.accent.primary : theme.color.text.muted,
+      );
+    };
+    checkBg.on("pointerup", toggleCheckbox);
+    cbLabel.on("pointerup", toggleCheckbox);
+
+    // Buttons.
+    const buttonY = panelY + panelH - 52;
+
+    layer
+      .track(
+        new Button(this, {
+          x: panelX + panelW / 2 - 110,
+          y: buttonY,
+          width: 100,
+          label: "Accept",
+          onClick: () => {
+            layer.destroy();
+            const freshState = gameStore.getState();
+            const patch = acceptContract(c.id, freshState);
+            if (!patch) return;
+
+            let nextState = { ...freshState, ...patch };
+
+            if (autoBuyChecked) {
+              const hasIdleShip = nextState.fleet.some(
+                (s) => !s.assignedRouteId,
+              );
+              if (!hasIdleShip) {
+                const cheapestClass = Object.values(ShipClass).reduce(
+                  (best, cls) =>
+                    SHIP_TEMPLATES[cls].purchaseCost <
+                    SHIP_TEMPLATES[best].purchaseCost
+                      ? cls
+                      : best,
+                );
+                if (
+                  nextState.cash >= SHIP_TEMPLATES[cheapestClass].purchaseCost
+                ) {
+                  const { ship, cost } = buyShip(
+                    cheapestClass,
+                    nextState.fleet,
+                  );
+                  nextState = {
+                    ...nextState,
+                    fleet: [...nextState.fleet, ship],
+                    cash: nextState.cash - cost,
+                  };
+                }
+              }
+            }
+
+            gameStore.setState(nextState);
+            this.selectedAvailableId = null;
+            this.refreshAvailableTable();
+            this.refreshActiveTable();
+            this.portrait.updatePortrait(
+              "event",
+              0,
+              "Contract Accepted!",
+              [
+                {
+                  label: "Status",
+                  value:
+                    "Route created. Assign a ship to start fulfilling the contract.",
+                },
+              ],
+              { eventCategory: "opportunity" },
+            );
+          },
+        }),
+      )
+      .setDepth(DEPTH_MODAL);
+
+    layer
+      .track(
+        new Button(this, {
+          x: panelX + panelW / 2 + 10,
+          y: buttonY,
+          width: 100,
+          label: "Cancel",
+          onClick: () => layer.destroy(),
+        }),
+      )
+      .setDepth(DEPTH_MODAL);
   }
 
   // ════════════════════════════════════════════════════════════════
