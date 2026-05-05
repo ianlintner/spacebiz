@@ -140,12 +140,11 @@ export class RouteBuilderPanel {
   private fuelValue!: Label;
   private profitValue!: Label;
   private statusValue!: Label;
-  private hintValue!: Label;
   private cargoIcon!: Phaser.GameObjects.Image;
   private fieldLabels = new Map<FieldKey, Label>();
   private fieldValues = new Map<FieldKey, Label>();
   private fieldArrows = new Map<FieldKey, { left: Button; right: Button }>();
-  private statsTitle!: Label;
+  private pickerColumnLeft: number = 0;
   private pickerHint!: Label;
   private confirmButton!: Button;
   private cancelButton!: Button;
@@ -177,6 +176,8 @@ export class RouteBuilderPanel {
     this.panelY = Math.floor(
       L.contentTop + (L.contentHeight - this.panelHeight) / 2,
     );
+    // Must be computed before createFieldRow so arrow buttons land inside it.
+    this.pickerColumnLeft = Math.min(460, Math.floor(this.panelWidth * 0.6));
 
     this.originIndex = this.getInitialOriginIndex();
     this.destinationIndex = this.getInitialDestinationIndex();
@@ -213,18 +214,7 @@ export class RouteBuilderPanel {
     this.titleValue.setDepth(DEPTH_MODAL);
     layer.track(this.titleValue);
 
-    this.hintValue = new Label(scene, {
-      x: this.panelX + content.x,
-      y: this.panelY + content.y + 26,
-      text: "↑ ↓ choose field • ← → change • Enter create • Esc cancel",
-      style: "caption",
-      color: getTheme().colors.textDim,
-      maxWidth: content.width,
-    });
-    this.hintValue.setDepth(DEPTH_MODAL);
-    layer.track(this.hintValue);
-
-    let rowY = content.y + 66;
+    let rowY = content.y + 44;
     this.createFieldRow("origin", "Origin", rowY, !options.lockOrigin);
     rowY += 38;
     this.createFieldRow("destination", "Destination", rowY, true);
@@ -263,19 +253,8 @@ export class RouteBuilderPanel {
     this.autoBuyButton.setDepth(DEPTH_MODAL);
     layer.track(this.autoBuyButton);
 
-    rowY += 44;
+    rowY += 38;
 
-    this.statsTitle = new Label(scene, {
-      x: this.panelX + content.x,
-      y: this.panelY + rowY,
-      text: "Route preview",
-      style: "body",
-      color: getTheme().colors.accent,
-    });
-    this.statsTitle.setDepth(DEPTH_MODAL);
-    layer.track(this.statsTitle);
-
-    rowY += 22;
     this.distanceValue = this.createSummaryLabel(content.x, rowY);
     rowY += 20;
     this.recommendationValue = this.createSummaryLabel(content.x, rowY);
@@ -413,15 +392,14 @@ export class RouteBuilderPanel {
     };
 
     place(this.titleValue, content.y);
-    place(this.hintValue, content.y + 26);
 
     // Field rows (origin/destination/cargo/ship). The rowY sequence below
     // mirrors the constructor's `rowY` accumulator exactly.
     const rowOffsets: Array<{ field: FieldKey; rowY: number }> = [
-      { field: "origin", rowY: content.y + 66 },
-      { field: "destination", rowY: content.y + 66 + 38 },
-      { field: "cargo", rowY: content.y + 66 + 38 * 2 },
-      { field: "ship", rowY: content.y + 66 + 38 * 3 },
+      { field: "origin", rowY: content.y + 44 },
+      { field: "destination", rowY: content.y + 44 + 38 },
+      { field: "cargo", rowY: content.y + 44 + 38 * 2 },
+      { field: "ship", rowY: content.y + 44 + 38 * 3 },
     ];
     const contentX = 16;
     for (const { field, rowY } of rowOffsets) {
@@ -432,8 +410,14 @@ export class RouteBuilderPanel {
         .get(field)
         ?.setPosition(this.panelX + contentX + 120, contentTop(rowY + 4));
       const arrows = this.fieldArrows.get(field);
-      arrows?.left.setPosition(this.panelX + 430, contentTop(rowY));
-      arrows?.right.setPosition(this.panelX + 478, contentTop(rowY));
+      arrows?.left.setPosition(
+        this.panelX + this.pickerColumnLeft - 92,
+        contentTop(rowY),
+      );
+      arrows?.right.setPosition(
+        this.panelX + this.pickerColumnLeft - 46,
+        contentTop(rowY),
+      );
     }
 
     // Cargo icon hugs the cargo value label.
@@ -443,11 +427,9 @@ export class RouteBuilderPanel {
     }
 
     // Auto-buy / preview column (left).
-    let rowY = content.y + 66 + 38 * 3 + 48; // ship row + 48 spacer
+    let rowY = content.y + 44 + 38 * 3 + 48; // ship row + 48 spacer
     place(this.autoBuyButton, rowY);
-    rowY += 44;
-    place(this.statsTitle, rowY);
-    rowY += 22;
+    rowY += 38;
     place(this.distanceValue, rowY);
     rowY += 20;
     place(this.recommendationValue, rowY);
@@ -535,7 +517,7 @@ export class RouteBuilderPanel {
     }
 
     const leftButton = new Button(this.scene, {
-      x: this.panelX + 430,
+      x: this.panelX + this.pickerColumnLeft - 92,
       y: this.panelY + rowY,
       width: 42,
       height: 32,
@@ -547,7 +529,7 @@ export class RouteBuilderPanel {
     leftButton.setDepth(DEPTH_MODAL);
     this.layer.track(leftButton);
     const rightButton = new Button(this.scene, {
-      x: this.panelX + 478,
+      x: this.panelX + this.pickerColumnLeft - 46,
       y: this.panelY + rowY,
       width: 42,
       height: 32,
@@ -876,9 +858,9 @@ export class RouteBuilderPanel {
 
     if (!origin || !destination || origin.id === destination.id) {
       return {
-        distanceLabel: "Select two different planets",
-        shipLabel: "Waiting for route",
-        statusLabel: "Pick an origin and destination to see the route preview.",
+        distanceLabel: "Select origin and destination",
+        shipLabel: "",
+        statusLabel: "",
         revenueLabel: "—",
         fuelLabel: "—",
         profitLabel: "—",
@@ -929,7 +911,7 @@ export class RouteBuilderPanel {
       ? (state.galaxy.empires ?? []).find((e) => e.id === destEmpireId)
       : undefined;
     const tariffNote = destEmpire
-      ? ` \u2022 Tariff: ${Math.round(destEmpire.tariffRate * 100)}%`
+      ? ` \u2022 Tariff ${Math.round(destEmpire.tariffRate * 100)}%`
       : "";
 
     const distance = calculateDistance(
@@ -943,13 +925,11 @@ export class RouteBuilderPanel {
 
     if (!previewShip) {
       return {
-        distanceLabel: `${distance.toFixed(1)} units`,
-        shipLabel: this.autoBuy
-          ? "No affordable compatible ship available"
-          : "No compatible ship selected",
+        distanceLabel: `${distance.toFixed(1)} units${tariffNote}`,
+        shipLabel: "",
         statusLabel: this.autoBuy
-          ? `The route can still be created, but you will need to assign a ship later.${tariffNote}`
-          : `Create the route now and assign a ship later in Routes.${tariffNote}`,
+          ? "No ship available — assign later"
+          : "No ship — assign later",
         revenueLabel: "—",
         fuelLabel: "—",
         profitLabel: "—",
@@ -977,17 +957,17 @@ export class RouteBuilderPanel {
     const profit = revenue - fuel;
 
     return {
-      distanceLabel: `${distance.toFixed(1)} units`,
+      distanceLabel: `${distance.toFixed(1)} units${tariffNote}`,
       shipLabel: previewShip.isPurchasedPreview
         ? `${previewShip.name} (auto-buy ${formatCash(previewShip.purchaseCost ?? 0)})`
         : previewShip.id == null
           ? previewShip.name
           : `${previewShip.name}`,
       statusLabel: previewShip.isPurchasedPreview
-        ? `A compatible ship will be purchased automatically if you confirm.${tariffNote}`
+        ? "Ship will be purchased on confirm"
         : previewShip.id == null
-          ? `A compatible ship will be chosen automatically if one is free.${tariffNote}`
-          : `This ship will be assigned as soon as the route is created.${tariffNote}`,
+          ? "Ship auto-assigned when available"
+          : "Ship assigned on create",
       revenueLabel: formatCash(revenue),
       fuelLabel: formatCash(fuel),
       profitLabel: formatCash(profit),

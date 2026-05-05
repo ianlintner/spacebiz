@@ -114,8 +114,8 @@ export class GalaxySetupScene extends Phaser.Scene {
       this.galaxyShape = lastSetupChoice.galaxyShape;
     } else {
       this.seed = Math.floor(Math.random() * 1000000);
-      this.nameIndex = 0;
-      this.portraitIndex = 0;
+      this.nameIndex = Math.floor(Math.random() * PRESET_NAMES.length);
+      this.portraitIndex = Math.floor(Math.random() * CEO_PORTRAITS.length);
       this.gamePreset = "standard";
       this.galaxyShape = "spiral";
     }

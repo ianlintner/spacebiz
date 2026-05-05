@@ -24,7 +24,9 @@ import {
   attachReflowHandler,
   GROUP_TAB_STRIP_HEIGHT,
   DEPTH_MODAL,
+  openCommunicationModal,
 } from "../ui/index.ts";
+import { generateContractDialogue } from "../game/diplomacy/DialogueGenerator.ts";
 import {
   acceptContract,
   abandonContract,
@@ -742,19 +744,23 @@ export class ContractsScene extends Phaser.Scene {
             this.selectedAvailableId = null;
             this.refreshAvailableTable();
             this.refreshActiveTable();
-            this.portrait.updatePortrait(
-              "event",
-              0,
-              "Contract Accepted!",
-              [
-                {
-                  label: "Status",
-                  value:
-                    "Route created. Assign a ship to start fulfilling the contract.",
-                },
-              ],
-              { eventCategory: "opportunity" },
-            );
+
+            // Ambassador communication on accept
+            const empires = nextState.galaxy.empires ?? [];
+            const empire = empires.find((e) => e.id === c.targetEmpireId);
+            const ambassador = c.targetEmpireId
+              ? nextState.diplomacy?.empireAmbassadors[c.targetEmpireId]
+              : undefined;
+            const empireName = empire?.name ?? "the Authority";
+            openCommunicationModal(this, this.ui, {
+              speakerName: ambassador?.name ?? empireName,
+              speakerTitle: ambassador
+                ? `Ambassador, ${empireName}`
+                : "Contract Authority",
+              ambassadorPortraitId: ambassador?.portrait.portraitId,
+              text: generateContractDialogue(c, ambassador, empireName),
+              accentColor: empire?.color,
+            });
           },
         }),
       )

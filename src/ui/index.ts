@@ -36,3 +36,6 @@ export type {
   GalaxySidebarEmpireRow,
   GalaxySidebarPanelConfig,
 } from "./GalaxySidebarPanel.ts";
+
+export { openCommunicationModal } from "./CommunicationModal.ts";
+export type { CommunicationDialogue } from "./CommunicationModal.ts";

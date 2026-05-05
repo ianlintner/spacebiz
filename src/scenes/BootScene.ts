@@ -295,7 +295,7 @@ export class BootScene extends Phaser.Scene {
   /**
    * panel-bg (64x64): Glass gradient with chamfered corners.
    * Vertical gradient from glass.topTint to glass.bottomTint,
-   * chamfered border in panelBorder, inner glow line in accent.
+   * chamfered border in panelBorder.
    */
   private generatePanelBg(theme: ThemeConfig): void {
     const size = 64;
@@ -313,20 +313,6 @@ export class BootScene extends Phaser.Scene {
     ctx.lineWidth = panel.borderWidth;
     ctx.strokeStyle = this.rgba(colors.panelBorder, 0.8);
     this.traceChamferedRect(ctx, 1, 1, size - 2, size - 2, chamfer.size);
-    ctx.stroke();
-
-    // Inner accent line (1px inside the border)
-    const inset = panel.borderWidth + 1;
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = this.rgba(colors.accent, glass.innerBorderAlpha);
-    this.traceChamferedRect(
-      ctx,
-      inset,
-      inset,
-      size - inset * 2,
-      size - inset * 2,
-      Math.max(chamfer.size - inset, 1),
-    );
     ctx.stroke();
 
     tex.refresh();
