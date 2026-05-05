@@ -44,8 +44,28 @@ export class Modal extends Phaser.GameObjects.Container {
 
     const gameWidth = scene.cameras.main.width;
     const gameHeight = scene.cameras.main.height;
-    const modalWidth = config.width ?? 400;
-    const modalHeight = config.height ?? 250;
+    const modalWidth = config.width ?? 440;
+
+    // Measure body text height with a temporary off-screen text node so the
+    // modal can auto-size its height to fit content rather than using a fixed
+    // guess that overflows for long multi-line bodies.
+    const bodyTextWidth = modalWidth - theme.spacing.md * 2;
+    const probeBody = scene.add.text(-10000, -10000, config.body, {
+      fontSize: `${theme.fonts.body.size}px`,
+      fontFamily: theme.fonts.body.family,
+      wordWrap: { width: bodyTextWidth },
+    });
+    const measuredBodyHeight = probeBody.height;
+    probeBody.destroy();
+
+    const contentHeight =
+      theme.panel.titleHeight +
+      theme.spacing.md +
+      measuredBodyHeight +
+      theme.spacing.md * 2 +
+      theme.button.height +
+      theme.spacing.md;
+    const modalHeight = config.height ?? Math.max(contentHeight, 180);
 
     // Full-screen overlay
     this.overlay = scene.add
