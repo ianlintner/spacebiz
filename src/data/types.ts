@@ -63,7 +63,8 @@ export type OptionScalingTag =
   | "fleetSize"
   | "tech"
   | "rep"
-  | "cash";
+  | "cash"
+  | "navigation";
 
 export interface ChoiceOption {
   id: string;
@@ -175,7 +176,10 @@ export type EventChainId =
   | "plague"
   | "fuel_crisis"
   | "black_market_scandal"
-  | "empire_succession";
+  | "empire_succession"
+  | "anomaly_investigation"
+  | "galactic_music_tour"
+  | "military_buildup";
 
 export interface EventChainState {
   chainId: EventChainId;
@@ -696,7 +700,9 @@ export interface EventEffect {
     | "signPeace"
     | "formAlliance"
     | "formTradePact"
-    | "degradeRelation";
+    | "degradeRelation"
+    | "modifyFleetCondition"
+    | "blockSystem";
   targetId?: string;
   cargoType?: CargoType;
   value: number;
@@ -1303,4 +1309,91 @@ export interface GameState {
 
   /** Rival CEO communications queued to show at the start of the next turn. */
   pendingRivalMessages?: RivalMessage[];
+}
+
+// ---------------------------------------------------------------------------
+// Universe Roster — persistent named entities for living-world ticker stories
+// ---------------------------------------------------------------------------
+
+export type MusicGenre =
+  | "void_jazz"
+  | "hyperpop"
+  | "drone_folk"
+  | "synthpulse"
+  | "death_ambient"
+  | "celestial_pop";
+
+export interface SportsTeam {
+  id: string;
+  name: string;
+  homePort: string;
+  league: "Core" | "Rim";
+  wins: number;
+  losses: number;
+  /** Positive = win streak, negative = loss streak. */
+  streak: number;
+  lastResult?: string;
+  championship: boolean;
+}
+
+export interface Musician {
+  id: string;
+  name: string;
+  genre: MusicGenre;
+  currentAlbum?: string;
+  onTour: boolean;
+  tourPort?: string;
+  controversyActive: boolean;
+  controversyDesc?: string;
+}
+
+export interface Celebrity {
+  id: string;
+  name: string;
+  role: string;
+  /** id of another Celebrity they're feuding with, if any */
+  currentFeud?: string;
+  latestProject?: string;
+  scandalActive: boolean;
+}
+
+export interface Pundit {
+  id: string;
+  name: string;
+  affiliation: string;
+  slant: "pro_empire" | "skeptic" | "contrarian" | "sensationalist";
+  recentQuote?: string;
+}
+
+export interface CrimeFigure {
+  id: string;
+  name: string;
+  type: "syndicate" | "pirate_lord" | "smuggler";
+  active: boolean;
+  lastSighting?: string;
+}
+
+export interface MilitaryOfficer {
+  id: string;
+  name: string;
+  rank: string;
+  empire: string;
+  status: "active" | "disgraced" | "retired" | "missing";
+  currentCommand?: string;
+}
+
+export interface UniverseRoster {
+  sportsTeams: SportsTeam[];
+  musicians: Musician[];
+  celebrities: Celebrity[];
+  pundits: Pundit[];
+  crimeFigures: CrimeFigure[];
+  militaryOfficers: MilitaryOfficer[];
+}
+
+export interface RosterHistoryEntry {
+  turn: number;
+  entityId: string;
+  /** Human-readable summary usable in ticker story templates. */
+  event: string;
 }
