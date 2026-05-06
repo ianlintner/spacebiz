@@ -120,24 +120,18 @@ export class HorizontalNewsTicker {
       .setInteractive({ useHandCursor: true })
       .setDepth(302);
 
-    this.hitZone.on(
-      "pointermove",
-      (pointer: Phaser.Input.Pointer) => {
-        this.handlePointerMove(pointer);
-      },
-    );
+    this.hitZone.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      this.handlePointerMove(pointer);
+    });
 
     this.hitZone.on("pointerout", () => {
       this.clearUnderline();
     });
 
-    this.hitZone.on(
-      "pointerdown",
-      (pointer: Phaser.Input.Pointer) => {
-        const found = this.findItemAtPointer(pointer);
-        if (found && this.onItemClick) this.onItemClick(found.item);
-      },
-    );
+    this.hitZone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      const found = this.findItemAtPointer(pointer);
+      if (found && this.onItemClick) this.onItemClick(found.item);
+    });
   }
 
   private handlePointerMove(pointer: Phaser.Input.Pointer): void {

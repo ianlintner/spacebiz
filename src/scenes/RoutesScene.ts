@@ -64,6 +64,10 @@ import {
   getEmpireForPlanet,
   checkTradePolicyViolation,
 } from "../game/empire/EmpireAccessManager.ts";
+import {
+  findTagOfKind,
+  removeTagsByKind,
+} from "../game/diplomacy/StandingTags.ts";
 import type { GalaxyMapScene } from "./GalaxyMapScene.ts";
 
 function formatCash(n: number): string {
@@ -1180,6 +1184,42 @@ export class RoutesScene extends Phaser.Scene {
       return;
     }
 
+    // Warn before breaching any active non-compete agreements.
+    const breachWarning = this.buildNonCompeteBreachWarning(
+      origin.systemId,
+      dest.systemId,
+    );
+    if (breachWarning) {
+      const confirmModal = new Modal(this, {
+        title: "Non-Compete Agreement Violation",
+        body: breachWarning,
+        okText: "Open Route Anyway",
+        cancelText: "Cancel",
+        onOk: () => {
+          confirmModal.destroy();
+          this.commitRouteCreation(idx, origin, dest, distance, licenseFee);
+        },
+        onCancel: () => confirmModal.destroy(),
+        closable: false,
+      });
+      confirmModal.show();
+      return;
+    }
+
+    this.commitRouteCreation(idx, origin, dest, distance, licenseFee);
+  }
+
+  private commitRouteCreation(
+    idx: number,
+    origin: ReturnType<typeof gameStore.getState>["galaxy"]["planets"][number],
+    dest: ReturnType<typeof gameStore.getState>["galaxy"]["planets"][number],
+    distance: number,
+    licenseFee: number,
+  ): void {
+    const opp = this.opportunities[idx];
+    if (!opp) return;
+    const state = gameStore.getState();
+
     const route = createRoute(origin.id, dest.id, distance, opp.bestCargoType);
 
     let updatedFleet = [...state.fleet];
@@ -1253,6 +1293,11 @@ export class RoutesScene extends Phaser.Scene {
       cash: updatedCash,
     });
 
+    // Queue ambassador greetings for any empire the player hasn't visited before.
+    this.queueAmbassadorGreetingsForRoute(origin.systemId, dest.systemId);
+    // Breach any non-compete agreements that cover the new route's empires.
+    this.checkNonCompeteBreach(origin.systemId, dest.systemId);
+
     const assignedName =
       updatedFleet.find((s) => s.id === shipId)?.name ?? null;
     const msg = boughtShipName
@@ -1270,6 +1315,133 @@ export class RoutesScene extends Phaser.Scene {
 
     this.refreshFinderTable();
     this.refreshActiveTable();
+  }
+
+  private queueAmbassadorGreetingsForRoute(
+    originSystemId: string,
+    destSystemId: string,
+  ): void {
+    const s = gameStore.getState();
+    const originEmpireId = s.galaxy.systems.find(
+      (sys) => sys.id === originSystemId,
+    )?.empireId;
+    const destEmpireId = s.galaxy.systems.find(
+      (sys) => sys.id === destSystemId,
+    )?.empireId;
+
+    const greeted = new Set(s.greetedEmpireIds ?? []);
+    const pending = [...(s.pendingAmbassadorGreetings ?? [])];
+    const seen = new Set(pending); // deduplicate within the queue
+    let changed = false;
+
+    for (const empireId of [originEmpireId, destEmpireId]) {
+      if (!empireId) continue;
+      if (empireId === s.playerEmpireId) continue; // skip home empire
+      if (greeted.has(empireId)) continue;
+      if (seen.has(empireId)) continue;
+      pending.push(empireId);
+      seen.add(empireId);
+      greeted.add(empireId);
+      changed = true;
+    }
+
+    if (changed) {
+      gameStore.update({
+        pendingAmbassadorGreetings: pending,
+        greetedEmpireIds: [...greeted],
+      });
+    }
+  }
+
+  /** Returns a warning string if the route would breach any active non-compete, or null. */
+  private buildNonCompeteBreachWarning(
+    originSystemId: string,
+    destSystemId: string,
+  ): string | null {
+    const s = gameStore.getState();
+    if (!s.diplomacy || !s.aiCompanies?.length) return null;
+
+    const routeEmpires = new Set<string>();
+    for (const sysId of [originSystemId, destSystemId]) {
+      const empireId = s.galaxy.systems.find(
+        (sys) => sys.id === sysId,
+      )?.empireId;
+      if (empireId && empireId !== s.playerEmpireId) routeEmpires.add(empireId);
+    }
+    if (routeEmpires.size === 0) return null;
+
+    const breached: string[] = [];
+    for (const rival of s.aiCompanies) {
+      if (rival.bankrupt) continue;
+      const tags = s.diplomacy.rivalTags[rival.id] ?? [];
+      const nonCompete = findTagOfKind(tags, "NonCompete");
+      if (!nonCompete) continue;
+      const protected_ = new Set(nonCompete.protectedEmpireIds);
+      if ([...routeEmpires].some((e) => protected_.has(e))) {
+        breached.push(rival.name);
+      }
+    }
+    if (breached.length === 0) return null;
+
+    const rivalList = breached.join(", ");
+    return (
+      `This route enters lanes covered by your non-compete agreement with ${rivalList}.\n\n` +
+      `Proceeding will void the agreement, reduce your standing with ${breached.length === 1 ? "them" : "each of them"} by 20 points, ` +
+      `and trigger a formal complaint from ${breached.length === 1 ? "their" : "their"} CEO.`
+    );
+  }
+
+  private checkNonCompeteBreach(
+    originSystemId: string,
+    destSystemId: string,
+  ): void {
+    const s = gameStore.getState();
+    if (!s.diplomacy || !s.aiCompanies?.length) return;
+
+    const routeEmpires = new Set<string>();
+    for (const sysId of [originSystemId, destSystemId]) {
+      const empireId = s.galaxy.systems.find(
+        (sys) => sys.id === sysId,
+      )?.empireId;
+      if (empireId && empireId !== s.playerEmpireId) routeEmpires.add(empireId);
+    }
+    if (routeEmpires.size === 0) return;
+
+    let updatedTags = { ...s.diplomacy.rivalTags };
+    let updatedStanding = { ...s.diplomacy.rivalStanding };
+    const breachMessages: Array<{
+      rivalId: string;
+      kind: "breachOfAgreement";
+    }> = [];
+
+    for (const rival of s.aiCompanies) {
+      if (rival.bankrupt) continue;
+      const tags = updatedTags[rival.id] ?? [];
+      const nonCompete = findTagOfKind(tags, "NonCompete");
+      if (!nonCompete) continue;
+      const protected_ = new Set(nonCompete.protectedEmpireIds);
+      const breached = [...routeEmpires].some((e) => protected_.has(e));
+      if (!breached) continue;
+
+      updatedTags[rival.id] = removeTagsByKind(tags, "NonCompete");
+      updatedStanding[rival.id] = Math.max(
+        0,
+        (updatedStanding[rival.id] ?? 50) - 20,
+      );
+      breachMessages.push({ rivalId: rival.id, kind: "breachOfAgreement" });
+    }
+
+    if (breachMessages.length === 0) return;
+
+    const pending = [...(s.pendingRivalMessages ?? []), ...breachMessages];
+    gameStore.update({
+      pendingRivalMessages: pending,
+      diplomacy: {
+        ...s.diplomacy,
+        rivalTags: updatedTags,
+        rivalStanding: updatedStanding,
+      },
+    });
   }
 
   // ════════════════════════════════════════════════════════════════
