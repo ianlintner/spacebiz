@@ -120,6 +120,7 @@ export class RoutesScene extends Phaser.Scene {
   // ── Main layout panels ──
   private contentPanel!: Panel;
   private tabGroup!: TabGroup;
+  private createSelectedBtn!: Button;
 
   constructor() {
     super({ key: "RoutesScene" });
@@ -491,7 +492,7 @@ export class RoutesScene extends Phaser.Scene {
     // Finder action buttons (laid out via flowButtonRow so they wrap if the
     // panel ever shrinks below the combined button width)
     const finderButtonY = finderTableTop + finderTableHeight + 8;
-    const createSelectedBtn = new Button(this, {
+    this.createSelectedBtn = new Button(this, {
       x: 0,
       y: 0,
       autoWidth: true,
@@ -518,7 +519,7 @@ export class RoutesScene extends Phaser.Scene {
       contentInnerX,
       finderButtonY,
       contentInnerX + contentInnerW,
-      [createSelectedBtn, customRouteBtn],
+      [this.createSelectedBtn, customRouteBtn],
       12,
       6,
     );
