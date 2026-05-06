@@ -1440,7 +1440,7 @@ export class GameHUDScene extends Phaser.Scene {
     });
   }
 
-  showNamedHighlight(region: "endTurn" | "routesNav"): void {
+  showNamedHighlight(region: "endTurn" | "routesNav" | "createRouteBtn"): void {
     this.hideTutorialHighlight();
     const L = getLayout();
     const theme = getTheme();
@@ -1453,6 +1453,16 @@ export class GameHUDScene extends Phaser.Scene {
       y = L.hudBottomBarTop - 4;
       w = sz + 8;
       h = sz + 8;
+    } else if (region === "createRouteBtn") {
+      const routesScene = this.scene.get("RoutesScene") as
+        | RoutesScene
+        | undefined;
+      const bounds = routesScene?.getCreateRouteBtnBounds();
+      if (!bounds) return;
+      x = bounds.x - 4;
+      y = bounds.y - 4;
+      w = bounds.w + 8;
+      h = bounds.h + 8;
     } else {
       const hitArea = this.navHitAreas.get("RoutesScene");
       if (!hitArea) return;

@@ -131,6 +131,11 @@ export class RoutesScene extends Phaser.Scene {
     this.refreshActiveTable();
   }
 
+  getCreateRouteBtnBounds(): { x: number; y: number; w: number; h: number } {
+    const b = this.createSelectedBtn.getBounds();
+    return { x: b.x, y: b.y, w: b.width, h: b.height };
+  }
+
   create(): void {
     this.selectedRouteId = null;
     this.ui = new SceneUiDirector(this);

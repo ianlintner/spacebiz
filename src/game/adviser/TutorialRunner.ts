@@ -13,7 +13,9 @@ import {
 export interface TutorialCallbacks {
   navigateTo: (sceneName: string) => void;
   skipTutorial: () => void;
-  showNamedHighlight: (region: "endTurn" | "routesNav") => void;
+  showNamedHighlight: (
+    region: "endTurn" | "routesNav" | "createRouteBtn",
+  ) => void;
   hideHighlight: () => void;
   showActiveRoutes: () => void;
 }
@@ -69,8 +71,20 @@ export class TutorialRunner {
       this.rexDialogue({
         mood: "standby",
         text: "This is the Routes Command screen. Every row in this table is a viable trade corridor — sorted by estimated profit. Tap a row to open a route. I'll pick the best one and open it for you now!",
-        onDismiss: () => this.createTutorialRoute(),
+        onDismiss: () => this.pointToCreateRouteBtn(),
       });
+    });
+  }
+
+  private pointToCreateRouteBtn(): void {
+    this.callbacks.showNamedHighlight("createRouteBtn");
+    this.rexDialogue({
+      mood: "analyzing",
+      text: "See that 'Create Route' button? Select any row in the finder table and tap it to open that lane yourself. For now — I'll open the top corridor for you!",
+      onDismiss: () => {
+        this.callbacks.hideHighlight();
+        this.createTutorialRoute();
+      },
     });
   }
 
