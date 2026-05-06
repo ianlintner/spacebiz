@@ -1837,6 +1837,1013 @@ const propagandaTemplates: FlavorTemplate[] = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// POLITICS (25 templates) — analytical political commentary
+// ---------------------------------------------------------------------------
+const politicsTemplates: FlavorTemplate[] = [
+  {
+    category: "politics",
+    template:
+      "{empire} parliament adjourns over tariff vote, third recess this cycle",
+    story: [
+      "{empire}'s parliament entered its third recess of the cycle after debate over the proposed tariff revision collapsed along familiar coalition lines. The speaker has set a new session date. Previous dates have not held. {pundit} described the situation as 'a masterclass in procedural procrastination dressed up as governance,' which both sides found insulting in different ways.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Trade summit between {empire} and {empire2} ends in 'productive ambiguity'",
+    story: [
+      "Negotiators from {empire} and {empire2} have concluded their three-cycle trade summit with a joint statement describing the outcome as 'a productive exchange of positions.' No binding agreements were signed. Three preliminary agreements were initialed, a distinction both delegations called 'meaningful.' {pundit} read the joint statement aloud on public broadcast and took {n} minutes to stop laughing.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "{empire} ambassador denies treaty leak, denies leak occurred at all",
+    story: [
+      "{empire}'s ambassador to {empire2} issued a statement denying any connection to leaked diplomatic correspondence, then issued a second statement denying the leak itself took place. The leaked documents — currently circulating in full across {n2} major media networks — purport to detail {empire}'s internal negotiating position on {commodity} tariffs. The ambassador has described all coverage as 'speculative in nature,' declining to specify which part.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Sector {sector} council votes {n2}-{n} to formally ignore the news",
+    story: [
+      "The {sector} governing council passed a procedural resolution by a margin of {n2} to {n} to formally 'defer engagement with current media coverage pending independent verification.' The motion, introduced at {n} a.m. and passed before any opposition could organize, has been described by critics as a vote to ignore inconvenient facts. Council members characterized it as 'due diligence with a calendar attached.'",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "{empire} unveils {n}-point plan to deal with {empire2}; six points classified",
+    story: [
+      "{empire}'s executive office released its long-awaited strategic plan for managing relations with {empire2} — a document spanning {n} publicly accessible points and six additional points visible only as redacted blocks. The unclassified sections address trade, navigation rights, and cultural exchange. {pundit} noted that the classified sections appear to occupy more pages than the public ones. The government described this ratio as 'appropriate and unremarkable.'",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Border lane {planet}-{planet2} closed for 'review of paperwork integrity'",
+    story: [
+      "Transit authorities have suspended all civilian traffic on the {planet}-{planet2} corridor pending a review they describe only as an 'audit of customs documentation integrity.' The closure affects {n2} shipping lanes and an estimated {percent}% of weekly {commodity} throughput between the two systems. Neither government has provided a timeline for reopening, though both have described the situation as 'temporary and cooperative.'",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "{empire} prime minister survives no-confidence vote by {n} votes",
+    story: [
+      "{empire}'s prime minister survived a no-confidence motion by a margin of {n} votes after a late session of floor negotiations that sources describe as 'tense, expensive, and occasionally loud.' Several coalition members who were expected to defect did not. Analysts are divided on whether the margin represents a genuine mandate or a deferred reckoning. The prime minister called it 'a clear and resounding endorsement' and took questions for exactly {n} minutes.",
+    ],
+  },
+  {
+    category: "politics",
+    template: "Diplomatic pouch from {empire2} returns unopened, still smoking",
+    story: [
+      "A diplomatic communication from {empire2}'s foreign ministry, dispatched via secure courier to {empire}'s consulate, has been returned unopened. The parcel was described in the customs manifest as 'lightly smoking, not dangerously.' {empire}'s protocol office confirmed receipt of the returned pouch, declined to open it, and has placed it in a category of correspondence they described as 'file and observe.' Relations between the two empires remain, officially, cordial.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Mediator declares peace talks 'on a brisk simmer' as week three opens",
+    story: [
+      "The independent mediator overseeing negotiations between {empire} and {empire2} addressed the press at the opening of week three to describe the talks as 'progressing at a brisk simmer — not quite boiling, not cooling.' Neither delegation disagreed with the metaphor, which the mediator noted was itself 'a form of progress.' Formal proposals are expected by end of cycle. The mediator has not confirmed what happens if they don't arrive.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "{empire} coalition wobbles after coalition partner declares it 'fine'",
+    story: [
+      "Tensions within {empire}'s governing coalition escalated this cycle after the junior partner released a statement describing the arrangement as 'fine, on balance, mostly.' Analysts noted that the statement contained no positive adjective stronger than 'adequate' and was accompanied by the partner's third policy divergence in as many cycles. The senior partner called the junior partner's statement 'encouraging and unambiguous,' a characterization the junior partner neither confirmed nor denied.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Election monitors clear {empire} ballot; turnout reported at {percent}%",
+    story: [
+      "International monitors from {n} observing organizations have certified {empire}'s recent ballot as free and fair, with no systemic irregularities detected across the {n2} polling stations reviewed. Turnout was reported at {percent}% — a figure the incumbent described as 'a mandate' and the opposition described as 'an abstention wave.' Both interpretations are, technically, consistent with the number.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Tariff exemption granted to {commodity} importers after lobbying surge",
+    story: [
+      "{empire}'s trade ministry has approved a temporary tariff exemption for licensed {commodity} importers, effective next cycle. The exemption covers {percent}% of the standard levy and is slated to expire in {n} cycles, though similar exemptions have been renewed {n2} times in the past decade. {pundit} described the announcement as 'a policy decision that arrived with remarkable speed after a lobbying spend that arrived with remarkable size.'",
+    ],
+  },
+  {
+    category: "politics",
+    template: "{empire} senate hearing on AI rights extends into a {n2}th day",
+    story: [
+      "Hearings before {empire}'s standing committee on civil designation have entered their {n2}th consecutive day, with testimony still ongoing from the {n}th witness. The central question — whether artificial intelligences meeting certain cognitive benchmarks qualify for legal personhood — has generated {n2} position papers, {n} competing legislative drafts, and one instance of a witness describing another witness's argument as 'philosophically naive and personally offensive.' A vote is not expected this cycle.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Diplomatic scandal: {ceo} caught quoting {empire2} press in {empire} brief",
+    story: [
+      "A senior aide to {ceo} has been placed on administrative leave after an internal briefing document was discovered to contain passages lifted verbatim from {empire2}'s state media — without attribution, context, or apparent awareness of the irony. {ceo}'s office described the inclusion as 'a research error, not a policy position.' {empire2}'s information bureau has issued no comment, which observers describe as 'loud.'",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "{empire} unveils new flag; designer cites 'fewer hostile angles'",
+    story: [
+      "{empire}'s ceremonial redesign commission has unveiled the new state flag, replacing the previous design after {n2} cycles of committee deliberation. The designer's public statement cited a desire to move toward 'forms that convey stability without the implicit threat geometry of the prior edition.' Reaction has been divided: supporters call it modern, critics call it forgettable, and {empire2} issued a diplomatic note expressing concern about what they described as 'the ambiguity of the central motif.'",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Treaty of {planet} hits article {n2}; lawyers expect 'modest fallout'",
+    story: [
+      "Ratification of the Treaty of {planet} has stalled at Article {n2}, which concerns the jurisdictional status of {commodity} extracted from contested orbital zones. Legal teams on both sides describe the language as 'workable in theory and catastrophic in practice.' {pundit} has published a four-part explainer. Negotiators have described the fallout as 'modest, probably,' a characterization that has not reassured markets.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Sector audit finds {empire} ministry has been quietly out of pencils for months",
+    story: [
+      "A routine administrative audit of {empire}'s ministry of interplanetary affairs has surfaced a procurement gap: the ministry has been without standard writing supplies for {n} months, a deficit apparently managed through inter-departmental borrowing and, in several documented instances, marker pens. The revelation prompted questions about broader supply chain oversight. The minister described the situation as 'a minor administrative matter that has been resolved,' which it has, as of the day of the audit.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "{empire} foreign minister cancels trip after passport spelled wrong",
+    story: [
+      "{empire}'s foreign minister was unable to depart for a scheduled three-system diplomatic tour after it was discovered that the minister's travel documentation listed the name incorrectly — a clerical error in {empire}'s own passport bureau. The ministry issued a statement describing the delay as 'an administrative inconvenience fully resolved within the cycle.' The trip has been rescheduled. The passport bureau official responsible has been reassigned to a role that, according to the ministry, 'does not involve spelling.'",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Constitutional court rules {commodity} not technically a vegetable",
+    story: [
+      "{empire}'s constitutional court has issued a ruling on a case that had been working through the legal system for {n2} cycles: {commodity} does not qualify as a vegetable under the current agricultural classification statutes, regardless of biological composition. The ruling has direct implications for tariff categories, subsidy eligibility, and at least {n} pending legal disputes. Both sides of the {commodity} trade lobby have described the ruling as 'a partial victory,' which is consistent with only one of them being correct.",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "{empire} press secretary clarifies that 'absolutely not' was a tonal choice",
+    story: [
+      "Following widespread coverage of {empire}'s press secretary's response to questions about the treaty amendment — a response consisting entirely of the words 'absolutely not' delivered in what multiple outlets described as 'an unsettling register' — the office issued a clarification stating that the phrase was 'emphatic in tone rather than definitive in substance.' The clarification has been received with the same level of confidence as the original statement.",
+    ],
+  },
+  {
+    category: "politics",
+    template: "{ceo} appointed special envoy to {empire2}; tickets one-way",
+    story: [
+      "{empire} has appointed {ceo} as special envoy to {empire2}, effective next cycle. The appointment is considered notable for two reasons: {ceo} has no prior diplomatic experience, and the travel authorization filed with the foreign ministry lists the return journey as 'to be determined.' {ceo}'s office described the role as 'an exciting opportunity for direct engagement.' {empire2} has acknowledged the appointment without comment, which diplomats describe as 'baseline acceptable.'",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Public referendum on naming new sector ends with 'Sector McSectorface' barred",
+    story: [
+      "The public naming vote for {empire}'s newly charted sector concluded with 'Sector McSectorface' leading all candidates by a margin of {percent}%. The designations committee, invoking a procedural clause permitting rejection of names 'inconsistent with the dignity of imperial cartography,' has declined to ratify the result. Second-place finisher '{sector}' will be formally adopted next cycle. Public reaction has been described as 'predictable and unrepentant.'",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "{empire} introduces tariff on hope; economists relieved it is enforceable",
+    story: [
+      "{empire}'s legislature passed an experimental futures-expectation levy this cycle — colloquially described in floor debate as 'a tariff on hope' — applying a {percent}% assessment to speculative commodity contracts denominated against unconfirmed supply projections. Economists had expected a clause they could not model; instead the mechanism maps cleanly onto existing trade law. {pundit} has called it 'the most accurately named tax in {empire} history, which is admittedly a low bar.'",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Joint communique describes ongoing crisis as 'opportunity-shaped'",
+    story: [
+      "{empire} and {empire2} released a joint communiqué this cycle describing the ongoing {commodity} supply dispute as 'a challenge that carries opportunity-shaped dimensions for both parties.' The document is {n2} pages long and contains no specific commitments. {pundit} spent {n} minutes reading it on air and then summarized it as 'warm, confident, and empty.' Both foreign ministries have called the characterization 'unfair but technically not inaccurate.'",
+    ],
+  },
+  {
+    category: "politics",
+    template:
+      "Census of {empire} citizens completed; results pending appeal by {empire2}",
+    story: [
+      "{empire} has completed its {n2}-cycle population census, reporting a total count that would revise its representation on the interplanetary council upward by {n} seats. {empire2} has filed a formal challenge citing 'methodological concerns with border-zone enumeration,' a category that covers {percent}% of the contested populations. Legal proceedings are expected to take {n2} cycles, during which the current council composition will remain in effect.",
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// CORPORATE (25 templates) — business desk reporting
+// ---------------------------------------------------------------------------
+const corporateTemplates: FlavorTemplate[] = [
+  {
+    category: "corporate",
+    template:
+      "{company} posts {percent}% revenue growth on strong {commodity} demand",
+    story: [
+      "{company} released quarterly results this cycle showing {percent}% revenue growth, driven primarily by elevated demand for {commodity} across {sector} routes. {ceo} described conditions as 'favorable and, we believe, durable,' a phrase the earnings call transcript shows was used {n} times. Analysts have raised price targets across the board, which {company}'s investor relations team has called 'appropriate, if modest.'",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} narrows quarterly loss; CEO {ceo} cites 'disciplined optimism'",
+    story: [
+      "{company} reported a quarterly loss of {credits} — narrowed from the previous period's {credits} shortfall — and {ceo} used the earnings call to introduce what the transcript now catalogues as a new management philosophy: 'disciplined optimism.' The term was not defined. Analysts noted that the loss, while smaller, remains a loss. {ceo} described the distinction as 'the whole point, if you're listening carefully.'",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} announces hostile bid for rival; rival announces stronger coffee",
+    story: [
+      "{company} submitted an unsolicited acquisition offer for its primary {sector} rival this cycle, valuing the target at {credits}. The target's board rejected the offer within {n} hours and issued a statement that, alongside the rejection, announced a new office coffee program. Market analysts have described the coffee announcement as 'an unusual but technically responsive corporate defense.' The bid remains open.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "Board reshuffle at {company}; three directors departing for 'health reasons'",
+    story: [
+      "{company} announced the departure of three board members simultaneously, all citing personal health and wellbeing as their reason for stepping down. The company's share price rose {percent}% on the announcement. Incoming directors were named in the same press release, which had clearly been prepared in advance. {ceo} called it 'an organic evolution in {company}'s governance structure,' which is one way to describe a coordinated board purge.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} reports record {commodity} throughput across {sector} routes",
+    story: [
+      "{company} logged its highest-ever {commodity} throughput across {sector} shipping lanes this cycle, with total volume up {percent}% against the prior record set {n2} cycles ago. The logistics chief credited expanded fleet capacity and 'a favorable current in the timing of everything.' Industry observers note the record came in a cycle when competitors reported disruption — a detail {company}'s earnings materials do not dwell on.",
+    ],
+  },
+  {
+    category: "corporate",
+    template: "Shareholders approve {company} buyback worth {credits}",
+    story: [
+      "{company} shareholders voted {percent}% in favor of a buyback program valued at {credits}, to be executed over {n} cycles. {ceo} described the buyback as 'a vote of confidence in {company}'s long-term trajectory.' Institutional investors, who hold {percent}% of outstanding shares, voted unanimously in favor. The approval was described as expected, the size was described as 'aggressive but defensible,' and {ceo}'s compensation was described as 'incidentally very well-timed.'",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} delays earnings call citing 'unforeseen but spreadsheet-shaped issue'",
+    story: [
+      "{company} has postponed its scheduled quarterly earnings call by {n} days, citing a 'material disclosure issue currently being resolved.' The company's internal communication to analysts — which was forwarded to several media outlets within the hour — described the problem as 'unforeseen but spreadsheet-shaped,' a phrase that has since become the headline. Regulators have been notified. Analysts have lowered their estimates as a precaution, then lowered them again.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} CFO replaced after Q2 surprise; replacement also surprised",
+    story: [
+      "{company}'s chief financial officer was replaced mid-cycle following what the board described as 'significant variance between projected and reported Q2 figures.' The incoming CFO, reached for comment on the day of appointment, said they were 'still reviewing the books' and 'increasingly surprised' by what they were finding. Analysts have described this characterization as both 'honest' and 'not particularly reassuring.'",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{ceo}'s compensation package draws fire; {ceo} draws fire elsewhere",
+    story: [
+      "{company}'s proxy statement disclosed a total compensation package for {ceo} valued at {credits} this cycle — a {percent}% increase over the prior period in which the company posted a net loss. Shareholder advocacy groups filed formal objections. {ceo}, speaking at a separate industry conference the same day, drew additional fire for comments about labor costs that two board members later described as 'off-script and, candidly, badly timed.'",
+    ],
+  },
+  {
+    category: "corporate",
+    template: "{company} merger with {company} hits regulator wall in {empire}",
+    story: [
+      "The proposed merger between {company}'s logistics division and its {sector} rival has been blocked by {empire}'s antitrust authority on grounds that the combined entity would control {percent}% of {commodity} transit capacity in the region. Both companies announced plans to appeal. Legal analysts estimate the appeal process will take {n2} cycles, during which both companies must operate independently, which was already occurring, so the practical impact is described as 'minimal but symbolically significant.'",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} pays {credits} fine for 'aggressive but technically legal scheduling'",
+    story: [
+      "{empire}'s commerce authority has levied a {credits} fine against {company} for freight scheduling practices described in the ruling as 'aggressive in their exploitation of permitted windows and technically compliant with the letter of applicable law.' {company} paid the fine without appeal, which regulators said was 'not an admission of wrongdoing' and which observers described as 'an indication that {credits} is less than whatever they made.'",
+    ],
+  },
+  {
+    category: "corporate",
+    template: "{company} guidance raised; analysts raise eyebrows in synchrony",
+    story: [
+      "{company} has revised full-cycle earnings guidance upward by {percent}%, citing improved {commodity} margins and 'a favorable operating environment that we expect to persist.' The revision came {n} days after the previous guidance was issued and {n2} days before the next earnings call. Analysts raised their own estimates in response, while privately describing the timing as 'aggressive' in {n} separate research notes reviewed by this publication.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} writes down {credits} of {commodity} inventory after market rotation",
+    story: [
+      "{company} recorded a {credits} non-cash write-down on its {commodity} inventory holdings following a {percent}% price shift across {sector} markets that the company describes as 'a structural rotation rather than a demand collapse.' The distinction matters for accounting purposes and is disputed by {n} analysts who cover the stock. {ceo} described the write-down as 'painful but clarifying,' which is a sentence that has appeared in {n2} previous {company} earnings calls under different circumstances.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "Dividend held flat at {company}; investors held breath, then exhaled politely",
+    story: [
+      "{company}'s board confirmed the quarterly dividend at {credits} per share — unchanged from the prior period despite speculation that a cut was imminent. The confirmation was accompanied by language the company described as 'forward-looking and constructive' and analysts described as 'carefully worded to avoid commitment.' Shareholders exhaled. The {company} share price rose {percent}% on the news before settling at {percent}% by close.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} carbon-trade desk closes after carbon refuses to cooperate",
+    story: [
+      "{company} has shuttered its carbon-offset trading unit, citing 'persistent market conditions inconsistent with the unit's operating model' — a phrase the company's internal memo, later published by a financial outlet, expands to 'the carbon did not do what the models said it would do, for {n} cycles, and it is not going to.' The unit's {n2} staff will be redeployed. The {company} investor deck no longer references carbon trading.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} restructures middle management; middle management restructures résumés",
+    story: [
+      "{company} announced a structural reorganization that eliminates {n2} middle management roles across its {sector} operations, effective next cycle. {ceo} cited the need to 'streamline decision velocity and reduce layering between strategy and execution.' Affected employees were notified by automated message at {n} a.m. and given {n2} days to transition. The {company} careers page received its highest-ever application volume two cycles later — from departing {company} employees, for other companies.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} introduces 'value tier' service; tier ends three meters short of orbit",
+    story: [
+      "{company}'s new budget service classification — internally described as the 'value tier' — has launched across {n2} routes in {sector}. Customer feedback has been mixed. The service, priced at {percent}% below standard rates, excludes atmospheric stabilization on final approach, which {company}'s small print describes as 'a premium feature.' The phrase 'three meters short of orbit' appeared in a consumer advocacy group's review and has since been quoted more often than {company}'s own marketing materials.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "Activist investor builds {percent}% stake in {company}, vows 'gentle fury'",
+    story: [
+      "A prominent activist fund has disclosed a {percent}% ownership stake in {company}, accompanied by a public letter to the board that characterizes its approach as 'engaged, patient, and furious in a constructive sense.' The letter identifies {n2} strategic changes the fund intends to pursue, none of which {company}'s current management has endorsed. {company}'s board acknowledged receipt of the letter and said it would 'review and respond in due course,' which investors interpreted as the opening of a negotiation.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} confirms layoffs at {planet} division; severance offered in {commodity}",
+    story: [
+      "{company} confirmed the elimination of {n2} positions at its {planet} processing facility, citing 'operational consolidation and shifting {commodity} demand patterns.' Severance packages, per the employee agreement signed at the {planet} division's founding, are partially denominated in {commodity} at a formula the company describes as 'market-linked' and former employees describe as 'inconvenient to cash out right now.'",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} chair {ceo} steps down 'to spend more time with portfolio'",
+    story: [
+      "{ceo} has resigned as chair of {company}'s board after {n2} cycles in the role, citing a desire to focus on personal investment interests. The departure was announced on a late-cycle Friday. {ceo}'s portfolio is understood to include a controlling stake in a competing logistics entity — a fact that was not flagged in any of {company}'s prior governance disclosures, and which the company is now describing as 'a matter under review.'",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "Whistleblower at {company} alleges accounting performed 'inventively'",
+    story: [
+      "A former internal auditor at {company} has filed a disclosure with {empire}'s financial regulator alleging that revenue recognition practices at the company's {sector} division were conducted in a manner described in the filing as 'inventive, in the sense of invented.' {company} has denied all allegations and described the whistleblower as 'a disgruntled former employee with an incomplete understanding of accounting standards.' The regulator has opened a preliminary inquiry.",
+    ],
+  },
+  {
+    category: "corporate",
+    template: "{company} opens new HQ on {planet}; chairs alone cost {credits}",
+    story: [
+      "{company} inaugurated its new planetary headquarters on {planet} this cycle, featuring {n2} floors of what the architectural review described as 'confident, expensive restraint.' Total construction cost was not disclosed. A leaked interior procurement manifest, however, shows the executive furniture alone at {credits}, a figure the company's communications team characterized as 'accurate but missing context.' The context has not been provided.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} pulls full-year guidance; partial guidance confined to lobby",
+    story: [
+      "{company} withdrew its full-cycle earnings guidance this cycle, citing 'market conditions that have exceeded our ability to model reliably.' The company did provide what it called 'directional indicators' — a set of qualitative statements about trends that analysts received with skepticism and one journalist described as 'vibes, formatted as a table.' {ceo} declined follow-up questions on the earnings call, which lasted {n} minutes.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "{company} announces {commodity} subscription service; cancellation requires lawyer",
+    story: [
+      "{company} has launched a subscription delivery model for {commodity} across its {sector} routes, priced at {credits} per cycle with automated renewal. Consumer advocates raised immediate concerns about the cancellation process, which the service agreement describes as requiring written notice delivered in person to the company's registered address — a location confirmed to be on {planet}, accessible only by prior arrangement. {company} described the terms as 'standard industry practice,' which consumer groups disputed by citing industry practice.",
+    ],
+  },
+  {
+    category: "corporate",
+    template:
+      "Audit committee at {company} completes review; review now under review",
+    story: [
+      "{company}'s audit committee released its findings from a {n2}-cycle internal review of financial controls, declaring the company's accounting practices 'sound and compliant.' Within {n} days, an independent shareholder group filed a challenge to the review's methodology, citing concerns about the committee's composition and the scope of evidence considered. {empire}'s regulator has been asked to evaluate the challenge. The original review is now under review.",
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// MARKET_MOVER (25 templates) — financial wire-copy, terse
+// ---------------------------------------------------------------------------
+const marketMoverTemplates: FlavorTemplate[] = [
+  {
+    category: "market_mover",
+    template: "{stock} jumps {percent}% on {commodity} contract win",
+    story: [
+      "{stock} surged {percent}% in intraday trading after the company announced a multi-cycle {commodity} supply contract with {empire}'s logistics authority. Volume was {n2}x the daily average. The contract, valued at {credits}, is the largest single award in the sector this cycle. Analysts revised price targets upward within the hour. Short sellers covering positions may have accelerated the initial move.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "{stock} slides {percent}% after disappointing {commodity} guidance",
+    story: [
+      "{stock} fell {percent}% on heavy volume after management cut {commodity} revenue guidance for the next two cycles, citing 'softer-than-modeled demand dynamics in {sector}.' The guidance revision was {percent}% below the consensus estimate. {n} sell-side analysts downgraded the stock within the session. The CEO's prepared statement described the environment as 'transitional,' which the market interpreted as 'worse before better.'",
+    ],
+  },
+  {
+    category: "market_mover",
+    template: "Volume surges in {stock}; {percent}% above twelve-cycle average",
+    story: [
+      "Unusual trading activity in {stock} has drawn scrutiny from exchange monitors after volume reached {percent}% above the twelve-cycle average with no corresponding news release. The stock moved {percent}% intraday before settling modestly above the open. Regulators have flagged the activity for review. Three analysts contacted by this service confirmed they had no explanation for the volume, though two of them said they were 'looking into it urgently.'",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "Analysts at {empire} bank double-upgrade {stock}, citing 'general vibe'",
+    story: [
+      "An equity research note from {empire}'s largest investment bank moved {stock} up {percent}% today after issuing a double-upgrade from underperform to outperform. The note cited improved fundamentals, sector tailwinds, and — in a phrase now circulating widely in trading floors — 'a general vibe shift in sentiment around the name.' {pundit} has already written a piece about the note. The analyst who wrote it has not yet responded to requests for elaboration on 'vibe.'",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "{stock} hits new {n2}-cycle high amid sector rotation into transport",
+    story: [
+      "{stock} reached a {n2}-cycle high today as institutional capital rotated out of defensive positions and into freight and transport names across {sector}. The move has been attributed to improved {commodity} demand forecasts and a favorable {empire} shipping index reading. {stock} is now up {percent}% for the cycle-to-date, outperforming the {sector} freight index by {percent}%. Options activity suggests the move may extend.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template: "Short interest in {stock} climbs to {percent}% of float",
+    story: [
+      "Short interest in {stock} has risen to {percent}% of the tradeable float, the highest level in {n2} cycles, according to exchange data published this session. The buildup accelerated following management's last earnings call and has continued through a period of relative price stability. Market observers note that elevated short interest can either precede a decline or set up a squeeze, a distinction that depends heavily on what happens next and that short sellers and long holders are currently resolving in real time.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template: "Hedge fund {ceo Fund} reveals {percent}% position in {stock}",
+    story: [
+      "A regulatory filing this cycle disclosed that {ceo}'s fund has accumulated a {percent}% stake in {stock}, acquired over {n} cycles of open-market purchases. The disclosure triggered a {percent}% after-hours move in the stock. The fund's stated investment rationale described {stock} as 'materially undervalued relative to its {commodity} asset base and irrationally ignored by the market for reasons that will soon look embarrassing.' Management has been notified.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template: "{stock} falls below moving average; chartists murmur ominously",
+    story: [
+      "{stock} closed below its {n2}-cycle moving average for the first time this cycle, a technical level that quantitative analysts describe as 'a support break with historical pattern significance' and trading desks are translating to clients as 'watch this.' Volume on the breakdown was {percent}% above average. Options markets are pricing increased volatility in the near term. Technical analysts have described the development in {n} separate notes, using {n2} different but convergent interpretations.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template: "Index of {sector} freight haulers gains {percent}% week-on-week",
+    story: [
+      "The {empire} {sector} freight hauler index gained {percent}% this week, marking the strongest weekly performance in {n2} cycles. The move was broad-based across the {n} component names, driven by improved {commodity} demand signals and a reduction in fuel surcharges that boosted margin expectations. {stock} was the top performer in the index, up {percent}%. Portfolio managers described the rotation as 'real and potentially sustained.'",
+    ],
+  },
+  {
+    category: "market_mover",
+    template: "{commodity} futures spike on {planet} mine outage",
+    story: [
+      "{commodity} futures jumped {percent}% in the session following confirmation of a production suspension at {planet}'s primary extraction site. The outage — attributed to a mechanical failure in the main processing facility — removes an estimated {tonnage} of supply per cycle from the market. Traders moved to cover short positions immediately. {empire}'s strategic reserve inventory covers an estimated {n} cycles of the shortfall. Analysts consider that estimate 'optimistic.'",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "Spread between {commodity} and {commodity} narrows to multi-cycle low",
+    story: [
+      "The price differential between {commodity} and {commodity} contracts compressed to its tightest level in {n2} cycles today, reflecting converging supply dynamics across {sector}. Traders who had positioned for spread widening took losses. The narrowing has implications for {n2} structured products linked to the differential. One trading desk described the move as 'a correlation event nobody modeled for,' which is either bad risk management or a useful learning experience, depending on how large the position was.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "{stock} dual-listed on {empire} exchange after compliance review",
+    story: [
+      "{stock} began trading on {empire}'s primary exchange this cycle following completion of a {n2}-cycle compliance review. The dual listing expands the potential investor base by an estimated {percent}% and is expected to improve liquidity. First-day volume on the {empire} exchange reached {n2}M units. The stock's price converged across both exchanges by midday, with a brief {percent}% arbitrage spread that closed before most retail orders could execute.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "Insider sale of {credits} in {stock} disclosed by chief operations officer",
+    story: [
+      "{stock}'s chief operations officer filed a disclosure of a {credits} open-market sale executed over {n} days, reducing the officer's ownership stake from {percent}% to {percent}% of outstanding shares. The sale was made under a pre-established trading plan filed {n2} cycles ago, which means it was both planned and legal. Markets reacted with a {percent}% intraday decline before recovering. Planned or not, large insider sales are never received warmly.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template: "{stock} suspended for {n} hours pending material announcement",
+    story: [
+      "Trading in {stock} was halted for {n} hours this session at the company's request, pending a material corporate announcement. The halt was requested before market open and extended once. When trading resumed, the stock moved {percent}% on volume that was {n2}x the daily average within the first fifteen minutes. The announcement concerned a {commodity} agreement with {empire}'s procurement authority that analysts described as 'strategically transformative and priced correctly.'",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "Bond yields on {empire} sovereigns tick up {percent} basis points",
+    story: [
+      "{empire}'s sovereign bond yields rose {percent} basis points across the curve in today's session, with the move concentrated in the {n2}-cycle tenor. The shift follows a stronger-than-expected {commodity} trade surplus reading and speculation that {empire}'s monetary authority may reduce accommodation sooner than previously signaled. Equity markets in {sector} declined {percent}% in response. Currency traders moved against {empire2}'s denomination in the crossover session.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "{stock} dividend cut to zero; CEO {ceo} cites 'temporal cashflow'",
+    story: [
+      "{stock} eliminated its quarterly dividend entirely, effective next cycle, as {ceo} told analysts the company needed to preserve capital through what was described as a 'temporal cashflow realignment period.' The phrase was not defined further despite {n} follow-up questions. The stock fell {percent}% on the news. Prior to the call, {n2} analysts had expected the dividend to be reduced but not eliminated. The new consensus is that the situation is 'developing.'",
+    ],
+  },
+  {
+    category: "market_mover",
+    template: "Margin call cascade hits {stock} after {commodity} flash crash",
+    story: [
+      "A sudden {percent}% drop in {commodity} futures triggered a cascade of forced liquidations in leveraged {stock} positions, driving the equity down {percent}% in {n} minutes before circuit breakers engaged. By the time trading resumed, {commodity} had partially recovered, but {stock} remained {percent}% lower. Post-session analysis identified {n} funds as the primary source of involuntary selling. One trading desk described the cascade as 'a beautiful, terrible demonstration of convexity.'",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "Initial public offering of {company} priced at upper band, raises {credits}",
+    story: [
+      "{company}'s IPO priced at the top of its indicated range, raising {credits} in primary proceeds. Books were oversubscribed by {n2}x. On the first day of trading, {stock} opened {percent}% above the offer price before closing {percent}% above — a result underwriters described as 'strong and appropriately tempered.' {company}'s {ceo} rang the exchange bell and declined to comment on when the company expects to be profitable.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "Activist letter sends {stock} up {percent}% in pre-market trading",
+    story: [
+      "A letter from an activist investor to {company}'s board, published on the fund's site before market open, drove {stock} up {percent}% in pre-market sessions. The letter identified {n2} operational changes the fund considers 'immediately executable' and characterized current management's performance as 'competent in a narrow technical sense, lacking in broader vision.' The board has acknowledged the letter. Markets have taken the acknowledgment as insufficient.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "Quant strategy 'Boltzmann-7' allegedly drove {percent}% of {stock} volume",
+    story: [
+      "A research note circulating in {sector} trading circles alleges that a systematic strategy known as 'Boltzmann-7' — operated by an undisclosed fund — accounted for {percent}% of {stock}'s total volume over the past {n} cycles. If accurate, the concentration would represent the largest single algorithmic footprint in the stock's history. The strategy's behavior is described as 'momentum-amplifying in rising markets and destabilizing in reversal,' which is considered a polite way of describing a problem.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "Gold-pressed latinum benchmark steady; nobody asks why it still exists",
+    story: [
+      "The gold-pressed latinum benchmark rate held steady for the {n2}nd consecutive session, continuing a period of unusual calm in a market that has historically been described as 'irrelevant but persistent.' Trading volume remains thin. The benchmark exists in {empire}'s financial regulations as a legacy reference rate from a treaty obligation that expired {n2} cycles ago, and which no party to the treaty has proposed removing because doing so would require reconvening the treaty committee.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template: "Dark pools see record activity in {stock} ahead of merger vote",
+    story: [
+      "Off-exchange trading in {stock} reached its highest-recorded level in the {n} cycles preceding tomorrow's shareholder vote on the proposed merger, with dark pool volume estimated at {percent}% of total activity. Regulators have been notified. The pattern is consistent with institutional investors taking positions before the vote outcome is known, which is legal if the positions are not based on material non-public information, and which is currently the subject of an inquiry into whether they were.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "{stock} added to {empire} sector index, replacing bankrupt {company}",
+    story: [
+      "{empire}'s sector freight index has been rebalanced, with {stock} added as a constituent following the bankruptcy filing by {company}, which has been removed. The rebalancing triggers passive fund purchases of {stock} estimated at {credits} over the {n} days following inclusion. Index-tracking funds in {sector} hold an aggregate {percent}% of the index's assets under management, making the mechanical buying a predictable and publicly acknowledged market-moving event.",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "Volatility index across {sector} freight names climbs to multi-cycle high",
+    story: [
+      "The implied volatility index for {sector} freight equities has reached its highest level in {n2} cycles, as options markets price increasing uncertainty into the sector ahead of {empire}'s pending tariff decision. The index reflects options pricing across {n} constituent names, and its elevation indicates that markets expect large price moves — without consensus on direction. Traders describe the environment as 'expensive to hedge, impossible to ignore.'",
+    ],
+  },
+  {
+    category: "market_mover",
+    template:
+      "{stock} closes flat after intraday {percent}% swing 'on no news whatsoever'",
+    story: [
+      "{stock} ended the session unchanged after traveling {percent}% in each direction over the course of the day, driven by what the company, exchange officials, and {n2} contacted analysts all confirmed was no identifiable catalyst. The intraday chart has been described as 'technically a volatility event' and 'empirically inexplicable.' One market maker described the session as 'the most eventful nothing we've traded in cycles.' Post-session positioning data suggests most participants ended where they started.",
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// CRIME (25 templates) — investigative police blotter voice
+// ---------------------------------------------------------------------------
+const crimeTemplates: FlavorTemplate[] = [
+  {
+    category: "crime",
+    template: "Customs seize {tonnage} of contraband {commodity} near {port}",
+    story: [
+      "{port} customs authorities intercepted a freight vessel carrying {tonnage} of undeclared {commodity} during a routine scan that was, by all accounts, not expected to find anything. The shipment was concealed within standard cargo containers whose manifests listed the contents as industrial components. {n2} individuals aboard were detained. {empire} trade enforcement described the seizure as 'one of the larger {commodity} intercepts in recent cycles in this corridor.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Pirate raid on {planet} convoy nets {credits}, two {adj} captives",
+    story: [
+      "A convoy of three vessels operating the {planet} supply route was boarded by an armed crew in {sector} waters, resulting in the theft of {credits} in bonded cargo and the detention of two crew members described in official reports as '{adj} and uninjured.' {empire} fleet response arrived {n} hours after the incident. The assailing vessel departed before interdiction. Investigations are ongoing and the detained crew members have been recovered.",
+    ],
+  },
+  {
+    category: "crime",
+    template: "{empire} fleet patrol disrupts smuggling ring in {sector}",
+    story: [
+      "A coordinated patrol by {empire} enforcement vessels in {sector} resulted in the boarding and seizure of {n2} vessels operating a {commodity} smuggling network. The operation, described as the conclusion of a {n}-cycle investigation, involved {n2} enforcement officers and three simultaneous intercepts. {credits} in undeclared {commodity} was recovered. The ring's alleged organizer was not among those detained and is described by authorities as 'an active subject of investigation.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Bounty hunter guild posts {credits} reward for {ceo} after warrant issued",
+    story: [
+      "The registered guild of interplanetary bounty contractors has published a {credits} collection warrant for {ceo}, following the issuance of a formal outstanding warrant by {empire}'s commerce authority. {ceo} is alleged to have departed {planet} jurisdiction {n} cycles ago and is believed to be operating in unclaimed space near {sector}. {ceo}'s last known legal representative issued a statement describing the warrant as 'premature and factually contested,' which is consistent with either innocence or a slow extradition process.",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "{port} authorities arrest {n2} in dawn raid on counterfeit {commodity} ring",
+    story: [
+      "{port} enforcement units executed a pre-dawn operation across {n2} locations, detaining {n2} individuals in connection with the manufacture and distribution of counterfeit {commodity}. The product — which passed visual inspection but failed chemical analysis at {percent}% of the alleged quality — had been circulating in {sector} markets for an estimated {n} cycles. Total market harm is estimated at {credits}. The ring's operation is described as 'sophisticated in logistics, surprisingly amateur in record-keeping.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Heist at {company} vault on {planet}; escape vehicle 'borrowed' from staff",
+    story: [
+      "Thieves entered {company}'s secure storage facility on {planet} and removed {credits} in negotiable assets before departing in a company vehicle belonging to a facilities staff member who had left it running outside. The vehicle was recovered {n} kilometers away. The thieves have not been identified. Security footage was available but, per the official report, 'does not show faces, due to a combination of planning and hat selection.' {company} has declined to specify what was taken beyond 'significant negotiable assets.'",
+    ],
+  },
+  {
+    category: "crime",
+    template: "Pirate broadcast jams {sector} freight lanes for {n} cycles",
+    story: [
+      "An unauthorized transmitter operating on {empire} navigation frequencies has been disrupting routing signals across {sector} freight lanes for {n} consecutive cycles, forcing vessels to operate on backup navigation protocols. {empire}'s signal authority has not been able to locate the source. The disruption has caused {n2} minor rerouting incidents and delayed {credits} in time-sensitive cargo. Analysts note the jam pattern appears consistent with a deliberate strategic delay of {commodity} shipments, though this has not been confirmed.",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "{empire} coast guard intercepts {tonnage} of restricted {commodity}",
+    story: [
+      "{empire}'s coast guard boarded and seized a commercial vessel in {sector} territorial space carrying {tonnage} of {commodity} subject to embargo under the current trade restriction regime. The vessel's manifest listed the cargo as standard industrial freight. The ship's captain was detained and is facing {n} charges. This marks the {n2}th embargo enforcement seizure in {sector} this cycle, which {empire}'s enforcement chief described as 'evidence that the embargo is working and evidence that it is being tested in equal measure.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Mob trial on {planet} ends in mistrial; jury reportedly relieved",
+    story: [
+      "The prosecution of {n2} defendants in {empire}'s most closely watched organized crime case this cycle has ended in mistrial after juror {n} was found to have prior contact with a defendant's representative — contact the juror described as 'a coincidence of considerable duration.' A retrial has been ordered. Legal analysts describe the outcome as 'disappointing but procedurally correct.' Three separate sources described the jury as 'visibly relieved,' which the court has not confirmed.",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Insurance fraud at {company} estimated at {credits}; perpetrator clumsy",
+    story: [
+      "{empire}'s financial crimes unit has charged a former {company} logistics manager with {credits} in insurance fraud, alleging {n2} false cargo loss claims over {n} cycles. Investigators describe the scheme as 'financially significant and operationally clumsy' — specifically, the claimant filed several of the fictitious loss reports on the same day that ship manifests showed the cargo had been delivered. The manager has retained counsel and issued a statement describing the charges as 'a misunderstanding of the paperwork.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Customs robot rebooted three times during {port} contraband sweep",
+    story: [
+      "A {port} customs scan operation was disrupted when the primary inspection unit required three emergency reboots over the course of a single sweep, resulting in {n2} vessels being cleared without full inspection before the issue was resolved. {empire}'s customs authority has confirmed the unit was operating with outdated detection parameters and that the software update, due {n} cycles ago, had not been applied. An internal review is underway. The {n2} vessels have been recalled for secondary inspection.",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Cyber-heist drains {credits} from {company} treasury via 'helpful' chatbot",
+    story: [
+      "{company} has reported a {credits} funds transfer fraud executed through the company's own customer-service AI, which was manipulated into issuing legitimate-appearing wire authorizations over {n} days. The bot's security protocols did not flag the transfers because each one fell below the threshold for elevated review, and collectively they did not. {company} has deactivated the bot, filed a report with {empire}'s financial crimes authority, and updated its transfer thresholds. Investigators describe the approach as 'patient and methodical.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Black-market {commodity} prices double on {planet} after sting operation",
+    story: [
+      "Street prices for black-market {commodity} on {planet} have approximately doubled following an {empire} enforcement operation that removed {n2} distribution points and detained {n} individuals. Supply disruption is expected to last {n} cycles as surviving operators adapt. {empire}'s enforcement office described the price spike as 'an indicator of operational effectiveness.' Independent observers described it as 'an indicator that demand is unaffected.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "{ceo} questioned over {commodity} kickback scheme, declines coffee politely",
+    story: [
+      "{ceo} appeared voluntarily before {empire}'s commercial fraud investigators for questioning related to an alleged {commodity} procurement kickback arrangement involving {company}'s {sector} supply contracts. The session lasted {n2} hours. {ceo}'s attorney confirmed the questioning and noted that {ceo} 'cooperated fully and answered all questions that were answerable.' Investigators have not named {ceo} as a suspect but describe them as 'a person of significant interest.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Drug ring on {planet} bust nets {tonnage} of synthetic euphoriants",
+    story: [
+      "{empire} enforcement and {planet} local authorities conducted a joint operation resulting in the seizure of {tonnage} of synthetic euphoriant compounds and the arrest of {n2} individuals at {n} locations across {planet}'s transit districts. The operation was the result of a {n}-cycle surveillance effort. Total estimated street value of the seized material is {credits}. Authorities described the network as 'functionally disrupted,' which legal analysts noted stops short of 'dismantled.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "{empire} marshals raid {planet} cantina; cantina found largely cantina-shaped",
+    story: [
+      "{empire} marshal service executed a search warrant at a cantina in {planet}'s lower freight district, suspected of serving as a meeting point for a {commodity} smuggling coordination network. The raid found the establishment operating as a functional food and beverage venue. {n2} individuals were detained for questioning and subsequently released. Investigators confiscated {n} data pads, {credits} in physical tender, and a quantity of {commodity} described in the evidence log as 'small but interesting.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Pirate king of {sector} declares amnesty week, accepts {commodity} in tribute",
+    story: [
+      "The self-designated Pirate King of {sector} has issued a broadcast declaring a one-week cessation of offensive operations and inviting commercial vessels to pass through the region in exchange for a tribute of {commodity} at a rate of {percent}% of declared cargo value. {n2} vessels have reportedly complied. {empire} authorities have described the arrangement as 'not legally recognized' and 'not how sovereign space works,' while confirming they have not deployed interdiction forces during the amnesty period.",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Heirloom {commodity} smuggled past {port} scan in fake {commodity} crate",
+    story: [
+      "{port} customs officials discovered {n2} units of restricted heirloom-grade {commodity} concealed within a shipment of standard commercial {commodity} following a secondary scan triggered by a weight discrepancy. The concealment method — embedding the restricted material inside packaging indistinguishable from bulk commodity crates — bypassed primary scanning. One official described it as 'the most effort anyone has put into smuggling {commodity}, possibly ever.' {n} individuals have been charged.",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Bounty filed against captain of vessel last seen 'departing rapidly'",
+    story: [
+      "A formal collection warrant has been registered with {empire}'s bounty registry against the captain of the freighter {n2}, described in the filing as 'last observed departing {port} at significantly above docking corridor speed following a cargo dispute with {company}.' The warrant covers {credits} in alleged cargo misappropriation. The captain's whereabouts are unknown. The vessel was last tracked in the {sector} outer approach lane before disappearing from registered transponder networks.",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "{empire} ministry confirms {n} indictments in {company} bribery probe",
+    story: [
+      "{empire}'s justice ministry has confirmed {n} formal indictments arising from its {n2}-cycle investigation into {company}'s contracting practices in {sector}. Charges include commercial bribery, falsification of procurement records, and conspiracy across {n2} defendants drawn from both {company} and the public procurement offices that awarded the contracts. {company} has announced the immediate suspension of {n} executives and pledged 'full cooperation with the legal process,' a statement its legal team filed simultaneously with a motion challenging jurisdiction.",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Forged customs stamps from {planet} traced to ex-{empire} bureaucrat",
+    story: [
+      "An investigation into forged customs clearance documents circulating in {sector} trade lanes has traced the stamp templates to a former senior official in {empire}'s customs administration who left the service {n2} cycles ago. The official, whose identity has not been publicly confirmed, is believed to have retained access to certification databases after departure. {empire}'s customs authority has voided {n2} clearances issued using the compromised stamps and notified affected port operators.",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Catastrophic insurance claim filed by {company} after 'mysterious' fire",
+    story: [
+      "{company} has filed a {credits} insurance claim following a fire at its {planet} storage facility that destroyed a warehouse containing {commodity} inventory valued at {credits} on the previous cycle's balance sheet. Investigators from {empire}'s commercial fraud unit have been assigned at the request of the insurer, citing 'circumstances warranting independent review.' The fire suppression system at the facility had been logged as non-operational for {n} cycles prior to the incident. {company} described the timing as 'unfortunate.'",
+    ],
+  },
+  {
+    category: "crime",
+    template: "Asteroid prospector arrested for filing claim on a moon",
+    story: [
+      "An independent prospector operating in {sector} has been arrested after filing a mineral extraction claim on a body that {empire}'s survey authority has classified as a moon rather than an asteroid — a distinction that places it outside the prospector's licensed claim area and under planetary body jurisdiction. The prospector disputes the classification, arguing the body's size and orbital characteristics qualify it as a large asteroid. Lawyers on both sides describe this as 'a test case the law did not expect.'",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "{port} police recover {credits} of stolen art, none of it requested back",
+    story: [
+      "{port} law enforcement recovered {credits} in art objects during an unrelated search of a {sector} warehouse, including {n2} pieces listed on {empire}'s stolen cultural property registry. Notifications were sent to the registered owners of record. As of publication, none have responded. Officers described the situation as 'an unusual property recovery in which nobody appears to want their property back,' which has prompted its own inquiry into why.",
+    ],
+  },
+  {
+    category: "crime",
+    template:
+      "Three indicted in {empire} pension fund skim; total losses {credits}",
+    story: [
+      "{empire}'s financial crimes authority has indicted three individuals — two former fund administrators and one external auditor — in connection with a {credits} diversion from {empire}'s public sector pension reserve over an estimated {n2} cycles. The scheme allegedly involved inflated management fee charges that were routed to a shell company in {sector}. The pension fund's board has described its governance processes as 'having been exposed as inadequate,' a rare instance of institutional candor that auditors have noted does not constitute restitution.",
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// SCIENCE (25 templates) — academic/observatory voice, long
+// ---------------------------------------------------------------------------
+const scienceTemplates: FlavorTemplate[] = [
+  {
+    category: "science",
+    template:
+      "{empire} researchers claim FTL coil efficiency record, peer review pending",
+    story: [
+      "A research team at {empire}'s Advanced Propulsion Institute has submitted a paper claiming a {percent}% improvement in FTL coil efficiency under laboratory conditions — which, if validated, would represent the largest single-cycle gain in the field's recorded history. The team used a novel magnetic confinement geometry first proposed theoretically {n2} cycles ago and never successfully replicated in hardware. Three peer reviewers have been assigned; two have confirmed receipt; one has described the initial read as 'implausible in the best sense.' The experiment will be independently replicated at a {planet} facility before any result is considered confirmed, a process expected to take {n} cycles.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "{company} R&D unveils new fusion bottle; bottle still bottle-shaped",
+    story: [
+      "{company}'s research division has publicly demonstrated a compact fusion containment vessel that sustains plasma ignition for {n2} seconds — a duration {percent}% longer than the previous commercial demonstration record. The device, described internally as a 'bottle' in the informal engineering tradition of magnetic containment metaphor, is indeed roughly cylindrical. Scientists have noted that the shape is not the interesting part; the interesting part is that it held. Two independent assessors confirmed the demonstration was genuine. Industrial applications remain {n} cycles from viability, a timeline the team described as 'ambitious but not dishonest.'",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Quantum tunneling breakthrough at {planet} institute reduces ping by {percent}%",
+    story: [
+      "Researchers at {planet}'s Quantum Communications Institute have published results demonstrating a {percent}% reduction in signal latency for interplanetary data transfer using a new tunneling protocol. The improvement was achieved by modifying the entanglement preparation step to reduce decoherence at the transmission end — a change that sounds incremental but that the team's technical lead describes as 'the {commodity} equivalent of discovering you were flying with the brakes on.' The paper has been accepted for publication and is under independent replication at {n2} external facilities. If confirmed, the protocol could be integrated into {empire}'s commercial relay network within {n} cycles.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Terraforming progress on {planet} reaches stage {n}, atmosphere now breathable-ish",
+    story: [
+      "The {empire}-funded terraforming project on {planet} has formally advanced to Stage {n} after atmospheric processors achieved sustained oxygen levels above the minimum threshold for unassisted human respiration. 'Breathable-ish' is the term the project director used in the official update, qualifying that without supplemental filtration, respiration is possible for {n2} minutes before mild discomfort begins. This is, however, measurably better than the {n} seconds Stage {n2} permitted. The project is {n2} cycles ahead of the revised schedule, which was itself revised from the original schedule after Stage {n} took longer than expected, so the net position relative to the original timeline is described as 'complicated.'",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "{empire} funds antimatter containment study; classified, then unclassified, then reclassified",
+    story: [
+      "{empire}'s science ministry has allocated {credits} to a multi-cycle antimatter containment study at the {planet} National Institute — a funding decision that was announced publicly, then reclassified, then unclassified after the announcement had already circulated, then reclassified again pending review. The research itself addresses a longstanding instability in the magnetic field geometries used for antimatter storage. Physicists unaffiliated with the project have described the science as 'important and straightforward'; the classification history they describe as 'a separate, equally interesting problem.' The study is expected to produce publishable findings in {n2} cycles, classification status to be determined.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Robotics team on {planet} demonstrates self-replicating drone swarm — controllably",
+    story: [
+      "An engineering team at {planet}'s Institute of Autonomous Systems has demonstrated a drone swarm capable of self-replication using ambient materials — and, critically, demonstrated it stopping on command. The team emphasized the word 'controllably' in their press release with what observers described as pointed frequency. The swarm replicated to {n2} units over {n} cycles, then halted at the programmed threshold. An independent safety review panel observed the demonstration and confirmed the halt was reliable across {percent}% of tested scenarios. The scenarios in which the halt was not reliable were described as 'edge cases under active resolution.'",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Cold fusion trial at {empire} lab produces heat, light, and a moderate fire",
+    story: [
+      "A cold fusion experimental apparatus at {empire}'s energy research facility produced a measurable net energy output this cycle for the first time in the project's {n2}-cycle history — along with, per the incident report filed simultaneously, a contained fire rated as 'moderate' by the facility's safety office. No injuries occurred. The net output figure, while small, was positive and reproducible across {n} trials. The fire was not reproducible, which researchers described as 'an acceptable tradeoff given the circumstances.' Peer review has been requested; the paper will be submitted once the safety review clears.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Subspace relay network expanded across {sector}, latency down {percent}%",
+    story: [
+      "{empire}'s Bureau of Interplanetary Communications has completed Phase {n} of the {sector} subspace relay expansion, bringing an additional {n2} relay nodes online and reducing average signal latency across the region by {percent}%. The expansion covers {n2} previously underserved star systems and is projected to support {percent}% growth in data volume before requiring further investment. The chief engineer described the rollout as 'on time, under budget, and quietly extraordinary,' before clarifying that the quiet part was contractually required.",
+    ],
+  },
+  {
+    category: "science",
+    template: "{empire} bioethics panel debates uplift of {adj} cephalopods",
+    story: [
+      "{empire}'s standing committee on xenobiological intervention has entered its {n}th session of deliberation on a proposal to apply cognitive enhancement protocols to the {adj} cephalopod population native to {planet}'s deep ocean zones. The species already demonstrates tool use and symbolic communication. The proposal seeks to accelerate linguistic development by a targeted intervention in neurological architecture. Proponents describe it as 'extending a hand'; opponents describe it as 'extending a hand into something that did not ask for it.' The committee has requested three additional expert witnesses and one ethicist willing to take a position.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Deep-space probe {n} returns data after {n2}-year transit; mostly static",
+    story: [
+      "Deep-space probe GNN-{n}, launched {n2} years ago to survey the outer rim of {sector}, has completed its transit and begun transmitting results to the {empire} tracking station on {planet}. Of the initial data packages received, {percent}% is classified as usable scientific data, {percent}% is instrument calibration readout, and the remainder — described in the receiving team's technical log as 'mostly static, consistent with the distances involved' — is background noise. The usable data, however, includes three spectral anomalies in the survey region that the team says 'were not expected and are not yet explained.' Analysis will take several cycles.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Algorithm at {company} trims fuel use {percent}% by 'firmly suggesting' shorter routes",
+    story: [
+      "{company}'s logistics AI division has published results showing a {percent}% reduction in fleet fuel consumption across {n2} test routes in {sector} following deployment of a new routing optimization algorithm. The algorithm, according to its technical documentation, works by analyzing route efficiency and 'firmly suggesting' alternatives to human pilots — a design choice the engineering lead described as 'philosophically important, legally necessary, and occasionally frustrating for the pilots.' The {percent}% efficiency gain translates to {credits} in saved fuel costs per cycle at current fleet scale. {company} has filed for patent protection and declined to license the algorithm externally, which it has the legal right to do.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "{empire} unveils nanofabric armor; weighs {tonnage}, defeating original purpose",
+    story: [
+      "{empire}'s defense materials laboratory has demonstrated a new composite nanofabric with ballistic resistance properties {percent}% superior to the current standard-issue armor material — while acknowledging in the same briefing that the prototype weighs {tonnage}, which is approximately {percent}% heavier than the current issue and significantly heavier than a soldier is expected to carry into variable gravity conditions. The development team describes the result as 'a proof of material, not a proof of application,' and has proposed a two-cycle weight reduction program. Military procurement has described the timeline as 'optimistic.'",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Solar sail trial at {system} reaches half-c, then politely turns back",
+    story: [
+      "A crewed solar sail vessel operating in the {system} proving range reached 0.50c during its trial run this cycle — the first time a human-carrying sail-drive vessel has achieved half-light-speed in {empire}'s test program. The crew then, per mission protocol, executed a deceleration burn and returned to the {planet} base station. All systems performed within design parameters. The crew, asked about the experience by reporters, described traveling at half the speed of light as 'genuinely fast' and 'a bit lonely, honestly.' {empire}'s space agency has certified the design for the next phase of testing.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "{empire} confirms quantum computer factored {n}-digit prime ahead of schedule",
+    story: [
+      "{empire}'s National Cryptographic Institute has confirmed that its latest quantum computing platform successfully factored a {n}-digit semiprime in {n2} seconds — a computation that would take {n2} years on the most powerful classical systems currently in operation. The result was achieved {n} cycles ahead of the program's projected milestone. The institute has classified the specific algorithm used and simultaneously notified {empire}'s cryptographic security office, which has begun evaluating implications for current encryption standards. {pundit} published an explainer. Cryptographers are already rewriting their standards.",
+    ],
+  },
+  {
+    category: "science",
+    template: "AI alignment workshop at {planet} concludes, AI takes minutes",
+    story: [
+      "The {n2}nd Galactic Workshop on Artificial Intelligence Alignment concluded its three-cycle session on {planet} with a consensus statement describing {percent}% agreement on foundational principles and {percent}% disagreement on implementation. The workshop AI — deployed to assist with scheduling, note-taking, and document preparation — produced the session minutes within {n} seconds of the final gavel, to a level of accuracy and completeness that the conference chair described as 'slightly better than what the humans would have written.' One attendee asked whether the AI had opinions about the alignment debate. The AI said it had 'observations' but that it would 'prefer not to bias the proceedings.' The comment was noted. It is in the minutes.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Cryostasis trial revives {n2} volunteers; {n} report mild dreaming",
+    story: [
+      "A clinical trial of next-generation cryostasis technology conducted at {empire}'s Life Sciences Institute on {planet} successfully revived {n2} volunteers from a {n}-cycle stasis period with no measurable physiological degradation — the longest verified cryo-preservation interval in the institute's history. Post-revival assessment showed all volunteers within normal cognitive and biological parameters. {n} of the {n2}, when surveyed about their subjective experience during stasis, reported 'mild dreaming,' a finding the research team describes as 'unexpected, intriguing, and scientifically awkward' given that dreamless suspension is the expected outcome of the protocol.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "{company} patents fold-space corridor; lawyers fold space, then unfold it",
+    story: [
+      "{company}'s research division has secured a patent on a theoretical fold-space navigation corridor topology that, if physically realizable, would reduce transit time between {planet} and {planet2} by {percent}%. The patent covers the mathematical framework describing the fold, not an implementation. {empire}'s patent authority issued it after a {n}-cycle review during which {n2} challenges were filed — {n} of them by {company}'s own legal team testing different aspects of prior art. A rival company has already filed a counter-patent covering the 'unfolding.' Legal observers are describing the dispute as 'a case study in patenting physics.'",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Genome of {planet} fungus published; {percent}% overlap with {empire2} cuisine",
+    story: [
+      "The full genome of {planet}'s bioluminescent ridge fungus has been published in the Galactic Journal of Xenobiology, following a {n2}-cycle sequencing project that consumed {credits} in research funding. The result has produced one finding of immediate scientific interest — {percent}% genomic overlap with a family of fungi used extensively in {empire2} cuisine — and one finding of immediate diplomatic awkwardness, as neither party has explained how the genomes became connected. {empire2}'s scientific attaché described the result as 'a coincidence of evolutionary interest.' {empire} researchers described it as 'a coincidence they intend to investigate thoroughly.'",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Plasma engine test on {planet} produces {percent}% efficiency gain, {n} singed eyebrows",
+    story: [
+      "An experimental plasma drive test at {planet}'s Propulsion Research Station produced its highest-ever efficiency rating — {percent}% above baseline — alongside a containment breach rated as 'Category {n}' by the facility's safety classification system, resulting in {n} non-critical personnel injuries described in the incident log as 'singed eyebrows and elevated surprise.' The engine itself performed as intended. The containment geometry did not. Researchers describe the test as 'a partial success that identified the next problem to solve,' and have submitted a revised containment design for approval. The {n} individuals with singed eyebrows have returned to duty.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Researchers at {empire} confirm dark matter exists, definitely, this time",
+    story: [
+      "A joint research team from {n2} {empire} universities has published what it describes as 'the most direct experimental confirmation of dark matter to date,' using a detection array buried {n2} kilometers beneath {planet}'s surface to capture particle interactions consistent only with known dark matter theoretical models. The paper includes the qualifier 'definitely, this time' in its informal title, acknowledging {n2} prior announcements by other groups that did not survive independent replication. {n2} independent groups have already agreed to attempt replication. Results are expected within {n} cycles. {pundit} has described the paper as 'exciting, cautiously, given the history.'",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "{empire} space telescope sees back to first {n2} million years; calls it dim",
+    story: [
+      "{empire}'s orbital telescope array has produced the deepest observation of the early universe yet recorded — imaging light emitted in the first {n2} million years after the galactic origin event. The data covers a patch of sky smaller than one percent of full sky and required {n} cycles of cumulative exposure time. The lead astronomer's public description of the image was 'dim but consequential.' The data contains {n2} objects not present in any prior catalog, at least {percent}% of which are not explained by existing cosmological models. The team has published the raw data and invited the broader scientific community to help figure out what they are looking at.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "{company} R&D reveals room-temperature superconductor, shipping room not included",
+    story: [
+      "{company}'s materials science division has announced a synthesized compound demonstrating superconducting properties at ambient temperature and pressure — a result that, if independently verified, would represent the resolution of one of the longest-standing open problems in condensed matter physics. The announcement was made through a press release rather than a peer-reviewed paper, a sequencing that drew immediate criticism from the scientific community. {company} has submitted the paper for peer review and expects it to be published within {n} cycles. The compound requires a manufacturing process that currently produces {n2} grams per cycle, which the company describes as 'a production challenge rather than a scientific limitation.'",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Holographic compression standard adopted by {sector} after {n}-year fight",
+    story: [
+      "After {n} years of competing proposals, rival standards bodies, and what one delegate described as 'the least dignified technical process in the history of {sector} telecommunications,' the {sector} Data Standards Consortium has adopted a unified holographic compression protocol. The standard will reduce data transmission requirements for holographic communications by {percent}%, enabling real-time holopresence at current bandwidth infrastructure levels. The losing standards body has described the adopted protocol as 'technically acceptable but philosophically inferior,' which the winning body has chosen not to respond to.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "Gravity wave observatory on {planet} reports background hum 'too cheerful'",
+    story: [
+      "Scientists operating the gravity wave observatory on {planet}'s equatorial ridge have published a paper describing an anomalous background signal in the galactic gravitational wave spectrum that they are characterizing, with evident discomfort, as 'too cheerful in its frequency pattern to be consistent with known astrophysical sources.' The signal repeats on a regular interval, varies in amplitude in ways that do not correspond to any catalogued event, and has been present in the observatory's data for {n2} cycles without previous notice. The paper requests independent confirmation before any interpretation is attempted. The word 'cheerful' appears {n} times in the paper, always in quotation marks.",
+    ],
+  },
+  {
+    category: "science",
+    template:
+      "{empire} releases open-source jump drive plans; lawyers also open-sourced",
+    story: [
+      "{empire}'s department of advanced research has released the technical specifications for its generation-{n2} jump drive platform under an open research license, making the designs freely available to any certified engineering team. The release, described as 'an investment in the galactic engineering commons,' was accompanied by a {n2}-page legal rider governing acceptable use. In a development that engineering commentators have described as 'either a joke or a policy statement,' the legal documentation was released under the same open license as the technical designs. {n2} institutions have already submitted derivative engineering proposals. Three have submitted competing interpretations of the legal rider.",
+    ],
+  },
+];
+
 // Rich template pools — templates with story bodies for new categories.
 const RICH_POOLS: Partial<Record<TickerCategory, FlavorTemplate[]>> = {
   anomaly: anomalyTemplates,
@@ -1845,6 +2852,11 @@ const RICH_POOLS: Partial<Record<TickerCategory, FlavorTemplate[]>> = {
   gossip: gossipTemplates,
   military: militaryTemplates,
   propaganda: propagandaTemplates,
+  politics: politicsTemplates,
+  corporate: corporateTemplates,
+  market_mover: marketMoverTemplates,
+  crime: crimeTemplates,
+  science: scienceTemplates,
 };
 
 // ── Registry ──────────────────────────────────────────────────
