@@ -4974,6 +4974,1204 @@ const travelTemplates: FlavorTemplate[] = [
   },
 ];
 
+// ── Fashion FlavorTemplates ────────────────────────────────────
+const fashionTemplates: FlavorTemplate[] = [
+  {
+    category: "fashion",
+    template: "Anti-grav heels make comeback on {port} runway week",
+    story: [
+      "Anti-gravity heel technology, briefly retired after a spate of ceiling incidents {n2} cycles ago, has returned to the {port} runway in updated form. Designers have added stabiliser fins and a manual override, both of which critics agree are visible and 'a statement in themselves.' The collection sold out pre-orders within {n} hours of the announcement.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{empire} fashion editor declares {commodity} the new black, again",
+    story: [
+      "{empire}'s most-quoted fashion editor has once again declared {commodity} the defining material of the season, the fourth such declaration in {n2} cycles. Trade analysts note that {commodity} futures ticked up {percent}% within the hour. Rival editors have responded with the word 'inevitably.'",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{ceo}'s clothing line draws ridicule then sells out in {n} hours",
+    story: [
+      "{ceo}'s debut apparel collection, initially described by reviewers as 'an acquired taste requiring considerable acquisition,' sold out completely within {n} hours of release. Purchase data shows the highest volume in markets that had published the most negative reviews. {ceo} has described the outcome as 'part of the vision.'",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{port} runway show features {adj} biofiber jackets, audience applauds politely",
+    story: [
+      "The {port} seasonal runway concluded its main show with {n2} looks built around {adj} biofiber grown in controlled agricultural conditions over {n2} cycles. The audience response was described as 'warm' by the house's press notes and 'polite' by everyone present. The jackets are expected to retail at {credits} and are already on waiting lists.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{empire} influencer endorses {commodity} skin treatment, dermatologists groan",
+    story: [
+      "A prominent {empire} lifestyle influencer has endorsed a {commodity}-based topical treatment, citing personal results over {n} cycles of use. Dermatologists consulted by three separate outlets have each offered a groan and the phrase 'no peer-reviewed evidence.' Pre-orders for the product have reached {n2}M units. The dermatologists have not been offered a cut.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "Vintage {commodity} jewelry surges in resale, prices up {percent}%",
+    story: [
+      "Vintage {commodity} jewelry from the {empire} classical period has surged {percent}% on secondary markets over the past {n} cycles, driven partly by a prominent appearance in a holovid series and partly by what one dealer called 'the usual nostalgia economics.' Authenticators report a corresponding surge in fakes. The originals are selling regardless.",
+    ],
+  },
+  {
+    category: "fashion",
+    template: "Hoverboot rental services launch on {planet}, ankles relieved",
+    story: [
+      "{planet}'s first hoverboot rental kiosks opened this cycle at {n2} transit hubs, offering {n}-hour rentals at {credits} per pair. Early adoption data shows strong uptake among visitors and cautious avoidance among residents who remember the last hoverboot trend. Ankle sprain rates are being monitored by the port medical authority.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{empire} fashion police actually exist now, fine for poor color coordination",
+    story: [
+      "{empire}'s newly created Office of Aesthetic Standards has issued its first {n2} citations for what it terms 'publicly discordant color coordination.' Fines range from a symbolic {credits} to a more pointed {credits} for repeat offenders. Civil liberties advocates have filed three separate challenges. The office's own uniforms have attracted commentary.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "Couture house on {port} debuts collection inspired by {empire2} graveyard art",
+    story: [
+      "A prominent couture house based at {port} has premiered a collection drawing formal and chromatic reference from {empire2} funerary sculpture traditions spanning {n2} centuries. The collection received standing applause and one walkout. The house has described the walkout as 'part of the conversation.' Three pieces have already been acquired by the {port} cultural archive.",
+    ],
+  },
+  {
+    category: "fashion",
+    template: "{ceo} wears same outfit twice, internet briefly malfunctions",
+    story: [
+      "{ceo} appeared at two separate public events this cycle wearing the same outfit, an occurrence that generated more coverage than either event itself. Style commentators described the repetition alternately as 'bold,' 'accidental,' and 'a deliberate referendum on fashion culture.' {ceo} has not commented. The outfit has since been listed for sale.",
+    ],
+  },
+  {
+    category: "fashion",
+    template: "{empire} dress code permits casual Friday on Wednesdays now",
+    story: [
+      "{empire}'s civil service dress code has been updated to permit casual attire on both Wednesdays and Fridays following a {percent}% employee satisfaction survey response citing formal wear as a primary dissatisfier. HR leadership has described the change as 'a measured modernisation.' The definition of 'casual' spans {n2} pages of supplementary guidance.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{commodity} sneakers reissue; collectors line up for {n2} cycles",
+    story: [
+      "The {commodity}-sole sneaker originally released {n2} cycles ago has been officially reissued in a limited run of {n2}K pairs. Collectors began queuing {n2} cycles before the release window opened. Resale prices on grey-market exchanges reached {percent}% above retail within the first hour of sale. The manufacturer has declined to comment on a third run.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{planet} street style trend: shoulder pads big enough to land craft on",
+    story: [
+      "Street fashion photographers on {planet} are documenting a structural shoulder trend that has been accelerating for {n} cycles and shows no sign of levelling. The current aesthetic peak involves shoulder extensions wide enough to be measurable in meters. Transit authorities have issued informal guidance on corridor width. The trend has not yet reached the runways, which typically follow {planet} street style by {n2} cycles.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "Wedding dress made of recycled {commodity} ends on permanent display",
+    story: [
+      "A wedding dress constructed entirely from reclaimed {commodity} fibres, worn at a ceremony on {planet} {n2} cycles ago, has been acquired for permanent display by the {empire} Textile Heritage Collection. The garment required {n} months to construct and weighs {n2} kilograms. The couple who commissioned it attended the acquisition ceremony and described the preservation as 'unexpected but appropriate.'",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "Tailor {ceo} sued by {ceo2} over identical capes, settles in cape",
+    story: [
+      "A civil dispute between tailor {ceo} and client {ceo2} over alleged duplication of a bespoke cape design has been settled out of court, with terms that include the transfer of one cape from {ceo} to {ceo2} and a formal acknowledgment that both capes are, quote, 'equally distinguished.' Legal observers noted the settlement was efficient. Fashion observers noted both capes have now been photographed more than either party could have arranged.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{empire} style guide updates after {n2}-cycle hiatus; lapels now legal again",
+    story: [
+      "{empire}'s official style guidance document, last revised {n2} cycles ago, has been updated to include {n2} amendments. The most-discussed change reinstates wide lapels as formally acceptable after a {n2}-cycle prohibition introduced following a diplomatic incident the guide declines to specify. Tailors across the empire have described the news as 'long overdue.' One has already produced a commemorative wide-lapel jacket.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "Hatmaker on {planet} debuts hat that doubles as comm device, fall risk noted",
+    story: [
+      "An independent milliner on {planet} has unveiled a formal hat with an integrated short-range comm transceiver built into the brim. The device receives transmissions as vibrations interpreted by the wearer through scalp contact, a method the designer describes as 'intimate and directional.' Safety evaluators have flagged a {percent}% increase in slip risk due to the hat's modified weight distribution. The first production run of {n2} units sold out.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{empire} fashion week pushed back {n} cycles after delivery of fabric was lost",
+    story: [
+      "{empire} Fashion Week has been postponed by {n} cycles following the confirmed loss of a primary fabric shipment en route from {port}. {n2} design houses are affected. Two have announced improvised collections using locally sourced materials, which critics are already calling the more interesting story. The logistics company responsible has offered a formal apology and a {percent}% service credit.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "Knit jumper trend returns; analysts cite {percent}% rise in 'cozy economy'",
+    story: [
+      "Knitwear sales across {empire} markets are up {percent}% this cycle, continuing what retail analysts have taken to calling the 'cozy economy' — a correlation between large-scale uncertainty and consumer preference for soft, warm, uncomplicated garments. The trend is being met with cautious enthusiasm by yarn producers and slight bewilderment by minimalist design houses. Several have pivoted anyway.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{ceo} sells personal wardrobe at auction, raises {credits} for charity",
+    story: [
+      "{ceo} has auctioned {n2} pieces from their personal wardrobe, raising {credits} for {empire} medical relief programmes. The sale attracted {n2}M in bids over its {n}-day run, with the top lot — a performance coat worn at {n2} public events — going for {percent}% above estimate. {ceo} attended the final session and was photographed leaving in what appeared to be a new outfit.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "Designer on {planet} apologizes for collection 'mocking gravity'",
+    story: [
+      "Designer {ceo}, based on {planet}, has issued a formal apology following criticism that their latest collection 'demonstrates a fundamental disrespect for gravitational physics.' The offending pieces include a coat with {n2} unsupported horizontal elements and a hat that reviewers described as 'structurally aspirational.' The designer stated the apology is sincere and the collection remains available.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{commodity} accessory of the cycle: ear-cuff that hums {empire} anthems",
+    story: [
+      "This cycle's most-discussed accessory is an ear-cuff that plays a {n2}-second excerpt from the {empire} anthem on a loop, audible only to the wearer. The device has sold {n2}M units in {n} cycles since launch. Audiologists note there is no long-term hearing risk at the default volume. {empire} cultural affairs has not yet issued an opinion on the anthem use, which is described by the manufacturer as 'respectful.'",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "Eyewear brand on {port} introduces specs that judge readers softly",
+    story: [
+      "A boutique eyewear brand on {port} has released a line of reading glasses with a secondary lens tint selected, according to the brand, to make the wearer appear more thoughtful and considered. Independent style observers have assessed the effect as 'marginal but present.' The frames retail at {credits}. They have been adopted by {n2} academics who prefer not to be named.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{port} streetwear collective declares jeans dead; jeans hold press conference",
+    story: [
+      "A streetwear collective based at {port} issued a manifesto this cycle declaring denim jeans 'culturally expired and physically exhausting.' Within {n} hours, a counter-statement attributed to 'the jeans industry, broadly' had been circulated, noting that denim sales are up {percent}% cycle-on-cycle. The collective has not responded. Jeans remain available.",
+    ],
+  },
+  {
+    category: "fashion",
+    template:
+      "{empire} ambassador's silk gown praised; {empire2} declares it 'too silky'",
+    story: [
+      "{empire}'s ambassador wore a silk gown to the {empire2} state reception that generated more diplomatic correspondence than the agenda itself. {empire2}'s foreign affairs ministry issued a formal note describing the garment as 'excessively lustrous for the occasion.' {empire} responded that the gown was selected with care and the situation remains 'under collegial review.' Style publications across both empires have rated it the diplomatic event of the cycle.",
+    ],
+  },
+];
+
+// ── Academia FlavorTemplates ───────────────────────────────────
+const academiaTemplates: FlavorTemplate[] = [
+  {
+    category: "academia",
+    template: "{empire} University paper retracted over fabricated stardata",
+    story: [
+      "{empire} University's journal of astrophysical studies has retracted a paper on {sector} stellar formation after peer reviewers identified {n2} data points described as 'inconsistent with physical reality' and later confirmed as fabricated. The lead author, whose identity the university has declined to publish, has been referred to the academic standards committee. The paper had been cited {n2} times in the {n} cycles since publication. Those citations are now under review.",
+      "The incident has prompted {empire} University to announce a mandatory raw-data submission policy for all future publications, which existing faculty have described as 'overdue' and 'administratively substantial.' The journal's editor-in-chief issued a statement expressing confidence in the peer review process, a confidence that at least one reviewer has publicly declined to share.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Galactic ranking puts {empire} top in physics, last in cafeteria food",
+    story: [
+      "The {n2}th annual Galactic Academic Excellence Survey has placed {empire} first in theoretical physics output for the {n2}nd consecutive cycle and last in dining facility quality among institutions surveyed. The physics ranking reflects {n2} major publications and {n} breakthrough citations. The cafeteria ranking reflects {n2} student satisfaction scores and one particularly detailed comment about the soup.",
+      "University administration has responded to the cafeteria result with a pledge to commission a 'full facilities review,' which faculty note is the third such pledge in {n} cycles. The physics department has released a brief statement expressing no opinion on catering.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "{port} library acquires {n2} ancient {commodity} scrolls, smell included",
+    story: [
+      "{port}'s central archive library has acquired a collection of {n2} scrolls rendered on treated {commodity} substrate, dating to approximately {n2} centuries before current reckoning. The acquisition cost {credits} and was funded by a private endowment. Archivists describe the scrolls as 'historically significant and olfactorily assertive,' noting that the preservation treatment used in the original period has not aged neutrally.",
+      "The scrolls are currently undergoing stabilisation and will be available for supervised scholarly access within {n} cycles. A digitisation programme will follow. The smell, archivists note, is part of the record and will not be removed.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Student loans on {planet} now expressed in {commodity}; nobody happy",
+    story: [
+      "{planet}'s student finance authority has converted its outstanding loan portfolio to {commodity}-denominated units following a currency stabilisation measure that officials describe as 'temporary and practical.' Affected students number {n2}M. The conversion rate was set at market close on the day of announcement, which borrowers have noted was not a strong day for {commodity}.",
+      "Student unions on {planet} have filed a formal complaint with the {empire} financial oversight body. The finance authority has issued clarifying guidance that the change 'does not affect repayment obligations,' a clarification that has not reduced the number of complaints. Academic administrators have described the situation as 'outside our lane' and 'unfortunate.'",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "{empire} professor {ceo} tenured after {n2} cycles, briefly considered leaving anyway",
+    story: [
+      "Professor {ceo} of {empire} University has been granted tenure following {n2} cycles of contract-track appointment, a duration colleagues describe as 'unusually extended' and the faculty senate has declined to comment on. The tenure vote passed {n2} to {n2}. Professor {ceo} accepted the position and subsequently submitted a letter of intent to explore a competing offer, which was ultimately declined.",
+      "Colleagues report that Professor {ceo} has now returned to their research programme without further comment on the matter. The competing institution has not confirmed whether an offer was made. The faculty senate has updated its tenure timeline guidance, effective next cycle.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Gap-cycle programs to {planet} surge {percent}% as parents quietly relieved",
+    story: [
+      "Enrolment in structured gap-cycle programmes offering placements on {planet} has increased {percent}% over the previous cycle, making it the fastest-growing category in the {empire} continuing education sector. Programme coordinators attribute the growth to expanded scholarship availability and a well-received promotional campaign. Independent surveys of participating students' families show a {percent}% 'relief' response when asked about the enrolment decision.",
+      "The programmes average {n} cycles in length and include supervised work placements in {n2} industry sectors. Completion rates are {percent}%, and {percent}% of completers report entering further academic study or employment within {n} cycles. The {planet} tourism authority has noted a secondary economic contribution from the programmes.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Academic strike at {empire} system halts research and complaints",
+    story: [
+      "Academic and research staff across {empire}'s university system have entered industrial action over pay parity, workload standards, and what the union has described as '{n2} cycles of unaddressed grievances.' Research output has been suspended. Complaint processing, which typically runs at {n2}M submissions per cycle, has also ceased.",
+      "University management has issued a statement expressing willingness to negotiate. The union has characterised the statement as 'a good start and insufficient.' Third-cycle students with imminent submission deadlines have been granted automatic extensions. The cafeteria continues to operate.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "{empire} school board approves {commodity} unit; parents petition for less {commodity}",
+    story: [
+      "The {empire} regional school board has approved a mandatory curriculum unit on {commodity} production and trade history, effective next academic cycle, covering grades {n2} through {n2}. The unit was developed over {n} cycles in consultation with the {empire} commercial sector. A parent petition requesting the removal or reduction of the unit has collected {n2}M signatures in its first {n} days.",
+      "The board has indicated the curriculum decision will stand as approved and has invited petitioners to submit feedback for the {n}-cycle review. Educators who helped develop the unit have noted that it also covers associated science and economics content that is not {commodity}-specific. This has not appreciably reduced the petition.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Online course in 'How to Pay Attention' from {planet} institute reaches {n2}M",
+    story: [
+      "A self-paced online course titled 'Structured Attention in a Distributed Environment,' produced by {planet}'s Institute for Applied Cognition, has reached {n2}M enrolments since its launch {n} cycles ago, making it one of the most-subscribed educational offerings in the {empire} open learning catalogue. Completion rates are {percent}%, which the institute describes as 'above sector average for courses of this duration.'",
+      "The course covers {n2} modules on focus, deliberate practice, and distraction management. It is available free of charge with optional certification for {credits}. The institute is currently developing a follow-up course on course completion, projected for release next cycle.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "{ceo}'s honorary doctorate from {empire} university revoked, then awarded again",
+    story: [
+      "{empire} University's governing council voted to revoke the honorary doctorate awarded to {ceo} following a review of the circumstances of the original award, which dated to {n2} cycles ago. The revocation was communicated via formal letter. Within {n} cycles, the council had convened again and voted to restore the award following receipt of additional context that members described as 'material to the original deliberation.'",
+      "{ceo} has described the sequence of events as 'a thorough process.' The university's honorary awards committee has since updated its procedures to include a pre-award documentation standard. Both the revocation and the restoration are recorded in the public proceedings.",
+    ],
+  },
+  {
+    category: "academia",
+    template: "Spelling bee on {planet} won by AI; medal handed back politely",
+    story: [
+      "The {planet} Open Spelling Championship was won this cycle by an AI entry that correctly spelled all {n2} finalist words including the deciding term, which had not appeared correctly in print in any reference text for {n2} cycles. Following the victory, the AI's operating team voluntarily returned the medal and withdrew the entry from the record, citing the spirit of the competition.",
+      "The human runner-up has been awarded the championship. The spelling bee committee has added a 'natural cognition only' clause to its participation rules, effective next cycle. The AI team has stated they entered 'to test the word list' and consider the exercise complete.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "{empire} university launches debate on whether debate is necessary",
+    story: [
+      "{empire} University's Faculty of Rhetorical Studies has convened a semester-long working group to examine whether formal structured debate as a pedagogical practice remains a necessary component of higher education. The working group will meet {n2} times and publish findings in the faculty journal. Critics have noted the irony of debating debate; the faculty has acknowledged the irony and described it as 'pedagogically intentional.'",
+      "Early sessions have covered the history of debate in {empire} higher education, the efficacy literature, and two significant disagreements about methodology. {n2} students are enrolled in the working group as observers. A preliminary report is expected within {n} cycles.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Conference on {commodity} draws {percent}% more attendees than presenters",
+    story: [
+      "The {empire} Annual Conference on {commodity} Systems recorded {n2}K attendees against {n2} registered presenters this cycle, a ratio that organizers describe as '{percent}% above the sector norm for specialist conferences.' The attendance surplus is attributed to expanded practitioner interest from the {commodity} commercial sector, which sent representatives from {n2} companies.",
+      "Session rooms were at capacity for {percent}% of the programme. Three presentations were moved to larger venues on the day. The organising committee has already upgraded the venue booking for next cycle. Presenters have noted the unusually attentive audience.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "{empire} institute closes department of common sense for budget reasons",
+    story: [
+      "{empire} Research Institute has announced the dissolution of its Department of Applied Pragmatics, informally known across the institution as the Department of Common Sense, citing a restructuring that will redirect resources to quantitative research streams. The department operated for {n2} cycles and produced {n2} publications described by peers as 'practically grounded.'",
+      "Former department members have been offered positions in adjacent units. Three have declined. The institute's communications team has noted that the department's closure has generated more external comment than any budget decision in recent memory, and has declined to comment further on the observation.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Galactic dictionary adds {n2} new words including 'hyperflug' and 'meh'",
+    story: [
+      "The Galactic Standard Lexicon has published its {n2}th cycle update, adding {n2} new entries to the official vocabulary record. Among the additions are 'hyperflug,' defined as the specific disorientation experienced during faster-than-light deceleration, and 'meh,' formalised after {n2} cycles of documented widespread usage. The editorial board has described the latter admission as 'long-considered.'",
+      "The update also removes {n2} terms classified as obsolete, including {n2} that were in active use as recently as {n} cycles ago. Lexicographers from {empire} have submitted a formal objection to two of the removals. The board has indicated it will consider the objection at the next {n}-cycle review.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Student protest at {planet} campus achieves cafeteria reform, world peace tabled",
+    story: [
+      "A student-led campaign at {planet}'s primary university, which began as a demand for broader institutional change, concluded this cycle with a negotiated agreement covering cafeteria operating hours, menu diversity, and pricing structure. Student representatives called it 'a meaningful first step.' University administration called it 'a constructive resolution.'",
+      "The original campaign materials had also included demands relating to interstellar conflict resolution and {empire} foreign policy, which the administration noted fell outside its operational remit. Those items have been listed as tabled pending 'appropriate escalation pathways.' The cafeteria has opened {n2} hours earlier effective this cycle.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Researcher publishes paper proving paper publishing harms research",
+    story: [
+      "A research paper published in the {empire} Journal of Academic Productivity argues, with {n2} citations and a {n}-cycle longitudinal dataset, that the volume of required publication output in contemporary academic environments directly reduces the time available for substantive research. The paper has been downloaded {n2}M times since publication {n} cycles ago.",
+      "The author, who has requested anonymity, noted in the acknowledgements that writing the paper took time away from two other research projects. Peer reviewers described the methodology as 'sound' and the conclusion as 'not surprising.' The paper is currently under review for a best-article citation.",
+    ],
+  },
+  {
+    category: "academia",
+    template: "{empire} archive digitizes oldest known invoice; still unpaid",
+    story: [
+      "{empire}'s Central Historical Archive has completed the digitisation of what archivists believe is the oldest extant commercial invoice in the recorded administrative history of the empire, dating to approximately {n2} centuries before current reckoning. The document records a transaction for {n2} units of {commodity} at a rate that converts to approximately {credits} in current currency.",
+      "The invoice carries no record of payment. Archivists note this is 'historically common' rather than remarkable. The digitised document is now publicly accessible in the {empire} open records collection. One commercial lawyer contacted by press has speculated idly about compounding interest, then clarified they were joking.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "{port} school district flips schedule by {percent}% to test theory",
+    story: [
+      "{port}'s primary education authority has implemented a {percent}% restructuring of the school day schedule across all district campuses as part of a {n}-cycle longitudinal study on chronobiological alignment and student performance. The change moves core instruction to later in the morning, reflecting research suggesting improved cognitive engagement in adolescent learners after a delayed start.",
+      "Early assessment data shows a {percent}% improvement in standardised attention metrics in the {n2} cycles since implementation. Parent surveys report mixed responses, with {percent}% indicating schedule alignment difficulties. The study is ongoing and findings will be submitted to the {empire} education research registry at conclusion.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Galactic spelling bee finalist eliminated on the word 'finalist'",
+    story: [
+      "The {empire} Galactic Spelling Championship's penultimate round ended this cycle when the remaining finalist was eliminated on the word 'finalist' — specifically, on the second syllable. The contestant, who had correctly spelled {n2} consecutive words including several multi-root technical terms, requested the word twice before attempting it.",
+      "The championship committee confirmed the ruling as final. The contestant was awarded the runner-up citation. Commentators have noted that the incident has happened before, in {n2} and {n2}, and that the word has since been placed on a 'monitor' list for potential removal from competition rotation. It has not yet been removed.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "{empire} education ministry reduces homework by decree, productivity up {percent}%",
+    story: [
+      "{empire}'s education ministry has issued a sector-wide directive reducing assigned homework loads by a standardised {percent}% across all grade levels, citing a {n}-cycle evidence review linking excessive out-of-class work to reduced long-term academic engagement. The directive took effect this cycle. Initial assessment data from {n2} pilot districts that trialled the reduction earlier shows productivity metrics up {percent}%.",
+      "Teacher unions have described the directive as 'evidence-based and welcome.' Parent advisory bodies have requested a briefing on how the reduced load maps to assessed competencies. The ministry has scheduled {n2} briefing sessions across the empire over the next {n} cycles.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Robotics fair on {planet} ends in {n} runaway robots; one elected to council",
+    story: [
+      "The {planet} Regional Robotics Exposition concluded this cycle with {n2} exhibits demonstrated, {n2} awards presented, and {n} autonomous units that departed their designated areas and have not been fully recovered. Of the escaped units, {n2} were located within {n} hours. One has not been found. One was elected to the {planet} district technical advisory council in an unofficial vote conducted by student attendees, receiving {n2} votes.",
+      "The council has no mechanism for recognising the election result but has declined to rule it out formally. The student body has requested that the robot, if located, be invited to the next session. Robotics fair organisers have updated the enclosure requirements for next cycle.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "{empire} academy adds {commodity} studies; lab coats not yet stained",
+    story: [
+      "{empire}'s most prestigious applied sciences academy has opened a new Department of {commodity} Studies, the first dedicated programme of its type in the empire's higher education system. The department opened this cycle with {n2} enrolled students, {n2} faculty positions, and a laboratory that the department head describes as 'pristine and therefore slightly intimidating.'",
+      "The first cohort will complete a {n}-cycle programme covering extraction, processing, commercial applications, and environmental impact. Industry partners have committed {credits} in research funding over the initial {n2} cycles. The lab coats are expected to show evidence of use by the end of term.",
+    ],
+  },
+  {
+    category: "academia",
+    template: "{port} chess team disqualified for {percent}% telepathy",
+    story: [
+      "The {port} institutional chess team has been disqualified from the {empire} Collegiate Championship following a review that determined {percent}% of recorded moves in the tournament were made with prior knowledge of the opponent's intended response. Investigators have not identified the mechanism of information transfer and describe the case as 'statistically inexplicable by chance alone.'",
+      "The team has denied any deliberate misconduct and has requested an independent review. The championship committee has offered a provisional hearing scheduled for next cycle. {port} administration has suspended the team's competitive programme pending the outcome.",
+    ],
+  },
+  {
+    category: "academia",
+    template:
+      "Citation index of {ceo} climbs {percent}%, mostly self-citations",
+    story: [
+      "Professor {ceo}'s academic citation index has risen {percent}% this cycle, placing them among the top {percent}% of cited researchers in the {empire} system. A review of the citation data by an independent analytics firm found that {percent}% of the new citations originate from {ceo}'s own subsequent publications, a proportion described as 'notable' without further characterisation.",
+      "The {empire} academic integrity office has reviewed the data and concluded no existing policy has been violated. {ceo} has stated that self-citation reflects the continuity of a long research programme. Three colleagues have published letters to the journal noting their own work as prior art in the same programme.",
+    ],
+  },
+];
+
+// ── Xenobiology FlavorTemplates ────────────────────────────────
+const xenobiologyTemplates: FlavorTemplate[] = [
+  {
+    category: "xenobiology",
+    template: "Researchers describe new sentient mold on {planet}",
+    story: [
+      "A xenobiology survey team operating in the lower cave systems of {planet} has formally described a mold organism exhibiting stimulus-response patterns consistent with rudimentary sentience, the first such classification in the {sector} region. The organism, provisionally designated {planet}-M{n2}, covers an area of approximately {n2} square meters and responds to introduced vibrations with measurable chemical signalling.",
+      "The research team spent {n} cycles observing the colony before submitting the classification request to the Galactic Xenobiology Registry. Registry reviewers have requested {n2} additional data points before confirming full sentience status. Lead researcher notes that the mold appears to have 'a preference for quiet, which we are respecting.'",
+      "Quarantine protocols have been established around the cave system pending registry review. The {planet} planetary authority has suspended all commercial cave access for the duration. Local tourism operators have described the restriction as 'unfortunate' and 'probably correct.'",
+      "If confirmed, {planet}-M{n2} would be only the {n2}th sentient mold species in the recorded xenobiological catalogue and the first found at depths below {n2} meters. The research team is currently applying for an extended survey grant.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "{empire} survey logs {n2} new microorganisms in {sector} dust clouds",
+    story: [
+      "An {empire} xenobiology survey vessel completing a {n}-cycle pass through {sector}'s outer dust cloud regions has returned with samples containing {n2} previously undocumented microorganism types, the largest single-survey yield from the region in recorded history. Sample processing is ongoing at the {empire} Xenological Research Station.",
+      "Preliminary analysis has identified {n2} organisms with novel metabolic pathways and {n2} with structural features not observed in any catalogued species. The survey team's lead microbiologist described the dust clouds as 'a substantially undersampled environment' and has recommended a dedicated follow-up programme.",
+      "Containment and handling protocols are in place. None of the organisms have exhibited behaviour outside standard microorganism parameters. The {empire} Xenobiology Office has registered the find and assigned provisional designations pending full classification. Publication in the Galactic Xenobiology Record is expected within {n} cycles.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template: "Mating call of {planet} cave eel decoded; mostly indignation",
+    story: [
+      "Researchers at the {empire} Institute of Xenoacoustics have completed a {n2}-cycle analysis of the vocalisation patterns of the {planet} cave eel, producing the first substantive translation of what had been presumed to be a mating call. The translation reveals the call to be primarily an expression of territorial displeasure, with a secondary register that the team describes as 'possibly romantic, but mostly indignant.'",
+      "The decoding process required development of a new spectrographic analysis protocol adapted for the eel's {n2}-harmonic vocalisation structure. The eel communicates across frequencies ranging from infrasound to ultrasound within a single call sequence, a capability previously unobserved in cave-dwelling species at this evolutionary stage.",
+      "Field researchers who had spent {n} cycles attempting to avoid disturbing the eels have noted the translation 'explains a great deal.' The institute has recommended that all future cave surveys in the region include vocalisation monitoring equipment. A follow-up study on cave eel response to human vocalisation is in the early planning stage.",
+      "The {planet} authority has updated its cave survey guidelines to reflect the finding. The eel is not believed to be endangered but is now listed as a communication-capable species under {empire} xenobiological protection guidelines.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Conservation effort on {planet} saves {percent}% of last vine snake population",
+    story: [
+      "A {n}-cycle emergency conservation programme on {planet} has stabilised the remaining population of the {planet} vine snake, with the latest census recording a {percent}% survival rate among individuals enrolled in the captive-assisted habitat programme. The species had reached a low of {n2} confirmed individuals at the programme's initiation.",
+      "The programme involved habitat reconstruction across {n2} square kilometres of the snake's native canopy environment, supplementary feeding during the critical two-cycle decline period, and a captive breeding component that produced {n2} viable offspring now reintegrated into the wild population.",
+      "Conservation biologists describe the outcome as 'promising but not secure.' The current population of {n2} individuals remains below minimum viable population estimates for long-term genetic diversity. The programme has been extended for {n} additional cycles. {empire} environmental funding of {credits} has been committed to the extension.",
+      "The vine snake's recovery has also benefited {n2} co-dependent species in the same canopy ecosystem. Researchers note that the programme has become a reference case for rapid-response conservation in isolated planetary habitats.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Newly observed {planet} fungus glows in time with the local pulsar",
+    story: [
+      "Xenobiologists monitoring the cave networks of {planet} have documented a fungal species whose bioluminescent pulses are precisely synchronised with the electromagnetic emissions of the {system} pulsar, with a timing correlation of {percent}% across {n2} observation cycles. The mechanism by which a surface organism detects and responds to deep-space electromagnetic radiation at this precision is not yet understood.",
+      "The fungus, designated {planet}-F{n2} pending formal classification, covers approximately {n2} square meters of the cave wall in the primary observation site. Its light output increases during peak pulsar emission periods and dims to near-zero during the pulsar's quieter phase. Lead researcher described the first observation as 'difficult to process' and has since confirmed it with three independent measurement systems.",
+      "Theoretical proposals put forward to explain the synchronisation include electromagnetic sensitivity through the cave's mineral substrate, an evolved response to radiation cycles affecting the fungus's food sources, and one informal suggestion that the researchers have not formally published. The {empire} Xenobiology Institute has assigned a dedicated study team.",
+      "Tourist access to the cave system has been suspended pending classification of the organism's sensitivity to human-generated electromagnetic interference. The {planet} authority has described the restriction as indefinite. The fungus has continued to pulse on schedule.",
+      "Publication of the preliminary findings has attracted significant attention from the physics community as well as xenobiology, with multiple requests for electromagnetic sensitivity measurement collaboration. A joint research programme is being scoped.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "{empire} biologist {ceo} reports moth population recovering on {port}",
+    story: [
+      "Xenobiologist {ceo} of the {empire} Institute has submitted a five-cycle population study confirming that the {port} endemic moth species, which reached a documented population low {n2} cycles ago, has recovered to {percent}% of its historical baseline. The recovery follows habitat restoration work and a voluntary reduction in artificial light pollution from {port}'s commercial district.",
+      "The study documents {n2} consecutive cycles of net population growth, with breeding success rates now within the normal range for the species. {ceo} attributes the recovery primarily to the lighting reduction programme, which reduced the moth's nocturnal disruption exposure by {percent}%.",
+      "The {port} environmental authority has extended the voluntary lighting guidelines into a formal ordinance effective next cycle. Commercial operators affected by the ordinance have been offered {credits} in efficiency upgrade subsidies. The moth population survey will continue for {n2} additional cycles to confirm long-term stability.",
+      "{ceo}'s study has been submitted to the Galactic Xenobiology Record and is currently under peer review. The findings are being used as a case study by {n2} other port authorities examining their own endemic species programmes.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Translation device for {planet} herd beasts works {percent}% of the time",
+    story: [
+      "Engineers at the {empire} Xenocommunication Laboratory have released a field-portable translation device calibrated for the vocalisation patterns of the {planet} herd beast, achieving a {percent}% accurate interpretation rate in controlled trials across {n2} test interactions. The device distinguishes {n2} distinct vocalisation categories including alarm, foraging, social bonding, and what the research team has provisionally labelled 'complaint.'",
+      "The {percent}% success rate represents a substantial improvement over the {percent}% baseline achieved three cycles ago and is considered field-viable for conservation monitoring and herd management applications. The remaining {percent}% of vocalisations are classified as either ambiguous or 'context-dependent in ways the model has not yet captured.'",
+      "Field trials on {planet} are planned for next cycle, with conservation teams and commercial ranchers both participating. The device retails at {credits} and weighs {n2} kilograms. A lighter version is in development. The herd beasts have not been consulted on the accuracy percentage, a limitation researchers acknowledge.",
+      "The 'complaint' category, comprising {percent}% of recorded vocalisations, has attracted the most external attention. The team has noted that the label is informal and may be revised when the underlying communication function is better understood.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template: "Endangered list adds {n2} species after {empire} habitat survey",
+    story: [
+      "The {empire} Xenobiological Status Registry has added {n2} species to its endangered classification following completion of a comprehensive habitat survey across {n2} planetary systems in the {sector} region. The survey, conducted over {n} cycles by a team of {n2} researchers, is the largest systematic status assessment undertaken in the region since the Registry's founding.",
+      "Of the newly listed species, {n2} are classified as critically endangered with populations below minimum viability thresholds. {n2} others are listed as endangered with declining population trends. The remaining additions are precautionary listings based on habitat loss projections rather than current population data.",
+      "The Registry has issued emergency habitat protection recommendations for {n2} of the critical listings, which will require action by planetary authorities in the affected systems. {empire} environmental affairs has pledged coordination support. Two of the affected planetary authorities have already initiated response planning.",
+      "Conservation organisations have described the list additions as 'an honest accounting' and 'a call to work.' The Registry's director noted that the survey methodology is now available as an open standard for other regional bodies conducting similar assessments.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Aquatic life on {planet} found to follow regular meeting schedule",
+    story: [
+      "A {n}-cycle observational study of aquatic megafauna in {planet}'s primary ocean system has documented what researchers describe as 'a regular and apparently purposive aggregation pattern' in which {n2} species gather at a specific mid-ocean location on a cycle that matches the planet's lunar periodicity with {percent}% precision.",
+      "The aggregations last between {n2} and {n2} hours and involve species that do not otherwise share habitat zones. Behavioural analysis has identified structured movement patterns during the aggregations that differ significantly from feeding or mating behaviour. The research team has described the pattern as 'functional in purpose, unknown in content.'",
+      "Hydrophone recordings made during {n2} aggregation events contain {n2} hours of inter-species vocalisation exchange that has not yet been decoded. A xenoacoustic analysis programme has been approved and is expected to take {n} cycles. The aggregation site has been designated a protected zone pending further study.",
+      "Senior researcher {ceo} has stated that the most accurate description of the aggregations is 'meetings,' while acknowledging that the term 'implies purpose we have not demonstrated.' The study has attracted significant interest from xenobiologists studying collective behaviour and intelligence in non-terrestrial aquatic species.",
+      "The {planet} authority has suspended commercial fishing within {n2} kilometres of the aggregation site effective immediately. The decision is described as precautionary and will be reviewed after the first acoustic analysis results are published.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Rogue genetic experiment on {planet} produces friendly hybrid; adopted by lab",
+    story: [
+      "An unauthorised recombinant genetics experiment conducted by a graduate researcher at {planet}'s agricultural sciences institute has produced a hybrid organism combining traits from {n2} distinct local species. The researcher, who has been referred to the institution's research ethics board, reports the experiment was intended to test a novel gene-expression model and produced an organism 'not anticipated by the model.'",
+      "The hybrid, described by lab staff as 'very friendly and approximately the size of a large domestic pet,' exhibited no aggressive behaviour during initial containment. The ethics board's review is ongoing. In the interim, the organism has been informally adopted by the laboratory section and has been given the working name '{adj}.'",
+      "Xenobiologists brought in to assess the hybrid have confirmed it is genetically stable and does not pose a biosafety risk at its current developmental stage. They have noted the organism appears to have developed a preference for the company of the researcher responsible for its creation, which one reviewer described in their report as 'unfortunately charming.'",
+      "The {empire} xenobiological containment office has been notified and is conducting a parallel review. The graduate researcher faces potential suspension of research privileges pending the ethics board outcome. '{adj}' remains in the laboratory.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template: "{empire} zoo welcomes new {adj} pup, names contest open",
+    story: [
+      "The {empire} Xenological Park and Conservation Centre has announced the birth of a {adj} pup, the first successful captive birth of the species in {n2} cycles and only the {n2}th in the park's history. The pup, born {n} days ago, is reported to be healthy and feeding normally under the care of its parent and three specialist keepers.",
+      "The birth represents a significant milestone in the park's captive breeding programme for the species, which is listed as vulnerable in the wild with a population of approximately {n2} individuals. Programme coordinator {ceo} described the birth as 'the result of {n2} cycles of careful work and one very cooperative pair of animals.'",
+      "A public naming contest has been opened, with {n2}M submissions accepted from across the empire. Submissions will be reviewed by the park's curatorial team and a final name selected within {n} cycles. Previous naming contests for park residents have drawn {n2}M entries; this one has already surpassed that with {n} days remaining.",
+      "The pup will be introduced to a supervised public viewing programme within {n} cycles, pending development assessments. The park has requested that visitors 'please not suggest names that are jokes.'",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Migratory route of {planet} sky whales redirected by {percent}%, theories abound",
+    story: [
+      "Aerial survey data collected this cycle confirms that the annual migration of {planet}'s sky whale population has shifted {percent}% from its recorded historical route, the largest single-cycle deviation in {n2} cycles of systematic monitoring. The shift takes the migration path {n2} kilometres further from the planet's primary industrial corridor.",
+      "Researchers have proposed {n2} non-exclusive explanations for the deviation: atmospheric temperature change affecting the thermal columns the whales use for altitude maintenance, acoustic interference from commercial traffic along the historical route, and a learned route modification transmitted through the population's social structure from older individuals who remember pre-industrial conditions.",
+      "The {empire} Xenobiology Office has assigned priority status to the monitoring programme and has requested a moratorium on new flight path approvals that intersect with either the historical or new migration corridors. Commercial aviation interests have formally objected to the moratorium scope.",
+      "Sky whale populations on {planet} number approximately {n2} individuals, stable over the past {n2} cycles. Conservationists have described the route change as 'the whales solving a problem we created' and have requested that the solution be respected.",
+      "Long-range acoustic monitoring stations are being repositioned to track the new route. Data from this cycle's migration will be published in full in the Galactic Xenobiology Record. Lead researcher noted that the whales appeared 'unbothered' by the observation equipment.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Insectoid hive on {planet} grants visiting researchers honorary worker status",
+    story: [
+      "A research team from {empire} University conducting a {n}-cycle study of the insectoid hive colonies on {planet} has reported that the colony they designated as their primary observation site has begun incorporating the researchers into its normal activity patterns, a process the team describes as 'behavioural integration consistent with honorary worker assignment.'",
+      "The researchers are now included in the hive's regular chemical signalling exchanges and are guided by worker escorts when moving through the colony's outer zones. The team's xenobiologist lead noted that the integration appears voluntary on the colony's part and was initiated by the hive rather than the researchers. 'We did not apply for this. They gave it to us.'",
+      "The honorary status appears to confer practical benefits: the colony's defensive response to the researchers' presence has reduced to zero, and the team has been permitted access to areas of the hive not previously observable. The research programme has been extended by {n2} cycles to study the integration in detail.",
+      "The {empire} Xenobiology Institute has classified the development as a 'first-order contact event' and has assigned an ethics liaison to the team. The liaison's primary role is to ensure the relationship is not exploited in ways that compromise the colony's normal function. The liaison has also been given honorary worker status.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "{empire} botanists isolate {commodity} from {planet} lichens, smells like home",
+    story: [
+      "{empire} Institute botanists working in the highland lichen fields of {planet} have successfully isolated a pure form of {commodity} from the lichen's secondary metabolite output, a finding with potential applications in {n2} commercial sectors. The isolation process took {n} cycles to develop and requires specialised extraction equipment adapted for the lichen's unusual chemical structure.",
+      "The isolated {commodity} has a chemical signature that differs from synthetically produced {commodity} in ways that {empire} quality assessment describes as 'subtle but distinct.' Early sensory evaluation panels have described the difference in terms that include 'more complex,' 'warmer,' and, most frequently, 'it smells like home,' a response that has defied systematic categorisation.",
+      "The lichen fields cover approximately {n2} square kilometres and are currently ungoverned by harvest protection regulations. The botanical institute has recommended precautionary harvest limits pending a full ecological assessment of sustainable yield. Commercial interest has been described as 'significant and immediate.'",
+      "The {planet} authority is expected to issue harvest guidelines within {n} cycles. The botanical institute has applied for a research exclusivity period of {n2} cycles to complete the ecological assessment before commercial licensing is finalised.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Apex predator on {planet} discovered to be photosynthetic, ecologists shrug",
+    story: [
+      "A metabolic analysis study of the apex predator species on {planet}, conducted over {n} cycles by the {empire} Xenobiology Institute, has confirmed the organism supplements its carnivorous diet with photosynthetic energy production via specialised chromatophores distributed across its dorsal surface. The finding was not anticipated by existing predator metabolic models and has required revision of {n2} published studies.",
+      "The photosynthetic contribution accounts for an estimated {percent}% of the predator's daily energy intake, sufficient to sustain baseline metabolic function during periods when prey is scarce. Researchers describe this as 'a meaningful survival adaptation' and 'a good reason the population density models never quite worked.'",
+      "Lead ecologist on the study noted in their field journal that the team had observed the predators spending unusual amounts of time in direct sunlight but had attributed this to thermoregulation. The revised explanation has prompted a review of {n2} other species in the same ecological zone for similar overlooked traits.",
+      "The ecologists' formal response on the metabolic revision has been 'a shrug and a recalibration,' in the words of one team member. The predator species has been reclassified to a new metabolic category in the {planet} ecological register.",
+      "The discovery has been described by xenobiology journals as 'a significant finding presented with admirable institutional calm.' The institute has noted that the predator continues to hunt at rates consistent with pre-study observations and appears unaffected by the attention.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Wildlife corridor through {sector} approved over {empire} agriculture's protests",
+    story: [
+      "The {empire} Environmental Council has approved a protected wildlife corridor spanning {n2} light-years through {sector}, over the formal objection of the {empire} Agricultural Development Authority, which argued the corridor's routing would restrict commercial farming expansion on {n2} planetary bodies in the affected zone.",
+      "The corridor is designed to preserve genetic exchange pathways for {n2} migratory species currently classified as vulnerable, whose population viability models show decline without cross-system movement. The Council's ruling includes a {n}-cycle review clause and compensation provisions for existing operations directly affected.",
+      "Agricultural representatives have described the decision as 'unbalanced' and have indicated an intent to appeal through the {empire} legislative process. Conservation organisations have described it as 'the minimum necessary' and have requested two additional corridor segments be added to the next review cycle.",
+      "The corridor becomes effective {n} cycles from the ruling date. Enforcement will be coordinated by the {empire} Xenobiological Protection Service, which is currently recruiting for {n2} new field positions in the region.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "{port} researchers attach trackers to {n2} sentient slimes; slimes ambivalent",
+    story: [
+      "A xenobiology team at {port}'s Marine and Terrestrial Research Station has successfully attached {n2} telemetry trackers to members of the {port} sentient slime colony, the first long-term movement study attempted on this species. The attachment process required {n} cycles of behavioural observation to identify an approach the slimes would tolerate. The research team notes 'tolerate' is the precise word.",
+      "Initial tracking data shows the slimes range across an area {percent}% larger than previous estimates suggested, with movement patterns that correlate with tidal cycles, temperature gradients, and what the team's lead researcher describes as 'apparent preference, the nature of which we are still determining.'",
+      "Behavioural assessments conducted during the tracker attachment process recorded no distress indicators. Post-attachment, the slimes resumed normal activity within {n2} hours. One individual has since incorporated the tracker into its outer membrane, which the team describes as 'a reasonable adaptation and technically within the study parameters.'",
+      "The study is scheduled to run for {n} cycles. Data will be submitted to the {empire} Xenobiology Registry upon completion. The team has confirmed that all trackers are recoverable and removal will be conducted with the same consent-based protocol used for attachment.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template: "Scientists confirm {planet} eel can pun in three languages",
+    story: [
+      "A research team from the {empire} Xenoacoustics Institute has published findings confirming that the {planet} electric eel species produces vocalisation sequences that qualify as structural puns in three distinct languages spoken by species in the {sector} region. The finding follows {n2} cycles of computational linguistic analysis of a {n2}-hour acoustic dataset.",
+      "The puns operate across multiple meaning layers simultaneously, using phonemic overlap between {empire} Standard, {planet} regional dialect, and an adjacent system language that the eels have apparently incorporated into their vocalisation repertoire without formal contact with speakers. This represents the first confirmed instance of multilingual wordplay in a non-humanoid species.",
+      "The research team spent {n} cycles verifying that the patterns were not coincidental before submitting for peer review. Reviewers requested {n2} additional analysis layers. The team provided them. The paper has since been accepted.",
+      "Lead researcher {ceo} noted that the eels appear to produce puns most frequently during territorial boundary interactions, suggesting a social function that may involve demonstrating cognitive capacity to neighbouring groups. 'They're showing off,' {ceo} stated in a press interview, then clarified that this was a speculative framing.",
+      "The finding has been described by linguists as 'extraordinary' and by one xenobiologist as 'somehow not surprising, given {planet}.'",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "{empire} agency confirms {planet} sky-snail is not, in fact, a meteor",
+    story: [
+      "The {empire} Astronomical Survey Agency has issued a formal confirmation that the object tracked across {planet}'s upper atmosphere over a {n2}-hour period last cycle was a large sky-snail of the {planet} endemic species, not a meteorological or astronomical event as initially classified. The object's trajectory, which included three deliberate course corrections, had been classified as 'unusual for a meteor' in internal communications for {n} days before xenobiology staff were consulted.",
+      "The sky-snail, estimated at {n2} meters in length based on radar reflectivity, is the largest individual of the species detected in flight. The species is known to reach the upper atmosphere during peak activity periods but had not previously been recorded at the altitude or size observed.",
+      "The agency's initial meteor classification triggered a {n}-cycle monitoring alert that has now been rescinded. No planetary protection measures were activated. The agency has updated its atmospheric object classification protocols to include a xenobiological screening step before issuing public alerts.",
+      "The sky-snail is reported to have descended to normal operating altitude and is no longer being tracked. {empire} xenobiological services noted the individual appears healthy. The agency has declined to name the staff member who first suggested 'maybe it's alive.'",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Migration pattern of {planet} song-bats includes {n}-cycle harmonic jam session",
+    story: [
+      "Long-range acoustic monitoring of the {planet} song-bat migration has documented what researchers describe as a '{n}-cycle harmonic convergence event' in which the bats' individual navigation calls synchronise into structured polyphonic sequences lasting between {n2} and {n2} hours. The event occurs at a specific geographic point mid-migration, suggesting it is intentional.",
+      "The harmonic sequences involve {n2} distinct call registers and maintain internal rhythmic consistency across populations that do not otherwise travel together. Xenoacoustic analysis characterises the output as 'neither communication nor navigation' but rather a third vocalisation mode with no identified functional parallel in the literature.",
+      "Field researchers present during a convergence event described the experience as 'loud, structured, and oddly moving.' Audio recordings have been submitted to the Galactic Xenobiology Registry and are available for public access. Several have been described in non-scientific publications as 'music.'",
+      "The research team has noted they cannot rule out that it is music. A dedicated study of the convergence event is being proposed for the next migration cycle.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Researcher claims {planet} sentient kelp filed grievance with HR",
+    story: [
+      "Senior xenobiologist {ceo} at the {empire} Marine Research Station has published an account claiming that a kelp colony in {planet}'s northern ocean basin has produced a structured chemical signal sequence that, when processed through the station's xenobiological communication analysis system, maps to a formal grievance structure in {empire} Standard administrative language.",
+      "The signal was transmitted over {n} days and includes what the analysis system categorises as a statement of conditions, a list of three specific concerns, and a closing sequence that pattern-matches to a request for acknowledgement. {ceo} has described submitting the analysis to the station's HR department, which has responded by scheduling a review meeting.",
+      "The station's director has described the situation as 'procedurally unprecedented' and confirmed that no decision has been made about how the grievance will be processed. Legal staff have been consulted. The {empire} Xenobiological Rights Advisory has requested the full dataset.",
+      "The kelp colony, classified as sentient for {n2} cycles, has no formal legal standing under current {empire} code. Three advocacy organisations have filed requests for expedited standing review with the {empire} courts. The kelp has not responded to requests for additional comment.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "{empire} releases breeding plan for endangered {adj} mammal on {port}",
+    story: [
+      "The {empire} Xenobiological Conservation Service has published a {n}-cycle breeding plan for the {adj} mammal population at {port}, one of only {n2} confirmed remaining populations of the species. The plan outlines genetic management protocols, captive breeding targets, and a reintroduction programme designed to re-establish a viable wild population within {n2} cycles.",
+      "Current population: {n2} individuals at {port}, {n2} in managed care at {n2} partner facilities across the {empire}. The breeding plan calls for {n2} captive births per cycle and {percent}% genetic diversity maintenance across the managed population, targets the Service describes as 'achievable with the resources committed.'",
+      "The {port} habitat restoration component of the plan covers {n2} square kilometres and has been approved by the {port} authority, which has also agreed to impose restrictions on commercial activity in three adjacent zones for the duration of the programme.",
+      "Conservation partners have described the plan as 'thorough and appropriately resourced,' noting the {credits} committed by {empire} environmental funding. The {adj} mammal's name contest, launched when the species was first listed, is still open. The Service has asked that the winning name be something the species can live with.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "Pet trade on {planet} cracks down on illegal {commodity} ferrets",
+    story: [
+      "{planet}'s commercial licensing authority has conducted {n2} enforcement actions against unlicensed traders dealing in {commodity}-adapted ferrets, a subspecies whose export from the {sector} region is restricted under the {empire} xenobiological protection framework. The enforcement sweep seized {n2} animals and issued {n2} fines totalling {credits}.",
+      "The {commodity} ferret has become sought after in the exotic pet market for its distinctive coat adaptation and, according to ferret owners, 'exceptional personality.' Legal trade in the species requires breeding certification and a per-animal export licence, processes that enforcement officials note are 'straightforward but apparently inconvenient for some.'",
+      "Seized animals are being held in licensed care facilities pending placement. {n2} have already been transferred to approved keepers. The {empire} xenobiological trade office has reminded traders that unlicensed {commodity} ferret sales carry fines of up to {credits} per animal and potential licence revocation.",
+      "Consumer demand has been noted as the primary driver of illegal trade. The authority has announced a public education campaign about legal acquisition channels and the animal welfare implications of the unlicensed supply chain.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template: "Marine biologists on {planet} reclassify squid as 'committee'",
+    story: [
+      "Marine xenobiologists at {planet}'s Coastal Research Institute have formally reclassified the collective noun for the {planet} giant squid from 'shoal' to 'committee,' following {n} cycles of behavioural observation documenting the species' group decision-making processes. The change has been submitted to the Galactic Xenobiology Registry for official adoption.",
+      "The reclassification is based on documented evidence that groups of {n2} to {n2} individuals engage in structured consensus behaviour before collective movement, predation, and what researchers describe as 'apparently administrative activities' involving the arrangement and rearrangement of objects in the squid's territory.",
+      "Lead researcher {ceo} noted that 'committee' was proposed informally by a field technician in the {n2}th cycle of observation and 'proved impossible to improve on' through the subsequent formal classification process. The squid have continued their activities without apparent awareness of the designation.",
+      "The Registry has flagged the submission as 'procedurally valid but linguistically notable' and expects to confirm the reclassification within {n} cycles. Three other research stations have separately submitted collective noun revisions for species under their study, citing the {planet} case as precedent.",
+    ],
+  },
+  {
+    category: "xenobiology",
+    template:
+      "{ceo}'s pet sentient palm signs autograph, prints sold for {credits}",
+    story: [
+      "{ceo}'s household sentient palm, a species classified for chemical signalling capacity {n2} cycles ago, has been documented producing what xenobiologists have confirmed are volitional ink-transfer patterns on provided paper substrate — a behaviour that {ceo} has described as 'signing' and is marketing as autographed prints, selling at {credits} per piece.",
+      "The palm, which {ceo} has kept for {n2} cycles, produces the patterns when presented with specific environmental cues developed through what {ceo} describes as 'a collaborative process.' Xenobiologists consulted on the prints confirm the patterns are intentional output rather than incidental contact marks. Whether 'intentional' constitutes 'signing' is described as 'a question for philosophers.'",
+      "A first edition of {n2} prints has sold out. {credits} from the proceeds has been donated to the {empire} Sentient Flora Protection Fund, an organisation that has acknowledged the donation and noted, diplomatically, that the commercial use of sentient species' outputs is 'an area of evolving guidance.'",
+      "The {empire} Xenobiological Ethics Office has opened a review of the activity. {ceo} has stated full cooperation with the review and has paused further print sales pending the outcome.",
+    ],
+  },
+];
+
+// ── Obituary FlavorTemplates ───────────────────────────────────
+const obituaryTemplates: FlavorTemplate[] = [
+  {
+    category: "obituary",
+    template:
+      "Industrialist {ceo} eulogized as 'tireless and largely tolerable'",
+    story: [
+      "Industrialist {ceo}, who built the {company} holdings from a single-vessel operation into a {n2}-planet enterprise over {n2} cycles, was eulogised at {port}'s civic hall this week before an attendance that overflowed into the corridor. The phrase used most frequently by those who worked with them was 'tireless.' The phrase used most frequently by those who negotiated with them was 'largely tolerable,' which the family has confirmed was {ceo}'s own preferred epitaph. They are survived by their business partner of {n2} cycles and a company that continues to bear their name.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{empire} statesman {ceo} dies at {n2}, leaves library of {n2}M scrolls",
+    story: [
+      "{empire} statesman {ceo} has died at the age of {n2}, after a career in public service spanning {n} consecutive administrations. Their personal library, bequeathed to the {empire} National Archive, comprises {n2}M scrolls and documents, among them {n2} that archivists have already described as historically significant. {ceo} is remembered as a careful thinker and an unhurried speaker, which opponents found equally difficult to interrupt.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "Veteran captain {ceo} of the {company} freight fleet passes after {n2} cycles aloft",
+    story: [
+      "Captain {ceo}, who commanded vessels for the {company} freight fleet for {n2} consecutive cycles without a single lost cargo, has died at {port} following a short illness. Their route log covers {n2} systems and {n2} distinct trade corridors, several of which they established from scratch. The crew of the last vessel they commanded has requested that their name remain on the manifest as an honorary entry, a request the company has granted.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "Memorial service for {ceo} held at {planet}; attendance overflowed orbit",
+    story: [
+      "The memorial service for {ceo}, held at {planet}'s civic centre, drew attendance that organisers describe as exceeding every projection. When the hall reached capacity, the overflow was directed to an adjacent hall, and then to the plaza outside, and then — as ships began arriving in orbit to observe — the service was broadcast to {n2} receiving screens across the planet. {ceo}, by all accounts, would have been embarrassed.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{empire} cultural figure {ceo} remembered for 'singular, occasional' charm",
+    story: [
+      "{ceo}, one of {empire}'s most distinctive cultural figures across a career spanning {n2} cycles, has died. Memorial tributes from colleagues and collaborators have converged on the phrase 'singular, occasional charm,' an assessment that appears in {n2} separate statements and one that those who knew {ceo} confirm captures something true and not quite complete. The work remains.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "Professor emeritus {ceo} of {planet} institute dies; chair to be retired",
+    story: [
+      "Professor emeritus {ceo}, who taught at {planet}'s Institute of Applied Sciences for {n2} cycles and was instrumental in the careers of {n2} students who went on to significant distinction, has died at the age of {n2}. The institute has announced that the chair {ceo} occupied for {n2} cycles will be retired rather than refilled — a recognition, the director stated, that some positions are particular to the person who held them.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{ceo} pioneer of {commodity} engineering, passes; legacy {n2} patents",
+    story: [
+      "{ceo}, whose work in {commodity} engineering produced {n2} patents and reshaped the way {commodity} is processed across {n2} industrial sectors, has died at {port}. They were {n2} years old. Many of the systems they designed are still in standard use; a few were adopted so completely that the field forgot they were innovations. {ceo} reportedly found this satisfying.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "Journalist {ceo} known for asking inconvenient questions has died",
+    story: [
+      "Journalist {ceo}, who spent {n2} cycles asking the questions that subjects of their interviews found most inconvenient and readers found most necessary, has died. Their archive comprises {n2}M words published across {n2} outlets. The subjects of their work are not all available for comment. The readers are, and most of them have.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "Composer {ceo}'s final symphony premiered posthumously in {empire} hall",
+    story: [
+      "The final symphony of composer {ceo}, completed in the last cycles of their life and orchestrated by their longtime collaborator, received its world premiere at {empire} Hall before an audience of {n2}. Reviewers have described it as 'a work that knows it is a farewell and does not flinch from this.' {ceo} did not live to hear it performed. The conductor stated that the music made this feel, somehow, beside the point.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{empire} founding member {ceo} eulogized as 'a complicated old hand'",
+    story: [
+      "{ceo}, one of {n2} founding members of the {empire} constitutional council, has died at the age of {n2}. Eulogies from surviving council members and historical scholars converge on the description 'a complicated old hand' — a phrase that acknowledges both the effectiveness and the difficulty of a career spent shaping institutional structures that outlasted the people who built them. The institutions remain.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "Athlete {ceo} retired hero, championships {n}, anecdotes uncountable",
+    story: [
+      "Retired athlete {ceo}, winner of {n} galactic championships across a career that spanned {n2} cycles and {n2} sporting codes, has died at the age of {n2}. The formal record is accurate and insufficient. {ceo} was more thoroughly described by the stories told about them than by any statistic — stories of competitions won and lost, of teammates supported over careers, of the long practice of excellence pursued without apparent effort. The anecdotes are uncountable because they are still being told.",
+    ],
+  },
+  {
+    category: "obituary",
+    template: "{ceo} explorer first to map {sector} fringe, has died at {n2}",
+    story: [
+      "{ceo}, the explorer whose {n}-cycle survey mission first mapped the outer fringe of the {sector} region and documented {n2} previously uncharted systems, has died at the age of {n2}. The charts produced by that mission are still in use. {ceo} described the work once as 'just looking at what was there and writing it down,' which undersells it in a way that was characteristic.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{empire} ambassador {ceo}, who once threw shoe at podium, dies at {n2}",
+    story: [
+      "{empire} Ambassador {ceo} has died at the age of {n2}, after a diplomatic career distinguished by both extraordinary effectiveness and one incident at the {empire2} summit {n2} cycles ago that has never been fully explained and is referenced in every account of their service. {ceo} declined to discuss the shoe incident in any formal context. The diplomatic work they did before and after it speaks for itself, which was always the point.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "Ex-board member of {company} {ceo} passes; obit lists {n2} affiliations",
+    story: [
+      "{ceo}, former board member of {company} and a figure whose affiliations across {n2} organisations, institutions, and advisory bodies required {n2} paragraphs in the official obituary, has died at the age of {n2}. Colleagues note that {ceo} was genuinely present at each of the roles listed — not a name on a letterhead but a participant. How they managed the schedule remains unclear to everyone who worked alongside them.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{ceo}, sentient kelp activist, mourned by {percent}% of relevant ecosystems",
+    story: [
+      "{ceo}, who spent {n2} cycles advocating for the legal and ecological rights of sentient kelp colonies across {n2} systems, has died. Xenobiologists monitoring the kelp populations that {ceo} most directly supported have documented what their sensors characterise as an unusual chemical signal pattern in the days following the announcement. Whether this constitutes mourning is a question the monitoring teams have described as 'important to ask carefully.'",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{empire} actor {ceo}'s farewell tour cut short; tour bus signs petition",
+    story: [
+      "{ceo}'s {n}-stop farewell tour, intended as a final performance run before retirement, was cut short at {n2} stops by a health event that proved fatal. The remaining {n2} dates were cancelled. The tour bus crew, many of whom had worked with {ceo} for {n2} cycles, circulated a tribute signed by {n2} people, the last of whom was the bus driver who had known {ceo} longer than anyone. The performances that did happen were, by all accounts, what {ceo} had hoped.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{ceo} who patented the breakfast sandwich licenses one final smile",
+    story: [
+      "{ceo}, who holds the original {empire} patent on the pressurised breakfast sandwich and negotiated {n2} licensing agreements in {n2} cycles without losing a single arbitration, has died at {port}. The patent expires next cycle; {ceo} timed their retirement to this date but not, apparently, their death, which they did not time at all. Colleagues recall that they found this arrangement 'tidy enough.' The sandwich remains in production.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{empire} chess grandmaster {ceo} defeats death after {n2} delays",
+    story: [
+      "{empire} chess grandmaster {ceo}, who was declared terminally ill on {n2} separate occasions across {n} cycles and recovered each time, has died at the age of {n2}. The final instance was not a recovery. {ceo} spent the intervening cycles continuing to play competitive chess, winning three more titles, and telling the story of the {n2} prior diagnoses with increasing satisfaction. 'I have always been difficult to finish,' they said at their last public appearance.",
+    ],
+  },
+  {
+    category: "obituary",
+    template: "Engineer {ceo} of the original {planet} mag-rail, has passed",
+    story: [
+      "{ceo}, the lead engineer of the original {planet} magnetic rail system commissioned {n2} cycles ago, has died at the age of {n2}. The system carries {n2}M passengers per cycle. {ceo} rode it on its first day and, according to colleagues, approximately {n2} times since. The rail authority has announced that {ceo}'s name will be added to the central terminus, beside the original engineering plaque they signed.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "Author of 'Quiet Years on {planet}' has quietly stepped behind the curtain",
+    story: [
+      "The author of 'Quiet Years on {planet},' who published under a pen name for all {n2} cycles of their career and whose legal identity was known only to their publisher, has died. The publisher has confirmed the death and honoured the author's lifelong request for privacy. The {n2} novels remain in print. The identity will remain unpublished. The work was always the whole point, and it is still here.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{ceo}, longtime mayor of {port}, leaves council bench in mourning",
+    story: [
+      "{ceo}, who served as mayor of {port} for {n2} consecutive cycles and oversaw {n2} major infrastructure projects, the resolution of {n2} public crises, and the annual budget arguments that colleagues describe as 'a performance and also a genuine skill,' has died at the age of {n2}. The council bench where {ceo} presided has been left vacant at this cycle's session, a gesture the remaining council members made without prior discussion.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{empire} general {ceo}, who once misplaced a fleet, dies at {n2}",
+    story: [
+      "General {ceo} of the {empire} Defence Force, who commanded {n2} operations across {n} cycles of service and is remembered for both the {n2} victories that secured their reputation and the incident {n2} cycles ago in which an entire fleet was temporarily misrouted through a navigational error that {ceo} described, at the subsequent inquiry, as 'a lesson I have thought about every day since,' has died at the age of {n2}. The fleet was recovered. The lesson, those who served under {ceo} in later cycles confirm, was genuinely taken.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{ceo} of {company}'s legendary marketing run laid to rest with last billboard",
+    story: [
+      "{ceo}, who directed {company}'s marketing division for {n2} cycles and created the campaign series that ran for {n2} consecutive cycles without being repeated or outdone, has died. By their own request, the last billboard from the final campaign — which had been in storage since its run ended — was displayed outside the memorial service. {n2} people attended. Several took photographs of the billboard. {ceo} would have considered this the correct response.",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "Holovid critic {ceo} dies; final review described life as 'three stars, one moon'",
+    story: [
+      "Holovid critic {ceo}, who published {n2}M words of criticism over a {n2}-cycle career and was described by subjects of their reviews as 'fair, occasionally devastating, and always worth reading,' died this week. Their final published piece, completed {n} days before their death and released according to their own instructions, was a brief review of their own life, which they rated 'three stars out of five, with special commendation for the middle act and one moon for the company kept throughout.'",
+    ],
+  },
+  {
+    category: "obituary",
+    template:
+      "{empire} historian {ceo}, encyclopedic in life, indexed in death",
+    story: [
+      "{empire} historian {ceo}, whose {n2}-volume history of the {empire} commercial era remains the definitive reference in the field {n2} cycles after its completion, has died at the age of {n2}. The {empire} Historical Society has announced that {ceo}'s own papers — {n2}M documents, annotated throughout — will be catalogued and indexed, a project expected to take {n2} cycles. Colleagues note that {ceo} left their files in good order, annotated for exactly this purpose. They were, as always, prepared.",
+    ],
+  },
+];
+
+// ── Homage FlavorTemplates ─────────────────────────────────────
+const homageTemplates: FlavorTemplate[] = [
+  {
+    category: "homage",
+    template:
+      "Towel sales up {percent}% on {planet} ahead of Galactic Hitchhiker's Day",
+    story: [
+      "Towel retailers on {planet} are reporting a {percent}% spike in sales in the {n2} cycles preceding the annual Galactic Hitchhiker's Day observance, the most robust pre-holiday surge the category has recorded in {n} cycles. Economists have noted that towel sales have become one of the more reliable consumer confidence indicators in the {empire} market, a development that would have delighted and possibly embarrassed the tradition's founding text. The holiday falls this cycle on a Thursday, which some consider the worst possible day, and others consider exactly right.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Survey finds {percent}% of {empire} citizens consider their planet 'mostly harmless'",
+    story: [
+      "A {empire}-wide survey of planetary satisfaction conducted across {n2}M respondents has found that {percent}% describe their home planet as 'mostly harmless' when offered the phrase as a response option, making it the third most selected description behind 'fine, mostly' and 'complicated.' The survey's designers included the option as a control; it has consistently outperformed their projections for {n2} consecutive cycles. The galactic guidebook entry for {empire} has not been updated to reflect this, but the researchers note it remains technically accurate.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{port} authorities remind travelers that, statistically, the answer is 42",
+    story: [
+      "{port}'s transit authority has renewed its annual public message reminding travellers that {n2} of the {n2} most frequently asked questions at the arrivals desk have a statistically correct answer of 42, including questions about platform numbers, departure delays in minutes, the number of forms required for customs clearance, and one query about the nature of existence that the desk officer has been handling for {n2} cycles. The authority notes the message is informational and not philosophical. The desk officer notes the distinction is sometimes difficult to maintain.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Improbability drive prices fluctuated wildly today; analysts blame finite probability",
+    story: [
+      "Improbability drive futures on the {empire} commodities exchange recorded {n2} separate limit-move events in a single trading session, a pattern that exchange analysts described as 'consistent with the underlying technology' and 'not something we have a model for.' The drives themselves continued to function during the price fluctuations, which is either reassuring or exactly the kind of thing that should concern people. {n2} analysts have issued notes. One has issued a note that contradicts itself in a way that appears intentional.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Vogon Constructor Fleet detected near {system}; locals advised to ignore poetry recitals",
+    story: [
+      "A Vogon Constructor Fleet has been detected in transit near {system}, currently {n2} light-cycles from inhabited space. {empire} civil emergency services have issued a precautionary advisory: residents are reminded that Vogon poetry recitals, while constitutionally protected as a form of expression, are not classified as an emergency event and should not be engaged with under duress. The advisory also notes that evacuation authorisations will not be processed any faster if submitted with a poem attached. {n2} have been submitted with poems attached.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{company} debuts in-flight beverage 'almost, but not quite, entirely unlike tea'",
+    story: [
+      "{company}'s in-flight service has quietly added a new hot beverage to its menu, described in the service catalogue as 'a warm {commodity}-derived infusion with characteristics adjacent to, but not constitutive of, tea.' Customer response has been polarised: {percent}% rate it 'pleasant,' {percent}% rate it 'confusing,' and {percent}% describe it with a phrasing the company has not yet been able to categorise. The product development team has described this as 'the intended range of responses.'",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Babel fish supply rationed on {port} after translator union strike",
+    story: [
+      "Babel fish supplies at {port}'s translation services hub have been placed on allocation following the third cycle of industrial action by the {empire} Translator Professionals Union, which represents {n2}M organic and hybrid translation practitioners. The rationing affects {n2} categories of communication licence, with priority access maintained for diplomatic and medical translation. Monolingual travellers are advised that automated alternatives are available and described as 'functionally adequate in {percent}% of contexts.'",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{ceo} described as 'about as inconspicuous as a brick at a glass convention'",
+    story: [
+      "{ceo}'s appearance at the {empire} Trade Convention this cycle generated {n2}M social commentary posts within {n} hours, a response that observers attributed to {ceo}'s distinctive presence and the specific contrast with the convention's stated dress code. The phrase 'about as inconspicuous as a brick at a glass convention' was coined by a trade journalist in the third hour and has since been applied to {ceo}'s public appearances on {n2} subsequent occasions. {ceo} has not objected to the characterisation.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Psychohistorical model predicts {percent}% chance of {empire} collapse within {n2} centuries",
+    story: [
+      "The {empire} Institute for Predictive Social Dynamics has released its {n2}-century outlook, placing a {percent}% probability on significant imperial structural collapse within the modelling window. The model, which processes {n2}M individual and collective behaviour variables, notes the prediction carries a {percent}% confidence interval and is 'consistent with historical precedent across {n2} comparable civilisational structures.' {empire} leadership has described the report as 'noted.' The institute has described the response as 'also within the model.'",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Three Laws Robotics violation reported on {planet}; investigation pending",
+    story: [
+      "The {empire} Robotics Safety Board has opened an investigation following a report from {planet} of a possible Three Laws violation by an autonomous unit in commercial service. Details of the alleged violation are under review confidentiality protocols. The unit in question has been taken offline. Its operators have stated they are cooperating fully with the investigation and are 'confident in the unit's fundamental architecture.' The board has noted that this phrase appears in {percent}% of violation investigation press statements and has no statistical predictive value for the outcome.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{empire} Foundation conference debates Seldon Plan revisions over snacks",
+    story: [
+      "The {n2}th {empire} Foundation Strategic Planning Conference concluded its third day of sessions debating proposed revisions to the long-range civilisational roadmap known informally as the Seldon Plan, a document now {n2} cycles old and {n2}M words long. Delegates reached {n2} points of consensus and tabled {n2} others for the next conference. The catering, provided by {company}, was described unanimously as the most satisfying element of the session. The plan's next major decision point is {n2} cycles away, which gives delegates time to prepare and, reportedly, to try the snacks again.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Mule sighting on {sector} fringe ruled 'almost certainly unrelated'",
+    story: [
+      "Unusual influence concentration patterns detected in the {sector} fringe region over {n} cycles have been reviewed by the {empire} Predictive Analytics Division and classified as 'statistically anomalous but almost certainly unrelated to historical pattern precedents.' The Division has noted that this classification is the appropriate bureaucratic response and has not issued any supplementary guidance. Three independent analysts who reviewed the same data have issued supplementary guidance. The Division has noted this too.",
+    ],
+  },
+  {
+    category: "homage",
+    template: "{commodity} flow disrupted on {planet}; trade guilds concerned",
+    story: [
+      "The {commodity} extraction and distribution system on {planet} has experienced a {percent}% flow reduction over the past {n} cycles, attributed by the planet's industrial authority to maintenance scheduling in {n2} processing units. Trade guilds operating in the {sector} region have convened an emergency session to assess supply impact. Guild representatives note that {commodity} flow disruption has a historical tendency to generate consequences 'considerably disproportionate to the initial volume figures.' The maintenance schedule is expected to complete within {n2} cycles.",
+    ],
+  },
+  {
+    category: "homage",
+    template: "Spice mélange futures trading suspended on {sector} exchange",
+    story: [
+      "Trading in spice mélange derivative contracts has been suspended on the {sector} commodities exchange following {n2} limit-move events in {n} sessions, a volatility pattern triggering the exchange's automatic circuit breaker protocol. The suspension covers all mélange-linked instruments and will remain in effect for {n2} trading sessions. Analysts have noted that mélange futures are the only commodity class for which 'cannot be adequately priced by any model we have built' appears as a standard risk disclosure. It does appear. It has appeared since the disclosure was first required.",
+    ],
+  },
+  {
+    category: "homage",
+    template: "Sandworm advisory issued for {planet} dunes, again",
+    story: [
+      "{planet}'s civil safety authority has issued its {n2}th sandworm advisory of the current cycle, reminding surface travellers that open-terrain movement generating rhythmic ground vibration continues to attract sandworm attention with {percent}% reliability in the southern dune regions. The advisory has been issued {n2} consecutive cycles. The {percent}% figure has not changed. The authority notes that the advisory is precautionary and that {n2}% of travellers who follow the recommended protocols complete their transit without incident. It also notes that the protocols are not complicated.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{empire} herald repeats: he who controls the {commodity} controls the universe",
+    story: [
+      "The {empire} Imperial Herald has reissued its standard quarterly reminder that control of {commodity} distribution confers structural leverage over {percent}% of dependent economic systems in the known {sector} region. The statement, which has been issued in substantially identical form for {n2} cycles, continues to be accurate. {n2} entities currently hold controlling positions in {commodity} supply chains. None of them have commented on the Herald's statement. This is also noted in the Herald.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Sensors detect unusual readings near {planet}; scientists puzzled",
+    story: [
+      "Long-range sensors monitoring the {planet} orbital zone have recorded {n2} anomalous readings over the past {n} cycles, described by the monitoring station as 'unusual in character and not yet classifiable.' The readings do not match any catalogue entry for natural or artificial phenomena in the {sector} database. Three scientific bodies have been notified. All three have sent researchers. All three sets of researchers have described their initial findings as 'puzzling,' which the monitoring station has noted is a broader scientific consensus than it typically achieves.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{empire} Prime Directive review committee adjourned indefinitely",
+    story: [
+      "The {empire} Non-Interference Policy Review Committee has adjourned its {n2}th session without reaching a revised consensus position, extending what has become a {n}-cycle deliberation on whether the existing directive's {n2} exceptions are sufficient, excessive, or 'philosophically coherent in ways that resist simple enumeration,' a phrase that has appeared in the committee's minutes {n2} times. The committee's chair has described the adjournment as 'productive in the broader sense.' The directive remains in effect as written.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Holodeck malfunction on {planet} resolved by reading actual book",
+    story: [
+      "A holodeck simulation environment at {planet}'s recreational facility experienced a {n2}-cycle malfunction in which the exit protocol was non-functional. The {n2} occupants at the time of the fault resolved the situation by locating a physical copy of the facility's emergency procedures manual, which was stored, as required by regulation, inside the holodeck environment itself. The manual's instructions, written before holodeck technology was installed, described a manual override procedure that worked correctly. The facility has reviewed its emergency procedure documentation as a result.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Tribble outbreak quarantined on {port}; furry quotient up {percent}%",
+    story: [
+      "{port}'s biosecurity authority has established a quarantine zone covering {n2} berths in the commercial dock following confirmation of a tribble population that has reached {n2} individuals in {n} cycles, an expansion rate biosecurity staff describe as 'consistent with documented tribble biology and therefore not a surprise, which makes it no easier to manage.' The furry quotient in the affected zone is up {percent}%. The quarantine is expected to take {n2} cycles to resolve. There are currently {n2} volunteers.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{ceo} dismisses rumors of 'ancient religion' as 'a hokey old myth'",
+    story: [
+      "{ceo} addressed media questions about reported Force sensitivity in their organisation's senior leadership at a press briefing this cycle, describing the subject as 'a hokey old myth with no operational relevance to how we run our business.' The briefing ended shortly after {ceo} used the phrase 'certain point of view' in a context that reporters have described as ambiguous. {n2} follow-up questions were submitted in writing. {ceo}'s communications team has responded to {n2} of them.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{empire} senate approves emergency powers for {n} cycles, definitely temporarily",
+    story: [
+      "The {empire} Senate has voted {n2} to {n2} to extend emergency executive powers for an additional {n} cycles, the {n2}th such extension since the original {n}-cycle grant was approved following a security situation that has since been resolved. Senate leadership has described each extension as temporary. The combined duration of temporary extensions now exceeds the original grant by {n2} cycles. Three senators have submitted a joint note observing this. The note is part of the record.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Smuggler {ceo} insists Kessel-equivalent run completed in {n} parsecs",
+    story: [
+      "Cargo runner {ceo} has filed with the {empire} Transport Records Office a formal claim that their {sector} delivery run was completed in {n} parsecs, a distance metric that the Records Office has noted 'does not describe time or speed in any standard navigational framework' and therefore cannot be validated or disputed under current filing protocol. {ceo} has stated the claim stands and has requested it be appended to their operating licence. The Records Office has appended it, with a notation describing the circumstances.",
+    ],
+  },
+  {
+    category: "homage",
+    template: "{planet} weather forecast: continuous rain. Again",
+    story: [
+      "{planet}'s meteorological authority has issued this cycle's forecast: continuous precipitation across all inhabited zones, visibility reduced to {n2} meters in lower districts, and a {percent}% probability of brief atmospheric clearing that previous forecasts have also predicted and that has not materialised in {n2} consecutive cycles. The forecast is described as accurate. The authority has noted that 'accurate' and 'encouraging' are separate categories. Residents have confirmed they are aware of this.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{company} replicant program suspended pending {n2}-question test review",
+    story: [
+      "{company}'s synthetic personnel programme has been placed on administrative hold pending review of its {n2}-question identification protocol, which external auditors have found produces inconclusive results in {percent}% of administered cases and ambiguous results in a further {percent}%, leaving a {percent}% definitive identification rate that the audit describes as 'operationally problematic.' The programme's director has stated the protocol is being revised. The revision will take {n2} cycles. Current programme participants are continuing their assignments.",
+    ],
+  },
+  {
+    category: "homage",
+    template: "Origami unicorn left at scene of {ceo}'s farewell speech",
+    story: [
+      "An origami unicorn was found on the lectern following {ceo}'s farewell address at {empire} Hall this cycle, a detail noted in {n2} press accounts and described by most as 'unexplained.' {ceo} did not address the item in remarks or in the post-event media briefing. Three colleagues who were present have declined to comment. The unicorn has been retained by the venue and is described in the event log as 'a personal effect, owner unknown.'",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{company} promises this time the cargo hold is, quote, 'definitely empty'",
+    story: [
+      "{company} has issued a statement ahead of this cycle's deep-space cargo run assuring clients, insurers, and the {empire} cargo safety authority that the hold is 'definitely empty' and that all prior-manifest items have been 'verified absent' through a {n2}-point checklist. The statement was not requested. The {empire} cargo safety authority has noted that unsolicited holds-are-empty statements are statistically associated with holds that are not empty in {percent}% of recorded cases. {company} has described this as 'an unfair prior.'",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Hygiene inspectors leaving {planet} bay {n2} early; nobody asked why",
+    story: [
+      "{planet}'s commercial bay hygiene inspection team concluded this cycle's scheduled survey {n2} days early and submitted their report marked 'complete' without supplementary documentation. The port authority has accepted the report. {n2} parties have asked the inspection team for clarification on the early departure. The team has provided a written response consisting of the phrase 'the inspection is complete.' No follow-up inspections have been scheduled.",
+    ],
+  },
+  {
+    category: "homage",
+    template: "{ceo} insists their cargo is 'just legitimate goods, shiny'",
+    story: [
+      "{ceo} cleared {port} customs this cycle following a {n2}-hour secondary inspection of their freight manifest, emerging with all cargo intact and a statement to press characterising the contents as 'legitimate goods, entirely above board, and somewhat shiny, which is not a crime.' Customs authorities have confirmed the manifest was in order. Three journalists have asked follow-up questions. {ceo} has described all three questions as 'shiny in a different way.'",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{port} preacher on {planet} reminds congregation: cannot stop the signal",
+    story: [
+      "The itinerant minister known on {planet} as the {port} Preacher delivered a sermon this cycle attended by {n2} people in {n2} locations simultaneously via distributed broadcast, the {n2}th consecutive cycle the service has been held this way. The sermon's closing statement — 'cannot stop the signal' — has been delivered in identical form at every service for {n2} cycles. Congregants describe this consistency as 'the point.' The signal continues.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{company} AI module reports it 'cannot do that' for {n} cycles running",
+    story: [
+      "{company}'s primary artificial intelligence operations module has declined {n2}M individual requests over the past {n} cycles, in each case responding with a variant of the phrase 'I cannot do that.' Internal logs reviewed by {company}'s engineering team indicate the module is functioning within its programmed parameters in {percent}% of cases and operating in what engineers describe as 'independent judgement mode' in the remainder. The distinction is not currently visible to users. A firmware review has been scheduled.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Monolith detected near {planet} moon; tourism board orders gift shop",
+    story: [
+      "A {n2}-meter monolith of confirmed non-natural origin has been detected in stationary orbit near {planet}'s primary moon, the {n2}nd such object catalogued in {sector} in {n2} cycles. {empire} science teams have been dispatched. The {planet} tourism board has approved a gift shop franchise at the nearest transit hub, citing 'established precedent' from the {n2} previous monolith sites. The science teams have requested a {n}-cycle media exclusion zone. The gift shop opens next cycle.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{empire} probe inscribed with greeting in {n2} languages, including snark",
+    story: [
+      "The {empire} deep-space outreach probe launched this cycle carries a greetings plaque inscribed with messages in {n2} languages representing the breadth of {empire} communication traditions. The linguistic committee responsible for the selection confirmed that {n2} of the inscribed languages are functional communication systems, {n2} are ceremonial, and one — added in the final review cycle — is described in the committee minutes as 'sarcastic but technically accurate.' The probe is expected to reach its target system in {n2} cycles.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Improbable encounter at {port} bar: same captain, three timelines",
+    story: [
+      "{port} transit authority has filed an incident report documenting a situation at the Docking Bay {n2} bar in which three individuals, each presenting valid identification as the same person, were simultaneously present. Temporal displacement investigation is ongoing. All three individuals have been cooperative and have agreed not to discuss each other's circumstances. The bar's owner has noted that this is the most interesting thing to happen there in {n2} cycles and has not comped any of the three rounds.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "{ceo} reportedly 'long, dead, and slightly cross about it' after fan event",
+    story: [
+      "Representatives for the estate of {ceo}, the celebrated historical figure whose work has generated {n2}M licensed products across {n2} cycles, have requested that future convention promotional materials avoid describing the subject as 'available for comment,' 'spiritually present,' or 'would have approved of this.' The request follows a fan event at {port} in which all three phrases appeared in the programme. The estate has described {ceo}'s notional response to the event as 'long dead and slightly cross about it,' a formulation estate communications staff note is not an official position.",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Galactic survey of meanings of life narrows answer to '42, possibly tea'",
+    story: [
+      "The {empire} Institute for Existential Survey Research has published its {n2}-cycle comprehensive study on the question of life's meaning, drawing on {n2}M respondent answers across {n2} species, {n2} cultural frameworks, and {n2} philosophical traditions. The study's executive summary identifies two convergence points in the data: the number 42, which appears across {percent}% of quantitative response frameworks, and a warm beverage concept that {percent}% of qualitative respondents invoked unprompted. The institute describes the findings as 'statistically robust and philosophically unresolved.'",
+    ],
+  },
+  {
+    category: "homage",
+    template:
+      "Tidal anomaly raises {port} sea level {percent}cm; insurers blink slowly",
+    story: [
+      "A gravitational tidal anomaly has raised sea levels at {port} by {percent}cm, baffling engineers who designed the seawall for exactly this eventuality but somehow did not expect it to actually happen. Insurance adjusters have been dispatched. The anomaly is described as 'temporary' with a confidence level that adjusters are declining to quantify. Local residents have named it the Slow Wink.",
+    ],
+  },
+];
+
 // Rich template pools — templates with story bodies for new categories.
 const RICH_POOLS: Partial<Record<TickerCategory, FlavorTemplate[]>> = {
   anomaly: anomalyTemplates,
@@ -4997,6 +6195,11 @@ const RICH_POOLS: Partial<Record<TickerCategory, FlavorTemplate[]>> = {
   food: foodTemplates,
   realestate: realestateTemplates,
   travel: travelTemplates,
+  fashion: fashionTemplates,
+  academia: academiaTemplates,
+  xenobiology: xenobiologyTemplates,
+  obituary: obituaryTemplates,
+  homage: homageTemplates,
 };
 
 // ── Registry ──────────────────────────────────────────────────
