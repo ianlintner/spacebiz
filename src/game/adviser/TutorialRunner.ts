@@ -159,7 +159,7 @@ export class TutorialRunner {
       ? `${idleShip.name} is assigned and ready to haul.`
       : "Assign a ship from the Fleet screen when you're ready.";
 
-    this.scene.time.delayedCall(200, () => {
+    this.scene.time.delayedCall(2200, () => {
       this.showFinalModal(
         `Route opened: ${opp.originName} → ${opp.destinationName} (${opp.bestCargoType}). ${shipNote} Hit the End Turn button to run the simulation — your ships will haul cargo and revenue will roll in!`,
       );

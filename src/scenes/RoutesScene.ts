@@ -127,6 +127,7 @@ export class RoutesScene extends Phaser.Scene {
 
   switchToActiveRoutesTab(): void {
     this.tabGroup.setActiveTab(1);
+    this.refreshActiveTable();
   }
 
   create(): void {
