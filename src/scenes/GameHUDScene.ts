@@ -70,6 +70,12 @@ import {
 } from "../game/PortraitLoader.ts";
 import { getNewlyUnlockedTabs } from "../game/nav/NavUnlocks.ts";
 import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
+import { openCommunicationModal } from "../ui/CommunicationModal.ts";
+import { getStandingTier } from "../game/diplomacy/StandingTiers.ts";
+import { buildAmbassadorGreeting } from "../game/diplomacy/AmbassadorGreetings.ts";
+import { buildRivalMessageDialogue } from "../game/rivals/RivalMessageDialogue.ts";
+import { replaceTag } from "../game/diplomacy/StandingTags.ts";
+import type { RivalMessage } from "../data/types.ts";
 import {
   NAV_GROUPS,
   SCENE_TO_NAV_TAB,
@@ -138,6 +144,12 @@ export class GameHUDScene extends Phaser.Scene {
   private newsTicker: HorizontalNewsTicker | null = null;
   private sceneUi!: SceneUiDirector;
   private tutorialHighlight?: Phaser.GameObjects.Rectangle;
+  /** Empire ids copied from state when a new turn begins — drained as ambassador modals show. */
+  private sessionAmbassadorQueue: string[] = [];
+  private ambassadorGreetingShowing = false;
+  /** Rival messages copied from state at turn start — drained after ambassador greetings. */
+  private sessionRivalMessageQueue: RivalMessage[] = [];
+  private rivalMessageShowing = false;
   // ── Layout-derived widgets re-positioned/re-sized by relayout() ──
   private topBarBg!: Phaser.GameObjects.NineSlice;
   private bottomBarBg!: Phaser.GameObjects.NineSlice;
@@ -212,6 +224,16 @@ export class GameHUDScene extends Phaser.Scene {
         gameStore.update({
           adviser: { ...state.adviser, pendingMessages: [] },
         });
+      }
+      // Capture ambassador greetings queued during the previous turn.
+      if (state.pendingAmbassadorGreetings?.length) {
+        this.sessionAmbassadorQueue.push(...state.pendingAmbassadorGreetings);
+        gameStore.update({ pendingAmbassadorGreetings: [] });
+      }
+      // Capture rival CEO messages queued during the previous turn.
+      if (state.pendingRivalMessages?.length) {
+        this.sessionRivalMessageQueue.push(...state.pendingRivalMessages);
+        gameStore.update({ pendingRivalMessages: [] });
       }
     }
     this.updateHUD();
@@ -894,6 +916,14 @@ export class GameHUDScene extends Phaser.Scene {
         tickerY,
         L.gameWidth - L.navSidebarWidth,
         L.hudTickerHeight,
+        {
+          onItemClick: (item) => {
+            if (!this.scene.isActive("NewscasterScene")) {
+              this.scene.launch("NewscasterScene", { item });
+              this.scene.bringToTop("NewscasterScene");
+            }
+          },
+        },
       );
       this.newsTicker.updateItems(this.buildTickerItems(gameStore.getState()));
     }
@@ -927,7 +957,175 @@ export class GameHUDScene extends Phaser.Scene {
     if (hasDilemma && !this.scene.isActive("DilemmaScene")) {
       this.scene.launch("DilemmaScene");
       this.scene.bringToTop("DilemmaScene");
+    } else if (!hasDilemma) {
+      this.maybeShowAmbassadorGreeting();
     }
+  }
+
+  private maybeShowAmbassadorGreeting(): void {
+    if (this.ambassadorGreetingShowing) return;
+    if (!this.sessionAmbassadorQueue.length) {
+      // No ambassador greetings — proceed to rival messages
+      this.maybeShowRivalMessage();
+      return;
+    }
+    if (this.scene.isActive("DilemmaScene")) return;
+
+    const empireId = this.sessionAmbassadorQueue.shift()!;
+    const state = gameStore.getState();
+
+    const ambassador = state.diplomacy?.empireAmbassadors[empireId];
+    const empire = state.galaxy.empires.find((e) => e.id === empireId);
+    if (!ambassador || !empire) {
+      // Unknown empire — skip and try the next one
+      this.maybeShowAmbassadorGreeting();
+      return;
+    }
+
+    const standingValue = state.empireReputation?.[empireId] ?? 50;
+    const tier = getStandingTier(standingValue);
+    const text = buildAmbassadorGreeting(
+      ambassador.personality,
+      tier,
+      empire.name,
+    );
+
+    this.ambassadorGreetingShowing = true;
+    openCommunicationModal(this, this.sceneUi, {
+      speakerName: ambassador.name,
+      speakerTitle: `Ambassador, ${empire.name}`,
+      accentColor: empire.color,
+      ambassadorPortraitId: ambassador.portrait.portraitId,
+      text,
+      onDismiss: () => {
+        this.ambassadorGreetingShowing = false;
+        // Chain: more ambassador greetings first, then rival messages
+        if (this.sessionAmbassadorQueue.length) {
+          this.maybeShowAmbassadorGreeting();
+        } else {
+          this.maybeShowRivalMessage();
+        }
+      },
+    });
+  }
+
+  private maybeShowRivalMessage(): void {
+    if (this.rivalMessageShowing) return;
+    if (!this.sessionRivalMessageQueue.length) return;
+    if (this.scene.isActive("DilemmaScene")) return;
+    if (this.ambassadorGreetingShowing) return;
+
+    const msg = this.sessionRivalMessageQueue.shift()!;
+    const state = gameStore.getState();
+
+    const rival = state.aiCompanies?.find((c) => c.id === msg.rivalId);
+    const liaison = state.diplomacy?.rivalLiaisons[msg.rivalId];
+    if (!rival || !liaison) {
+      this.maybeShowRivalMessage();
+      return;
+    }
+
+    const { text, choices } = buildRivalMessageDialogue(
+      msg.kind,
+      liaison.personality,
+      rival.name,
+    );
+
+    const next = () => {
+      this.rivalMessageShowing = false;
+      this.maybeShowRivalMessage();
+    };
+
+    this.rivalMessageShowing = true;
+    openCommunicationModal(this, this.sceneUi, {
+      speakerName: liaison.name,
+      speakerTitle: `${rival.name}`,
+      accentColor: 0x8888bb,
+      ambassadorPortraitId: liaison.portrait.portraitId,
+      text,
+      ...(choices
+        ? {
+            choices: [
+              {
+                label: choices[0],
+                onClick: () => {
+                  this.handleRivalProposalResponse(msg, true);
+                  next();
+                },
+              },
+              {
+                label: choices[1],
+                onClick: () => {
+                  this.handleRivalProposalResponse(msg, false);
+                  next();
+                },
+              },
+            ],
+          }
+        : { onDismiss: next }),
+    });
+  }
+
+  private handleRivalProposalResponse(
+    msg: RivalMessage,
+    accepted: boolean,
+  ): void {
+    const state = gameStore.getState();
+    if (!state.diplomacy) return;
+    const rival = state.aiCompanies?.find((c) => c.id === msg.rivalId);
+    const standing = state.diplomacy.rivalStanding[msg.rivalId] ?? 50;
+    const currentTags = state.diplomacy.rivalTags[msg.rivalId] ?? [];
+
+    if (accepted && msg.proposalType === "nonCompete" && rival) {
+      // Add a NonCompete tag covering the player's empire and the rival's home empire.
+      const protectedPair = [state.playerEmpireId, rival.empireId].filter(
+        Boolean,
+      ) as string[];
+      const newTags = replaceTag(currentTags, {
+        kind: "NonCompete",
+        protectedEmpireIds: protectedPair,
+        expiresOnTurn: state.turn + 8,
+      });
+      gameStore.update({
+        diplomacy: {
+          ...state.diplomacy,
+          rivalStanding: {
+            ...state.diplomacy.rivalStanding,
+            [msg.rivalId]: Math.min(100, standing + 15),
+          },
+          rivalTags: { ...state.diplomacy.rivalTags, [msg.rivalId]: newTags },
+        },
+      });
+      return;
+    }
+
+    if (accepted && msg.proposalType === "sharedIntel") {
+      gameStore.update({
+        tech: {
+          ...state.tech,
+          researchPoints: state.tech.researchPoints + 150,
+        },
+        diplomacy: {
+          ...state.diplomacy,
+          rivalStanding: {
+            ...state.diplomacy.rivalStanding,
+            [msg.rivalId]: Math.min(100, standing + 10),
+          },
+        },
+      });
+      return;
+    }
+
+    // Declined — standing penalty only.
+    gameStore.update({
+      diplomacy: {
+        ...state.diplomacy,
+        rivalStanding: {
+          ...state.diplomacy.rivalStanding,
+          [msg.rivalId]: Math.max(0, standing - 8),
+        },
+      },
+    });
   }
 
   private updateHUD(): void {

@@ -880,6 +880,24 @@ export interface AICompany {
   homeworldPlanetId?: string;
 }
 
+// ── Rival communications ────────────────────────────────────
+
+export type RivalMessageKind =
+  | "taunt" // rival is significantly ahead and rubs it in
+  | "warning" // rival warns player to back off their territory
+  | "espionageCaught" // rival discovered player's surveillance or sabotage
+  | "proposal" // rival proposes a non-compete or intel-sharing deal
+  | "congratulate" // rival acknowledges the player is doing well
+  | "flavor" // periodic character-building contact
+  | "breachOfAgreement"; // player violated a non-compete agreement
+
+export interface RivalMessage {
+  rivalId: string;
+  kind: RivalMessageKind;
+  /** Set for "proposal" messages — the type of deal being offered. */
+  proposalType?: "nonCompete" | "sharedIntel";
+}
+
 // ── Contract types ─────────────────────────────────────────
 
 /**
@@ -1277,4 +1295,12 @@ export interface GameState {
     diplomacyDigest?: string[];
     [k: string]: unknown;
   };
+
+  /** Empire ids queued to greet the player at the start of the next turn (after summary & dilemmas). */
+  pendingAmbassadorGreetings?: string[];
+  /** Empire ids whose ambassador has already welcomed the player — prevents repeat greetings. */
+  greetedEmpireIds?: string[];
+
+  /** Rival CEO communications queued to show at the start of the next turn. */
+  pendingRivalMessages?: RivalMessage[];
 }

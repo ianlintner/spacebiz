@@ -55,6 +55,7 @@ import {
   recordDilemmaFired,
 } from "../events/Storyteller.ts";
 import { generateTurnMessages } from "../adviser/AdviserEngine.ts";
+import { generateRivalMessages } from "../rivals/RivalMessageGenerator.ts";
 import { simulateAITurns } from "../ai/AISimulator.ts";
 import { processContracts } from "../contracts/ContractManager.ts";
 import {
@@ -934,6 +935,29 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       ].slice(-ADVISER_QUEUE_CAP),
     },
   };
+
+  // ----- Step 11c: Generate rival CEO communications -----
+  {
+    const { messages, cooldownUpdates } = generateRivalMessages(nextState, rng);
+    if (messages.length > 0) {
+      nextState = {
+        ...nextState,
+        pendingRivalMessages: [
+          ...(nextState.pendingRivalMessages ?? []),
+          ...messages,
+        ],
+        diplomacy: nextState.diplomacy
+          ? {
+              ...nextState.diplomacy,
+              cooldowns: {
+                ...nextState.diplomacy.cooldowns,
+                ...cooldownUpdates,
+              },
+            }
+          : nextState.diplomacy,
+      };
+    }
+  }
 
   // ----- Step 12: Advance turn counter and check end conditions -----
   const nextTurn = nextState.turn + 1;
