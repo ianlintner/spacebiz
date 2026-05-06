@@ -837,6 +837,375 @@ const empireSuccession: EventChainDefinition = {
 };
 
 // ---------------------------------------------------------------------------
+// Chain 7: Anomaly Investigation (3 steps)
+// Triggers: when a Tier 2 anomaly fires; 40% chance to seed
+// ---------------------------------------------------------------------------
+
+const anomalyInvestigationChain: EventChainDefinition = {
+  chainId: "anomaly_investigation",
+  name: "Anomaly Investigation",
+  description:
+    "A flavor anomaly escalates into a real consequence — discovery or disaster.",
+  triggerCondition: (state) =>
+    state.turn >= 4 &&
+    state.activeEventChains.every(
+      (c) => c.chainId !== "anomaly_investigation",
+    ) &&
+    // Trigger only when a tier-2 anomaly is in activeEvents
+    state.activeEvents.some((e) =>
+      [
+        "ghost_signal",
+        "ancient_probe_detected",
+        "temporal_echo",
+        "void_choir_phenomenon",
+        "mass_hallucination_report",
+        "unexplained_formation",
+        "first_contact_signal",
+      ].includes(e.id),
+    ),
+  steps: [
+    {
+      stepIndex: 0,
+      delayTurns: 0,
+      prompt:
+        "Strange readings persist near a recent anomaly. Your survey teams want to deploy a probe.",
+      options: [
+        {
+          id: "send_probe",
+          label: "Send a deep-space probe",
+          outcomeDescription:
+            "Most expensive option — but you'll know what's out there.",
+          baseSuccess: 60,
+          scalingTags: ["cash", "tech"],
+          effects: [{ type: "modifyCash", value: -6000 }],
+        },
+        {
+          id: "sell_coordinates_anomaly",
+          label: "Sell coordinates to a rival corporation",
+          outcomeDescription: "Cash now, reputation later.",
+          baseSuccess: 80,
+          effects: [
+            { type: "modifyCash", value: 4000 },
+            { type: "modifyReputation", value: -3 },
+          ],
+        },
+        {
+          id: "ignore_anomaly",
+          label: "Ignore it",
+          outcomeDescription: "Free, but you may regret it.",
+          baseSuccess: 90,
+          effects: [],
+        },
+      ],
+    },
+    {
+      stepIndex: 1,
+      delayTurns: 2,
+      prompt:
+        "The probe returns with data. The readings are unprecedented — and ambiguous.",
+      options: [
+        {
+          id: "investigate_further",
+          label: "Charter a follow-up expedition",
+          outcomeDescription: "Most likely to yield a discovery.",
+          baseSuccess: 55,
+          scalingTags: ["cash", "tech", "navigation"],
+          effects: [{ type: "modifyCash", value: -10000 }],
+        },
+        {
+          id: "publish_findings",
+          label: "Publish the findings publicly",
+          outcomeDescription: "Reputation boost; you lose exclusive claim.",
+          baseSuccess: 75,
+          effects: [{ type: "modifyReputation", value: 8 }],
+        },
+        {
+          id: "stay_quiet",
+          label: "Stay quiet and watch what happens",
+          outcomeDescription:
+            "No cost, no reward — but you'll be on the back foot if it escalates.",
+          baseSuccess: 80,
+          effects: [],
+        },
+      ],
+    },
+    {
+      stepIndex: 2,
+      delayTurns: 2,
+      prompt:
+        "The investigation reaches its conclusion. Either an ancient ruin is uncovered — or the anomaly has destabilized into a spatial rift.",
+      options: [
+        {
+          id: "claim_discovery",
+          label: "Claim the discovery (if positive outcome)",
+          outcomeDescription:
+            "Big reputation gain and potential research income.",
+          baseSuccess: 70,
+          effects: [
+            { type: "modifyCash", value: 18000 },
+            { type: "modifyReputation", value: 12 },
+          ],
+        },
+        {
+          id: "absorb_disaster",
+          label: "Absorb the disaster (if negative outcome)",
+          outcomeDescription: "Take the route damage and move on.",
+          baseSuccess: 90,
+          effects: [{ type: "modifyFleetCondition", value: -10 }],
+        },
+      ],
+    },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// Chain 8: Galactic Music Tour (3 steps)
+// Triggers: turn >= 6, a roster Musician with onTour: false exists
+// ---------------------------------------------------------------------------
+
+const galacticMusicTourChain: EventChainDefinition = {
+  chainId: "galactic_music_tour",
+  name: "Galactic Music Tour",
+  description:
+    "A roster musician launches a tour. Player can sponsor, ship cargo, or ignore.",
+  triggerCondition: (state) =>
+    state.turn >= 6 &&
+    state.activeEventChains.every((c) => c.chainId !== "galactic_music_tour") &&
+    (state.universeRoster?.musicians ?? []).some((m) => !m.onTour),
+  steps: [
+    {
+      stepIndex: 0,
+      delayTurns: 0,
+      prompt:
+        "{musician} is announcing a galactic tour. Promoters are courting freight companies for sponsorship.",
+      options: [
+        {
+          id: "sponsor_tour",
+          label: "Sponsor the tour",
+          outcomeDescription: "Brand visibility across the galaxy.",
+          baseSuccess: 65,
+          scalingTags: ["cash", "rep"],
+          effects: [
+            { type: "modifyCash", value: -8000 },
+            { type: "modifyReputation", value: 6 },
+          ],
+        },
+        {
+          id: "book_tour_cargo",
+          label: "Book cargo contracts hauling tour equipment",
+          outcomeDescription: "Steady revenue, no glamour.",
+          baseSuccess: 75,
+          scalingTags: ["fleetSize"],
+          effects: [{ type: "modifyCash", value: 5000 }],
+        },
+        {
+          id: "ignore_tour",
+          label: "Ignore the tour",
+          outcomeDescription: "A rival sponsors it instead.",
+          baseSuccess: 95,
+          effects: [{ type: "modifyReputation", value: -2 }],
+        },
+      ],
+    },
+    {
+      stepIndex: 1,
+      delayTurns: 2,
+      prompt:
+        "Concert night at {port}. {musician} pulls record crowds — but rumors of a contract dispute swirl.",
+      options: [
+        {
+          id: "amplify_sponsorship",
+          label: "Double down on sponsorship visibility",
+          outcomeDescription: "More marketing spend, more brand lift.",
+          baseSuccess: 55,
+          scalingTags: ["cash"],
+          effects: [
+            { type: "modifyCash", value: -4000 },
+            { type: "modifyReputation", value: 5 },
+          ],
+        },
+        {
+          id: "stay_low_key",
+          label: "Stay low-key — let the tour speak for itself",
+          outcomeDescription: "Modest gains either way.",
+          baseSuccess: 80,
+          effects: [{ type: "modifyReputation", value: 2 }],
+        },
+      ],
+    },
+    {
+      stepIndex: 2,
+      delayTurns: 1,
+      prompt:
+        "Aftermath: {musician} is now embroiled in {controversy}. Sponsors are caught in the spotlight.",
+      options: [
+        {
+          id: "distance_from_scandal",
+          label: "Quietly distance yourself from the artist",
+          outcomeDescription:
+            "Save your rep at the cost of being seen as a fair-weather backer.",
+          baseSuccess: 70,
+          scalingTags: ["rep"],
+          effects: [{ type: "modifyReputation", value: -2 }],
+        },
+        {
+          id: "defend_artist",
+          label: "Publicly defend the artist",
+          outcomeDescription: "Polarizing — could pay off, could backfire.",
+          baseSuccess: 50,
+          scalingTags: ["rep"],
+          effects: [{ type: "modifyReputation", value: 8 }],
+        },
+      ],
+    },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// Chain 9: Military Buildup (4 steps)
+// Triggers: turn >= 10, two empires have active diplomatic relations
+// ---------------------------------------------------------------------------
+
+const militaryBuildupChain: EventChainDefinition = {
+  chainId: "military_buildup",
+  name: "Military Buildup",
+  description:
+    "An arms race escalates between two empires; player can profit, mediate, or hedge.",
+  triggerCondition: (state) =>
+    state.turn >= 10 &&
+    state.activeEventChains.every((c) => c.chainId !== "military_buildup") &&
+    (state.galaxy?.empires?.length ?? 0) >= 2,
+  steps: [
+    {
+      stepIndex: 0,
+      delayTurns: 0,
+      prompt:
+        "Intelligence sources report unusual fleet movements between two empires. {rank} {officer} is mobilizing.",
+      options: [
+        {
+          id: "report_to_empire",
+          label: "Report the buildup to your home empire",
+          outcomeDescription: "Earn favor with your home empire.",
+          baseSuccess: 75,
+          scalingTags: ["rep"],
+          effects: [{ type: "modifyReputation", value: 5 }],
+        },
+        {
+          id: "sell_intel_rival",
+          label: "Sell the intel to the rival empire",
+          outcomeDescription: "Cash gain, reputation loss if discovered.",
+          baseSuccess: 50,
+          scalingTags: ["cash"],
+          effects: [
+            { type: "modifyCash", value: 14000 },
+            { type: "modifyReputation", value: -8 },
+          ],
+        },
+        {
+          id: "sit_on_intel",
+          label: "Sit on the intel",
+          outcomeDescription: "No risk, no reward.",
+          baseSuccess: 95,
+          effects: [],
+        },
+      ],
+    },
+    {
+      stepIndex: 1,
+      delayTurns: 3,
+      prompt:
+        "The arms race formalizes. Border tariffs spike and military contractors are hiring freight at premium rates.",
+      options: [
+        {
+          id: "hedge_both",
+          label: "Hedge — supply both empires through shells",
+          outcomeDescription: "Modest gain, complex logistics.",
+          baseSuccess: 50,
+          scalingTags: ["fleetSize"],
+          effects: [{ type: "modifyCash", value: 8000 }],
+        },
+        {
+          id: "commit_one",
+          label: "Commit fully to one side's supply chain",
+          outcomeDescription: "Bigger gain if you pick the winner.",
+          baseSuccess: 60,
+          scalingTags: ["fleetSize", "rep"],
+          effects: [
+            { type: "modifyCash", value: 12000 },
+            { type: "modifyReputation", value: 4 },
+          ],
+        },
+        {
+          id: "move_assets",
+          label: "Quietly move assets out of the conflict zone",
+          outcomeDescription: "Safe play; no profit from the war boom.",
+          baseSuccess: 85,
+          scalingTags: ["navigation"],
+          effects: [{ type: "modifyCash", value: -3000 }],
+        },
+      ],
+    },
+    {
+      stepIndex: 2,
+      delayTurns: 2,
+      prompt:
+        "A border incident has occurred. {officer}'s status hangs in the balance. The galaxy holds its breath.",
+      options: [
+        {
+          id: "offer_mediation",
+          label: "Offer mediation services",
+          outcomeDescription:
+            "Big reputation upside if successful, embarrassment if not.",
+          baseSuccess: 35,
+          scalingTags: ["rep", "tech"],
+          effects: [{ type: "modifyReputation", value: 12 }],
+        },
+        {
+          id: "profiteer_conflict",
+          label: "Profiteer from emergency demand",
+          outcomeDescription: "Cash up, ethics down.",
+          baseSuccess: 70,
+          scalingTags: ["fleetSize"],
+          effects: [
+            { type: "modifyCash", value: 16000 },
+            { type: "modifyReputation", value: -6 },
+          ],
+        },
+        {
+          id: "pull_routes",
+          label: "Pull all cross-border routes preemptively",
+          outcomeDescription: "Protect your fleet, lose contracts.",
+          baseSuccess: 90,
+          effects: [{ type: "modifyCash", value: -7000 }],
+        },
+      ],
+    },
+    {
+      stepIndex: 3,
+      delayTurns: 2,
+      prompt:
+        "The buildup resolves — either into open war or a tense armistice. The dust is settling.",
+      options: [
+        {
+          id: "war_post_mortem",
+          label: "Publicly back the survivor empire",
+          outcomeDescription: "Long-term diplomatic capital.",
+          baseSuccess: 65,
+          effects: [{ type: "modifyReputation", value: 8 }],
+        },
+        {
+          id: "armistice_business",
+          label: "Quietly resume normal operations",
+          outcomeDescription: "No flair, no fuss.",
+          baseSuccess: 90,
+          effects: [],
+        },
+      ],
+    },
+  ],
+};
+
+// ---------------------------------------------------------------------------
 // All chain definitions exported
 // ---------------------------------------------------------------------------
 
@@ -847,6 +1216,9 @@ export const EVENT_CHAIN_DEFINITIONS: EventChainDefinition[] = [
   fuelCrisis,
   blackMarketScandal,
   empireSuccession,
+  anomalyInvestigationChain,
+  galacticMusicTourChain,
+  militaryBuildupChain,
 ];
 
 /** Look up a chain definition by its chainId */
