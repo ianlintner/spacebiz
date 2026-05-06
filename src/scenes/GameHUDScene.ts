@@ -30,6 +30,7 @@ import { TUTORIAL_STEPS } from "../game/adviser/TutorialDefinitions.ts";
 import type { GameState } from "../data/types.ts";
 import { generateTickerFeed } from "../generation/news/tickerFeed.ts";
 import { generateOpeningFeed } from "../generation/news/openingFeed.ts";
+import type { RoutesScene } from "./RoutesScene.ts";
 
 /**
  * Compact "Charters: 3 (2P/1F) · Upkeep: §2,400" string for the HUD.
@@ -770,6 +771,12 @@ export class GameHUDScene extends Phaser.Scene {
         skipTutorial: () => this.skipTutorial(),
         showNamedHighlight: (region) => this.showNamedHighlight(region),
         hideHighlight: () => this.hideTutorialHighlight(),
+        showActiveRoutes: () => {
+          const routesScene = this.scene.get("RoutesScene") as
+            | RoutesScene
+            | undefined;
+          routesScene?.switchToActiveRoutesTab();
+        },
       });
       this.time.delayedCall(900, () => runner.start());
     }
