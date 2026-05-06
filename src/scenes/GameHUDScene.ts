@@ -15,6 +15,8 @@ import {
 } from "../ui/index.ts";
 import { colorToString } from "@spacebiz/ui";
 import { TutorialRunner } from "../game/adviser/TutorialRunner.ts";
+import { RdAdviser } from "../game/adviser/RdAdviser.ts";
+import { getRdChief } from "../game/adviser/RdChiefs.ts";
 import { SettingsPanel } from "../ui/SettingsPanel.ts";
 import { formatTurnShort, formatTurnLong } from "../utils/turnFormat.ts";
 import { HorizontalNewsTicker } from "@rogue-universe/shared";
@@ -1652,6 +1654,17 @@ export class GameHUDScene extends Phaser.Scene {
         if (indicator) indicator.setVisible(false);
         if (badge) badge.setAlpha(0);
         hitArea.disableInteractive();
+      }
+    }
+
+    // Fire R&D chief intro when research tab unlocks for the first time.
+    if (newlyUnlocked.includes("research") && !state.adviser?.rdIntroComplete) {
+      const chief = getRdChief(state.adviser?.rdChiefId ?? "");
+      if (chief) {
+        this.time.delayedCall(600, () => {
+          const adviser = new RdAdviser(this, this.sceneUi, chief);
+          adviser.introduce(() => this.switchContentScene("TechTreeScene"));
+        });
       }
     }
 

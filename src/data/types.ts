@@ -833,6 +833,10 @@ export interface AdviserState {
   secretRevealed: boolean;
   statsAdviserSaved: number;
   statsAdviserHindered: number;
+  /** Which of the 10 R&D chiefs was assigned at new-game start. */
+  rdChiefId: string;
+  /** Set true after the turn-3 research-unlock intro has been shown. */
+  rdIntroComplete: boolean;
 }
 
 // ── AI Hub State ───────────────────────────────────────────

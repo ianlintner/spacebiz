@@ -196,6 +196,8 @@ function makeTrafficState(overrides: Partial<GameState> = {}): GameState {
       secretRevealed: false,
       statsAdviserSaved: 0,
       statsAdviserHindered: 0,
+      rdChiefId: "voss",
+      rdIntroComplete: false,
     },
     score: 0,
     gameOver: false,

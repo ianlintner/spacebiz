@@ -7,6 +7,7 @@ import type {
   TutorialTrigger,
   EventCategory,
 } from "../../data/types.ts";
+import { pickRandomRdChief } from "./RdChiefs.ts";
 import {
   GRADE_COMMENTARY,
   EVENT_REACTIONS,
@@ -29,6 +30,8 @@ export function initAdviserState(): AdviserState {
     secretRevealed: false,
     statsAdviserSaved: 0,
     statsAdviserHindered: 0,
+    rdChiefId: pickRandomRdChief(Math.random).id,
+    rdIntroComplete: false,
   };
 }
 
