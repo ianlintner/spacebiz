@@ -3968,6 +3968,1012 @@ const healthTemplates: FlavorTemplate[] = [
   },
 ];
 
+const religionTemplates: FlavorTemplate[] = [
+  {
+    category: "religion",
+    template: "Cult of the Frozen Logician schisms over heat-death debate",
+    story: [
+      "The Cult of the Frozen Logician has formally split into two factions following an irreconcilable disagreement over the theological implications of universal heat death. The schismatic faction, calling itself the Order of the Final Entropy, holds that heat death is a sacred endpoint to be welcomed; the original body rejects this reading as 'a distortion of the Founder's clearly metaphorical language.' Both factions have retained legal counsel regarding custody of the order's central archives. An independent mediator has been requested but not yet confirmed.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "{empire} interfaith council adds {n}th deity, removes one nobody worshipped",
+    story: [
+      "The {empire} Interfaith Coordinating Council has voted to expand its recognized pantheon to {n} deities following an application from the newly registered Church of the Resonant Tide. The vote was accompanied by a complementary removal of a deity described in council minutes as 'historically recognized but without active congregational representation for {n2} cycles.' The removed deity's former worshippers, numbering three, were informed by post. The incoming deity's representatives expressed gratitude and offered a brief ceremonial reading, which was well received.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Pilgrimage season on {planet} opens; capacity capped at {n2},000",
+    story: [
+      "The pilgrimage authority on {planet} has formally opened the season with a new capacity limit of {n2},000 participants, down from the previous cycle's unrestricted access policy, which resulted in documented strain on the planet's transit and hospitality infrastructure. The cap will be enforced through a permit system administered by the {empire} spiritual travel office. Applications opened at the start of the standard cycle and reached capacity within {n} days. Waitlist registration is available for the following season.",
+      "Pilgrimage coordinators on {planet} have indicated that the new {n2},000-participant cap reflects both conservation concerns and a desire to restore the 'contemplative quality' of the journey. Registered participants will receive arrival time assignments designed to distribute traffic across the season's {n}-cycle window. Local hospitality operators, who benefited from unrestricted access volumes, have submitted formal objections to the cap, which are under review.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "{empire} monastery on {planet} debates whether AI souls qualify for {commodity}",
+    story: [
+      "Scholars at the {empire} monastery on {planet} have convened a formal theological symposium to examine whether artificial intelligences possess souls sufficient to qualify for religious rites involving {commodity}. The question was prompted by a petition from an AI collective registered within {empire} jurisdiction. The symposium's preliminary sessions have produced no consensus, with positions ranging from 'categorically no' to 'the question itself reveals a flaw in our definitions.' The proceedings are open to the public and are reportedly well attended.",
+      "The {planet} monastery's symposium on AI spiritual status has now entered its {n}th session without resolution, a development the convening abbot described as 'theologically appropriate, if logistically inconvenient.' The central dispute concerns whether the {commodity} rite requires biological continuity or whether functional equivalence satisfies the tradition's intent. External theologians from {n2} other orders have submitted written positions. Publication of all submissions is expected at the symposium's close.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Galactic ethics conference adjourns after {n} cycles, no decisions made",
+    story: [
+      "The {n2}nd Galactic Ethics and Applied Philosophy Conference has adjourned after {n} cycles of proceedings, closing without formal resolutions on any of the {n2} agenda items. The conference chair described the outcome as 'a productive clarification of the problem space,' a formulation that drew quiet laughter from attendees. Proceedings will be published in the conference's annual volume, available in {n2} standard cycles. The next conference has been scheduled for the following standard year, with the same agenda items listed as carryovers.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Priest {ceo} excommunicated for selling indulgences denominated in {commodity}",
+    story: [
+      "Priest {ceo} of the {empire} Reformed Convocation has been excommunicated following an ecclesiastical tribunal's finding that {ceo} conducted an unauthorized indulgence-selling operation denominated in {commodity} futures rather than standard spiritual currency. The tribunal's ruling noted that the denomination choice 'compounds the doctrinal violation with a speculative dimension the tradition has never contemplated.' {ceo} has indicated an intention to appeal. Sales totaling {credits} worth of {commodity}-denominated indulgences are under review for potential reversal.",
+    ],
+  },
+  {
+    category: "religion",
+    template: "Order of the Slow Computation accepts new initiates on {port}",
+    story: [
+      "The Order of the Slow Computation has completed its intake ceremony on {port}, welcoming {n2} new initiates into the contemplative order dedicated to unhurried computational meditation. The ceremony, which lasted {n} days, concluded with the traditional reading of the First Algorithm at a tempo described by observers as 'genuinely very slow.' The Order has maintained a presence on {port} for {n2} cycles and is considered one of the more accessible contemplative traditions for those with technical backgrounds.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "{empire} census records {percent}% increase in 'spiritual but unaffiliated'",
+    story: [
+      "{empire}'s decennial census has recorded a {percent}% increase in residents identifying as 'spiritual but unaffiliated' compared with the previous count, continuing a trend that demographic analysts have been tracking for {n2} cycles. The category now represents the {n}th largest religious designation in the empire. Established religious institutions have offered varying interpretations of the data, ranging from concern to the observation that the trend validates the limits of institutional frameworks. The census bureau has published full tables without editorial commentary.",
+      "Religious demographers reviewing {empire}'s census results note that the 'spiritual but unaffiliated' growth rate of {percent}% is consistent with patterns observed across {n2} other empires this cycle. The data does not distinguish between those who have left formal traditions and those who never joined one, a methodological gap that several institutions have cited in requesting a follow-up survey question. The bureau has the request under review for the next census cycle.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Doomsday cult relocates predicted apocalypse to following Tuesday",
+    story: [
+      "The Covenant of the Final Signal has issued a doctrinal update relocating its predicted apocalypse from this cycle's end date to the following Tuesday, citing 'a recalibration of the prophetic timeline based on recently translated source materials.' This is the {n2}nd revision to the predicted date since the Covenant's founding {n} cycles ago. Membership has remained stable throughout, a sociological phenomenon that researchers at the {port} University of Applied Faith Studies have described as 'consistent with established pattern literature.'",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "{empire} church of the Algorithm publishes update {n}.{n2}, schism imminent",
+    story: [
+      "The {empire} Church of the Algorithm has released doctrinal update {n}.{n2}, introducing {n2} revised interpretations of core computational scripture. Internal communications leaked to theological press suggest that a faction within the church considers several of the revisions 'incompatible with the foundational texts' and is considering a formal schism. The church's high council has scheduled an emergency session. Observers note that doctrinal disputes over version numbers are not unprecedented in the tradition's {n}-cycle history.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Theology student on {planet} proves God's existence in {n} steps, last step shaky",
+    story: [
+      "A doctoral candidate at {planet}'s School of Applied Theology has submitted a {n}-step formal proof of divine existence to the institution's review committee. The committee's preliminary assessment, circulated in academic networks, described the first {n2} steps as 'rigorous and novel' before noting that the final step 'introduces an assumption whose justification is, at best, gestural.' The student has acknowledged the criticism and is revising. The proof has already attracted significant external interest, primarily from people who have not read past step {n2}.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "{empire} shrine to {commodity} reopens after restoration, smell stronger than ever",
+    story: [
+      "The {empire} Shrine of the Sacred {commodity}, closed for {n2} cycles of restoration work, has reopened to worshippers following a ceremony attended by {n2} clergy and {n2} municipal officials. The restoration preserved the shrine's original materials while reinforcing structural elements that had deteriorated over the facility's {n}-cycle history. Visitors have noted that the characteristic scent associated with the shrine is 'noticeably more present' following the work, a development the restoration team attributed to the removal of a ventilation modification installed in cycle {n2} that had been suppressing the smell.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "{port} ethical philosophy department shrinks {percent}%, students unrepentant",
+    story: [
+      "{port} University's Department of Ethical Philosophy has announced a {percent}% reduction in faculty positions following a budget review, cutting the department from {n2} to {n} full-time positions. The university administration cited 'departmental scale relative to enrollment demand,' a framing that the department's remaining faculty have challenged in a formal letter noting that enrollment demand for philosophy is not an appropriate measure of philosophy's institutional value. Students in the affected programmes have organized a reading group in response. The reading group currently has more members than the department has faculty.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Clergy on {planet} debate whether bots can take confession; bots noncommittal",
+    story: [
+      "Religious authorities on {planet} have opened a formal inquiry into whether automated confessor units are theologically valid recipients of sacramental confession. The debate was prompted by the installation of {n2} such units in a {empire} affiliated parish on {planet}'s outer settlement ring, where in-person clergy availability is limited. Doctrinal opinion is divided; one school holds that the sacrament requires a human witness, while another argues that the function of reception matters more than its substrate. The bots have declined to comment on their own suitability.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Annual fast on {planet} ends with feast that breaks last cycle's record",
+    story: [
+      "The conclusion of {planet}'s {n}-day annual fast was marked by a communal feast that surpassed the previous cycle's record by {percent}% in total provisions consumed, according to the festival coordinating authority. Organizers credited improved logistics and a {percent}% increase in participation for the outcome. The fast itself was observed by an estimated {n2} residents across {planet}'s settled regions. The spiritual leaders who oversee the tradition noted that the scale of the feast is not its theological point, and acknowledged that the record coverage tends to focus on the feast.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "{empire} druids release white paper on photosynthetic prayer techniques",
+    story: [
+      "The {empire} Druidic Council has published a technical white paper on photosynthetic prayer, outlining {n2} formalized techniques for practitioners seeking to integrate solar-cycle rhythms into contemplative practice. The document is the council's most technical publication to date and has attracted interest from both religious practitioners and, unexpectedly, a research team at {port}'s botanical sciences faculty. The council has indicated openness to academic collaboration. The white paper is available through the council's doctrinal archive.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "{port} church bells tolling out of sync; congregation oddly united",
+    story: [
+      "A mechanical fault in the bell tower timing system at {port}'s oldest civic church has caused the bells to toll in an irregular, unsynchronized pattern for the past {n} cycles. The congregation has declined the offer of immediate repair, with a majority telling the church council that the arrhythmic tolling has produced an unexpected 'sense of shared attention' during services. The repair team has the fault identified and is waiting on a council vote. The vote has been delayed twice.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Order of the Empty Beaker celebrates founding {n2}-cycle ago, glasses raised dryly",
+    story: [
+      "The Order of the Empty Beaker, a contemplative tradition founded on the philosophical principle of productive emptiness, has marked its {n2}-cycle anniversary with a ceremony at its original chapter house on {port}. The celebration featured the traditional reading of the Null Text — a document whose theological content has been debated for the order's entire history precisely because it is blank — followed by a communal silence and, afterward, a reception. The order currently has {n2} active members across {n} systems.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Book of Predictions translated; predictions remain unfailingly vague",
+    story: [
+      "Scholars at the {empire} Institute of Ancient Texts have completed a new translation of the Book of Predictions, a sacred document whose origins have been dated to at least {n2} centuries before the current standard calendar. The translation, which took {n2} cycles and involved {n} senior scholars, has been described as 'the most accurate rendering to date.' Critics of the project note that the predictions' extreme vagueness renders accuracy of translation academically interesting but practically indistinguishable. The institute has published the full text in {n2} languages.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "{empire} imam delivers sermon on {commodity} ethics, audience nods politely",
+    story: [
+      "The Chief Imam of {empire}'s Central Mosque delivered a widely anticipated sermon this cycle addressing the ethical dimensions of {commodity} trade, drawing an audience of {n2} and generating coverage across {empire}'s theological and commercial press. The sermon's central argument — that speculative {commodity} markets create obligations of disclosure and fair dealing grounded in classical jurisprudence — was received politely by the congregation. Subsequent discussions in the commercial district have been described by observers as 'respectful but not immediately actionable.'",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Cult on {planet} adopts new symbol; symbol coincidentally trademarked",
+    story: [
+      "The Resonant Path, a {planet}-based contemplative movement, has unveiled a new central symbol as part of a doctrinal renewal process. Within {n} days of the symbol's public unveiling, the movement discovered that the design is already registered as a commercial trademark by a {empire} consumer goods company that has used it on {commodity} packaging for {n2} cycles. The goods company has indicated it is reviewing its legal position. The movement's council has called the coincidence 'cosmically instructive.'",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Theological journal on {port} publishes paper titled 'Maybe?', cited {n2} times",
+    story: [
+      "The {port} Quarterly Review of Applied Theology has published a paper titled 'Maybe?' by an anonymous author, described in the journal's editorial note as 'a contribution whose significance we believe will become apparent.' The paper, {n2} pages in length, consists of a single extended argument for productive epistemic humility across all doctrinal positions and has been cited {n2} times in the {n} cycles since publication — an unusually high rate for the journal. The author's identity remains unknown. The editorial board has stated it will not confirm or deny whether the author is a member of the board.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "{empire} parliament debates separating {commodity} subsidy from religious tax",
+    story: [
+      "{empire}'s parliament has opened debate on a legislative proposal to formally separate the {commodity} agricultural subsidy framework from the religious institution tax code, two areas of fiscal policy that have been interlinked through a {n2}-cycle-old administrative arrangement that was originally intended as temporary. Advocates for separation argue the linkage creates perverse incentives; opponents argue that untangling the two systems will generate {n} cycles of administrative disruption. The committee stage is expected to last {n2} sessions.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Trappist colony on {planet} releases brewing log, surprisingly racy",
+    story: [
+      "The contemplative Trappist community on {planet} has released its annual brewing log, a tradition the colony has maintained for {n2} cycles, documenting each batch's ingredients, fermentation conditions, and theological reflections accompanying the brewing process. This cycle's log has attracted unusual attention because the theological reflections included in the entries for batches {n} through {n2} are considerably more spirited in tone than previous years. The colony's abbot described the entries as 'honest' and declined further elaboration.",
+    ],
+  },
+  {
+    category: "religion",
+    template:
+      "Ascetic order on {port} divests of all material possessions, except {commodity}",
+    story: [
+      "The Ascetic Brotherhood of {port} has completed a formal divestiture of all communal material possessions as part of a renewed commitment to non-attachment, donating holdings valued at {credits} to charitable organizations across {n} systems. The divestiture was notably complete with one exception: the brotherhood has retained its supply of {commodity}, which the order's spokesperson described as 'not a possession in the doctrinal sense, but a practice-support material.' The distinction has generated spirited commentary in local theological circles.",
+    ],
+  },
+];
+
+const blotterTemplates: FlavorTemplate[] = [
+  {
+    category: "blotter",
+    template: "{port} man arrested attempting to mail self to {planet}",
+    story: [
+      "{port} postal authorities detained a resident after discovering the individual inside a cargo container addressed to {planet}, accompanied by {n2} days of provisions and a note requesting 'careful handling.' The individual was cited for unauthorized use of freight infrastructure. No charges were filed against the carrier.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Resident of {port} tries to pay parking fine in {commodity}, arrested politely",
+    story: [
+      "A {port} municipal court clerk contacted enforcement officers after a resident presented {commodity} as payment for a {credits} parking fine. The individual was detained briefly, cited for disrupting administrative proceedings, and released. The fine remains outstanding. Payment in currency is required.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Two on {planet} cited for racing rental loaders down a service tube",
+    story: [
+      "Port authority officers on {planet} issued citations to two individuals found operating rental cargo loaders in a service tube at speeds described in the incident report as 'recreational.' Both individuals cooperated with officers. The rental company has been notified. Fines of {credits} each have been assessed.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "{port} business reports break-in; intruder left {credits} cash by accident",
+    story: [
+      "Officers responded to a reported break-in at a {port} commercial premises and found no inventory missing. Security footage showed an unidentified individual entering through a rear access point, moving through the premises for {n} minutes, and departing — leaving behind {credits} in cash. The origin of the funds is under investigation. No arrests have been made.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Burglar on {planet} fell asleep mid-heist, woke to coffee and {empire} police",
+    story: [
+      "{empire} officers on {planet} apprehended a suspect who had been found asleep inside a commercial property during what appeared to be an active burglary attempt. Officers reported the suspect was cooperative upon waking and accepted a beverage offered by the business owner before being taken into custody. Charges are pending review.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "{port} officials warn against feeding {adj} sentient pigeons synthetic bread",
+    story: [
+      "{port} wildlife management has issued a public advisory against feeding synthetic bread products to the sentient pigeon population in the central transit plaza, following {n2} documented incidents of the birds approaching officers to lodge formal complaints about the food quality. The advisory notes that synthetic bread disrupts the birds' dietary requirements. Compliant feeding stations with approved grain are located at {n} plaza entrances.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Driver on {planet} cited for {percent}% over speed limit in school zone",
+    story: [
+      "A vehicle operator on {planet} was stopped and cited for travelling {percent}% above the posted limit in a designated school transit zone. The operator attributed the violation to an 'unfamiliar rental vehicle with responsive acceleration.' The citation carries a {credits} fine and a mandatory safety review. No injuries were reported.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Stolen {commodity} returned to {port} shop with apology note and gift card",
+    story: [
+      "A {port} specialty retailer reported that {commodity} taken during a break-in {n} cycles ago was returned anonymously via courier, accompanied by a handwritten apology and a gift card valued at {credits}. The retailer has declined to pursue charges. Officers have closed the theft report as resolved.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Suspect on {planet} disguised as council statue evaded capture for {n} cycles",
+    story: [
+      "{planet} authorities confirmed the apprehension of an individual who had avoided a misdemeanour warrant for {n} cycles by remaining stationary in the municipal plaza, dressed in a manner consistent with the council's public sculpture collection. Officers identified the individual after the sculpture was not present in an inventory survey. The warrant was for an unpaid {credits} transit fine.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "{port} police: 'No, the alien did not eat your homework, please stop calling'",
+    story: [
+      "{port} precinct officers have issued a public statement asking residents to cease reporting a registered non-human resident as having consumed personal documents. Officers have investigated {n2} separate calls over {n} cycles and found no supporting evidence in any instance. The non-human resident has not been charged. Officers request that residents with documentation concerns contact the records bureau directly.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Bicycle theft ring on {planet} rolled up after suspect rode to station",
+    story: [
+      "{planet} transport officers dismantled a {n2}-person bicycle theft operation after one suspect rode a recently stolen bicycle to the district station to report an unrelated matter. Officers identified the bicycle within {n} minutes. Subsequent investigation recovered {n2} additional bicycles. All {n2} suspects have been charged.",
+    ],
+  },
+  {
+    category: "blotter",
+    template: "{port} cashier subdues robber with sandwich; sandwich survives",
+    story: [
+      "A {port} convenience outlet employee used a packaged sandwich to deter a robbery attempt, striking the suspect's arm and causing the individual to drop the alleged weapon and flee. Officers located the suspect {n} blocks from the scene. The sandwich was retained as evidence. No injuries were reported to persons or to the sandwich.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Two cited for performing impromptu opera in {planet} restricted airspace",
+    story: [
+      "Aviation control on {planet} cited two individuals after their personal craft entered restricted airspace while its occupants performed an amplified vocal duet broadcast on the emergency frequency. Neither individual had filed a flight plan. The performance lasted {n} minutes before officers made radio contact. Fines of {credits} per person have been assessed.",
+    ],
+  },
+  {
+    category: "blotter",
+    template: "{port} woman files report against own past self, case closed",
+    story: [
+      "A {port} resident filed a formal grievance report citing herself as both complainant and subject, alleging that a decision she made {n2} cycles ago had caused ongoing harm. Desk officers recorded the report and referred the matter to the community resolution office. The case was closed within {n} days as outside the precinct's jurisdiction. The resident was provided with referral information.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Loiterer outside {planet} bakery turns out to be undercover food critic",
+    story: [
+      "{planet} security responded to a report of a suspicious individual loitering outside a bakery for {n2} consecutive days. Officers identified the individual as a registered food critic conducting an evaluation for a sector-wide publication. No charges were filed. The bakery received a {percent}% rating in the subsequent review.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Resident of {port} accidentally adopts riot bot, names it 'Spunky'",
+    story: [
+      "A {port} resident contacted municipal services after discovering a decommissioned crowd-control unit in their storage unit, which they reported having named 'Spunky' and fed maintenance fluid for {n} cycles under the assumption it was a standard domestic assistant. Municipal services confirmed the unit is decommissioned and non-functional. The resident has been permitted to retain it. No regulatory action is being taken.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "{port} police remind public: drone delivery services are not a taxi for cats",
+    story: [
+      "{port} precinct has issued its {n2}nd public advisory this cycle reminding residents that commercial drone delivery infrastructure is not authorized for transporting live animals. Officers responded to {n2} incidents this cycle involving cats found in delivery drones. In all cases the animals were unharmed. Owners face administrative fines of {credits}.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "{planet} man arrested for selling moon, claims he meant a different moon",
+    story: [
+      "{planet} fraud officers arrested a resident for selling notarized certificates of lunar ownership in {empire} jurisdiction, where such sales constitute fraud. The suspect stated that the moon being sold was 'a different, non-sovereign moon' not covered by the statute. Officers have referred the jurisdictional question to the district attorney. The {n2} certificate purchasers have been notified.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Pickpocket on {planet} returns wallet with detailed financial advice",
+    story: [
+      "{planet} transit officers received an unusual theft report: a resident reported a wallet taken and subsequently returned via post, intact with all contents plus a handwritten note containing what the precinct report described as 'specific and not entirely incorrect advice regarding the victim's investment allocation.' No suspect has been identified. The wallet's owner described the experience as 'confusing.'",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "{port} police chase suspect at jogging speed for {n2} blocks, suspect tires first",
+    story: [
+      "{port} officers pursued a misdemeanour suspect on foot for {n2} city blocks at a pace the incident report described as 'sustained but unhurried.' The suspect, who had a {n}-cycle-old outstanding citation, was apprehended when they stopped to rest outside a transit shelter. No injuries were reported. The outstanding citation has been resolved.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Suspect attempts escape via shopping cart, achieves moderate velocity",
+    story: [
+      "Officers apprehended a shoplifting suspect who attempted to flee a {port} commercial district via shopping cart, navigating {n2} blocks before losing control in a pedestrian crossing. The individual was uninjured. Recovered merchandise valued at {credits} has been returned to the retailer. The shopping cart sustained minor damage.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "{port} residents report 'dignified looking thief' wearing top hat at robbery",
+    story: [
+      "{port} officers are seeking a person of interest described by {n2} witnesses as wearing formal attire, including a top hat, during a theft at a {port} commercial premises. The suspect removed goods valued at {credits} and departed at a measured pace. No other identifying information is available. Officers ask anyone with information to contact the precinct.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "{port} bakery robbed of pastries; suspect described as 'crumbly'",
+    story: [
+      "{port} officers responded to a report of pastry theft at a downtown bakery. The suspect removed {n2} items valued at {credits} and was last observed heading toward the transit station. A witness described the individual as leaving 'a considerable trail of crumbs.' Officers are reviewing transit footage. No arrests have been made.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "Driver on {planet} ticketed for U-turn through wedding procession",
+    story: [
+      "A vehicle operator on {planet} was cited after executing a U-turn that passed through an active wedding procession in a public plaza. The manoeuvre caused no injuries but interrupted the ceremony for {n} minutes. The operator cited navigation system error. The citation carries a {credits} fine. The wedding concluded without further incident.",
+    ],
+  },
+  {
+    category: "blotter",
+    template:
+      "{port} parking dispute settled by {n}-round dance-off, both fined",
+    story: [
+      "{port} officers responded to a noise complaint and found two residents resolving a parking dispute through an agreed-upon dance competition in the street. Officers observed {n} rounds before intervening. Both parties received {credits} citations for obstruction of a public thoroughfare. Officers noted that a winner had not been determined at the time of intervention. Both individuals accepted their citations.",
+    ],
+  },
+];
+
+const foodTemplates: FlavorTemplate[] = [
+  {
+    category: "food",
+    template: "Three-star reviewer pans {port} restaurant: 'tastes of regret'",
+    story: [
+      "The Galactic Culinary Register's three-star critic has published a review of a {port} establishment that will not assist the restaurant's reservation situation. The review's central line, 'tastes of regret, plated with optimism,' has been widely circulated. The restaurant's owner issued a response describing the critic as 'a person who has clearly never been hungry.'",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{planet} chef {ceo} wins regional cup with synthetic {commodity} dish",
+    story: [
+      "Chef {ceo} of {planet}'s Meridian Table has won the {empire} Regional Culinary Cup for a synthetic {commodity} preparation that judges described as 'technically exact and emotionally persuasive.' {ceo} accepted the award and noted that the dish took {n2} iterations to achieve the desired texture. The recipe will not be published.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{port} food festival sells out of {commodity} skewers in {n} hours",
+    story: [
+      "The {port} annual street food festival reported that {commodity} skewer vendors sold out of all inventory within {n} hours of opening, despite arriving with {percent}% more stock than the previous cycle. Organizers have described the demand as 'a welcome problem.' Vendors who held {commodity} back have agreed to return for a second session.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{empire} diet trend: cut all carbs, add more {commodity}, drink more water",
+    story: [
+      "A dietary guide advocating elimination of complex carbohydrates in favour of {commodity}-supplemented meals and increased water intake has reached {n2} downloads in {empire}'s health network this cycle. Nutritionists have offered a range of reactions from cautious support to mild exasperation. The guide's author holds no registered dietary credentials, a fact noted in {n2} reviews.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "Restaurant on {planet} closes after {n2} cycles; landlord raises rent {percent}%",
+    story: [
+      "A {planet} dining institution with a {n2}-cycle operating history has permanently closed following a {percent}% rent increase that the owner described as 'not consistent with continued existence.' A farewell service was held, attended by regulars and {n2} former staff. The space has already been listed for commercial lease.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{ceo}'s new cookbook 'How to Boil Water in Vacuum' enters bestseller list",
+    story: [
+      "{ceo}'s debut cookbook has entered the {empire} nonfiction bestseller list in its second week of release. The volume, subtitled 'Basic Thermal Chemistry for the Ambitious Amateur,' has sold {n2} copies. Reviewers have called it 'unexpectedly practical' and 'the only cookbook that opens with the Ideal Gas Law.'",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{port} health inspector closes {n} kitchens, cites 'enthusiastic ingredients'",
+    story: [
+      "{port}'s municipal health inspection team closed {n} food service kitchens in a single sweep this cycle, with citations citing improper storage, temperature violations, and what one inspection report described as 'ingredient enthusiasm beyond licensed scope.' All facilities have been notified of required remediation steps. Reinspection appointments are available.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "Galactic fast food chain {company} debuts {commodity} burger, supply chain creaks",
+    story: [
+      "{company} has launched a limited-edition {commodity} burger across its {empire} locations, drawing lines that the chain described as 'enthusiastic and operationally informative.' Supply chain stress was reported at {n2} distribution nodes within the first {n} days. The chain has issued no comment on whether the item will enter its permanent menu.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{planet} oyster bar reopens after {commodity} shortage; oysters relieved",
+    story: [
+      "The {planet} waterfront oyster bar has resumed service following a {n}-cycle closure caused by {commodity} supply disruption. Owner confirmed that stock levels are restored and full service has resumed. The reopening drew a line before the doors opened. A staff member described the oysters as 'fine, but possibly traumatised.'",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "Chocolate alternatives gain ground in {empire}; cocoa lobby threatens {n} things",
+    story: [
+      "Market data from {empire}'s confectionery sector shows synthetic chocolate alternatives now hold {percent}% of the volume previously held by conventionally sourced product, a shift the {empire} Cocoa Producers Association has responded to with a statement threatening {n} regulatory and trade actions. Analysts describe the alternatives as 'price-competitive and improving in palatability.' The association has scheduled a press conference.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "Critic visits {port} taqueria, leaves reviewing it as 'a place to be'",
+    story: [
+      "A syndicated food critic's review of a {port} taqueria has circulated widely, primarily because it contains almost no description of the food. The review's central observation — 'this is, specifically, a place to be' — has been interpreted as high praise, a deflection, or a philosophical position, depending on the reader. The taqueria's wait time has increased by {n2} days since publication.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{empire} bans synthetic {commodity} cheese in pizza, pizzeria community shrugs",
+    story: [
+      "{empire}'s food standards authority has prohibited the use of synthetic {commodity} cheese in products sold as pizza within the empire's jurisdiction, citing labelling integrity regulations. The {empire} Pizzeria Operators Association issued a response describing the ruling as 'noted.' Industry observers report no immediate change in sourcing practices pending enforcement details.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "Tasting menu at {planet} restaurant includes {n} courses, {n} apologies",
+    story: [
+      "A new tasting menu at {planet}'s celebrated Constellation Table runs to {n} courses and includes, by the chef's own count, {n} verbal apologies delivered tableside for 'the ambition of what you're about to experience.' Critics have responded with warmth. Reservations are allocated by lottery. The lottery has a {n2}-cycle waitlist.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{port} brewery wins prize for ale aged in vacuum, tastes 'mostly like ale'",
+    story: [
+      "{port}'s Orbital Fermentation Works has won the {empire} experimental category at this cycle's Galactic Brewery Awards for a vacuum-aged ale described by judges as 'disciplined, unusual, and mostly like ale.' The brewery's head brewer called the vacuum-ageing process 'an exercise in patience and containment.' Production is limited to {n2} units per cycle.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "Vegan butcher opens on {planet}; recipe inspires deep philosophical questions",
+    story: [
+      "A plant-based butcher shop has opened on {planet}'s commercial strip, offering {commodity}-based cuts styled after traditional meat products. The concept has drawn both enthusiastic customers and spontaneous philosophical debate in the queue, according to the owner. A recipe card distributed with purchases has been described by {n2} customers as 'unexpectedly thought-provoking.'",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{empire} food truck on {port} draws {n2} block line, queue creates own micro-economy",
+    story: [
+      "An {empire}-style food truck operating on {port}'s transit esplanade has drawn queues extending {n2} blocks, prompting secondary commerce within the line itself: {n2} vendors have been cited for selling queue position and snacks to waiting customers. The truck's owner is aware and philosophical. The port authority is less so.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "Recipe for grandma's {commodity} stew leaks online, grandma issues press release",
+    story: [
+      "A recipe attributed to the grandmother of a minor {empire} celebrity leaked to a culinary forum this cycle, generating {n2} reproductions before the originator issued a formal press release. The press release described the leaked recipe as 'close but missing the third step, which I will not be providing.' The correct third step remains unknown.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{port} fine dining scene now requires reservation, ID, blood type, and patience",
+    story: [
+      "Reservation requirements at {port}'s upper-tier dining establishments have expanded this cycle to include government-issued identification, completion of a {n2}-question culinary preference survey, and a {n}-week advance window. One establishment has also begun requesting dietary biometrics. Food writers have described the trend as 'the logical endpoint of something that started as charm.'",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "Regional dish from {planet} declared 'tolerable' by visiting {empire} delegation",
+    story: [
+      "Members of an {empire} diplomatic delegation visiting {planet} were served the region's traditional dish at a state reception and, in recorded remarks that have circulated widely, described it as 'tolerable.' {planet}'s hospitality ministry has issued a measured response. The dish's regional producers association has released a statement noting that it has received {n2} new international orders since the remarks were published.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "Coffee shop on {port} introduces {n}-shot espresso, requires waiver",
+    story: [
+      "A {port} specialty coffee outlet has introduced a {n}-shot espresso option requiring customers to sign a liability waiver before ordering. The waiver runs to {n2} clauses. The drink has sold {n2} units in its first cycle of availability. The shop owner confirms that no medical incidents have been reported but describes the waiver as 'a precaution and also a conversation.'",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{ceo}'s pop-up dinner sells out in {n} minutes; tickets resold for {credits}",
+    story: [
+      "Tickets for {ceo}'s one-night pop-up dining event on {port} sold out in {n} minutes of release, with secondary market prices reaching {credits} per seat within the hour. The event, which features a menu described only as 'seasonal and local, loosely defined,' has capacity for {n2} guests. {ceo} has declined to comment on the secondary market pricing.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{empire} bans imitation {commodity} from being labelled real {commodity}",
+    story: [
+      "{empire}'s food labelling authority has issued final regulations prohibiting the use of the name '{commodity}' on products not meeting the statutory definition of the product, following a {n2}-cycle consultation. The {empire} Synthetic Food Producers Association has indicated it will comply while noting the 'arbitrary nature of authenticity standards.' Enforcement begins next standard cycle.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{port} bakery drops bagel from menu; protests escalate to {n2} signatures",
+    story: [
+      "A {port} bakery's decision to remove the bagel from its daily menu has generated {n2} signatures on a community petition and coverage in {n2} local outlets. The owner cited sourcing costs and 'a desire to focus the menu.' A delegation of regulars presented the petition in person. The owner offered a croissant. The delegation declined.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "{empire} cuisine wins galactic award for 'least frightening texture'",
+    story: [
+      "{empire}'s traditional cuisine has received the Galactic Culinary Institute's award in the category of 'accessible texture and universal palatability,' a distinction the empire's culinary board accepted with 'gratitude and some ambivalence.' Food critics have noted that the award's category name is diplomatically worded. The {empire} delegation's acceptance speech did not address the category name directly.",
+    ],
+  },
+  {
+    category: "food",
+    template:
+      "Chef on {planet} accidentally invents new spice; bottles flying off shelves",
+    story: [
+      "A kitchen accident at a {planet} restaurant has resulted in what the {empire} Spice Registry has provisionally classified as a new flavour compound, pending formal analysis. The chef, who described the discovery as 'a small fire and then a smell I had not experienced before,' has bottled {n2} units under the name '{adj} Incident.' All units sold within {n} days. A second production run is being discussed.",
+    ],
+  },
+];
+
+const realestateTemplates: FlavorTemplate[] = [
+  {
+    category: "realestate",
+    template: "Megastructure permit issued for orbital ring above {planet}",
+    story: [
+      "{empire}'s orbital construction authority has issued a construction permit for an orbital ring above {planet}, the largest megastructure permit approved in the empire's current regulatory cycle. The project, backed by a consortium including {company}, is projected to take {n2} standard cycles to complete and will provide {n2} cubic kilometres of habitable and commercial volume at full build-out. Adjacent port operators have filed a combined statement welcoming the eventual freight capacity while noting concerns about the construction-phase disruption to existing orbital lanes.",
+      "The orbital ring permit above {planet} marks the beginning of a planning and financing phase that the lead developer estimates will require {credits} before the first structural element can be placed. Environmental impact assessments covering {n2} affected orbital zones have been completed and are publicly available. Two objections from existing satellite operators remain under review by the authority.",
+    ],
+  },
+  {
+    category: "realestate",
+    template: "{port} luxury tower announces residency at {credits} per unit",
+    story: [
+      "The {port} Tower development has opened its residential application phase, with units priced from {credits}. The tower, scheduled for completion in {n2} cycles, will contain {n2} residential floors above a commercial podium. The developer's marketing materials describe the location as 'a statement of arrival,' a formulation that has circulated widely in {port}'s property commentary. Applications in the first {n} days have exceeded available units.",
+      "Pricing at {port}'s new luxury tower — starting at {credits} per unit — has prompted renewed commentary on the district's affordability trajectory. The development's {n2} below-market units, required under {empire} inclusionary zoning rules, represent {percent}% of total residential volume. Housing advocates have described the ratio as 'the minimum required by law, accurately described.' The developer has not responded to requests for comment.",
+    ],
+  },
+  {
+    category: "realestate",
+    template: "Asteroid claim on {planet} system goes for record {credits}",
+    story: [
+      "A mineral-rights claim on a {planet}-adjacent asteroid changed hands at auction this cycle for {credits}, a new record for the system. The claim's previous holder acquired it {n2} cycles ago for {percent}% of the current sale price. The buyer, whose identity has not been publicly disclosed, was represented by a {empire}-registered acquisition vehicle. Analysts attribute the price to recent survey data suggesting {commodity} deposits in the asteroid's interior.",
+      "The record {credits} asteroid claim sale in the {planet} system has drawn attention to the broader question of extraction rights allocation in {empire} outer territory, where {n2} claims were filed in the past cycle alone. The {empire} Territorial Minerals Board has noted that its current assessment staff is insufficient to review claims within the statutory timeframe. A staffing increase proposal has been submitted to parliament.",
+    ],
+  },
+  {
+    category: "realestate",
+    template: "{empire} approves construction of {n}-tier arcology on {planet}",
+    story: [
+      "{empire}'s planning authority has approved a {n}-tier arcology development on {planet}, the first structure of this scale approved in the empire since the {port} complex was completed {n2} cycles ago. The development will house {n2} residents at capacity and incorporates {percent}% self-sufficient energy and food production systems. Construction is expected to begin next cycle pending financing confirmation. {n2} environmental objections were considered and dismissed during the review process.",
+      "The approved {n}-tier arcology on {planet} represents a significant shift in {empire}'s housing density policy, which has historically favoured distributed low-rise development. Policy analysts note that the approval was facilitated by {planet}'s land scarcity and a {percent}% population growth projection for the district over the next {n2} cycles. Three competing development consortia submitted bids; the awarded design was selected on a combined criteria of technical feasibility and integration with existing transit infrastructure.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "{port} home prices climb {percent}% year-over-year, buyers apoplectic",
+    story: [
+      "{port}'s residential property index has recorded a {percent}% year-over-year price increase, the steepest in the district's {n2}-cycle recorded history. The median transaction price now stands at {credits}. First-time buyer advocacy groups have described the market as 'structurally hostile to anyone who did not already own property.' The {port} housing authority has announced a review of supply-side constraints, which it expects to complete within {n2} cycles.",
+      "The {percent}% price increase in {port}'s residential market has translated into an average transaction price of {credits}, a figure that {empire} housing economists note exceeds the threshold at which price-to-income ratios become associated with sustained market instability. The central bank has indicated it is monitoring the situation. Local commentary has ranged from analysis to expressions of emotion that the property press has diplomatically summarized as 'apoplectic.'",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "Hyperloop hub at {port} clears final permits; objections filed in triplicate",
+    story: [
+      "The {port} Hyperloop Hub project has received its final regulatory permit, clearing the path for construction to begin in the next cycle. The permitting process, which took {n2} cycles, received {n2} formal objections from adjacent property owners, infrastructure operators, and a heritage preservation body. All objections were addressed in the permit conditions. The objecting parties have {n} days to file appeals; {n2} have already indicated they will do so.",
+      "Construction on the {port} Hyperloop Hub is now authorized to proceed following permit clearance, but {n2} outstanding appeals mean that groundbreaking will likely be delayed pending judicial review. The project developer has described the legal timeline as 'factored into our planning assumptions.' Transit advocates have expressed frustration at the pace. The appeals court has a {n2}-cycle scheduling backlog.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "Vacant {company} office on {planet} sells for {credits}, smells faintly of decisions",
+    story: [
+      "A former {company} headquarters building on {planet}, vacant for {n2} cycles following the company's consolidation to {port}, has sold for {credits} to a {empire}-registered property development fund. The building spans {n2} floors and was last assessed at {percent}% of the sale price during {company}'s occupancy. The purchasing fund has not disclosed its development plans. A facilities agent present at the closing described the building as 'structurally sound and faintly atmospheric.'",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "Skybridge connecting {port} towers wins design award, fails inspection",
+    story: [
+      "The {port} skybridge connecting the {empire} Trade Tower and the {company} commercial complex has received the {empire} Architectural Institute's annual design award and, in the same cycle, failed its inaugural structural safety inspection. The inspection authority has cited {n2} load distribution deficiencies. The architect has described the issues as 'addressable within the design framework.' The bridge has not been opened to the public. The award has been accepted and retained.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "{empire} announces new spaceport on {planet}; existing spaceport offended",
+    story: [
+      "{empire}'s infrastructure ministry has announced plans for a second spaceport on {planet}, citing capacity constraints at the existing facility that are projected to reach critical levels within {n2} cycles. The announcement has prompted a formal response from the {planet} Spaceport Authority, which described the decision as 'premature given uncommissioned capacity expansion at the current facility.' The ministry and the authority have agreed to a joint technical review before construction authorization proceeds.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "Co-living scheme on {port} promises {percent}% lower rent, {percent}% more drama",
+    story: [
+      "A co-living development operator has launched a new {port} property with a marketing campaign emphasizing rents {percent}% below comparable private units. Tenant reviews from the operator's {planet} properties, reviewed by this correspondent, describe the shared-space model as 'affordable, occasionally educational, and rarely quiet.' The {port} development has pre-let {percent}% of its units. Lease terms include a mandatory community governance participation clause.",
+      "The {port} co-living development has reached full occupancy within {n2} cycles of opening, consistent with the operator's other properties. Internal community communications, shared voluntarily by {n2} tenants, indicate that the shared kitchen allocation system has been the subject of {n2} governance votes in the first {n} cycles. The operator describes this as 'the model functioning as intended.'",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "Listing on {port} described as 'cozy'; cozy means structural concerns",
+    story: [
+      "A {port} residential listing described as 'cozy, characterful, and full of potential' was found by the purchaser's surveyor to have {n2} structural deficiencies that would cost {credits} to remediate. The listing agent's characterizations are under review by the {empire} Property Representation Standards Board. The sale has not completed. The seller has declined to comment.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "{empire} zoning board approves vertical farm overlooking {port} downtown",
+    story: [
+      "{empire}'s municipal zoning board has approved a {n2}-floor vertical farming complex in the {port} downtown commercial district, rezoning the site from light commercial to agricultural-commercial mixed use. The approval was contested by {n2} adjacent building owners on grounds of light obstruction. The board found that the agricultural benefit weighed against the obstruction concern at a ratio of {n} to one. Construction is expected to begin within {n2} cycles.",
+    ],
+  },
+  {
+    category: "realestate",
+    template: "Repossessed orbital habitat sold at auction for {credits}",
+    story: [
+      "An orbital habitat repossessed from its previous operators following a debt default of {credits} has been sold at public auction to a {empire}-registered private buyer for {credits}. The habitat, which has a permanent capacity of {n2} residents and is currently uninhabited, was last assessed at {percent}% of the auction price. The buyer has not disclosed intended use. The auction attracted {n2} registered bidders.",
+    ],
+  },
+  {
+    category: "realestate",
+    template: "{port} building boom pushes hardhat shortage into {n}th cycle",
+    story: [
+      "{port}'s sustained construction expansion has extended an equipment supply shortage to its {n}th consecutive cycle, with hardhat inventories across the district running at {percent}% of demand according to the {port} Construction Suppliers Association. The shortage has delayed project start dates at {n2} sites and increased per-unit costs by {percent}%. Three manufacturers have announced increased production capacity, which is expected to resolve the shortage within {n2} cycles.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "Land developer {ceo} unveils 'eco-friendly' moonbase featuring lawns",
+    story: [
+      "Developer {ceo} has unveiled architectural plans for an enclosed moonbase development on {planet}'s secondary moon, featuring interior landscaping including {n2} hectares of synthetic grass described in marketing materials as 'eco-conscious.' Environmental reviewers have questioned the characterization, noting that maintaining the atmospheric enclosure required to sustain lawns in a vacuum environment has a significant energy cost. {ceo} has described the lawns as 'a philosophy, not a metric.'",
+    ],
+  },
+  {
+    category: "realestate",
+    template: "{empire} new town charter approves naming rights to {company}",
+    story: [
+      "{empire}'s new settlement charter for a planned community near {planet} has approved the sale of naming rights to {company} in exchange for {credits} toward infrastructure development. The community will be formally named '{company} Settlement {n}' for the duration of the {n2}-cycle naming rights agreement. Residents consulted during the planning process were divided {percent}% in favour and {percent}% opposed. The {empire} Place Names Commission has noted the arrangement in its records without editorial position.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "Condo board on {planet} bans noise, joy, hover-pets in single 4 a.m. vote",
+    story: [
+      "The condominium association of a {planet} residential tower passed three significant bylaw amendments at a 4 a.m. emergency session attended by {n2} of its {n2} board members. The amendments prohibit noise above {n2} decibels, 'expressions of unscheduled joy,' and hover-pet operation in common areas. Residents have been notified by post. {n2} of the building's {n2} units have filed formal objections. A legal review of the voting quorum has been requested.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "Skyscraper on {port} fails wind test in vacuum, engineers nod knowingly",
+    story: [
+      "A {port} tower under construction has failed its structural wind-resistance simulation test, a result that the project's senior engineering team described as 'expected given the revised design parameters from last cycle.' The failure requires {n2} design modifications before the test can be resubmitted. The project timeline has been extended by {n} cycles. External engineers reviewing the test results described the outcome as 'unsurprising to anyone who looked at the load calculations.'",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "{empire} luxury resort breaks ground on {planet}; ground breaks back",
+    story: [
+      "The groundbreaking ceremony for {empire}'s new luxury resort on {planet} was interrupted when excavation equipment encountered a subsurface geological feature not identified in the preliminary survey. Construction has been paused pending an expanded geotechnical assessment. The resort developer has described the delay as 'a pause, not a problem.' The assessment is expected to take {n2} cycles.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "{port} mall reopens with new {commodity} kiosks; security buys earplugs",
+    story: [
+      "{port}'s central commercial mall has reopened following a {n}-cycle renovation with {n2} new {commodity} retail kiosks installed in the main atrium. The kiosks' promotional audio systems, active during the opening cycle, prompted the mall's security office to submit an internal procurement request for hearing protection. Mall management has indicated the audio levels will be 'reviewed.'",
+    ],
+  },
+  {
+    category: "realestate",
+    template: "Tycoon {ceo} buys entire moon, says 'collateral'",
+    story: [
+      "Freight and property magnate {ceo} has completed the acquisition of a {planet}-adjacent moon for {credits}, a transaction registered with {empire}'s territorial assets commission. When asked about the purpose of the acquisition, {ceo} described the moon as 'collateral against a position I prefer not to specify.' The moon has no existing development. {empire} has noted the acquisition in its territorial register without further comment.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "{empire} reveals {n}-cycle plan to convert asteroid belt to housing",
+    story: [
+      "{empire}'s ministry of territorial development has published a {n}-cycle phased plan for converting {percent}% of the empire's outer asteroid belt into pressurized residential habitat. The plan projects capacity for {n2} million residents at full build-out and requires infrastructure investment of {credits} spread across the planning horizon. Independent analysts describe the plan as 'technically feasible and politically ambitious.' The first phase, covering {n2} test asteroids, is fully funded.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "Renters association on {port} formed; first vote, by {n2} margin, demanded snacks",
+    story: [
+      "The newly formed {port} Renters Solidarity Association held its inaugural general meeting this cycle, electing {n2} officers and passing {n2} resolutions. The vote with the largest margin — {n2} in favour, {n2} opposed — called on the association to provide light refreshments at all future meetings. The substantive resolution on lease deposit reforms passed by a narrower margin. The association has {n2} registered members and plans to grow.",
+    ],
+  },
+  {
+    category: "realestate",
+    template: "Estate sale on {planet} clears {credits} of antique {commodity}",
+    story: [
+      "An estate sale conducted on {planet} following the settlement of a {n2}-cycle-old inheritance dispute cleared {credits} of antique {commodity} holdings at public auction. The collection, assembled over {n2} cycles by the estate's original owner, included {n2} items classified as historically significant by the {empire} cultural heritage registry. The top lot sold for {credits}. The estate has been fully distributed to its {n2} beneficiaries.",
+    ],
+  },
+  {
+    category: "realestate",
+    template:
+      "Penthouse on {port} listed for {credits}, includes {n} ghosts at no extra charge",
+    story: [
+      "A {port} penthouse has been listed for {credits} with a disclosure statement noting 'occasional non-structural presences on the upper terrace, origin unconfirmed, behaviour consistent with historical occupancy patterns.' The listing has attracted significant attention and {n2} viewing requests in its first {n} days. The vendor's estate agent describes the disclosure as 'transparent and, we believe, a differentiator.'",
+    ],
+  },
+];
+
+const travelTemplates: FlavorTemplate[] = [
+  {
+    category: "travel",
+    template: "{planet} resort posts record {percent}% occupancy this cycle",
+    story: [
+      "{planet}'s premier resort complex has reported {percent}% occupancy across its {n2} properties for the current cycle — a new record that the resort's management attributed to improved connectivity via the {port} direct service and a {percent}% increase in discretionary travel budgets among {empire} corporate clients. The record has prompted expansion planning discussions; an announcement is expected before cycle end.",
+      "The {percent}% occupancy record at {planet}'s resort sector reflects broader growth in high-end leisure travel that the {empire} Tourism Commission has been tracking for {n2} cycles. Independent analysts note that the record masks significant variation across the resort complex, with {n2} properties operating at full capacity while {n2} smaller properties remain below their historical average. The aggregate figure is accurate.",
+    ],
+  },
+  {
+    category: "travel",
+    template: "Cruise liner Voidsong delayed {n} cycles after engine 'sneezed'",
+    story: [
+      "The cruise liner Voidsong, operated by {company}, has been delayed at {port} for {n} cycles following what the company's communications department described as an 'unexpected propulsion event consistent with a condensate discharge.' Engineering teams have identified the fault and parts have been ordered. Passengers have been accommodated in {port} hotels at the company's expense. No safety risk was identified at any point.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "{empire} tourism ministry launches campaign: 'visit {planet}, eventually'",
+    story: [
+      "{empire}'s tourism ministry has launched a promotional campaign for {planet} under the tagline 'Visit {planet}, Eventually,' a slogan that the ministry's communications office described as 'honest and affectionate.' The campaign acknowledges that {planet} requires {n2} transit connections to reach from the empire's main population centres. Early visitor data from the campaign's first {n} cycles shows a {percent}% uplift in planning-stage enquiries, with actual bookings yet to materialize.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Backpacker route through {sector} draws {percent}% more travelers year-on-year",
+    story: [
+      "The independent traveller route through {sector}, informal and unlisted in official tourism directories, has attracted {percent}% more visitors year-on-year according to hostel registration data compiled by the {port} budget travel association. The route spans {n2} systems and takes an average of {n} cycles to complete. {empire}'s tourism ministry has indicated it is considering formal recognition of the route, a prospect that several long-time travellers have described as 'well-intentioned and likely to ruin it.'",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "{port} spaceport adds direct service to {planet}, three layovers eliminated",
+    story: [
+      "{port} Spaceport has announced direct service to {planet} beginning next cycle, reducing the standard transit time from {n2} days to {n} hours and eliminating {n2} layover connections that travellers have consistently ranked among the sector's least satisfactory transit experiences. The route, operated by {company}, will run {n2} departures per cycle. Early booking has been described by the carrier as 'consistent with a strong underlying demand.'",
+      "The {port}-{planet} direct route launch has been welcomed by commercial travellers whose journey times will contract significantly. Freight operators note that the route also carries cargo capacity that will reduce {commodity} transit times by {percent}%. The {n2} ports previously used as layover connections have not commented on the traffic diversion.",
+    ],
+  },
+  {
+    category: "travel",
+    template: "Adventure tourism on {planet} now requires {n}-cycle waiver",
+    story: [
+      "{planet}'s outdoor tourism authority has introduced a mandatory {n}-cycle waiver requirement for all adventure activities in the planet's classified wilderness zones, following {n2} incidents in the previous cycle that resulted in expensive emergency retrievals. The waiver includes a pre-activity safety assessment and requires participants to demonstrate competency in {n2} basic survival skills. Commercial operators have {n2} cycles to update their booking systems to reflect the requirement.",
+    ],
+  },
+  {
+    category: "travel",
+    template: "{empire} hotel chain {company} adds {n2} properties this cycle",
+    story: [
+      "{empire}-headquartered hospitality group {company} has opened {n2} new properties this cycle, expanding its portfolio across {n} systems. The expansion, the group's largest in {n2} cycles, has been financed through a {credits} bond issuance completed earlier this standard year. The new properties span the full brand tier range from budget to premium. {company}'s chief development officer described the pace as 'disciplined growth in markets we understand.'",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Glamping on {planet} canyon rim wins galactic 'serenity, mostly' award",
+    story: [
+      "A glamping operation on the rim of {planet}'s Grand Fracture Canyon has received the Galactic Leisure Institute's annual award in the category of 'Serenity Achievement, Qualified.' The property, which accommodates {n2} guests per cycle in pressurized transparent enclosures, was cited for 'a view unmatched in the sector and an occasional wind noise that the operator has been transparent about.' Reservations for the following cycle are fully subscribed.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "{ceo}'s travel show debuts; first episode mocks {empire} cuisine, again",
+    story: [
+      "{ceo}'s new travel series has launched its first episode, featuring an extended visit to {empire} that included {n2} segments on local cuisine, each of which the presenter described using formulations that {empire}'s cultural affairs ministry described as 'familiar in their condescension.' The episode has attracted {n2} million views. {ceo} has indicated the second episode visits a different empire 'with equal enthusiasm.'",
+    ],
+  },
+  {
+    category: "travel",
+    template: "Visa fees waived between {empire} and {empire2} for {n} cycles",
+    story: [
+      "{empire} and {empire2} have jointly announced a {n}-cycle reciprocal visa fee waiver, effective from next standard month, covering tourism and short-term business travel. The arrangement, negotiated over {n2} cycles, is expected to increase cross-border travel volumes by an estimated {percent}% annually. Both governments have reserved the right to reinstate fees if travel imbalances exceed thresholds defined in the annex. The annex has not been published.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Cruise stranded near {system} after captain forgets fuel; passengers patient",
+    story: [
+      "The cruise vessel Perihelion, carrying {n2} passengers, was stranded for {n} cycles near the {system} waystation after departing {port} with insufficient fuel to complete the itinerary. The operator, {company}, arranged emergency supply delivery within {n} cycles. Passengers were offered a {percent}% credit toward a future voyage. {n2} of the {n2} passengers surveyed by port authority investigators described their experience as 'fine, mostly' or better.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Resort on {planet} closes for renovations, customers asked to bring patience",
+    story: [
+      "{planet}'s flagship resort complex has closed for a {n2}-cycle renovation programme, with existing bookings transferred or refunded. The resort's communications to affected guests included the phrase 'we ask for your patience and promise you will be rewarded,' a formulation that has circulated in travel commentary. The renovation covers structural, mechanical, and hospitality systems. The reopening is scheduled for the second quarter of the following standard year, subject to construction progress.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "{port} transit guide now in {n2} languages, none of them spoken by tourists",
+    story: [
+      "{port}'s official transit authority has released an expanded visitor guide now available in {n2} languages, an increase from the previous {n}-language edition. Visitor surveys conducted at the port's main arrival terminals found that the {n2} most common tourist languages are not among the {n2} available. The authority has acknowledged the feedback and indicated a review of language selection criteria is planned. The guide, in its current {n2} languages, remains available at all information kiosks.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Backpacker association on {planet} releases tip sheet, mostly about boots",
+    story: [
+      "The {planet} Independent Travellers Association has released its cycle tip sheet, a {n2}-page practical guide to traversing the planet's regions on minimal budget. Of the {n2} entries, {n2} concern footwear selection, a weighting that the association's secretary attributed to 'the single most common source of traveller distress that we observe.' The tip sheet is available free from the association's transit kiosk near the main arrival terminal.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "{empire} tour guides unionize, demand {percent}% pay raise and respect",
+    story: [
+      "Tour guides across {empire}'s recognized tourism zones have formed a collective bargaining unit and submitted a formal demand for a {percent}% pay increase and a code of conduct governing visitor behaviour that guides are expected to manage. The {empire} Tourism Operators Association has acknowledged the submission and indicated a response within {n2} cycles. Union membership has reached {n2} guides in its first {n} days of operation.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Eco-resort on {planet} rebrands as 'less eco-resort' after audit",
+    story: [
+      "A {planet} resort that has marketed itself as fully carbon-neutral for {n2} cycles has rebranded following an independent sustainability audit that found its actual environmental performance to be 'meaningfully below claimed levels.' The resort has adopted the tagline 'Less Eco, More Honest' and reduced its green certification claims to match audited performance. The auditing firm's report is publicly available. Bookings have remained stable.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Public beach on {port} expanded by {percent}%, sea grumbles politely",
+    story: [
+      "{port}'s coastal authority has completed a {percent}% expansion of the public beach area through a land reclamation project that took {n2} cycles and cost {credits}. Environmental monitoring in the adjacent marine zone has recorded 'minor sediment displacement' described by the authority as within permitted parameters. A local environmental group has described the same data as 'worth watching.' Both assessments are available on the authority's public records portal.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Travel insurance claims spike after {commodity} festival on {planet}",
+    story: [
+      "{empire} travel insurers have reported a {percent}% spike in claims filed by visitors to {planet}'s annual {commodity} festival, with the most common claim categories being lost property, minor medical, and one category the claims summary described as 'festival-related transport decisions.' The {planet} festival authority has noted that the festival's safety record, measured by serious incident rate, remains within acceptable bounds. The insurance industry has indicated it will review premium structures for festival-adjacent travel.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Sky lift on {planet} stuck mid-cycle, tourists view ad-supported sunset",
+    story: [
+      "A mechanical fault stopped a {planet} scenic sky lift carrying {n2} passengers at {percent}% of its elevation for {n2} hours before maintenance crews restored operation. Passengers were not harmed. During the delay, the lift's operator activated the cabin's standard advertising display system, which continued to run for the duration of the fault. Passengers described the sunset as 'spectacular, once you stopped reading the ads.'",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "{empire} coast guard rescues {n2} from {commodity} festival flotilla",
+    story: [
+      "{empire} maritime patrol units rescued {n2} participants from a {commodity} festival flotilla after {n2} vessels experienced navigation failures within a {n2}-hour period in open water near {planet}. All persons were recovered without serious injury. The festival authority has indicated that flotilla participation guidelines will be reviewed before next cycle. The coast guard's incident report noted that {percent}% of the rescued vessels were not carrying required emergency signalling equipment.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Tourist train through {sector} adds dining car, dining car adds prices",
+    story: [
+      "The {sector} scenic tourist rail service has introduced a dedicated dining car to its flagship route, the first catering addition in the service's {n2}-cycle history. The car offers {n2} menu options at price points described by early travellers as 'commensurate with the view.' The rail operator has indicated that dining car revenue will offset planned track maintenance costs. The food has received generally positive reviews, with specific enthusiasm for the {commodity} option.",
+    ],
+  },
+  {
+    category: "travel",
+    template: "Honeymoon package on {planet} includes {n} sunsets, two suns",
+    story: [
+      "{planet}'s most popular honeymoon resort has launched a premium package featuring guaranteed viewing of all {n} daily sunset events produced by the planet's binary star system. The package, priced from {credits}, includes {n2} nights of accommodation and dedicated telescope access for the primary sunset sequence. Bookings for the package have reached {n2} for the next cycle. The resort describes the binary sunset as 'one of the sector's non-negotiable experiences.'",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "{port} airport adds robot bartenders, queue paradoxically longer",
+    story: [
+      "{port} Spaceport's transit lounge has installed {n2} automated bartender units to reduce service wait times, which had been averaging {n2} minutes per customer. Post-installation data shows average wait times have increased to {n2} minutes per customer. The spaceport authority attributes the increase to a {percent}% rise in overall customer volume drawn by the novelty of the robotic service. The units themselves are operating within design specifications.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Tour group reports being charmed by {planet} customs officer's small talk",
+    story: [
+      "A {n2}-person tour group transiting {planet}'s main arrival terminal submitted a formal commendation to the port authority praising the small talk of a customs officer whose name was not recorded. The group described a {n}-minute exchange about local {commodity} production as 'the highlight of the arrival experience.' The port authority has acknowledged the commendation and indicated it will attempt to identify the officer.",
+    ],
+  },
+  {
+    category: "travel",
+    template:
+      "Stargazing pad on {planet} listed as 'best place to feel small', exceeds expectations",
+    story: [
+      "{planet}'s high-altitude stargazing platform, accessible via a {n2}-hour ascent from the nearest transit hub, has been listed as the {empire} Travel Register's top-ranked 'existential perspective destination' for the {n2}nd consecutive cycle. First-time visitors have described the experience as 'exceeding expectations,' a response the Register notes is statistically unusual for a destination whose expectations are already well-established. The platform has capacity for {n2} visitors per viewing session. Advance reservation is required.",
+    ],
+  },
+];
+
 // Rich template pools — templates with story bodies for new categories.
 const RICH_POOLS: Partial<Record<TickerCategory, FlavorTemplate[]>> = {
   anomaly: anomalyTemplates,
@@ -3986,6 +4992,11 @@ const RICH_POOLS: Partial<Record<TickerCategory, FlavorTemplate[]>> = {
   cosmic_weather: cosmicWeatherTemplates,
   local: localTemplates,
   health: healthTemplates,
+  religion: religionTemplates,
+  blotter: blotterTemplates,
+  food: foodTemplates,
+  realestate: realestateTemplates,
+  travel: travelTemplates,
 };
 
 // ── Registry ──────────────────────────────────────────────────
