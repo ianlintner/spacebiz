@@ -15,6 +15,7 @@ export interface TutorialCallbacks {
   skipTutorial: () => void;
   showNamedHighlight: (region: "endTurn" | "routesNav") => void;
   hideHighlight: () => void;
+  showActiveRoutes: () => void;
 }
 
 export class TutorialRunner {
@@ -63,7 +64,7 @@ export class TutorialRunner {
     this.callbacks.navigateTo("RoutesScene");
     this.callbacks.showNamedHighlight("routesNav");
 
-    this.scene.time.delayedCall(700, () => {
+    this.scene.time.delayedCall(2500, () => {
       this.callbacks.hideHighlight();
       this.rexDialogue({
         mood: "standby",
@@ -151,6 +152,8 @@ export class TutorialRunner {
       fleet,
       interEmpireCargoLocks: locks,
     });
+
+    this.callbacks.showActiveRoutes();
 
     const shipNote = idleShip
       ? `${idleShip.name} is assigned and ready to haul.`

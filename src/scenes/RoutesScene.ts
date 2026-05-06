@@ -125,6 +125,10 @@ export class RoutesScene extends Phaser.Scene {
     super({ key: "RoutesScene" });
   }
 
+  switchToActiveRoutesTab(): void {
+    this.tabGroup.setActiveTab(1);
+  }
+
   create(): void {
     this.selectedRouteId = null;
     this.ui = new SceneUiDirector(this);
