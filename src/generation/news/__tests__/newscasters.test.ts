@@ -41,18 +41,38 @@ describe("newscaster registry", () => {
     expect(getNewscasterForCategory("market_mover").type).toBe("finance");
   });
 
-  it("fashion and celebrity → fashion anchor", () => {
+  it("fashion → fashion anchor; celebrity → paparazzi", () => {
     expect(getNewscasterForCategory("fashion").type).toBe("fashion");
-    expect(getNewscasterForCategory("celebrity").type).toBe("fashion");
+    expect(getNewscasterForCategory("celebrity").type).toBe("paparazzi");
   });
 
-  it("crime and blotter → field reporter", () => {
-    expect(getNewscasterForCategory("crime").type).toBe("field");
-    expect(getNewscasterForCategory("blotter").type).toBe("field");
+  it("crime and blotter → investigator", () => {
+    expect(getNewscasterForCategory("crime").type).toBe("investigator");
+    expect(getNewscasterForCategory("blotter").type).toBe("investigator");
   });
 
-  it("headline and obituary → studio anchor", () => {
+  it("headline → main anchor; obituary → anchor_d night desk", () => {
     expect(getNewscasterForCategory("headline").type).toBe("anchor");
-    expect(getNewscasterForCategory("obituary").type).toBe("anchor");
+    expect(getNewscasterForCategory("obituary").type).toBe("anchor_d");
+  });
+
+  it("cosmic_weather → weather reporter", () => {
+    expect(getNewscasterForCategory("cosmic_weather").type).toBe("weather");
+  });
+
+  it("sports → sports anchor", () => {
+    expect(getNewscasterForCategory("sports").type).toBe("sports");
+  });
+
+  it("xenobiology, health, academia → explorer", () => {
+    expect(getNewscasterForCategory("xenobiology").type).toBe("explorer");
+    expect(getNewscasterForCategory("health").type).toBe("explorer");
+    expect(getNewscasterForCategory("academia").type).toBe("explorer");
+  });
+
+  it("leader and homage → anchor_b; religion → anchor_c", () => {
+    expect(getNewscasterForCategory("leader").type).toBe("anchor_b");
+    expect(getNewscasterForCategory("homage").type).toBe("anchor_b");
+    expect(getNewscasterForCategory("religion").type).toBe("anchor_c");
   });
 });

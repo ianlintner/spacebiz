@@ -3,7 +3,8 @@
 Generate GNN newscaster character portraits for Star Freight Tycoon.
 Produces 5 newscaster types: anchor, science, finance, fashion, field.
 
-Uses direct OpenAI gpt-image-1 API, same pipeline as generate-portraits.py.
+Uses direct OpenAI gpt-image-2 API (falls back to gpt-image-1).
+Reads IMAGE_GEN_OPEN_API_KEY env var first, then .mcp/.env fallback.
 Output: assets-source/portraits/newscaster/<name>.png (flattened to #0a0a1a bg)
 """
 
@@ -29,7 +30,11 @@ def load_api_key():
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
                     env[k.strip()] = v.strip()
-    return env.get("PROVIDERS__OPENAI__API_KEY", env.get("OPENAI_API_KEY", ""))
+    # Check IMAGE_GEN_OPEN_API_KEY first (dedicated image-gen key)
+    return env.get(
+        "IMAGE_GEN_OPEN_API_KEY",
+        env.get("PROVIDERS__OPENAI__API_KEY", env.get("OPENAI_API_KEY", "")),
+    )
 
 
 BG_COLOR = (10, 10, 26)  # #0a0a1a — matches game theme
@@ -78,6 +83,37 @@ NEWSCASTERS = {
         ),
         "filename": "anchor.png",
     },
+    "anchor-b": {
+        "desc": (
+            "Vaxis Morn, senior GNN correspondent and alternate anchor. "
+            "Dignified bipedal reptilian alien with silver-scaled skin, a broad flat head, "
+            "deep amber vertical-slit eyes, subtle neck frill folded neatly. "
+            "Immaculate dark grey formal robes with silver piping, small GNN broadcast pin. "
+            "Calm, measured expression. Warm studio backdrop with soft diffuse lighting."
+        ),
+        "filename": "anchor-b.png",
+    },
+    "anchor-c": {
+        "desc": (
+            "The Presence, enigmatic GNN omnibus anchor. "
+            "A floating semi-translucent energy being, vaguely humanoid silhouette composed of soft "
+            "glowing plasma in lime-green and ivory white, internal luminous core visible, "
+            "wispy tendrils of light framing the face area. No solid body — pure radiant energy. "
+            "Wears a minimalist dark anchor-desk jacket phased into the energy form. "
+            "Serene, all-knowing expression. Deep black studio void backdrop with subtle star motes."
+        ),
+        "filename": "anchor-c.png",
+    },
+    "anchor-d": {
+        "desc": (
+            "Crixx Velaan, GNN night desk anchor. "
+            "Insectoid alien with a sleek chitinous head, large multifaceted compound eyes in deep violet, "
+            "thin mandibles folded neatly, smooth carapace with iridescent black sheen. "
+            "Sharp fitted blazer in charcoal with metallic accents, crisp news-anchor composure. "
+            "Alert, precise expression. Dark studio with cool blue and purple lighting."
+        ),
+        "filename": "anchor-d.png",
+    },
     "science": {
         "desc": (
             "Dr. Krill Vexx, science and technology correspondent. "
@@ -119,6 +155,61 @@ NEWSCASTERS = {
         ),
         "filename": "field.png",
     },
+    "weather": {
+        "desc": (
+            "Syx-7 Vermis, GNN space weather and crisis reporter. "
+            "Highly alien cephalopod-like creature: bulbous translucent cranium housing a visible "
+            "pulsing brain, ring of six independent unblinking eyes around the head in amber and red, "
+            "short writhing sensory tendrils below the face, mottled dark purple and charcoal skin. "
+            "Wears a high-collared emergency-broadcast jacket with storm-alert insignia. "
+            "Intense, slightly unnerving expression. Backdrop of swirling nebula storm and warning hues."
+        ),
+        "filename": "weather.png",
+    },
+    "paparazzi": {
+        "desc": (
+            "Blix Snarr, GNN entertainment and pop culture correspondent. "
+            "Flashy insectoid alien: iridescent chitinous face with glittering faceted eyes in magenta, "
+            "razor-thin antenna swept back stylishly, wide toothy grin, exuberant energy. "
+            "Wears a gaudy sequined blazer in gold and hot pink, multiple press credentials hanging. "
+            "Holds a holographic press-camera in one of four thin arms. "
+            "Charismatic, larger-than-life expression. Glittering paparazzi backdrop with starburst lights."
+        ),
+        "filename": "paparazzi.png",
+    },
+    "sports": {
+        "desc": (
+            "Krag Ironstone, GNN sports desk anchor. "
+            "Massive silicate rock alien: thick craggy stone-textured body, broad flat face with deep-set "
+            "glowing lava-orange eyes, wide jaw with granite-like ridges, enormously wide shoulders. "
+            "Visibly crammed into an ill-fitting but expensive sports-anchor suit — jacket straining at "
+            "the seams, tie slightly crooked, too-small collar. Looks like an NFL linebacker forced into "
+            "broadcast TV. Enthusiastic, booming expression. Sports broadcast backdrop with score tickers."
+        ),
+        "filename": "sports.png",
+    },
+    "investigator": {
+        "desc": (
+            "Mira Tendrax, GNN investigative correspondent. "
+            "Elegant cephalopod-humanoid alien: smooth slate-grey domed head, four slender manipulator "
+            "tentacles visible at the sides, large luminous teal eyes with horizontal pupils, "
+            "composed but intense expression suggesting deep suspicion. "
+            "Sharp structured blazer in dark charcoal with subtle pinstripe, press badge on lapel. "
+            "Holds a datapad with holographic dossier. Dark investigative-desk backdrop, dramatic side light."
+        ),
+        "filename": "investigator.png",
+    },
+    "explorer": {
+        "desc": (
+            "Prof. Lumis Thane, GNN deep space and xenobiology correspondent. "
+            "Bioluminescent semi-translucent alien: soft jellyfish-like form with a distinct domed head, "
+            "large gentle deep-blue eyes, glowing bio-patterns of aqua and violet tracing the skin, "
+            "trailing gossamer fronds framing the head and shoulders. Otherworldly but approachable. "
+            "Wears a lightweight expedition field coat with xenobiology insignia and sample vials. "
+            "Curious, wonder-filled expression. Backdrop of alien flora and deep-space survey imagery."
+        ),
+        "filename": "explorer.png",
+    },
 }
 
 
@@ -133,10 +224,25 @@ def main():
 
     api_key = load_api_key()
     if not api_key:
-        print("ERROR: No OpenAI API key found in .mcp/image-gen-mcp/.env")
+        print("ERROR: No OpenAI API key found (IMAGE_GEN_OPEN_API_KEY / OPENAI_API_KEY)")
         sys.exit(1)
 
     client = openai.OpenAI(api_key=api_key)
+
+    # Try gpt-image-2 first; fall back to gpt-image-1 if unavailable
+    model = "gpt-image-2"
+    try:
+        test = client.images.generate(model=model, prompt="test pixel dot", n=1, size="1024x1024", quality="low")
+        if not (test.data and test.data[0].b64_json):
+            raise ValueError("no data")
+        print(f"  ✓ Model confirmed: {model}")
+    except Exception as e:
+        if "model" in str(e).lower() or "deployment" in str(e).lower() or "not found" in str(e).lower():
+            model = "gpt-image-1"
+            print(f"  gpt-image-2 unavailable ({e}), falling back to gpt-image-1")
+        else:
+            print(f"  Using {model} (probe error: {e})")
+
     results = {}
 
     items = list(NEWSCASTERS.items())
@@ -149,12 +255,12 @@ def main():
 
         prompt = f"{info['desc']} {STYLE_BASE}"
         print(f"\n{'='*60}")
-        print(f"[{i+1}/{len(items)}] Generating: {key} → {info['filename']}")
+        print(f"[{i+1}/{len(items)}] Generating: {key} → {info['filename']} [{model}]")
         print(f"{'='*60}")
 
         try:
             result = client.images.generate(
-                model="gpt-image-1",
+                model=model,
                 prompt=prompt,
                 n=1,
                 size="1024x1024",

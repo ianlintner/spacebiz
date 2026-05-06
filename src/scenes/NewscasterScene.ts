@@ -7,7 +7,10 @@ import {
   Button,
 } from "../ui/index.ts";
 import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
-import { getNewscasterForCategory } from "../generation/news/newscasters.ts";
+import {
+  getNewscasterForCategory,
+  NEWSCASTER_DEFS,
+} from "../generation/news/newscasters.ts";
 import type { TickerItem } from "../generation/news/types.ts";
 import { CATEGORY_META } from "../generation/news/categories.ts";
 
@@ -17,13 +20,10 @@ const PORTRAIT_SIZE = 180;
 const PADDING = 20;
 const TYPEWRITER_MS = 28;
 
-const NEWSCASTER_PORTRAIT_KEYS = [
-  "newscaster-anchor",
-  "newscaster-science",
-  "newscaster-finance",
-  "newscaster-fashion",
-  "newscaster-field",
-] as const;
+// Derived from NEWSCASTER_DEFS so it stays in sync automatically.
+const NEWSCASTER_PORTRAIT_KEYS = Object.values(NEWSCASTER_DEFS).map(
+  (d) => d.portraitKey,
+);
 
 export class NewscasterScene extends Phaser.Scene {
   private item!: TickerItem;
