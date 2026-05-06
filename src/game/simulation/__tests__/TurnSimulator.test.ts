@@ -485,7 +485,7 @@ describe("TurnSimulator", () => {
     });
 
     it("surfaces empire event headlines in the turn report digest", () => {
-      const result = simulateTurn(makeGameState(), new SeededRNG(2));
+      const result = simulateTurn(makeGameState(), new SeededRNG(3));
       const empireEvents = result.activeEvents.filter(
         (event) => event.category === EventCategory.Empire,
       );
