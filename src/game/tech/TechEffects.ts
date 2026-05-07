@@ -7,6 +7,7 @@ import { TECH_TREE } from "../../data/constants.ts";
 
 /**
  * Get the cumulative value of a specific effect type across all completed techs.
+ * Repeatable techs are multiplied by their purchase count.
  */
 export function getTechEffectTotal(
   state: GameState,
@@ -14,7 +15,7 @@ export function getTechEffectTotal(
   target?: "friendly" | "neutral" | "hostile" | "all",
 ): number {
   let total = 0;
-  for (const techId of state.tech.completedTechIds) {
+  for (const [techId, count] of Object.entries(state.tech.purchaseCount)) {
     const tech = TECH_TREE.find((t) => t.id === techId);
     if (!tech) continue;
     for (const effect of tech.effects) {
@@ -26,7 +27,7 @@ export function getTechEffectTotal(
         effect.target !== "all"
       )
         continue;
-      total += effect.value;
+      total += effect.value * count;
     }
   }
   return total;
@@ -39,7 +40,7 @@ export function hasTechEffect(
   state: GameState,
   effectType: TechEffect["type"],
 ): boolean {
-  for (const techId of state.tech.completedTechIds) {
+  for (const techId of Object.keys(state.tech.purchaseCount)) {
     const tech = TECH_TREE.find((t) => t.id === techId);
     if (!tech) continue;
     if (tech.effects.some((e) => e.type === effectType)) return true;
@@ -70,7 +71,7 @@ export function getTariffMultiplier(
 ): number {
   // Gather effects that apply to this disposition or to "all"
   let total = 0;
-  for (const techId of state.tech.completedTechIds) {
+  for (const [techId, count] of Object.entries(state.tech.purchaseCount)) {
     const tech = TECH_TREE.find((t) => t.id === techId);
     if (!tech) continue;
     for (const effect of tech.effects) {
@@ -80,7 +81,7 @@ export function getTariffMultiplier(
         effect.target === "all" ||
         effect.target === disposition
       ) {
-        total += effect.value;
+        total += effect.value * count;
       }
     }
   }

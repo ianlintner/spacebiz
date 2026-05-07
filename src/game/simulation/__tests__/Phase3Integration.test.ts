@@ -314,7 +314,7 @@ describe("Phase 3 Integration", () => {
         completedTechIds: ["logistics_hub"],
         currentResearchId: null,
         researchProgress: 0,
-        purchaseCount: {},
+        purchaseCount: { logistics_hub: 1 },
         queue: [],
       },
     });
