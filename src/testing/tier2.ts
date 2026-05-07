@@ -45,10 +45,10 @@ export function getPortrait(ceoId?: string): PortraitStatus {
   const id = ceoId ?? state.ceoPortrait?.portraitId ?? "";
   const textureKey = id ? getPortraitTextureKey(id) : "";
   const game = getGame();
-  // Phaser's TextureManager is global to the Game instance; any active scene
-  // sees the same set of keys.
-  const firstScene = game.scene.getScenes(true)[0] ?? game.scene.scenes[0];
-  const loaded = !!textureKey && !!firstScene?.textures.exists(textureKey);
+  // Phaser's TextureManager is global to the Game instance and persists
+  // across all scenes. Access it directly rather than through a scene.
+  const loaded =
+    !!textureKey && !!game?.textures && game.textures.exists(textureKey);
   const def = CEO_PORTRAITS.find((p) => p.id === id) ?? null;
   return {
     ceoId: id,

@@ -7,6 +7,7 @@ import type {
   StarSystem,
   Sector,
   GameEvent,
+  UniverseRoster,
 } from "../../../data/types.ts";
 
 /**
@@ -122,6 +123,77 @@ export function makeFixtureState(opts: FixtureOptions = {}): GameState {
     makeCompany("ai-3", "Trans-Sector Logistics", "Lin Aubrey", 40_000),
   ];
 
+  const universeRoster: UniverseRoster = {
+    sportsTeams: [
+      {
+        id: "team-1",
+        name: "Crimson Comets",
+        homePort: "New Terra",
+        league: "Core",
+        wins: 12,
+        losses: 4,
+        streak: 3,
+        lastResult: "won 4-2",
+        championship: false,
+      },
+      {
+        id: "team-2",
+        name: "Void Raptors",
+        homePort: "Ironhold",
+        league: "Rim",
+        wins: 8,
+        losses: 8,
+        streak: -1,
+        lastResult: "lost 1-3",
+        championship: false,
+      },
+    ],
+    musicians: [
+      {
+        id: "mus-1",
+        name: "Zara Vex",
+        genre: "void_jazz",
+        currentAlbum: "Event Horizon Blues",
+        onTour: true,
+        tourPort: "New Terra",
+        controversyActive: false,
+      },
+    ],
+    celebrities: [
+      {
+        id: "celeb-1",
+        name: "Orlan Starke",
+        role: "holovid actor",
+        scandalActive: false,
+      },
+    ],
+    pundits: [
+      {
+        id: "pundit-1",
+        name: "Dex Mallory",
+        affiliation: "GNN",
+        slant: "contrarian",
+      },
+    ],
+    crimeFigures: [
+      {
+        id: "crime-1",
+        name: "The Jackal",
+        type: "syndicate",
+        active: true,
+      },
+    ],
+    militaryOfficers: [
+      {
+        id: "off-1",
+        name: "Admiral Shen",
+        rank: "Admiral",
+        empire: "emp-1",
+        status: "active",
+      },
+    ],
+  };
+
   return {
     seed: opts.seed ?? 42,
     turn: opts.turn ?? 1,
@@ -131,6 +203,7 @@ export function makeFixtureState(opts: FixtureOptions = {}): GameState {
     galaxy: { sectors, empires, systems, planets },
     aiCompanies,
     activeEvents: opts.activeEvents ?? [],
+    universeRoster,
   } as unknown as GameState;
 }
 

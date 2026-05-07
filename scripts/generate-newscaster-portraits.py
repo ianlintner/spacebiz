@@ -210,6 +210,49 @@ NEWSCASTERS = {
         ),
         "filename": "explorer.png",
     },
+    "newscaster-anomaly": {
+        "desc": (
+            "Zix Anomura, GNN anomaly and unexplained phenomena correspondent. "
+            "alien xenobiologist field reporter, glowing teal eyes, deep-space science divination aesthetic, "
+            "cybernetic monocle, pixel-art portrait"
+        ),
+        "filename": "newscaster-anomaly.png",
+    },
+    "newscaster-music": {
+        "desc": (
+            "Lyra Cass, GNN music and culture correspondent. "
+            "vibrant alien music critic, holographic earrings, magenta fur trim, stylish pixel-art portrait"
+        ),
+        "filename": "newscaster-music.png",
+    },
+    "newscaster-discovery": {
+        "desc": (
+            "Dr. Venn Orix, GNN discovery and exploration correspondent. "
+            "weathered explorer-academic alien, dust-coated coat, telescope strap, weathered eyes, pixel-art portrait"
+        ),
+        "filename": "newscaster-discovery.png",
+    },
+    "newscaster-gossip": {
+        "desc": (
+            "Sable Drenn, GNN gossip and society correspondent. "
+            "glamorous alien socialite gossip columnist, amber lipstick, dramatic eye-shadow, voidlight earrings, pixel-art portrait"
+        ),
+        "filename": "newscaster-gossip.png",
+    },
+    "newscaster-military": {
+        "desc": (
+            "Cmdr. Harke Voss, GNN military and defense correspondent. "
+            "stern alien military officer with neural-link scar, bloodred eye, formal uniform, pixel-art portrait"
+        ),
+        "filename": "newscaster-military.png",
+    },
+    "newscaster-propaganda": {
+        "desc": (
+            "The Archivist, GNN state affairs and official broadcast correspondent. "
+            "silhouette only, no visible face, steel-grey shroud, abstract lighting, pixel-art portrait"
+        ),
+        "filename": "newscaster-propaganda.png",
+    },
 }
 
 

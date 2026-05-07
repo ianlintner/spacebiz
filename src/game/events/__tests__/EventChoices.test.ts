@@ -672,8 +672,8 @@ describe("tickEventChains", () => {
 // ---------------------------------------------------------------------------
 
 describe("EventChainDefinitions", () => {
-  it("has exactly 6 chain definitions", () => {
-    expect(EVENT_CHAIN_DEFINITIONS).toHaveLength(6);
+  it("has exactly 9 chain definitions", () => {
+    expect(EVENT_CHAIN_DEFINITIONS).toHaveLength(9);
   });
 
   it("all chain definitions have required fields", () => {

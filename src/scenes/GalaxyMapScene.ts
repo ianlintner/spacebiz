@@ -37,7 +37,7 @@ import {
   getUsedGalacticRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import type { RouteTrafficVisual } from "../game/routes/RouteManager.ts";
-import { GalaxyView3D } from "./galaxy3d/GalaxyView3D.ts";
+import { GalaxyView3D, setActiveGalaxyView } from "./galaxy3d/GalaxyView3D.ts";
 import type { ProjectedScreen, Vec3 } from "./galaxy3d/GalaxyView3D.ts";
 
 import type { GameHUDScene } from "./GameHUDScene.ts";
@@ -186,6 +186,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       designWidth: L.gameWidth,
       designHeight: L.gameHeight,
     });
+    setActiveGalaxyView(this.view3D);
     this.view3D.setViewport(this.vizRect);
     this.view3D.setGalaxy(
       systems,
@@ -330,6 +331,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       this.routeOriginRing = null;
       this.holdTimerEvent?.remove();
       this.holdTimerEvent = null;
+      setActiveGalaxyView(null);
       this.view3D?.destroy();
       this.view3D = null;
     };

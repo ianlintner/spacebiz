@@ -4,6 +4,7 @@ import type {
   EventChoice,
   ChoiceOption,
 } from "../../data/types.ts";
+import { ALL_SPACE_HAZARDS } from "./SpaceHazardEventDefinitions.ts";
 
 export interface EventTemplate {
   id: string;
@@ -925,4 +926,6 @@ export const EVENT_TEMPLATES: EventTemplate[] = [
   allianceFormed,
   tradePactSigned,
   borderClosure,
+  // Space Hazard Events (Tier 1 effects-bearing + Tier 2 flavor anomalies)
+  ...ALL_SPACE_HAZARDS,
 ];
