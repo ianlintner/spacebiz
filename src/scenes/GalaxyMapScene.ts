@@ -111,6 +111,9 @@ export class GalaxyMapScene extends Phaser.Scene {
   private showEmpires = true;
   private showSystemNames = true;
   private showShips = true;
+  // Multiplied into each ship's per-instance speed each frame. Set to a high
+  // value during sim playback so ships visibly race along their lanes.
+  private shipSpeedMultiplier = 1;
   // Cycle through: null (all) → "player" → each AI company id → null …
   // Routes/ships not matching the filter are ghosted; full hide is via the
   // ship layer toggle.
@@ -1453,7 +1456,7 @@ export class GalaxyMapScene extends Phaser.Scene {
           ts.waitRemaining = 0;
         }
       } else {
-        ts.t += ts.speed * ts.dir * dt;
+        ts.t += ts.speed * this.shipSpeedMultiplier * ts.dir * dt;
         if (ts.t >= 1) {
           ts.t = 1;
           ts.dir = -1;
