@@ -57,6 +57,20 @@ const Y_WOBBLE = 4;
  */
 export const GALAXY_3D_CANVAS_CLASS = "galaxy-3d-canvas";
 
+// Module-level pointer to the currently-mounted GalaxyView3D instance.
+// GalaxyMapScene registers its view on create and clears on shutdown so that
+// overlay scenes (SimPlaybackScene) can access route curves and projections
+// without creating a second Three.js canvas.
+let _activeGalaxyView: GalaxyView3D | null = null;
+
+export function getActiveGalaxyView(): GalaxyView3D | null {
+  return _activeGalaxyView;
+}
+
+export function setActiveGalaxyView(view: GalaxyView3D | null): void {
+  _activeGalaxyView = view;
+}
+
 /**
  * Hide or show every 3D galaxy canvas currently in the DOM. Idempotent and
  * safe to call when no canvas is mounted.

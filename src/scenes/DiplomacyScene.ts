@@ -774,7 +774,9 @@ export class DiplomacyScene extends Phaser.Scene {
           .image(cx, cy, textureKey)
           .setDisplaySize(SIZE, SIZE);
       } else {
-        this.portraitImage.setTexture(textureKey).setDisplaySize(SIZE, SIZE);
+        if (this.portraitImage.active && this.textures.exists(textureKey)) {
+          this.portraitImage.setTexture(textureKey).setDisplaySize(SIZE, SIZE);
+        }
       }
     } else {
       // Hide while loading; swap texture in once loaded. The selection may

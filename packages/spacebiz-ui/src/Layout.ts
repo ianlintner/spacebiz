@@ -40,7 +40,7 @@ function computeMetrics(w: number, h: number): LayoutMetrics {
   const navSidebarWidth = isPortrait ? 0 : 56;
   const hudTopBarHeight = 56;
   const hudBottomBarHeight = 52;
-  const hudTickerHeight = 20;
+  const hudTickerHeight = 36;
   const contentGap = 12;
 
   // Scale content to fill available space, keeping small margins on each side.
@@ -107,7 +107,7 @@ export const SIDEBAR_WIDTH = 240;
 export const CONTENT_GAP = 12;
 export const HUD_TOP_BAR_HEIGHT = 56;
 export const HUD_BOTTOM_BAR_HEIGHT = 52;
-export const HUD_TICKER_HEIGHT = 20;
+export const HUD_TICKER_HEIGHT = 36;
 export const NAV_SIDEBAR_WIDTH = 56;
 export const CONTENT_TOP = HUD_TOP_BAR_HEIGHT;
 export const CONTENT_HEIGHT =
