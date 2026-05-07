@@ -190,6 +190,7 @@ export function substituteTickerTokens(
   rng: SeededRNG,
 ): string {
   const ctx: TokenContext = { state, rng, bound: new Map() };
+  const roster = state.universeRoster;
 
   return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, raw) => {
     const tok = String(raw).toLowerCase();
@@ -230,6 +231,99 @@ export function substituteTickerTokens(
         return rng.pick(ADJECTIVES);
       case "commodity":
         return rng.pick(COMMODITIES);
+      // ── Roster tokens (universeRoster-backed) ────────────────────
+      case "team": {
+        if (!roster?.sportsTeams?.length) return match;
+        if (ctx.bound.has("team")) return ctx.bound.get("team")!;
+        const team =
+          roster.sportsTeams[ctx.rng.nextInt(0, roster.sportsTeams.length - 1)];
+        ctx.bound.set("team", team.name);
+        ctx.bound.set("__team_id", team.id);
+        if (team.lastResult)
+          ctx.bound.set("__team_last_result", team.lastResult);
+        return team.name;
+      }
+      case "team2": {
+        if (!roster?.sportsTeams?.length) return match;
+        if (ctx.bound.has("team2")) return ctx.bound.get("team2")!;
+        const taken = ctx.bound.get("__team_id");
+        const pool = roster.sportsTeams.filter((t) => t.id !== taken);
+        if (!pool.length) return match;
+        const team = pool[ctx.rng.nextInt(0, pool.length - 1)];
+        ctx.bound.set("team2", team.name);
+        return team.name;
+      }
+      case "last_result": {
+        return ctx.bound.get("__team_last_result") ?? "took the field";
+      }
+      case "musician": {
+        if (!roster?.musicians?.length) return match;
+        if (ctx.bound.has("musician")) return ctx.bound.get("musician")!;
+        const m =
+          roster.musicians[ctx.rng.nextInt(0, roster.musicians.length - 1)];
+        ctx.bound.set("musician", m.name);
+        ctx.bound.set("__musician_id", m.id);
+        if (m.controversyDesc)
+          ctx.bound.set("__controversy", m.controversyDesc);
+        if (m.currentAlbum) ctx.bound.set("__album", m.currentAlbum);
+        ctx.bound.set("__genre", m.genre);
+        return m.name;
+      }
+      case "album": {
+        return ctx.bound.get("__album") ?? "their latest record";
+      }
+      case "genre": {
+        return ctx.bound.get("__genre") ?? "void-jazz";
+      }
+      case "controversy": {
+        return ctx.bound.get("__controversy") ?? "an unspecified incident";
+      }
+      case "celeb": {
+        if (!roster?.celebrities?.length) return match;
+        if (ctx.bound.has("celeb")) return ctx.bound.get("celeb")!;
+        const c =
+          roster.celebrities[ctx.rng.nextInt(0, roster.celebrities.length - 1)];
+        ctx.bound.set("celeb", c.name);
+        return c.name;
+      }
+      case "pundit": {
+        if (!roster?.pundits?.length) return match;
+        if (ctx.bound.has("pundit")) return ctx.bound.get("pundit")!;
+        const p = roster.pundits[ctx.rng.nextInt(0, roster.pundits.length - 1)];
+        ctx.bound.set("pundit", p.name);
+        return p.name;
+      }
+      case "crime_figure": {
+        if (!roster?.crimeFigures?.length) return match;
+        const active = roster.crimeFigures.filter((c) => c.active);
+        if (!active.length) return roster.crimeFigures[0].name;
+        if (ctx.bound.has("crime_figure"))
+          return ctx.bound.get("crime_figure")!;
+        const cf = active[ctx.rng.nextInt(0, active.length - 1)];
+        ctx.bound.set("crime_figure", cf.name);
+        return cf.name;
+      }
+      case "officer": {
+        if (!roster?.militaryOfficers?.length) return match;
+        if (ctx.bound.has("officer")) return ctx.bound.get("officer")!;
+        const o =
+          roster.militaryOfficers[
+            ctx.rng.nextInt(0, roster.militaryOfficers.length - 1)
+          ];
+        ctx.bound.set("officer", o.name);
+        ctx.bound.set("__rank", o.rank);
+        return o.name;
+      }
+      case "rank": {
+        if (ctx.bound.has("__rank")) return ctx.bound.get("__rank")!;
+        if (!roster?.militaryOfficers?.length) return match;
+        const o =
+          roster.militaryOfficers[
+            ctx.rng.nextInt(0, roster.militaryOfficers.length - 1)
+          ];
+        ctx.bound.set("__rank", o.rank);
+        return o.rank;
+      }
       default:
         return match;
     }
@@ -257,4 +351,17 @@ export const KNOWN_TOKENS = [
   "n2",
   "adj",
   "commodity",
+  // Roster tokens (universeRoster-backed)
+  "team",
+  "team2",
+  "last_result",
+  "musician",
+  "album",
+  "genre",
+  "controversy",
+  "celeb",
+  "pundit",
+  "crime_figure",
+  "officer",
+  "rank",
 ] as const;

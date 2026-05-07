@@ -16,12 +16,13 @@ export {
 export { StandingsGraph } from "./StandingsGraph.ts";
 export type { StandingsGraphConfig } from "./StandingsGraph.ts";
 
-export { TechTreeGrid } from "./TechTreeGrid.ts";
+export { TechGraphCanvas, BRANCH_LABELS } from "./TechGraphCanvas.ts";
 export type {
-  TechTreeGridConfig,
-  TechTreeGridState,
-  TechNodeState,
-} from "./TechTreeGrid.ts";
+  TechGraphState,
+  TechGraphCanvasConfig,
+} from "./TechGraphCanvas.ts";
+export { TechQueueRow } from "./TechQueueRow.ts";
+export type { TechQueueRowConfig, TechQueueRowState } from "./TechQueueRow.ts";
 
 export { StationBuilderGrid, ROOM_COLORS } from "./StationBuilderGrid.ts";
 export type {

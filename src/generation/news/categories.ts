@@ -44,6 +44,12 @@ export const CATEGORY_META: Record<TickerCategory, CategoryMeta> = {
   xenobiology: { badge: "XBI", label: "Xenobiology", toneColor: "textDim" },
   obituary: { badge: "OBI", label: "Obituaries", toneColor: "textDim" },
   homage: { badge: "???", label: "Galactic Trivia", toneColor: "textDim" },
+  anomaly: { badge: "ANM", label: "Anomaly Report", toneColor: "warning" },
+  music: { badge: "MUS", label: "Music & Culture", toneColor: "textDim" },
+  discovery: { badge: "DSC", label: "Discovery", toneColor: "accent" },
+  gossip: { badge: "GSP", label: "Society", toneColor: "textDim" },
+  military: { badge: "MIL", label: "Defense", toneColor: "text" },
+  propaganda: { badge: "STA", label: "State Affairs", toneColor: "textDim" },
 };
 
 /** All twenty flavor categories, in canonical order (used by tests + feed balance). */
@@ -68,4 +74,11 @@ export const FLAVOR_CATEGORIES: TickerCategory[] = [
   "xenobiology",
   "obituary",
   "homage",
+  // Expansion
+  "anomaly",
+  "music",
+  "discovery",
+  "gossip",
+  "military",
+  "propaganda",
 ];

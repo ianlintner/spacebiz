@@ -115,6 +115,8 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
       completedTechIds: [],
       currentResearchId: null,
       researchProgress: 0,
+      purchaseCount: {},
+      queue: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],

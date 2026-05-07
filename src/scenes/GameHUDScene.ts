@@ -157,6 +157,7 @@ export class GameHUDScene extends Phaser.Scene {
   private navSidebarAccent!: Phaser.GameObjects.Rectangle;
   private tickerBg!: Phaser.GameObjects.Rectangle;
   private tickerBorder!: Phaser.GameObjects.Rectangle;
+  private tickerGradient!: Phaser.GameObjects.Graphics;
   private ceoPortraitImg!: Phaser.GameObjects.Image;
   private ceoPortraitMask!: Phaser.GameObjects.Arc;
   private ceoPortraitBorder!: Phaser.GameObjects.Arc;
@@ -287,6 +288,13 @@ export class GameHUDScene extends Phaser.Scene {
     const hudPortraitX = 6 + portraitSize / 2;
     const hudPortraitY = L.hudTopBarHeight / 2;
 
+    // Eagerly kick off portrait load to maximize time for it to complete.
+    // Don't await — create() must be synchronous for Phaser's scene lifecycle.
+    const portraitLoadPromise = portraitLoader.ensureCeoPortrait(
+      this,
+      state.ceoPortrait.portraitId,
+    );
+
     // Always add the image — start with placeholder if texture not yet loaded
     const initialKey = this.textures.exists(portraitKey)
       ? portraitKey
@@ -308,20 +316,17 @@ export class GameHUDScene extends Phaser.Scene {
       .setStrokeStyle(1, theme.colors.panelBorder)
       .setFillStyle(0x000000, 0);
 
-    // If portrait wasn't pre-loaded (save-game path), fetch it now
-    if (!this.textures.exists(portraitKey)) {
-      portraitLoader
-        .ensureCeoPortrait(this, state.ceoPortrait.portraitId)
-        .then((key) => {
-          if (portraitImg.active) {
-            portraitImg.setTexture(key);
-            fitImageCover(portraitImg, portraitSize, portraitSize);
-          }
-        })
-        .catch(() => {
-          /* leave placeholder */
-        });
-    }
+    // Update the portrait image once the texture loads
+    portraitLoadPromise
+      .then((key) => {
+        if (portraitImg.active && this.textures.exists(key)) {
+          portraitImg.setTexture(key);
+          fitImageCover(portraitImg, portraitSize, portraitSize);
+        }
+      })
+      .catch(() => {
+        /* leave placeholder if load fails */
+      });
 
     // Company name (left-aligned, shifted right for portrait)
     const nameOffsetX = 6 + portraitSize + 10;
@@ -725,6 +730,12 @@ export class GameHUDScene extends Phaser.Scene {
       .rectangle(0, tickerY, L.gameWidth, 1, theme.colors.panelBorder)
       .setOrigin(0, 0)
       .setDepth(291);
+    // Gradient fade strip above the ticker — fades from transparent at top to
+    // background at bottom so the strip emerges naturally from the screen edge.
+    this.tickerGradient = this.add.graphics().setDepth(289);
+    const bg = theme.colors.background;
+    this.tickerGradient.fillGradientStyle(bg, bg, bg, bg, 0, 0, 0.95, 0.95);
+    this.tickerGradient.fillRect(0, tickerY - 24, L.gameWidth, 24);
     // newsTicker is created/recreated by relayout() so the geometry is
     // owned by a single code path.
 
@@ -900,6 +911,20 @@ export class GameHUDScene extends Phaser.Scene {
     this.tickerBg.setSize(L.gameWidth, L.hudTickerHeight);
     this.tickerBorder.setPosition(0, tickerY);
     this.tickerBorder.setSize(L.gameWidth, 1);
+    const tickerTheme = getTheme();
+    const tickerBgColor = tickerTheme.colors.background;
+    this.tickerGradient.clear();
+    this.tickerGradient.fillGradientStyle(
+      tickerBgColor,
+      tickerBgColor,
+      tickerBgColor,
+      tickerBgColor,
+      0,
+      0,
+      0.95,
+      0.95,
+    );
+    this.tickerGradient.fillRect(0, tickerY - 24, L.gameWidth, 24);
 
     // News ticker reflows in place — mask + scroll travel rebuild against
     // the new bounds without destroying the underlying graphics objects.
@@ -1270,10 +1295,12 @@ export class GameHUDScene extends Phaser.Scene {
     }
 
     for (const key of this.contentSceneKeys) {
-      if (
-        key !== sceneName &&
-        (this.scene.isActive(key) || this.scene.isPaused(key))
-      ) {
+      if (key === sceneName) continue;
+      // Keep GalaxyMapScene running as backdrop when launching SimPlaybackScene
+      // so the sim renders as an overlay on the same galaxy view.
+      if (sceneName === "SimPlaybackScene" && key === "GalaxyMapScene")
+        continue;
+      if (this.scene.isActive(key) || this.scene.isPaused(key)) {
         this.scene.stop(key);
       }
     }
@@ -1336,7 +1363,10 @@ export class GameHUDScene extends Phaser.Scene {
 
     // Launch new content scene
     this.scene.launch(sceneName, data);
-    setGalaxy3DVisible(sceneName === "GalaxyMapScene");
+    // SimPlaybackScene overlays GalaxyMapScene — keep the 3D canvas visible.
+    setGalaxy3DVisible(
+      sceneName === "GalaxyMapScene" || sceneName === "SimPlaybackScene",
+    );
 
     this.activeContentScene = sceneName;
     this.activeContentData = data;
@@ -1362,6 +1392,7 @@ export class GameHUDScene extends Phaser.Scene {
     const theme = getTheme();
     const L = getLayout();
 
+    if (!this.tabStrip) return;
     this.tabStrip.removeAll(true);
 
     const group = findGroupForScene(this.activeContentScene);

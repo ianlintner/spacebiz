@@ -117,6 +117,33 @@ export class NewscasterScene extends Phaser.Scene {
       .setDepth(403);
     this.widgets.push(liveTag);
 
+    // [DEVELOPING] badge — only for long-depth stories. Pulses to signal an
+    // ongoing/expanded story; sits to the left of the LIVE indicator.
+    if (this.item.storyDepth === "long") {
+      const developing = this.add
+        .text(
+          panelX + PANEL_W - PADDING - 60,
+          panelY + headerH / 2,
+          "[DEVELOPING]",
+          {
+            fontSize: "11px",
+            fontFamily: "monospace",
+            color: colorToString(theme.colors.warning),
+          },
+        )
+        .setOrigin(1, 0.5)
+        .setDepth(403);
+      this.widgets.push(developing);
+      this.tweens.add({
+        targets: developing,
+        alpha: { from: 1, to: 0.4 },
+        duration: 800,
+        ease: "Sine.InOut",
+        yoyo: true,
+        repeat: -1,
+      });
+    }
+
     // Portrait area
     const portraitX = panelX + PADDING;
     const portraitY = panelY + headerH + PADDING;
@@ -192,7 +219,8 @@ export class NewscasterScene extends Phaser.Scene {
     this.widgets.push(divider);
 
     // Typewriter story text
-    this.fullStoryText = this.item.text;
+    // item.story takes precedence over item.text; absent story → backward-compatible fallback.
+    this.fullStoryText = this.item.story ?? this.item.text;
     this.charIndex = 0;
 
     this.storyText = this.add

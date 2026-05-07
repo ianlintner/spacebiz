@@ -253,6 +253,8 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
       completedTechIds: [],
       currentResearchId: null,
       researchProgress: 0,
+      purchaseCount: {},
+      queue: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],
@@ -485,7 +487,7 @@ describe("TurnSimulator", () => {
     });
 
     it("surfaces empire event headlines in the turn report digest", () => {
-      const result = simulateTurn(makeGameState(), new SeededRNG(2));
+      const result = simulateTurn(makeGameState(), new SeededRNG(3));
       const empireEvents = result.activeEvents.filter(
         (event) => event.category === EventCategory.Empire,
       );

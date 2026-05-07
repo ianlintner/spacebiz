@@ -5,7 +5,7 @@ import { CATEGORY_META } from "../../../../src/generation/news/categories.ts";
 
 const SCROLL_SPEED = 80; // px per second
 const ITEM_SEPARATOR = "   •   ";
-const FONT_SIZE = 11;
+const FONT_SIZE = 14;
 const UNDERLINE_HEIGHT = 1;
 const UNDERLINE_OFFSET_Y = 2;
 

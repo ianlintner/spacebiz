@@ -19,3 +19,6 @@ playwright-report/
 test-results/
 .playwright-mcp/
 e2e/screenshots/
+
+# Local Claude worktrees
+.claude/worktrees/

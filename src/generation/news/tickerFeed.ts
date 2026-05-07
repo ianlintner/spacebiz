@@ -1,6 +1,7 @@
 import type { GameState, TurnResult } from "../../data/types.ts";
 import { SeededRNG } from "../../utils/SeededRNG.ts";
 import type { TickerItem, TickerCategory } from "./types.ts";
+import { CATEGORY_STORY_DEPTH } from "./types.ts";
 import { FLAVOR_CATEGORIES } from "./categories.ts";
 import {
   ALL_FLAVOR_TEMPLATES,
@@ -103,12 +104,22 @@ export function generateTickerFeed(
   // ── 4) Flavor news ────────────────────────────────────────────
   const remaining = Math.max(0, maxItems - items.length);
   if (remaining > 0) {
-    const chosenCategories = chooseFlavorCategories(rng, flavorCategoryCount);
+    // Filter out categories with no templates yet (e.g., 2026-05 expansion
+    // categories before Tasks 12-13 land); otherwise the round-robin cursor
+    // can stall on an empty pool.
+    const chosenCategories = chooseFlavorCategories(
+      rng,
+      flavorCategoryCount,
+    ).filter((c) => getTemplatesForCategory(c).length > 0);
     const usedTemplates = new Set<string>();
     let drawn = 0;
     let safety = 0;
 
-    while (drawn < remaining && safety < remaining * 6) {
+    while (
+      drawn < remaining &&
+      safety < remaining * 6 &&
+      chosenCategories.length > 0
+    ) {
       safety++;
       const cat = chosenCategories[drawn % chosenCategories.length];
       const inCategorySoFar = items.filter((i) => i.category === cat).length;
@@ -120,10 +131,29 @@ export function generateTickerFeed(
       if (usedTemplates.has(tmpl.template)) continue;
       usedTemplates.add(tmpl.template);
 
+      // Resolve headline + optional story body. Note: each call to
+      // substituteTickerTokens has its own `bound` map, so token bindings
+      // (e.g. {team}/{musician}) do not currently carry across the headline
+      // and story. Sharing bindings is a tracked follow-up — for this phase
+      // headline and story resolve independently.
+      const resolvedHeadline = substituteTickerTokens(
+        tmpl.template,
+        state,
+        rng,
+      );
+      let resolvedStory: string | undefined;
+      if (tmpl.story && tmpl.story.length > 0) {
+        const variant = tmpl.story[rng.nextInt(0, tmpl.story.length - 1)];
+        resolvedStory = substituteTickerTokens(variant, state, rng);
+      }
+      const depth = tmpl.storyDepth ?? CATEGORY_STORY_DEPTH[cat];
+
       items.push({
         category: cat,
-        text: substituteTickerTokens(tmpl.template, state, rng),
+        text: resolvedHeadline,
         priority: 20 + (5 - (drawn % 5)),
+        story: resolvedStory,
+        storyDepth: depth,
       });
       drawn++;
     }

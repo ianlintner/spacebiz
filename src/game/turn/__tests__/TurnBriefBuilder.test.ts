@@ -138,6 +138,8 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
       completedTechIds: [],
       currentResearchId: "logistics-1", // queued so no "no research" card by default
       researchProgress: 0,
+      purchaseCount: {},
+      queue: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],
@@ -226,6 +228,8 @@ describe("buildTurnBrief", () => {
         completedTechIds: [],
         currentResearchId: null,
         researchProgress: 0,
+        purchaseCount: {},
+        queue: [],
       },
     });
     const cards = buildTurnBrief(state);
@@ -251,6 +255,8 @@ describe("buildTurnBrief", () => {
         completedTechIds: [],
         currentResearchId: null,
         researchProgress: 0,
+        purchaseCount: {},
+        queue: [],
       },
     });
     const cards = buildTurnBrief(state);
@@ -306,6 +312,8 @@ describe("buildTurnBrief", () => {
         completedTechIds: [],
         currentResearchId: null,
         researchProgress: 0,
+        purchaseCount: {},
+        queue: [],
       },
     });
     const cards = buildTurnBrief(state);
