@@ -1349,10 +1349,16 @@ export class GameHUDScene extends Phaser.Scene {
       return;
     }
 
-    // Stop current content scene (check it's actually running)
+    // Stop current content scene (check it's actually running).
+    // Exception: keep GalaxyMapScene alive when launching SimPlaybackScene
+    // so it continues running as the 3D backdrop.
+    const keepForSim =
+      sceneName === "SimPlaybackScene" &&
+      this.activeContentScene === "GalaxyMapScene";
     if (
-      this.scene.isActive(this.activeContentScene) ||
-      this.scene.isPaused(this.activeContentScene)
+      !keepForSim &&
+      (this.scene.isActive(this.activeContentScene) ||
+        this.scene.isPaused(this.activeContentScene))
     ) {
       this.scene.stop(this.activeContentScene);
     }

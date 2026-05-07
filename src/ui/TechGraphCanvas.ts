@@ -64,6 +64,7 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
   private dragStartPanY = 0;
   private currentState: TechGraphState | null = null;
   private bgHit: Phaser.GameObjects.Rectangle;
+  private clipMask!: Phaser.GameObjects.Graphics;
   private _onMove: ((ptr: Phaser.Input.Pointer) => void) | null = null;
   private _onUp: (() => void) | null = null;
   private _onWheel: (
@@ -104,8 +105,24 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
     // Apply initial zoom
     this.graphGroup.setScale(this.zoom);
 
+    // Clip mask — keeps graph content within the canvas bounds when panning/zooming
+    this.clipMask = scene.add.graphics().setVisible(false);
+    this.graphGroup.filters?.internal.addMask(this.clipMask);
+    this.updateClipMask();
+
     // Setup pan/zoom input
     this.setupPanZoom();
+  }
+
+  private updateClipMask(): void {
+    this.clipMask.clear();
+    this.clipMask.fillStyle(0xffffff);
+    this.clipMask.fillRect(
+      this.x,
+      this.y,
+      this.config.width,
+      this.config.height,
+    );
   }
 
   private polarToXY(angle: number, radius: number): { x: number; y: number } {
@@ -249,12 +266,19 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
     return this;
   }
 
+  override setPosition(x?: number, y?: number): this {
+    super.setPosition(x, y);
+    if (this.clipMask) this.updateClipMask();
+    return this;
+  }
+
   override setSize(width: number, height: number): this {
     super.setSize(width, height);
     this.config.width = width;
     this.config.height = height;
     this.bgHit.setSize(width, height);
     this.graphGroup.setPosition(width / 2 + this.panX, height / 2 + this.panY);
+    if (this.clipMask) this.updateClipMask();
     return this;
   }
 
@@ -301,6 +325,7 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
     if (this._onMove) this.scene.input.off("pointermove", this._onMove);
     if (this._onUp) this.scene.input.off("pointerup", this._onUp);
     if (this._onWheel) this.scene.input.off("wheel", this._onWheel);
+    this.clipMask?.destroy();
     super.destroy(fromScene);
   }
 }
