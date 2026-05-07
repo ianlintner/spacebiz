@@ -42,6 +42,15 @@ test.describe("Tier 2 smoke", () => {
     page,
     sft,
   }) => {
+    // Capture console logs for debugging
+    const consoleLogs: string[] = [];
+    page.on("console", (msg) => {
+      consoleLogs.push(`[${msg.type()}] ${msg.text()}`);
+    });
+    page.on("pageerror", (err) => {
+      consoleLogs.push(`[ERROR] ${err.message}`);
+    });
+
     // 1. Boot main game (handled by the sft fixture page.goto("/")).
     await sft.ready();
 
@@ -55,9 +64,16 @@ test.describe("Tier 2 smoke", () => {
     await page.waitForTimeout(800);
 
     // 3. CEO portrait — verify the player's CEO portrait texture is loaded.
-    await expect
-      .poll(async () => (await sft.getPortrait()).loaded, { timeout: 8000 })
-      .toBe(true);
+    try {
+      await expect
+        .poll(async () => (await sft.getPortrait()).loaded, { timeout: 8000 })
+        .toBe(true);
+    } catch (err) {
+      console.log("\n=== CONSOLE LOGS ===");
+      consoleLogs.forEach((log) => console.log(log));
+      console.log("=== END LOGS ===\n");
+      throw err;
+    }
 
     const portrait = await sft.getPortrait();
     expect(portrait.ceoId).toBeTruthy();

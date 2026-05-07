@@ -288,6 +288,16 @@ export class GameHUDScene extends Phaser.Scene {
     const hudPortraitX = 6 + portraitSize / 2;
     const hudPortraitY = L.hudTopBarHeight / 2;
 
+    // Eagerly kick off portrait load to maximize time for it to complete.
+    // Don't await — create() must be synchronous for Phaser's scene lifecycle.
+    console.log(
+      `[GameHUDScene.create] loading player CEO portrait: ${state.ceoPortrait.portraitId}`,
+    );
+    const portraitLoadPromise = portraitLoader.ensureCeoPortrait(
+      this,
+      state.ceoPortrait.portraitId,
+    );
+
     // Always add the image — start with placeholder if texture not yet loaded
     const initialKey = this.textures.exists(portraitKey)
       ? portraitKey
@@ -309,20 +319,17 @@ export class GameHUDScene extends Phaser.Scene {
       .setStrokeStyle(1, theme.colors.panelBorder)
       .setFillStyle(0x000000, 0);
 
-    // If portrait wasn't pre-loaded (save-game path), fetch it now
-    if (!this.textures.exists(portraitKey)) {
-      portraitLoader
-        .ensureCeoPortrait(this, state.ceoPortrait.portraitId)
-        .then((key) => {
-          if (portraitImg.active && this.textures.exists(key)) {
-            portraitImg.setTexture(key);
-            fitImageCover(portraitImg, portraitSize, portraitSize);
-          }
-        })
-        .catch(() => {
-          /* leave placeholder */
-        });
-    }
+    // Update the portrait image once the texture loads
+    portraitLoadPromise
+      .then((key) => {
+        if (portraitImg.active && this.textures.exists(key)) {
+          portraitImg.setTexture(key);
+          fitImageCover(portraitImg, portraitSize, portraitSize);
+        }
+      })
+      .catch(() => {
+        /* leave placeholder if load fails */
+      });
 
     // Company name (left-aligned, shifted right for portrait)
     const nameOffsetX = 6 + portraitSize + 10;
