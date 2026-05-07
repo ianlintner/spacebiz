@@ -1,6 +1,5 @@
-import fetch from "node-fetch";
-
 // Start a simple check for portrait URLs
+// Uses the built-in global fetch available in Node 22+
 async function checkPortraitUrls() {
   const urls = [
     "http://localhost:5173/portraits/ceo/alexander_zheng.webp",

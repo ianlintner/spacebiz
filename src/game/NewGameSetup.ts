@@ -367,6 +367,8 @@ export function createNewGame(
     completedTechIds: [],
     currentResearchId: null,
     researchProgress: 0,
+    purchaseCount: {},
+    queue: [],
   };
 
   // Phase 4: Initialize diplomacy & border ports

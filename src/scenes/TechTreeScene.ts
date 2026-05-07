@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
-import { TECH_TREE } from "../data/constants.ts";
+import { TECH_GRAPH } from "../data/constants.ts";
 import {
   getTheme,
   colorToString,
@@ -10,33 +10,35 @@ import {
   SceneUiDirector,
   createStarfield,
   getLayout,
-  ProgressBar,
-  Modal,
   attachReflowHandler,
   GROUP_TAB_STRIP_HEIGHT,
 } from "../ui/index.ts";
-import { TechTreeGrid, BRANCH_LABELS } from "../ui/TechTreeGrid.ts";
+import { TechGraphCanvas, BRANCH_LABELS } from "../ui/TechGraphCanvas.ts";
+import { TechQueueRow } from "../ui/TechQueueRow.ts";
 import {
   isTechAvailable,
-  setResearchTarget,
+  instantUnlockOrQueue,
+  reorderQueue,
+  removeFromQueue,
   getCurrentResearch,
-  getResearchProgress,
   calculateRPPerTurn,
+  effectiveCost,
 } from "../game/tech/TechTree.ts";
 
 // ---------------------------------------------------------------------------
 // Scene
 // ---------------------------------------------------------------------------
 
+const QUEUE_ROW_HEIGHT = 72;
+
 export class TechTreeScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
   private mainPanel!: Panel;
-  private grid!: TechTreeGrid;
+  private graph!: TechGraphCanvas;
+  private queueRow!: TechQueueRow;
   private rpStatusText!: Phaser.GameObjects.Text;
   private currentResearchText!: Phaser.GameObjects.Text;
-  private progressBar!: ProgressBar;
-  private progressLabel: Phaser.GameObjects.Text | null = null;
-  private researchButton!: Button;
+  private unlockButton!: Button;
   private selectedTechId: string | null = null;
 
   constructor() {
@@ -87,7 +89,7 @@ export class TechTreeScene extends Phaser.Scene {
     this.rpStatusText = this.add.text(
       0,
       0,
-      `Total RP: ${state.tech.researchPoints} • +${rpPerTurn} RP/turn • Techs: ${state.tech.completedTechIds.length}/20`,
+      `Total RP: ${state.tech.researchPoints} • +${rpPerTurn} RP/turn • Techs: ${state.tech.completedTechIds.length}`,
       {
         fontSize: `${theme.fonts.caption.size}px`,
         fontFamily: theme.fonts.caption.family,
@@ -101,7 +103,7 @@ export class TechTreeScene extends Phaser.Scene {
       0,
       currentResearch
         ? `⚙ Researching: ${currentResearch.name}`
-        : "⚙ No research in progress",
+        : "⚙ No research queued",
       {
         fontSize: `${theme.fonts.body.size}px`,
         fontFamily: theme.fonts.body.family,
@@ -111,34 +113,8 @@ export class TechTreeScene extends Phaser.Scene {
       },
     );
 
-    // Progress bar for current research
-    const progress = getResearchProgress(state.tech);
-    this.progressBar = new ProgressBar(this, {
-      x: 0,
-      y: 0,
-      width: L.mainContentWidth - 32,
-      height: 10,
-    });
-    this.progressBar.setValue(progress);
-
-    // Progress label
-    if (currentResearch) {
-      this.progressLabel = this.add
-        .text(
-          0,
-          0,
-          `${state.tech.researchProgress}/${currentResearch.rpCost} RP`,
-          {
-            fontSize: `${theme.fonts.caption.size}px`,
-            fontFamily: theme.fonts.caption.family,
-            color: colorToString(theme.colors.textDim),
-          },
-        )
-        .setOrigin(1, 0);
-    }
-
-    // Tech tree grid (sized in relayout)
-    this.grid = new TechTreeGrid(this, {
+    // Tech graph canvas (sized in relayout)
+    this.graph = new TechGraphCanvas(this, {
       x: 0,
       y: 0,
       width: 100,
@@ -146,22 +122,32 @@ export class TechTreeScene extends Phaser.Scene {
       onSelect: (techId) => {
         this.selectedTechId = techId;
         this.updateSelectedPortrait();
-        this.updateResearchButton();
+        this.updateUnlockButton();
       },
     });
-    this.grid.setGridState(this.buildGridState());
+    this.graph.setGraphState(this.buildGraphState());
 
-    // ── Research button ──
-    this.researchButton = new Button(this, {
+    // Queue row (sized in relayout)
+    this.queueRow = new TechQueueRow(this, {
+      x: 0,
+      y: 0,
+      width: 100,
+      height: QUEUE_ROW_HEIGHT,
+      onRemove: (index) => this.handleQueueRemove(index),
+      onReorder: (fromIdx, toIdx) => this.handleQueueReorder(fromIdx, toIdx),
+    });
+    this.queueRow.setQueueState(this.buildQueueState());
+
+    // Unlock button
+    this.unlockButton = new Button(this, {
       x: 0,
       y: 0,
       autoWidth: true,
-      label: "Research Selected",
+      label: "Select a technology",
       disabled: true,
-      onClick: () => this.confirmResearch(),
+      onClick: () => this.handleUnlock(),
     });
 
-    // Apply layout positions/sizes and register for future resizes.
     this.relayout();
     attachReflowHandler(this, () => this.relayout());
   }
@@ -171,11 +157,9 @@ export class TechTreeScene extends Phaser.Scene {
     const contentTop = L.contentTop + GROUP_TAB_STRIP_HEIGHT;
     const contentHeight = L.contentHeight - GROUP_TAB_STRIP_HEIGHT;
 
-    // PortraitPanel: setPosition before setSize.
     this.portrait.setPosition(L.sidebarLeft, contentTop);
     this.portrait.setSize(L.sidebarWidth, contentHeight);
 
-    // Main panel.
     this.mainPanel.setPosition(L.mainContentLeft, contentTop);
     this.mainPanel.setSize(L.mainContentWidth, contentHeight);
 
@@ -184,47 +168,49 @@ export class TechTreeScene extends Phaser.Scene {
     const panelW = L.mainContentWidth;
     const panelH = contentHeight;
 
-    // Status / current-research text — reposition only.
     this.rpStatusText.setPosition(panelX + 16, panelY + 44);
     const researchY = panelY + 64;
     this.currentResearchText.setPosition(panelX + 16, researchY);
 
-    // Progress bar tracks the panel content width.
-    this.progressBar.setPosition(panelX + 16, researchY + 22);
-    this.progressBar.setSize(panelW - 32, 10);
+    // Graph canvas: fills most of the panel, leaving room for queue row at bottom
+    const graphLeft = panelX + 16;
+    const graphTop = researchY + 22;
+    const graphWidth = panelW - 32;
+    const graphHeight = panelH - (graphTop - panelY) - QUEUE_ROW_HEIGHT - 16;
+    this.graph.setPosition(graphLeft, graphTop);
+    this.graph.setSize(graphWidth, graphHeight);
 
-    // Progress label (right-aligned to panel edge).
-    if (this.progressLabel) {
-      this.progressLabel.setPosition(panelX + panelW - 16, researchY + 22);
-    }
+    // Queue row: sits just below the graph
+    const queueY = panelY + panelH - QUEUE_ROW_HEIGHT - 8;
+    this.queueRow.setPosition(panelX + 16, queueY);
+    this.queueRow.setQueueState({
+      ...this.buildQueueState(),
+    });
 
-    // Tech-tree grid: reflow in place via setSize/setPosition (no rebuild).
-    const gridLeft = panelX + 16;
-    const gridTop = researchY + 46;
-    const gridWidth = panelW - 32;
-    const gridHeight = panelH - (gridTop - panelY) - 60;
-    this.grid.setPosition(gridLeft, gridTop);
-    this.grid.setSize(gridWidth, gridHeight);
+    // Unlock button: bottom of sidebar portrait
+    const buttonY = contentTop + contentHeight - 52;
+    this.unlockButton.setPosition(L.sidebarLeft + 8, buttonY);
 
-    // Research button (bottom-left of panel).
-    const buttonY = panelY + panelH - 52;
-    this.researchButton.setPosition(panelX + 16, buttonY);
-
-    this.updateResearchButton();
+    this.updateUnlockButton();
   }
 
-  private buildGridState(): {
-    completedTechIds: string[];
-    currentResearchId: string | null;
-    researchProgress: number;
-    isAvailable: (techId: string) => boolean;
-  } {
+  private buildGraphState() {
     const state = gameStore.getState();
     return {
       completedTechIds: state.tech.completedTechIds,
-      currentResearchId: state.tech.currentResearchId,
-      researchProgress: state.tech.researchProgress,
-      isAvailable: (techId) => isTechAvailable(techId, state.tech),
+      purchaseCount: state.tech.purchaseCount,
+      queue: state.tech.queue,
+      researchPoints: state.tech.researchPoints,
+      isAvailable: (techId: string) => isTechAvailable(techId, state.tech),
+    };
+  }
+
+  private buildQueueState() {
+    const state = gameStore.getState();
+    return {
+      queue: state.tech.queue,
+      researchPoints: state.tech.researchPoints,
+      purchaseCount: state.tech.purchaseCount,
     };
   }
 
@@ -234,84 +220,87 @@ export class TechTreeScene extends Phaser.Scene {
 
   private updateSelectedPortrait(): void {
     if (!this.selectedTechId) return;
-    const tech = TECH_TREE.find((t) => t.id === this.selectedTechId);
+    const tech = TECH_GRAPH.find((t) => t.id === this.selectedTechId);
     if (!tech) return;
 
     const state = gameStore.getState();
     const isCompleted = state.tech.completedTechIds.includes(tech.id);
-    const isResearching = state.tech.currentResearchId === tech.id;
+    const isQueued = state.tech.queue.includes(tech.id);
+    const isResearching = state.tech.queue[0] === tech.id;
     const available = isTechAvailable(tech.id, state.tech);
+    const cost = effectiveCost(tech.id, state.tech);
 
     let statusLine: string;
-    if (isCompleted) {
+    if (isCompleted && !tech.repeatable) {
       statusLine = "✓ Completed";
     } else if (isResearching) {
-      statusLine = `⚙ Researching (${state.tech.researchProgress}/${tech.rpCost} RP)`;
+      statusLine = `⚙ Researching (${cost} RP)`;
+    } else if (isQueued) {
+      statusLine = `📋 Queued (${cost} RP)`;
     } else if (available) {
-      statusLine = "★ Available";
+      statusLine = `★ Available (${cost} RP)`;
     } else {
-      statusLine = "🔒 Locked (complete prior tier)";
+      statusLine = "🔒 Locked";
     }
 
     const details: Array<{ label: string; value: string }> = [
-      { label: "Branch", value: BRANCH_LABELS[tech.branch] },
+      { label: "Branch", value: BRANCH_LABELS[tech.branch] ?? tech.branch },
       { label: "Tier", value: `${tech.tier}` },
-      { label: "Cost", value: `${tech.rpCost} RP` },
+      { label: "Cost", value: `${cost} RP` },
       { label: "Status", value: statusLine },
       { label: "Effect", value: tech.description },
     ];
+
+    if (tech.repeatable) {
+      const count = state.tech.purchaseCount[tech.id] ?? 0;
+      details.push({ label: "Owned", value: `${count}×` });
+    }
 
     this.portrait.updatePortrait("event", 0, tech.name, details, {
       eventCategory: "opportunity",
     });
   }
 
-  private updateResearchButton(): void {
+  private updateUnlockButton(): void {
     if (!this.selectedTechId) {
-      this.researchButton.setDisabled(true);
+      this.unlockButton.setDisabled(true);
       return;
     }
     const state = gameStore.getState();
-    const canResearch = isTechAvailable(this.selectedTechId, state.tech);
-    this.researchButton.setDisabled(!canResearch);
+    const canUnlock = isTechAvailable(this.selectedTechId, state.tech);
+    if (!canUnlock) {
+      this.unlockButton.setDisabled(true);
+      return;
+    }
+    const cost = effectiveCost(this.selectedTechId, state.tech);
+    const canAfford = state.tech.researchPoints >= cost;
+    const label = canAfford ? `Unlock — ${cost} RP` : `Queue — ${cost} RP`;
+    this.unlockButton.setLabel(label);
+    this.unlockButton.setDisabled(false);
   }
 
-  private confirmResearch(): void {
+  private handleUnlock(): void {
     if (!this.selectedTechId) return;
     const state = gameStore.getState();
-    const tech = TECH_TREE.find((t) => t.id === this.selectedTechId);
-    if (!tech) return;
-
-    if (!isTechAvailable(tech.id, state.tech)) return;
-
-    const currentResearch = getCurrentResearch(state.tech);
-    if (currentResearch && currentResearch.id !== tech.id) {
-      // Confirm switching research
-      new Modal(this, {
-        title: "Switch Research?",
-        body: [
-          `Currently researching: ${currentResearch.name}`,
-          `Progress: ${state.tech.researchProgress}/${currentResearch.rpCost} RP`,
-          "",
-          `Switch to: ${tech.name} (${tech.rpCost} RP)`,
-          "",
-          "Progress will carry over to the new technology.",
-        ].join("\n"),
-        okText: "Switch",
-        onOk: () => this.applyResearch(tech.id),
-      }).show();
-    } else {
-      this.applyResearch(tech.id);
-    }
-  }
-
-  private applyResearch(techId: string): void {
-    const state = gameStore.getState();
-    const newTech = setResearchTarget(techId, state.tech);
+    const newTech = instantUnlockOrQueue(this.selectedTechId, state.tech);
     if (newTech) {
       gameStore.setState({ ...state, tech: newTech });
       this.refreshUi();
     }
+  }
+
+  private handleQueueRemove(index: number): void {
+    const state = gameStore.getState();
+    const newTech = removeFromQueue(state.tech, index);
+    gameStore.setState({ ...state, tech: newTech });
+    this.refreshUi();
+  }
+
+  private handleQueueReorder(fromIdx: number, toIdx: number): void {
+    const state = gameStore.getState();
+    const newTech = reorderQueue(state.tech, fromIdx, toIdx);
+    gameStore.setState({ ...state, tech: newTech });
+    this.refreshUi();
   }
 
   private refreshUi(): void {
@@ -320,16 +309,14 @@ export class TechTreeScene extends Phaser.Scene {
     const rpPerTurn = calculateRPPerTurn(state);
     const currentResearch = getCurrentResearch(state.tech);
 
-    // RP totals + tech-count summary.
     this.rpStatusText.setText(
-      `Total RP: ${state.tech.researchPoints} • +${rpPerTurn} RP/turn • Techs: ${state.tech.completedTechIds.length}/20`,
+      `Total RP: ${state.tech.researchPoints} • +${rpPerTurn} RP/turn • Techs: ${state.tech.completedTechIds.length}`,
     );
 
-    // Current-research line.
     this.currentResearchText.setText(
       currentResearch
         ? `⚙ Researching: ${currentResearch.name}`
-        : "⚙ No research in progress",
+        : "⚙ No research queued",
     );
     this.currentResearchText.setColor(
       colorToString(
@@ -337,31 +324,11 @@ export class TechTreeScene extends Phaser.Scene {
       ),
     );
 
-    // Progress bar.
-    this.progressBar.setValue(getResearchProgress(state.tech));
+    this.graph.setGraphState(this.buildGraphState());
+    this.queueRow.setQueueState(this.buildQueueState());
 
-    // Progress label — created lazily on first active research.
-    if (currentResearch) {
-      const progressText = `${state.tech.researchProgress}/${currentResearch.rpCost} RP`;
-      if (this.progressLabel) {
-        this.progressLabel.setText(progressText).setVisible(true);
-      } else {
-        this.progressLabel = this.add
-          .text(0, 0, progressText, {
-            fontSize: `${theme.fonts.caption.size}px`,
-            fontFamily: theme.fonts.caption.family,
-            color: colorToString(theme.colors.textDim),
-          })
-          .setOrigin(1, 0);
-      }
-    } else if (this.progressLabel) {
-      this.progressLabel.setVisible(false);
-    }
-
-    this.grid.setGridState(this.buildGridState());
-
-    // relayout() repositions any lazily created label and refreshes button enablement.
     this.relayout();
     this.updateSelectedPortrait();
+    this.updateUnlockButton();
   }
 }

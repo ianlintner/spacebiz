@@ -1037,7 +1037,8 @@ export interface TechEffect {
     | "addBreakdownRevenue"
     | "addMarketForecast"
     | "addSaturationDisplay"
-    | "addMarketReset";
+    | "addMarketReset"
+    | "addRPPerTurn";
   value: number;
   target?: "friendly" | "neutral" | "hostile" | "all";
 }
@@ -1045,18 +1046,28 @@ export interface TechEffect {
 export interface Technology {
   id: string;
   name: string;
+  icon: string; // emoji for node display
   branch: TechBranch;
   tier: 1 | 2 | 3 | 4;
   rpCost: number;
   description: string;
   effects: TechEffect[];
+  edges: string[]; // adjacent node IDs (bidirectional)
+  position: { angle: number; radius: number }; // polar: degrees, ring units (RING_SPACING=130px)
+  repeatable?: boolean;
+  repeatCostScale?: number; // cost multiplier per repeat; default 1.5
 }
+
+// Alias for new code — both refer to the same interface
+export type TechNode = Technology;
 
 export interface TechState {
   researchPoints: number;
-  completedTechIds: string[];
-  currentResearchId: string | null;
-  researchProgress: number;
+  completedTechIds: string[]; // kept for backwards compat; derived from purchaseCount
+  purchaseCount: Record<string, number>; // techId → times purchased (source of truth)
+  queue: string[]; // ordered pending unlock IDs
+  currentResearchId: string | null; // = queue[0] ?? null
+  researchProgress: number; // display value: Math.min(rp, effectiveCost(queue[0]))
 }
 
 // ── Character / Portrait types ─────────────────────────────

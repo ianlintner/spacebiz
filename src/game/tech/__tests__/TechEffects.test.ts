@@ -53,6 +53,8 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
       completedTechIds: [],
       currentResearchId: null,
       researchProgress: 0,
+      purchaseCount: {},
+      queue: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],
@@ -88,12 +90,14 @@ describe("Tech Effects", () => {
     const state = createTestState({
       tech: {
         researchPoints: 0,
-        completedTechIds: ["logistics_1", "logistics_2"],
+        completedTechIds: ["logistics_hub", "logistics_3"],
         currentResearchId: null,
         researchProgress: 0,
+        purchaseCount: { logistics_hub: 1, logistics_3: 1 },
+        queue: [],
       },
     });
-    // logistics_1 = +1, logistics_2 = +1
+    // logistics_hub = +1, logistics_3 = +1
     expect(getTechRouteSlotBonus(state)).toBe(2);
   });
 
@@ -106,9 +110,11 @@ describe("Tech Effects", () => {
     const state = createTestState({
       tech: {
         researchPoints: 0,
-        completedTechIds: ["logistics_1"],
+        completedTechIds: ["logistics_hub"],
         currentResearchId: null,
         researchProgress: 0,
+        purchaseCount: { logistics_hub: 1 },
+        queue: [],
       },
     });
     expect(hasTechEffect(state, "addRouteSlots")).toBe(true);
@@ -123,12 +129,60 @@ describe("Tech Effects", () => {
     const state = createTestState({
       tech: {
         researchPoints: 0,
-        completedTechIds: ["logistics_1", "logistics_2"], // logistics_2 has -0.1 licenseFee
+        completedTechIds: ["logistics_hub", "logistics_3"], // logistics_3 has -0.1 licenseFee
         currentResearchId: null,
         researchProgress: 0,
+        purchaseCount: { logistics_hub: 1, logistics_3: 1 },
+        queue: [],
       },
     });
     expect(getLicenseFeeMultiplier(state)).toBeCloseTo(0.9);
+  });
+
+  it("repeatable fuel savings node purchased twice gives 2× effect", () => {
+    const state = createTestState({
+      tech: {
+        researchPoints: 0,
+        completedTechIds: ["fuel_savings_r"],
+        currentResearchId: null,
+        researchProgress: 0,
+        purchaseCount: { fuel_savings_r: 2 },
+        queue: [],
+      },
+    });
+    // fuel_savings_r = -0.01 per purchase; 2 purchases = -0.02 total
+    expect(getFuelMultiplier(state)).toBeCloseTo(0.98);
+  });
+
+  it("repeatable fuel savings node purchased three times gives 3× effect", () => {
+    const state = createTestState({
+      tech: {
+        researchPoints: 0,
+        completedTechIds: ["fuel_savings_r"],
+        currentResearchId: null,
+        researchProgress: 0,
+        purchaseCount: { fuel_savings_r: 3 },
+        queue: [],
+      },
+    });
+    // fuel_savings_r = -0.01 per purchase; 3 purchases = -0.03 total
+    expect(getFuelMultiplier(state)).toBeCloseTo(0.97);
+  });
+
+  it("getTechEffectTotal uses purchaseCount as source of truth (not completedTechIds)", () => {
+    // purchaseCount says 2 purchases but completedTechIds only lists it once
+    const state = createTestState({
+      tech: {
+        researchPoints: 0,
+        completedTechIds: ["fuel_savings_r"],
+        currentResearchId: null,
+        researchProgress: 0,
+        purchaseCount: { fuel_savings_r: 2 },
+        queue: [],
+      },
+    });
+    // Should be -0.02 (2 purchases × -0.01), not -0.01
+    expect(getTechEffectTotal(state, "modifyFuel")).toBeCloseTo(-0.02);
   });
 
   it("tariff multiplier defaults to 1.0", () => {

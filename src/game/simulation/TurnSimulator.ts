@@ -738,11 +738,13 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
     const rosterRng = new SeededRNG(
       nextState.seed + nextState.turn * 31 + 0x510c,
     );
-    const newHistory = rosterTick(
-      nextState.universeRoster,
-      rosterRng,
-      nextState.turn,
+    // Deep-clone the roster so rosterTick's in-place mutations don't bleed back
+    // into the input state (simulateTurn must remain a pure function).
+    const rosterClone: typeof nextState.universeRoster = JSON.parse(
+      JSON.stringify(nextState.universeRoster),
     );
+    const newHistory = rosterTick(rosterClone, rosterRng, nextState.turn);
+    nextState = { ...nextState, universeRoster: rosterClone };
     const combined = [...(nextState.rosterHistory ?? []), ...newHistory];
     nextState = {
       ...nextState,

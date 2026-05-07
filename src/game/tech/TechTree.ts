@@ -1,69 +1,179 @@
 import type { GameState, TechState, Technology } from "../../data/types.ts";
 import {
-  TECH_TREE,
+  TECH_GRAPH,
   BASE_RP_PER_TURN,
   RP_DIVERSITY_THRESHOLD,
   RP_RESEARCH_PLANET_BONUS,
 } from "../../data/constants.ts";
 
-// ---------------------------------------------------------------------------
-// Tech Research Manager
-// ---------------------------------------------------------------------------
+const CARGO_PACT_IDS = new Set([
+  "diplomacy_food",
+  "diplomacy_tech",
+  "diplomacy_luxury",
+]);
 
-/**
- * Check if a technology is available for research (prerequisites met).
- */
+export function effectiveCost(techId: string, tech: TechState): number {
+  const node = TECH_GRAPH.find((n) => n.id === techId);
+  if (!node) return Infinity;
+  const count = tech.purchaseCount[techId] ?? 0;
+  const scale = node.repeatCostScale ?? 1;
+  return Math.round(node.rpCost * Math.pow(scale, count));
+}
+
+export function applyPurchase(techId: string, tech: TechState): TechState {
+  const newCount = (tech.purchaseCount[techId] ?? 0) + 1;
+  const newCompletedIds =
+    newCount === 1 ? [...tech.completedTechIds, techId] : tech.completedTechIds;
+  return {
+    ...tech,
+    purchaseCount: { ...tech.purchaseCount, [techId]: newCount },
+    completedTechIds: newCompletedIds,
+  };
+}
+
 export function isTechAvailable(techId: string, tech: TechState): boolean {
-  if (tech.completedTechIds.includes(techId)) return false;
-  if (tech.currentResearchId === techId) return false;
+  const node = TECH_GRAPH.find((n) => n.id === techId);
+  if (!node) return false;
 
-  const techDef = TECH_TREE.find((t) => t.id === techId);
-  if (!techDef) return false;
+  // Not already queued
+  if (tech.queue.includes(techId)) return false;
 
-  // Must complete all lower tiers in the same branch first
-  if (techDef.tier > 1) {
-    const prerequisites = TECH_TREE.filter(
-      (t) => t.branch === techDef.branch && t.tier < techDef.tier,
+  // Non-repeatable already purchased
+  if (!node.repeatable && (tech.purchaseCount[techId] ?? 0) >= 1) return false;
+
+  // Cargo pact mutual exclusivity — block if another pact is owned OR already queued
+  if (CARGO_PACT_IDS.has(techId)) {
+    const conflict = [...CARGO_PACT_IDS].some(
+      (id) =>
+        id !== techId &&
+        (tech.completedTechIds.includes(id) || tech.queue.includes(id)),
     );
-    for (const prereq of prerequisites) {
-      if (!tech.completedTechIds.includes(prereq.id)) return false;
-    }
+    if (conflict) return false;
   }
 
-  return true;
+  // Center node is always available
+  if (techId === "fuel_efficiency_1") return true;
+
+  // Adjacency: at least one neighbor must be completed
+  return node.edges.some((neighborId) =>
+    tech.completedTechIds.includes(neighborId),
+  );
 }
 
-/**
- * Get all available technologies for research.
- */
 export function getAvailableTechs(tech: TechState): Technology[] {
-  return TECH_TREE.filter((t) => isTechAvailable(t.id, tech));
+  return TECH_GRAPH.filter((t) => isTechAvailable(t.id, tech));
 }
 
-/**
- * Set the current research target.
- * Returns updated TechState or null if invalid.
- */
-export function setResearchTarget(
+export function instantUnlockOrQueue(
   techId: string,
   tech: TechState,
 ): TechState | null {
   if (!isTechAvailable(techId, tech)) return null;
-
+  const cost = effectiveCost(techId, tech);
+  if (tech.researchPoints >= cost) {
+    const afterPurchase = applyPurchase(techId, tech);
+    return {
+      ...afterPurchase,
+      researchPoints: afterPurchase.researchPoints - cost,
+      currentResearchId: afterPurchase.queue[0] ?? null,
+    };
+  }
+  const newQueue = [...tech.queue, techId];
   return {
     ...tech,
-    currentResearchId: techId,
-    // Keep accumulated progress — it carries over
+    queue: newQueue,
+    currentResearchId: newQueue[0],
   };
 }
 
+export function setResearchTarget(
+  techId: string,
+  tech: TechState,
+): TechState | null {
+  return instantUnlockOrQueue(techId, tech);
+}
+
+export function reorderQueue(
+  tech: TechState,
+  fromIdx: number,
+  toIdx: number,
+): TechState {
+  const queue = [...tech.queue];
+  const [item] = queue.splice(fromIdx, 1);
+  queue.splice(toIdx, 0, item);
+  return { ...tech, queue, currentResearchId: queue[0] ?? null };
+}
+
+export function removeFromQueue(tech: TechState, index: number): TechState {
+  const queue = [...tech.queue];
+  queue.splice(index, 1);
+  return { ...tech, queue, currentResearchId: queue[0] ?? null };
+}
+
 /**
- * Calculate total RP earned this turn from all sources.
+ * Check whether a tech already in the queue can still be purchased given the
+ * current state (handles cases like cargo-pact exclusivity being violated after
+ * the item was enqueued).  Unlike isTechAvailable, this skips the "not already
+ * queued" guard — the item is, by definition, in the queue.
  */
+function canPurchaseQueuedTech(techId: string, tech: TechState): boolean {
+  const node = TECH_GRAPH.find((n) => n.id === techId);
+  if (!node) return false;
+  if (!node.repeatable && (tech.purchaseCount[techId] ?? 0) >= 1) return false;
+  if (CARGO_PACT_IDS.has(techId)) {
+    const conflict = [...CARGO_PACT_IDS].some(
+      (id) => id !== techId && tech.completedTechIds.includes(id),
+    );
+    if (conflict) return false;
+  }
+  if (techId === "fuel_efficiency_1") return true;
+  return node.edges.some((neighborId) =>
+    tech.completedTechIds.includes(neighborId),
+  );
+}
+
+export function processResearch(
+  state: GameState,
+  rpThisTurn: number,
+): TechState {
+  let tech: TechState = {
+    ...state.tech,
+    researchPoints: state.tech.researchPoints + rpThisTurn,
+  };
+
+  // Chain completions while top of queue is affordable and still valid
+  while (tech.queue.length > 0) {
+    const headId = tech.queue[0];
+    // Re-validate: a queued cargo pact may have become invalid if another was
+    // completed earlier in this same chain. Skip (remove) invalid entries.
+    if (!canPurchaseQueuedTech(headId, tech)) {
+      tech = { ...tech, queue: tech.queue.slice(1) };
+      continue;
+    }
+    const cost = effectiveCost(headId, tech);
+    if (tech.researchPoints < cost) break;
+    tech = applyPurchase(headId, {
+      ...tech,
+      researchPoints: tech.researchPoints - cost,
+    });
+    tech = { ...tech, queue: tech.queue.slice(1) };
+  }
+
+  tech = {
+    ...tech,
+    currentResearchId: tech.queue[0] ?? null,
+    researchProgress: tech.queue[0]
+      ? Math.min(tech.researchPoints, effectiveCost(tech.queue[0], tech))
+      : 0,
+  };
+
+  return tech;
+}
+
 export function calculateRPPerTurn(state: GameState): number {
   let rp = BASE_RP_PER_TURN;
 
-  // Diversity bonus: +1 RP if trading N+ distinct cargo types
+  // Diversity bonus
   const distinctCargos = new Set(
     state.activeRoutes
       .filter((r) => r.cargoType && r.assignedShipIds.length > 0)
@@ -73,7 +183,7 @@ export function calculateRPPerTurn(state: GameState): number {
     rp += 1;
   }
 
-  // Tech world bonus: +0.5 per route to/from techWorld-type planets
+  // TechWorld bonus
   const researchPlanets = new Set(
     state.galaxy.planets.filter((p) => p.type === "techWorld").map((p) => p.id),
   );
@@ -89,58 +199,35 @@ export function calculateRPPerTurn(state: GameState): number {
   }
   rp += Math.floor(researchRouteCount * RP_RESEARCH_PLANET_BONUS);
 
+  // RP node bonus (addRPPerTurn effects), capped at +4
+  let rpNodeBonus = 0;
+  for (const [techId, count] of Object.entries(state.tech.purchaseCount)) {
+    const node = TECH_GRAPH.find((n) => n.id === techId);
+    if (!node) continue;
+    for (const effect of node.effects) {
+      if (effect.type === "addRPPerTurn") {
+        rpNodeBonus += effect.value * count;
+      }
+    }
+  }
+  rp += Math.min(Math.floor(rpNodeBonus), 4);
+
   return rp;
 }
 
-/**
- * Process tech research for a turn.
- * Accumulates RP, checks for tech completion, carries over excess RP.
- */
-export function processResearch(
-  state: GameState,
-  rpThisTurn: number,
-): TechState {
-  const tech = { ...state.tech };
-  tech.researchPoints += rpThisTurn;
-
-  if (!tech.currentResearchId) {
-    tech.researchProgress += rpThisTurn;
-    return tech;
-  }
-
-  const currentTech = TECH_TREE.find((t) => t.id === tech.currentResearchId);
-  if (!currentTech) {
-    tech.researchProgress += rpThisTurn;
-    return tech;
-  }
-
-  tech.researchProgress += rpThisTurn;
-
-  // Check completion
-  if (tech.researchProgress >= currentTech.rpCost) {
-    const excess = tech.researchProgress - currentTech.rpCost;
-    tech.completedTechIds = [...tech.completedTechIds, currentTech.id];
-    tech.currentResearchId = null;
-    tech.researchProgress = excess;
-  }
-
-  return tech;
-}
-
-/**
- * Get the current technology being researched (or null).
- */
 export function getCurrentResearch(tech: TechState): Technology | null {
-  if (!tech.currentResearchId) return null;
-  return TECH_TREE.find((t) => t.id === tech.currentResearchId) ?? null;
+  if (!tech.queue[0]) return null;
+  return TECH_GRAPH.find((t) => t.id === tech.queue[0]) ?? null;
 }
 
-/**
- * Get progress fraction for current research (0.0 to 1.0).
- */
 export function getResearchProgress(tech: TechState): number {
-  if (!tech.currentResearchId) return 0;
-  const currentTech = TECH_TREE.find((t) => t.id === tech.currentResearchId);
-  if (!currentTech) return 0;
-  return Math.min(1, tech.researchProgress / currentTech.rpCost);
+  if (!tech.queue[0]) return 0;
+  const node = TECH_GRAPH.find((t) => t.id === tech.queue[0]);
+  if (!node) return 0;
+  const cost = effectiveCost(tech.queue[0], tech);
+  return Math.min(1, tech.researchPoints / cost);
+}
+
+export function getCompletedTechIds(tech: TechState): string[] {
+  return tech.completedTechIds;
 }

@@ -290,9 +290,6 @@ export class GameHUDScene extends Phaser.Scene {
 
     // Eagerly kick off portrait load to maximize time for it to complete.
     // Don't await — create() must be synchronous for Phaser's scene lifecycle.
-    console.log(
-      `[GameHUDScene.create] loading player CEO portrait: ${state.ceoPortrait.portraitId}`,
-    );
     const portraitLoadPromise = portraitLoader.ensureCeoPortrait(
       this,
       state.ceoPortrait.portraitId,
