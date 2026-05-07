@@ -13,7 +13,14 @@ export type NewscasterType =
   | "paparazzi"
   | "sports"
   | "investigator"
-  | "explorer";
+  | "explorer"
+  // 2026-05 expansion
+  | "anomaly"
+  | "music"
+  | "discovery"
+  | "gossip"
+  | "military"
+  | "propaganda";
 
 export interface NewscasterDef {
   type: NewscasterType;
@@ -131,6 +138,54 @@ export const NEWSCASTER_DEFS: Record<NewscasterType, NewscasterDef> = {
     portraitKey: "newscaster-explorer",
     accentColor: 0x44ffaa,
   },
+  anomaly: {
+    type: "anomaly",
+    name: "Zix Anomura",
+    title: "Phenomena Correspondent",
+    channel: "GNN Deep Scan",
+    portraitKey: "newscaster-anomaly",
+    accentColor: 0x00ffcc,
+  },
+  music: {
+    type: "music",
+    name: "Lyra Cass",
+    title: "Culture & Sound Correspondent",
+    channel: "GNN Pulse",
+    portraitKey: "newscaster-music",
+    accentColor: 0xff66aa,
+  },
+  discovery: {
+    type: "discovery",
+    name: "Dr. Venn Orix",
+    title: "Exploration Correspondent",
+    channel: "GNN Frontier Desk",
+    portraitKey: "newscaster-discovery",
+    accentColor: 0x88ff44,
+  },
+  gossip: {
+    type: "gossip",
+    name: "Sable Drenn",
+    title: "Society Correspondent",
+    channel: "GNN Inner Circle",
+    portraitKey: "newscaster-gossip",
+    accentColor: 0xffaa00,
+  },
+  military: {
+    type: "military",
+    name: "Cmdr. Harke Voss",
+    title: "Defense Correspondent",
+    channel: "GNN Strategic Bureau",
+    portraitKey: "newscaster-military",
+    accentColor: 0xcc2200,
+  },
+  propaganda: {
+    type: "propaganda",
+    name: "The Archivist",
+    title: "State Affairs Analyst",
+    channel: "GNN Authority Desk",
+    portraitKey: "newscaster-propaganda",
+    accentColor: 0x888888,
+  },
 };
 
 export const NEWSCASTER_BY_CATEGORY: Record<TickerCategory, NewscasterType> = {
@@ -159,6 +214,12 @@ export const NEWSCASTER_BY_CATEGORY: Record<TickerCategory, NewscasterType> = {
   xenobiology: "explorer",
   obituary: "anchor_d",
   homage: "anchor_b",
+  anomaly: "anomaly",
+  music: "music",
+  discovery: "discovery",
+  gossip: "gossip",
+  military: "military",
+  propaganda: "propaganda",
 };
 
 export function getNewscasterForCategory(cat: TickerCategory): NewscasterDef {

@@ -199,6 +199,8 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
       completedTechIds: [],
       currentResearchId: null,
       researchProgress: 0,
+      purchaseCount: {},
+      queue: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],
@@ -498,6 +500,8 @@ describe("ScoreCalculator", () => {
           completedTechIds: ["logistics_1", "fuel_1", "nav_1", "trade_1"],
           currentResearchId: null,
           researchProgress: 0,
+          purchaseCount: {},
+          queue: [],
         },
       });
 

@@ -57,6 +57,14 @@ const tagContributors: Record<OptionScalingTag, TagContributor> = {
     const ratio = Math.max(0, state.cash) / Math.max(1, STARTING_CASH);
     return Math.min(20, ratio * 10);
   },
+  navigation: ({ state, option }) => {
+    if (!option.scalingTechIds || option.scalingTechIds.length === 0) return 0;
+    const completed = state.tech?.completedTechIds ?? [];
+    const matches = option.scalingTechIds.filter((t) =>
+      completed.includes(t),
+    ).length;
+    return Math.min(25, matches * 12);
+  },
 };
 
 interface SuccessBreakdown {
@@ -108,5 +116,7 @@ export function tagLabel(tag: OptionScalingTag): string {
       return "Reputation";
     case "cash":
       return "Cash Reserves";
+    case "navigation":
+      return "Navigation";
   }
 }

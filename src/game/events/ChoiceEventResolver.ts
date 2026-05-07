@@ -107,7 +107,9 @@ function applyEffect(state: GameState, effect: EventEffect): GameState {
     case "signPeace":
     case "formAlliance":
     case "formTradePact":
-    case "degradeRelation": {
+    case "degradeRelation":
+    case "modifyFleetCondition":
+    case "blockSystem": {
       // These effects are handled at the simulation layer via activeEvents.
       // ChoiceOption effects using these types are acknowledged but not mutated here.
       return state;

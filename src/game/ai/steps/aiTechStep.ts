@@ -1,35 +1,57 @@
 import { AIPersonality, TechBranch } from "../../../data/types.ts";
 import type { AICompany, GameState, TechState } from "../../../data/types.ts";
-import { TECH_TREE } from "../../../data/constants.ts";
+import { TECH_GRAPH, AI_TECH_STRATEGIES } from "../../../data/constants.ts";
+import {
+  effectiveCost,
+  applyPurchase,
+  isTechAvailable,
+} from "../../tech/TechTree.ts";
 import type { SeededRNG } from "../../../utils/SeededRNG.ts";
 
 // ---------------------------------------------------------------------------
-// AI Tech Research (Wave 3 — Track 3.1)
+// AI Tech Research (Wave 3 — Track 3.1, rewritten for strategy arrays)
 // ---------------------------------------------------------------------------
 
 // AI RP accumulation per turn (flat — no diversity bonus)
 const AI_RP_PER_TURN = 1;
 
-// AI skips T4 techs — too expensive for the AI simulation budget
-const AI_MAX_TECH_TIER = 3;
+// Cheap tech threshold for opportunistic grabs
+const OPPORTUNISTIC_COST_CAP = 8;
+
+// Probability of taking an opportunistic cheap tech instead of strategy target
+const OPPORTUNISTIC_CHANCE = 0.1;
+
+/**
+ * Map AIPersonality value → AI_TECH_STRATEGIES key.
+ * Since AIPersonality values ARE the strategy keys, this is a passthrough,
+ * but kept explicit for clarity and type safety.
+ */
+function personalityToStrategyKey(
+  personality: (typeof AIPersonality)[keyof typeof AIPersonality],
+): string {
+  return personality;
+}
 
 /**
  * Get which tech branch an AI should research based on personality.
- *  - AggressiveExpander → Engineering (maintenance/fuel savings, more uptime)
- *  - SteadyHauler → Logistics (route slots, lower license fees)
+ *  - AggressiveExpander → Logistics (route slots, schedule efficiency)
+ *  - SteadyHauler → Engineering (maintenance/fuel savings, more uptime)
  *  - CherryPicker → Crisis (event mitigation, breakdown protection)
  *
  * NOTE: Intelligence branch is intentionally excluded from AI to preserve
  * info asymmetry — the player should have exclusive access to market intel.
+ *
+ * @deprecated Used only by IntelLevel.ts for the intel-view tech branch display.
+ *   New AI decisions use strategy arrays via getNextStrategyTarget instead.
  */
 export function getAITechBranch(
   personality: (typeof AIPersonality)[keyof typeof AIPersonality],
 ): (typeof TechBranch)[keyof typeof TechBranch] {
   switch (personality) {
     case AIPersonality.AggressiveExpander:
-      return TechBranch.Engineering;
-    case AIPersonality.SteadyHauler:
       return TechBranch.Logistics;
+    case AIPersonality.SteadyHauler:
+      return TechBranch.Engineering;
     case AIPersonality.CherryPicker:
       return TechBranch.Crisis;
     default:
@@ -38,49 +60,76 @@ export function getAITechBranch(
 }
 
 /**
- * Get the next tech to research in the AI's assigned branch.
- * Returns the lowest-tier un-completed tech in the branch (up to AI_MAX_TECH_TIER).
+ * Find the next tech the AI should purchase according to its strategy array.
+ *
+ * The strategy array is an ordered list of tech IDs, potentially with repeats
+ * to express "buy this N times". We compare the desired count (number of
+ * occurrences of each id up to the current position) against purchaseCount.
+ *
+ * Returns the first id where purchaseCount < desired count AND the tech is
+ * currently available (adjacency satisfied). Returns null if the strategy is
+ * complete or the next required tech is not yet available.
  */
-function getNextTechInBranch(
-  branch: (typeof TechBranch)[keyof typeof TechBranch],
-  techState: TechState,
+export function getNextStrategyTarget(
+  strategyKey: string,
+  tech: TechState,
 ): string | null {
-  const branchTechs = TECH_TREE.filter(
-    (t) =>
-      t.branch === branch &&
-      t.tier <= AI_MAX_TECH_TIER &&
-      !techState.completedTechIds.includes(t.id),
-  ).sort((a, b) => a.tier - b.tier);
+  const strategy =
+    AI_TECH_STRATEGIES[strategyKey] ?? AI_TECH_STRATEGIES["steadyHauler"];
 
-  if (branchTechs.length === 0) return null;
-
-  const next = branchTechs[0];
-
-  // Verify prerequisites are met (all lower tiers in branch complete)
-  if (next.tier > 1) {
-    const prereqs = TECH_TREE.filter(
-      (t) => t.branch === next.branch && t.tier < next.tier,
-    );
-    const allMet = prereqs.every((p) =>
-      techState.completedTechIds.includes(p.id),
-    );
-    if (!allMet) return null;
+  // Build wanted counts: how many times each id appears in strategy array
+  const wantedCounts: Record<string, number> = {};
+  for (const id of strategy) {
+    wantedCounts[id] = (wantedCounts[id] ?? 0) + 1;
   }
 
-  return next.id;
+  // Walk the strategy in order; return first id we haven't bought enough yet
+  // (preserves ordering so earlier priorities are fulfilled first)
+  for (const id of strategy) {
+    const have = tech.purchaseCount[id] ?? 0;
+    const want = wantedCounts[id];
+    if (have < want && isTechAvailable(id, tech)) return id;
+  }
+
+  return null;
+}
+
+/**
+ * Find a cheap (rpCost <= OPPORTUNISTIC_COST_CAP) available tech that is not
+ * already in the strategy path, for occasional opportunistic purchases.
+ * Returns null if none exists.
+ */
+function getOpportunisticTarget(
+  strategyKey: string,
+  tech: TechState,
+): string | null {
+  const strategy =
+    AI_TECH_STRATEGIES[strategyKey] ?? AI_TECH_STRATEGIES["steadyHauler"];
+  const strategySet = new Set(strategy);
+
+  const candidates = TECH_GRAPH.filter(
+    (t) =>
+      t.rpCost <= OPPORTUNISTIC_COST_CAP &&
+      !strategySet.has(t.id) &&
+      isTechAvailable(t.id, tech),
+  );
+
+  if (candidates.length === 0) return null;
+  return candidates[0].id;
 }
 
 /**
  * Process AI tech research for one turn.
- * - Initializes techState if missing
- * - Picks the next tech in personality-assigned branch if not currently researching
+ * - Initialises techState if missing
  * - Accumulates 1 RP per turn
- * - Completes tech when RP >= cost (excess carries over)
+ * - 10% chance: buys a cheap adjacent tech opportunistically
+ * - Otherwise: follows the company's strategy array (purchaseCount-based)
+ * - Deducts RP when purchasing; excess carries over
  */
 export function processAITech(
   company: AICompany,
   _state: GameState,
-  _rng: SeededRNG,
+  rng: SeededRNG,
 ): AICompany {
   // Initialize tech state if not present
   let techState: TechState = company.techState ?? {
@@ -88,36 +137,49 @@ export function processAITech(
     completedTechIds: [],
     currentResearchId: null,
     researchProgress: 0,
+    purchaseCount: {},
+    queue: [],
   };
-
-  // Pick branch based on personality if no current research queued
-  if (!techState.currentResearchId) {
-    const branch = getAITechBranch(company.personality);
-    const nextTechId = getNextTechInBranch(branch, techState);
-    if (nextTechId) {
-      techState = { ...techState, currentResearchId: nextTechId };
-    }
-  }
 
   // Accumulate 1 RP per turn
   techState = {
     ...techState,
     researchPoints: techState.researchPoints + AI_RP_PER_TURN,
-    researchProgress: techState.researchProgress + AI_RP_PER_TURN,
   };
 
-  // Check for tech completion
-  if (techState.currentResearchId) {
-    const currentTech = TECH_TREE.find(
-      (t) => t.id === techState.currentResearchId,
-    );
-    if (currentTech && techState.researchProgress >= currentTech.rpCost) {
-      const excess = techState.researchProgress - currentTech.rpCost;
+  const strategyKey = personalityToStrategyKey(company.personality);
+
+  // Determine target tech (opportunistic 10% or strategy-driven)
+  let targetId: string | null = null;
+
+  if (rng.next() < OPPORTUNISTIC_CHANCE) {
+    targetId = getOpportunisticTarget(strategyKey, techState);
+  }
+
+  if (!targetId) {
+    targetId = getNextStrategyTarget(strategyKey, techState);
+  }
+
+  // Purchase if we have a target and enough RP
+  if (targetId !== null) {
+    const cost = effectiveCost(targetId, techState);
+    if (techState.researchPoints >= cost) {
+      techState = applyPurchase(targetId, {
+        ...techState,
+        researchPoints: techState.researchPoints - cost,
+      });
+      // Keep currentResearchId in sync for display/intel purposes
       techState = {
         ...techState,
-        completedTechIds: [...techState.completedTechIds, currentTech.id],
         currentResearchId: null,
-        researchProgress: excess,
+        researchProgress: 0,
+      };
+    } else {
+      // Saving up — note the target for display purposes
+      techState = {
+        ...techState,
+        currentResearchId: targetId,
+        researchProgress: techState.researchPoints,
       };
     }
   }
@@ -132,7 +194,7 @@ export function processAITech(
 export function getAIMaintenanceMultiplier(techState: TechState): number {
   let total = 0;
   for (const techId of techState.completedTechIds) {
-    const tech = TECH_TREE.find((t) => t.id === techId);
+    const tech = TECH_GRAPH.find((t) => t.id === techId);
     if (!tech) continue;
     for (const effect of tech.effects) {
       if (effect.type === "modifyMaintenance") {
@@ -149,7 +211,7 @@ export function getAIMaintenanceMultiplier(techState: TechState): number {
 export function getAIFuelMultiplier(techState: TechState): number {
   let total = 0;
   for (const techId of techState.completedTechIds) {
-    const tech = TECH_TREE.find((t) => t.id === techId);
+    const tech = TECH_GRAPH.find((t) => t.id === techId);
     if (!tech) continue;
     for (const effect of tech.effects) {
       if (effect.type === "modifyFuel") {
@@ -166,7 +228,7 @@ export function getAIFuelMultiplier(techState: TechState): number {
 export function getAIRevenueMultiplier(techState: TechState): number {
   let total = 0;
   for (const techId of techState.completedTechIds) {
-    const tech = TECH_TREE.find((t) => t.id === techId);
+    const tech = TECH_GRAPH.find((t) => t.id === techId);
     if (!tech) continue;
     for (const effect of tech.effects) {
       if (effect.type === "modifyRevenue") {

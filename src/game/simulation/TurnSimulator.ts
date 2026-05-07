@@ -68,7 +68,8 @@ import {
   getFuelMultiplier,
   getRevenueMultiplier,
 } from "../tech/TechEffects.ts";
-import type { SeededRNG } from "../../utils/SeededRNG.ts";
+import { SeededRNG } from "../../utils/SeededRNG.ts";
+import { rosterTick } from "../../generation/news/universeRoster.ts";
 import { processDiplomacyTurn } from "../empire/DiplomacyManager.ts";
 import { getHubUpkeep } from "../hub/HubManager.ts";
 import {
@@ -84,6 +85,7 @@ import { selectDiplomacyOffer } from "../diplomacy/DiplomacyAI.ts";
 import { tickDiplomacyState } from "../diplomacy/DiplomacyTick.ts";
 
 const MAX_TURN_REPORT_WORLD_LINES = 8;
+const ROSTER_HISTORY_MAX = 10;
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -726,6 +728,27 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       ...nextState,
       diplomaticRelations: diplomacyResult.relations,
       borderPorts: diplomacyResult.borderPorts,
+    };
+  }
+
+  // --- Universe roster tick (sports, music, celebrities, crime, military) ---
+  if (nextState.universeRoster) {
+    // Distinct RNG namespace from galaxy/market streams so roster ticks don't
+    // perturb other deterministic systems.
+    const rosterRng = new SeededRNG(
+      nextState.seed + nextState.turn * 31 + 0x510c,
+    );
+    // Deep-clone the roster so rosterTick's in-place mutations don't bleed back
+    // into the input state (simulateTurn must remain a pure function).
+    const rosterClone: typeof nextState.universeRoster = JSON.parse(
+      JSON.stringify(nextState.universeRoster),
+    );
+    const newHistory = rosterTick(rosterClone, rosterRng, nextState.turn);
+    nextState = { ...nextState, universeRoster: rosterClone };
+    const combined = [...(nextState.rosterHistory ?? []), ...newHistory];
+    nextState = {
+      ...nextState,
+      rosterHistory: combined.slice(-ROSTER_HISTORY_MAX),
     };
   }
 

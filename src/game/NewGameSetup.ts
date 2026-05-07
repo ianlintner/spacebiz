@@ -46,6 +46,11 @@ import {
 } from "./hub/HubManager.ts";
 import { generateAmbassadors } from "./diplomacy/AmbassadorGenerator.ts";
 import { generateContracts } from "./contracts/ContractGenerator.ts";
+import { seedUniverseRoster } from "../generation/news/universeRoster.ts";
+
+// Namespaces the roster RNG stream away from galaxy/market seeds so reseeding
+// the roster never perturbs other deterministic systems.
+const ROSTER_SEED_OFFSET = 0x517a33;
 
 export interface NewGameResult {
   state: GameState;
@@ -362,6 +367,8 @@ export function createNewGame(
     completedTechIds: [],
     currentResearchId: null,
     researchProgress: 0,
+    purchaseCount: {},
+    queue: [],
   };
 
   // Phase 4: Initialize diplomacy & border ports
@@ -502,8 +509,26 @@ export function createNewGame(
     charters: playerCharters,
     diplomacy,
     homeworldPlanetId: playerHomeworldPlanetId,
+    universeRoster: {
+      sportsTeams: [],
+      musicians: [],
+      celebrities: [],
+      pundits: [],
+      crimeFigures: [],
+      militaryOfficers: [],
+    },
+    rosterHistory: [],
   };
 
   const contracts = generateContracts(state, rng);
-  return { state: { ...state, contracts }, startingSystemOptions };
+
+  // Seed the universe roster from the finalized galaxy. Uses a distinct seed
+  // namespace so changes here don't affect galaxy/market RNG streams.
+  const rosterRng = new SeededRNG(seed + ROSTER_SEED_OFFSET);
+  const universeRoster = seedUniverseRoster(rosterRng, state.galaxy);
+
+  return {
+    state: { ...state, contracts, universeRoster },
+    startingSystemOptions,
+  };
 }

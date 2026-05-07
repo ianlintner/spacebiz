@@ -1,5 +1,5 @@
 import { gameStore } from "../data/GameStore.ts";
-import type { GameState } from "../data/types.ts";
+import type { GameState, TechState } from "../data/types.ts";
 import { EMPTY_DIPLOMACY_STATE } from "../data/types.ts";
 import { initAdviserState } from "./adviser/AdviserEngine.ts";
 
@@ -43,6 +43,30 @@ function readSave(key: string): GameState | null {
   }
 }
 
+/** Migrate old TechState shapes that predate purchaseCount / queue fields. */
+function migrateTechState(tech: TechState): TechState {
+  // Always ensure both fields exist — old saves may lack either.
+  const hasPurchaseCount =
+    tech.purchaseCount != null && typeof tech.purchaseCount === "object";
+
+  const purchaseCount: Record<string, number> = hasPurchaseCount
+    ? { ...tech.purchaseCount }
+    : {};
+
+  // Synthesize purchaseCount from completedTechIds when missing (old save format).
+  if (!hasPurchaseCount && tech.completedTechIds?.length > 0) {
+    for (const id of tech.completedTechIds) {
+      purchaseCount[id] = 1;
+    }
+  }
+
+  return {
+    ...tech,
+    purchaseCount,
+    queue: Array.isArray(tech.queue) ? tech.queue : [],
+  };
+}
+
 /** Migrate older saves that lack newer fields. */
 export function migrateSave(state: GameState): GameState {
   let migrated = state;
@@ -54,6 +78,9 @@ export function migrateSave(state: GameState): GameState {
   }
   if (!migrated.diplomacy) {
     migrated = { ...migrated, diplomacy: { ...EMPTY_DIPLOMACY_STATE } };
+  }
+  if (migrated.tech) {
+    migrated = { ...migrated, tech: migrateTechState(migrated.tech) };
   }
   return migrated;
 }

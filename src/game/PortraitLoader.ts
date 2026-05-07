@@ -187,36 +187,114 @@ class PortraitLoader {
 
     // Deduplicate concurrent requests
     const existing = this.inFlight.get(key);
-    if (existing) return existing;
-
+    if (existing) {
+      return existing;
+    }
     const promise = getUrls().then(
       (urls) =>
         new Promise<string>((resolve, reject) => {
-          // Use the scene's loader for this single file. We call load.start()
-          // ourselves so we don't interfere with any currently-running bulk load.
-          scene.load.image(key, urls);
-
-          scene.load.once("complete", () => {
-            this.loaded.add(key);
-            this.inFlight.delete(key);
-            resolve(key);
-          });
-
-          scene.load.once("loaderror", (file: { key: string }) => {
-            if (file.key === key) {
+          // Fetch the image manually instead of using the Phaser loader.
+          // This avoids issues with loader state during scene creation.
+          fetchImageAndAddToTextures(key, urls, scene.textures)
+            .then(() => {
+              this.loaded.add(key);
               this.inFlight.delete(key);
-              reject(new Error(`Failed to load portrait texture: ${key}`));
-            }
-          });
-
-          // Kick off the loader (no-op if it's already running; Phaser queues the file)
-          scene.load.start();
+              // Verify texture exists before resolving promise to ensure it's
+              // fully committed to the TextureManager (fixes timing race conditions)
+              if (!scene.textures.exists(key)) {
+                // Give the texture manager a tick to process
+                setTimeout(() => {
+                  if (scene.textures.exists(key)) {
+                    resolve(key);
+                  } else {
+                    reject(
+                      new Error(
+                        `Texture "${key}" still not in manager after retry`,
+                      ),
+                    );
+                  }
+                }, 16); // ~one frame at 60fps
+              } else {
+                resolve(key);
+              }
+            })
+            .catch((err) => {
+              this.inFlight.delete(key);
+              reject(err);
+            });
         }),
     );
 
     this.inFlight.set(key, promise);
     return promise;
   }
+}
+
+/** Try to fetch and add an image texture, trying URLs in order until one succeeds. */
+async function fetchImageAndAddToTextures(
+  key: string,
+  urls: readonly string[],
+  textures: Phaser.Textures.TextureManager,
+): Promise<void> {
+  let lastError: Error | null = null;
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        lastError = new Error(`HTTP ${response.status} loading ${url}`);
+        continue;
+      }
+
+      const blob = await response.blob();
+      const dataUrl = URL.createObjectURL(blob);
+
+      // Create an HTMLImageElement and load from the data URL
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(dataUrl);
+          resolve(img);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(dataUrl);
+          reject(new Error(`Failed to decode image from ${url}`));
+        };
+        img.src = dataUrl;
+      });
+
+      // Create a canvas texture from the loaded image
+      const canvasTexture = textures.createCanvas(key, img.width, img.height);
+      if (!canvasTexture) {
+        throw new Error(
+          `Failed to create canvas texture for "${key}" (${img.width}x${img.height})`,
+        );
+      }
+
+      const ctx = canvasTexture.getContext();
+      ctx.drawImage(img, 0, 0);
+      canvasTexture.refresh();
+
+      // Verify texture was added to the texture manager
+      if (!textures.exists(key)) {
+        throw new Error(
+          `Texture "${key}" was not added to TextureManager after refresh`,
+        );
+      }
+      return; // Success — stop trying other URLs
+    } catch (err) {
+      lastError =
+        err instanceof Error
+          ? err
+          : new Error(`Failed to fetch ${url}: ${String(err)}`);
+      // Continue to the next URL
+    }
+  }
+
+  // All URLs failed
+  const finalError =
+    lastError ?? new Error(`No URLs provided for portrait texture: ${key}`);
+  throw finalError;
 }
 
 /** Singleton instance — shared across all scenes. */

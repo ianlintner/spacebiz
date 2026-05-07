@@ -150,6 +150,8 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
       completedTechIds: [],
       currentResearchId: null,
       researchProgress: 0,
+      purchaseCount: {},
+      queue: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],
@@ -278,6 +280,8 @@ describe("AdviserEngine", () => {
           completedTechIds: [],
           currentResearchId: null,
           researchProgress: 0,
+          purchaseCount: {},
+          queue: [],
         },
       });
       const msgs = generateTurnMessages(state, makeTurnResult());
@@ -293,6 +297,8 @@ describe("AdviserEngine", () => {
           completedTechIds: techIds,
           currentResearchId: null,
           researchProgress: 0,
+          purchaseCount: {},
+          queue: [],
         },
       });
       const msgs = generateTurnMessages(state, makeTurnResult());
@@ -307,6 +313,8 @@ describe("AdviserEngine", () => {
           completedTechIds: [],
           currentResearchId: "logistics_1",
           researchProgress: 0,
+          purchaseCount: {},
+          queue: [],
         },
       });
       const msgs = generateTurnMessages(state, makeTurnResult());
