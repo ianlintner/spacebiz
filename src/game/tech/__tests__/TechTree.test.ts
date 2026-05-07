@@ -104,27 +104,27 @@ describe("Tech Tree System", () => {
   describe("isTechAvailable", () => {
     it("tier 1 tech is available with no prerequisites", () => {
       const tech = makeTechState();
-      expect(isTechAvailable("logistics_1", tech)).toBe(true);
+      expect(isTechAvailable("logistics_hub", tech)).toBe(true);
     });
 
     it("already completed tech is not available", () => {
-      const tech = makeTechState({ completedTechIds: ["logistics_1"] });
-      expect(isTechAvailable("logistics_1", tech)).toBe(false);
+      const tech = makeTechState({ completedTechIds: ["logistics_hub"] });
+      expect(isTechAvailable("logistics_hub", tech)).toBe(false);
     });
 
     it("currently researching tech is not available", () => {
-      const tech = makeTechState({ currentResearchId: "logistics_1" });
-      expect(isTechAvailable("logistics_1", tech)).toBe(false);
+      const tech = makeTechState({ currentResearchId: "logistics_hub" });
+      expect(isTechAvailable("logistics_hub", tech)).toBe(false);
     });
 
     it("tier 2 tech requires tier 1 in same branch", () => {
       const tech = makeTechState({ completedTechIds: [] });
-      expect(isTechAvailable("logistics_2", tech)).toBe(false);
+      expect(isTechAvailable("logistics_2a", tech)).toBe(false);
     });
 
     it("tier 2 tech available after tier 1 completed", () => {
-      const tech = makeTechState({ completedTechIds: ["logistics_1"] });
-      expect(isTechAvailable("logistics_2", tech)).toBe(true);
+      const tech = makeTechState({ completedTechIds: ["logistics_hub"] });
+      expect(isTechAvailable("logistics_2a", tech)).toBe(true);
     });
   });
 
@@ -138,9 +138,9 @@ describe("Tech Tree System", () => {
     });
 
     it("includes tier 2 after completing tier 1", () => {
-      const tech = makeTechState({ completedTechIds: ["logistics_1"] });
+      const tech = makeTechState({ completedTechIds: ["logistics_hub"] });
       const available = getAvailableTechs(tech);
-      const hasT2 = available.some((t) => t.id === "logistics_2");
+      const hasT2 = available.some((t) => t.id === "logistics_2a");
       expect(hasT2).toBe(true);
     });
   });
@@ -148,14 +148,14 @@ describe("Tech Tree System", () => {
   describe("setResearchTarget", () => {
     it("sets a valid research target", () => {
       const tech = makeTechState();
-      const result = setResearchTarget("logistics_1", tech);
+      const result = setResearchTarget("logistics_hub", tech);
       expect(result).not.toBeNull();
-      expect(result!.currentResearchId).toBe("logistics_1");
+      expect(result!.currentResearchId).toBe("logistics_hub");
     });
 
     it("returns null for unavailable tech", () => {
       const tech = makeTechState();
-      const result = setResearchTarget("logistics_2", tech);
+      const result = setResearchTarget("logistics_2a", tech);
       expect(result).toBeNull();
     });
   });
@@ -226,26 +226,26 @@ describe("Tech Tree System", () => {
     it("progresses towards completion", () => {
       const state = createTestState({
         tech: makeTechState({
-          currentResearchId: "logistics_1",
-          researchProgress: 5,
+          currentResearchId: "logistics_hub",
+          researchProgress: 3,
         }),
       });
-      // logistics_1 costs 8 RP
+      // logistics_hub costs 6 RP
       const result = processResearch(state, 2);
-      expect(result.researchProgress).toBe(7);
-      expect(result.currentResearchId).toBe("logistics_1");
+      expect(result.researchProgress).toBe(5);
+      expect(result.currentResearchId).toBe("logistics_hub");
     });
 
     it("completes tech and carries over excess RP", () => {
       const state = createTestState({
         tech: makeTechState({
-          currentResearchId: "logistics_1",
-          researchProgress: 6,
+          currentResearchId: "logistics_hub",
+          researchProgress: 4,
         }),
       });
-      // logistics_1 costs 8 RP, progress 6 + 4 = 10 → complete with 2 excess
+      // logistics_hub costs 6 RP, progress 4 + 4 = 8 → complete with 2 excess
       const result = processResearch(state, 4);
-      expect(result.completedTechIds).toContain("logistics_1");
+      expect(result.completedTechIds).toContain("logistics_hub");
       expect(result.currentResearchId).toBeNull();
       expect(result.researchProgress).toBe(2); // carry-over
     });
@@ -258,10 +258,10 @@ describe("Tech Tree System", () => {
     });
 
     it("returns the current technology", () => {
-      const tech = makeTechState({ currentResearchId: "logistics_1" });
+      const tech = makeTechState({ currentResearchId: "logistics_hub" });
       const current = getCurrentResearch(tech);
       expect(current).not.toBeNull();
-      expect(current!.id).toBe("logistics_1");
+      expect(current!.id).toBe("logistics_hub");
     });
   });
 
@@ -273,11 +273,11 @@ describe("Tech Tree System", () => {
 
     it("returns fraction of completion", () => {
       const tech = makeTechState({
-        currentResearchId: "logistics_1",
-        researchProgress: 4,
+        currentResearchId: "logistics_hub",
+        researchProgress: 3,
       });
       const progress = getResearchProgress(tech);
-      expect(progress).toBe(0.5); // 4/8
+      expect(progress).toBe(0.5); // 3/6
     });
   });
 });

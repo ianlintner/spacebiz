@@ -97,7 +97,7 @@ describe("Route Slot System", () => {
       routeSlots: 4,
       tech: {
         researchPoints: 0,
-        completedTechIds: ["logistics_1"], // +1 slot
+        completedTechIds: ["logistics_hub"], // +1 slot
         currentResearchId: null,
         researchProgress: 0,
         purchaseCount: {},
@@ -135,7 +135,7 @@ describe("Route Slot System", () => {
       routeSlots: 4,
       tech: {
         researchPoints: 0,
-        completedTechIds: ["logistics_1", "logistics_2"], // +1 +1
+        completedTechIds: ["logistics_hub", "logistics_3"], // +1 +1
         currentResearchId: null,
         researchProgress: 0,
         purchaseCount: {},

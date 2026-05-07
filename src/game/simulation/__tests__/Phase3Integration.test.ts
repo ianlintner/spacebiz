@@ -277,9 +277,9 @@ describe("Phase 3 Integration", () => {
     const state = makeGameState();
 
     // setResearchTarget takes (techId, techState)
-    const newTech = setResearchTarget("logistics_1", state.tech);
+    const newTech = setResearchTarget("logistics_hub", state.tech);
     expect(newTech).not.toBeNull();
-    expect(newTech!.currentResearchId).toBe("logistics_1");
+    expect(newTech!.currentResearchId).toBe("logistics_hub");
 
     // Calculate RP and process
     const stateWithTarget: GameState = {
@@ -298,7 +298,7 @@ describe("Phase 3 Integration", () => {
       routeSlots: 4,
       tech: {
         researchPoints: 0,
-        completedTechIds: ["logistics_1"],
+        completedTechIds: ["logistics_hub"],
         currentResearchId: null,
         researchProgress: 0,
         purchaseCount: {},
@@ -307,7 +307,7 @@ describe("Phase 3 Integration", () => {
     });
 
     const slots = getAvailableRouteSlots(state);
-    // Base 4 + logistics_1 adds 1 route slot
+    // Base 4 + logistics_hub adds 1 route slot
     expect(slots).toBe(5);
   });
 

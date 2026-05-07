@@ -90,14 +90,14 @@ describe("Tech Effects", () => {
     const state = createTestState({
       tech: {
         researchPoints: 0,
-        completedTechIds: ["logistics_1", "logistics_2"],
+        completedTechIds: ["logistics_hub", "logistics_3"],
         currentResearchId: null,
         researchProgress: 0,
         purchaseCount: {},
         queue: [],
       },
     });
-    // logistics_1 = +1, logistics_2 = +1
+    // logistics_hub = +1, logistics_3 = +1
     expect(getTechRouteSlotBonus(state)).toBe(2);
   });
 
@@ -110,7 +110,7 @@ describe("Tech Effects", () => {
     const state = createTestState({
       tech: {
         researchPoints: 0,
-        completedTechIds: ["logistics_1"],
+        completedTechIds: ["logistics_hub"],
         currentResearchId: null,
         researchProgress: 0,
         purchaseCount: {},
@@ -129,7 +129,7 @@ describe("Tech Effects", () => {
     const state = createTestState({
       tech: {
         researchPoints: 0,
-        completedTechIds: ["logistics_1", "logistics_2"], // logistics_2 has -0.1 licenseFee
+        completedTechIds: ["logistics_hub", "logistics_3"], // logistics_3 has -0.1 licenseFee
         currentResearchId: null,
         researchProgress: 0,
         purchaseCount: {},
