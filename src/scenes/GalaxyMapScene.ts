@@ -33,6 +33,7 @@ import type {
   ProjectedScreen,
   Vec3,
 } from "./galaxy3d/GalaxyView3D.ts";
+import { GalaxyView2D } from "./galaxy2d/GalaxyView2D.ts";
 
 import type { GameHUDScene } from "./GameHUDScene.ts";
 import type { Empire, GameState, StarSystem } from "../data/types.ts";
@@ -125,13 +126,24 @@ export class GalaxyMapScene extends Phaser.Scene {
     // chrome. The left sidebar slot becomes the galaxy info panel.
     this.vizRect = this.computeVizRect(L);
 
-    const phaserCanvas = this.game.canvas;
-    this.view3D = new GalaxyView3D({
-      phaserCanvas,
-      designWidth: L.gameWidth,
-      designHeight: L.gameHeight,
-    });
-    setActiveGalaxyView(this.view3D);
+    // TODO(galaxy2d): replace with proper union type in Phase 6
+    const USE_GALAXY_2D = false; // Phase 1 — flip locally to test the Phaser-only renderer
+    if (USE_GALAXY_2D) {
+      const view2D = new GalaxyView2D({
+        scene: this,
+        designWidth: L.gameWidth,
+        designHeight: L.gameHeight,
+      });
+      this.view3D = view2D as unknown as GalaxyView3D;
+    } else {
+      const phaserCanvas = this.game.canvas;
+      this.view3D = new GalaxyView3D({
+        phaserCanvas,
+        designWidth: L.gameWidth,
+        designHeight: L.gameHeight,
+      });
+      setActiveGalaxyView(this.view3D);
+    }
     this.view3D.setViewport(this.vizRect);
     this.view3D.setGalaxy(
       systems,
