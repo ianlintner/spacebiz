@@ -15,6 +15,11 @@ import {
   GROUP_TAB_STRIP_HEIGHT,
 } from "../ui/index.ts";
 import { TARIFF_DIPLOMATIC_MULTIPLIER } from "../data/constants.ts";
+import { SPECIALS } from "../data/specialResources.ts";
+
+function formatArchetype(archetype: string): string {
+  return archetype.charAt(0).toUpperCase() + archetype.slice(1);
+}
 
 function statusLabel(status: string): string {
   switch (status) {
@@ -280,8 +285,14 @@ export class EmpireScene extends Phaser.Scene {
     const pool = empire.routeSlotPool;
     const repInThisEmpire = state.empireReputation?.[empireId] ?? 50;
 
+    const specialNames =
+      empire.ownedSpecials && empire.ownedSpecials.length > 0
+        ? empire.ownedSpecials.map((id) => SPECIALS[id]?.name ?? id).join(", ")
+        : "—";
+
     this.portrait.showEmpireLeader(empire, [
       { label: "Empire", value: empire.name },
+      { label: "Archetype", value: formatArchetype(empire.archetype) },
       { label: "Systems", value: String(empireSystems.length) },
       { label: "Planets", value: String(empirePlanets.length) },
       { label: "Tariff", value: `${(empire.tariffRate * 100).toFixed(0)}%` },
@@ -292,6 +303,7 @@ export class EmpireScene extends Phaser.Scene {
         label: "Open slots",
         value: pool ? `${pool.domesticOpen}D / ${pool.foreignOpen}F` : "—",
       },
+      { label: "Specials", value: specialNames },
     ]);
   }
 }
