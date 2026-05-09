@@ -64,8 +64,12 @@ function createPlanetMarket(planet: Planet, rng: SeededRNG): PlanetMarket {
         baseDemand = rng.nextFloat(10, 25);
       }
     } else if (producedSet.has(cargoType)) {
-      // Planet produces this cargo via its biome: high supply (scaled), low demand.
-      baseSupply = rng.nextFloat(60, 100) * scale;
+      // Planet produces this cargo via its biome: high supply (scaled), low
+      // demand. Floor the scale at 0.6 for the supply calc only — biomes like
+      // Outpost (productionScale 0.5) with the −30% RNG tail otherwise dip
+      // below the demand range and break the producer-surplus invariant.
+      const supplyScale = Math.max(0.6, scale);
+      baseSupply = rng.nextFloat(60, 100) * supplyScale;
       baseDemand = rng.nextFloat(10, 30);
     } else if (demandedSet.has(cargoType)) {
       // Planet consumes this cargo: low supply, high demand.

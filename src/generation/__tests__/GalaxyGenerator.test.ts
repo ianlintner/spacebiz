@@ -71,11 +71,12 @@ describe("GalaxyGenerator", () => {
     }
   });
 
-  it("total planets in expected range (48-192)", () => {
+  it("total planets in expected range (80-312)", () => {
+    // Standard preset: 8 empires × 10–13 systems × 1–3 planets = 80–312.
     for (const seed of [1, 42, 100, 999, 7777]) {
       const galaxy = generateGalaxy(seed);
-      expect(galaxy.planets.length).toBeGreaterThanOrEqual(48);
-      expect(galaxy.planets.length).toBeLessThanOrEqual(192);
+      expect(galaxy.planets.length).toBeGreaterThanOrEqual(80);
+      expect(galaxy.planets.length).toBeLessThanOrEqual(312);
     }
   });
 

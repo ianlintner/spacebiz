@@ -22,9 +22,12 @@ const GALACTIC_CORE_COLOR = 0xfff2cc; // warm cream-white
 const GALACTIC_CORE_OPACITY = 0.55;
 const GALACTIC_CORE_RADIUS_FACTOR = 0.35; // fraction of galaxy halfExtent
 
-const EMPIRE_HALO_OPACITY = 0.16;
-// Halo display radius = worldRadius * EMPIRE_HALO_SCALE, matching GalaxyView3D.
-const EMPIRE_HALO_SCALE = 2.2;
+// Empire halos are the "3D bubble" — additive radial glow centered on each
+// empire's centroid. Brighter + slightly tighter than the original 3D view
+// so each empire reads as a coherent volumetric region instead of a flat
+// territory fill.
+const EMPIRE_HALO_OPACITY = 0.32;
+const EMPIRE_HALO_SCALE = 2.4;
 
 const STARFIELD_KEY = "galaxy2d:starfield";
 const NEBULA_TEX_PREFIX = "galaxy2d:nebula:";

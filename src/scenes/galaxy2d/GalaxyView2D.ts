@@ -65,10 +65,12 @@ const SYSTEM_LABEL_DEFAULT_VISIBLE = true;
 // Empire name labels — large, faint, centered on each empire's territory.
 const EMPIRE_LABEL_DEPTH = 700;
 
-// Empire territory polygons — translucent fills behind systems but above bg.
-const TERRITORY_DEPTH = 100;
-const TERRITORY_FILL_ALPHA = 0.08;
-const TERRITORY_STROKE_ALPHA = 0.18;
+// Empire territory polygons — colored borders only (no fill). The "3D bubble"
+// look comes from the additive empire halos in Background2D; this is just a
+// thin colored outline so each empire's region reads at a glance.
+const TERRITORY_DEPTH = 140; // above nebulae/halos so the border isn't lost
+const TERRITORY_STROKE_ALPHA = 0.55;
+const TERRITORY_STROKE_WIDTH = 1.6;
 
 // HQ markers — sprite above the home system.
 const HQ_MARKER_DEPTH = 880;
@@ -625,13 +627,15 @@ export class GalaxyView2D {
       drawRing(this.originSystemId, 0x4dd0e1, 0.9);
     }
 
-    // Empire territory polygons — translucent fills behind systems.
+    // Empire territory borders — colored outline only, no fill. Verts whose
+    // projection is off-screen are kept (we still draw the stroke between
+    // visible neighbors) so a single off-screen vertex doesn't drop the
+    // whole polygon when you pan to a corner.
     if (this.territoryGfx) {
       this.territoryGfx.clear();
       for (const poly of this.territoryPolygons) {
         if (poly.worldVerts.length < 3) continue;
-        const screenPts: Array<{ x: number; y: number }> = [];
-        let allVisible = true;
+        const screenPts: Array<{ x: number; y: number; visible: boolean }> = [];
         for (const wv of poly.worldVerts) {
           this.scratchNdcA.x = wv.x;
           this.scratchNdcA.y = wv.y;
@@ -642,23 +646,19 @@ export class GalaxyView2D {
             viewProj,
             this.viewport,
           );
-          if (!proj.visible) {
-            allVisible = false;
-            break;
-          }
-          screenPts.push({ x: proj.x, y: proj.y });
+          screenPts.push({ x: proj.x, y: proj.y, visible: proj.visible });
         }
-        if (!allVisible || screenPts.length < 3) continue;
-        this.territoryGfx.fillStyle(poly.color, TERRITORY_FILL_ALPHA);
-        this.territoryGfx.beginPath();
-        this.territoryGfx.moveTo(screenPts[0].x, screenPts[0].y);
-        for (let i = 1; i < screenPts.length; i++) {
-          this.territoryGfx.lineTo(screenPts[i].x, screenPts[i].y);
+        this.territoryGfx.lineStyle(
+          TERRITORY_STROKE_WIDTH,
+          poly.color,
+          TERRITORY_STROKE_ALPHA,
+        );
+        for (let i = 0; i < screenPts.length; i++) {
+          const a = screenPts[i];
+          const b = screenPts[(i + 1) % screenPts.length];
+          if (!a.visible || !b.visible) continue;
+          this.territoryGfx.lineBetween(a.x, a.y, b.x, b.y);
         }
-        this.territoryGfx.closePath();
-        this.territoryGfx.fillPath();
-        this.territoryGfx.lineStyle(1, poly.color, TERRITORY_STROKE_ALPHA);
-        this.territoryGfx.strokePath();
       }
     }
 

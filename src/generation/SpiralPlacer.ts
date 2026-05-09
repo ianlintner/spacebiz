@@ -21,7 +21,10 @@ export function placeSpiralGalaxy(opts: {
   const armSweep = opts.armSweep ?? 1.8 * Math.PI;
   const radius = opts.radius ?? 1000;
 
-  // 1) Candidate generation along arms
+  // 1) Candidate generation along arms — thicker bands so the spiral reads
+  // as a wide swept disc instead of a thin pencil line. Tangent jitter (along
+  // the arm) and radial jitter (perpendicular thickness) are applied
+  // separately and scale up with t so outer arms are wider than the core.
   const candidateMultiplier = 2.0;
   const candidates: Array<{ x: number; y: number }> = [];
   const numCandidates = Math.ceil(systemCount * candidateMultiplier);
@@ -35,10 +38,17 @@ export function placeSpiralGalaxy(opts: {
     const curl = 0.4;
     const cx = r * Math.cos(angle + curl * Math.log(1 + (r / radius) * 5));
     const cy = r * Math.sin(angle + curl * Math.log(1 + (r / radius) * 5));
-    const jitterMag = radius * 0.04 * (rng.nextFloat(0, 1) * 2 - 1);
-    const jx = -Math.sin(angle) * jitterMag;
-    const jy = Math.cos(angle) * jitterMag;
-    candidates.push({ x: cx + jx, y: cy + jy });
+    // Perpendicular (radial) jitter — widens the arm band. 0.06 at the core,
+    // up to 0.16 at the outer rim — outer arms always look thicker.
+    const radialMag = radius * (0.06 + 0.1 * t) * (rng.nextFloat(0, 1) * 2 - 1);
+    const jx = -Math.sin(angle) * radialMag;
+    const jy = Math.cos(angle) * radialMag;
+    // Tangential jitter along the arm — breaks up the visible "stringing"
+    // of points along the centerline.
+    const tangentMag = radius * 0.05 * (rng.nextFloat(0, 1) * 2 - 1);
+    const tx = Math.cos(angle) * tangentMag;
+    const ty = Math.sin(angle) * tangentMag;
+    candidates.push({ x: cx + jx + tx, y: cy + jy + ty });
   }
 
   // 2) Poisson-disk cull until we hit systemCount
@@ -113,8 +123,23 @@ export function placeSpiralGalaxy(opts: {
 
   rebalanceEmptyEmpires(kept, assignments, centroids);
 
-  // 4) Voronoi territories
-  const territories = buildBoundedVoronoi(centroids, radius * 1.4);
+  // 4) Voronoi territories — clipped to a tight galaxy disc so border cells
+  // curve around the rim instead of stretching out into empty space.
+  // Then each cell is intersected with a per-empire circle (members' max
+  // distance from centroid + small buffer) so the territory hugs the actual
+  // star cluster instead of fanning out to the disc bound.
+  const rawTerritories = buildBoundedVoronoi(centroids, radius * 0.95);
+  const territories: Polygon[] = rawTerritories.map((poly, i) => {
+    const members = kept.filter((_, k) => assignments[k] === i);
+    if (members.length === 0) return poly;
+    let maxDist = 0;
+    for (const m of members) {
+      const d = Math.hypot(m.x - centroids[i].x, m.y - centroids[i].y);
+      if (d > maxDist) maxDist = d;
+    }
+    const cellRadius = Math.max(radius * 0.08, maxDist + radius * 0.04);
+    return { vertices: clipToCircle(poly.vertices, centroids[i], cellRadius) };
+  });
 
   return {
     systemPositions: kept,
@@ -153,15 +178,18 @@ function buildBoundedVoronoi(
   sites: Array<{ x: number; y: number }>,
   bound: number,
 ): Polygon[] {
+  // Approximate a disc with a 48-gon so each Voronoi cell that touches the
+  // galactic rim follows a curve instead of a hard corner. Rendered as just
+  // a colored border, this gives empires "bubble" outlines at the edges.
+  const SEGMENTS = 48;
+  const disc: Array<{ x: number; y: number }> = [];
+  for (let i = 0; i < SEGMENTS; i++) {
+    const a = (i / SEGMENTS) * 2 * Math.PI;
+    disc.push({ x: Math.cos(a) * bound, y: Math.sin(a) * bound });
+  }
   const result: Polygon[] = [];
-  const square: Array<{ x: number; y: number }> = [
-    { x: -bound, y: -bound },
-    { x: bound, y: -bound },
-    { x: bound, y: bound },
-    { x: -bound, y: bound },
-  ];
   for (let i = 0; i < sites.length; i++) {
-    let poly = square.slice();
+    let poly = disc.slice();
     for (let j = 0; j < sites.length; j++) {
       if (i === j) continue;
       poly = clipHalfPlane(poly, sites[i], sites[j]);
@@ -170,6 +198,35 @@ function buildBoundedVoronoi(
     result.push({ vertices: poly });
   }
   return result;
+}
+
+/**
+ * Clip a polygon against a circle, approximating the circle with N segments.
+ * Each segment becomes a half-plane that we clip against, so the result is
+ * a polygon that hugs the circle on whichever sides extend past it.
+ */
+function clipToCircle(
+  vertices: Array<{ x: number; y: number }>,
+  center: { x: number; y: number },
+  radius: number,
+): Array<{ x: number; y: number }> {
+  if (vertices.length < 3) return vertices;
+  const SEGMENTS = 32;
+  let poly = vertices.slice();
+  for (let s = 0; s < SEGMENTS; s++) {
+    if (poly.length === 0) break;
+    const a = (s / SEGMENTS) * 2 * Math.PI;
+    // Half-plane along the tangent at angle `a`: inside = circle center,
+    // outside = a point 2× radius away in the radial direction. Their
+    // midpoint sits exactly on the circle so clipHalfPlane keeps everything
+    // inside the radius.
+    const outside = {
+      x: center.x + Math.cos(a) * radius * 2,
+      y: center.y + Math.sin(a) * radius * 2,
+    };
+    poly = clipHalfPlane(poly, center, outside);
+  }
+  return poly;
 }
 
 function clipHalfPlane(
