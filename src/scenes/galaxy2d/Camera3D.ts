@@ -140,11 +140,17 @@ function makePerspective(
  * y = z × x. The world→view matrix is the transpose of the rotation block
  * with -dot(basis, eye) in the translation column.
  */
-function makeViewMatrixLookAtOrigin(out: Mat4, eye: Vec3): Mat4 {
-  // z = normalize(eye - target) = normalize(eye)
-  let zx = eye.x,
-    zy = eye.y,
-    zz = eye.z;
+function makeViewMatrixLookAt(
+  out: Mat4,
+  eye: Vec3,
+  targetX: number,
+  targetY: number,
+  targetZ: number,
+): Mat4 {
+  // z = normalize(eye - target)
+  let zx = eye.x - targetX,
+    zy = eye.y - targetY,
+    zz = eye.z - targetZ;
   const zLen = Math.hypot(zx, zy, zz);
   if (zLen < 1e-9) {
     // Degenerate: eye at origin. Identity-ish view; caller shouldn't hit this.
@@ -211,10 +217,17 @@ export class Camera3D {
   distance = 120;
   aspect = 1;
 
+  /** World-space target the camera orbits around. Translates with WASD. */
+  targetX = 0;
+  targetZ = 0;
+
   private readonly view: Mat4 = mat4Identity();
   private readonly proj: Mat4 = mat4Identity();
   private readonly viewProj: Mat4 = mat4Identity();
   private readonly position: Vec3 = { x: 0, y: 0, z: 0 };
+  // Camera basis vectors after recompute() — used for screen-aligned translation.
+  private readonly rightBasis: Vec3 = { x: 1, y: 0, z: 0 };
+  private readonly forwardBasisXZ: Vec3 = { x: 0, y: 0, z: -1 };
 
   /**
    * Recompute view, projection, and combined view-projection matrices from
@@ -227,11 +240,44 @@ export class Camera3D {
     const cosP = Math.cos(this.pitch);
     const sinY = Math.sin(this.yaw);
     const cosY = Math.cos(this.yaw);
-    this.position.x = sinY * sinP * r;
-    this.position.y = cosP * r;
-    this.position.z = cosY * sinP * r;
+    // Position = orbit offset + target, so the camera orbits around the
+    // current target rather than the world origin.
+    const orbitX = sinY * sinP * r;
+    const orbitY = cosP * r;
+    const orbitZ = cosY * sinP * r;
+    this.position.x = orbitX + this.targetX;
+    this.position.y = orbitY;
+    this.position.z = orbitZ + this.targetZ;
 
-    makeViewMatrixLookAtOrigin(this.view, this.position);
+    makeViewMatrixLookAt(
+      this.view,
+      this.position,
+      this.targetX,
+      0,
+      this.targetZ,
+    );
+    // Cache screen-aligned basis vectors in the world XZ plane for translate().
+    // Right = up × z (with up = (0,1,0)), z = normalize(eye - target) = normalize(orbit).
+    const oLen = Math.hypot(orbitX, orbitY, orbitZ) || 1;
+    const zx = orbitX / oLen;
+    const zz = orbitZ / oLen;
+    // x basis = (zz, 0, -zx) — purely in XZ plane.
+    let rx = zz;
+    let rz = -zx;
+    const rLen = Math.hypot(rx, rz) || 1;
+    rx /= rLen;
+    rz /= rLen;
+    this.rightBasis.x = rx;
+    this.rightBasis.z = rz;
+    // Forward (into screen) on the disc plane = -projection of z onto XZ.
+    let fx = -zx;
+    let fz = -zz;
+    const fLen = Math.hypot(fx, fz) || 1;
+    fx /= fLen;
+    fz /= fLen;
+    this.forwardBasisXZ.x = fx;
+    this.forwardBasisXZ.z = fz;
+
     makePerspective(
       this.proj,
       CAMERA_FOV_Y,
@@ -240,6 +286,13 @@ export class Camera3D {
       CAMERA_FAR,
     );
     mat4Multiply(this.viewProj, this.proj, this.view);
+  }
+
+  /** Translate the orbit target in world XZ. dx/dy are in screen-aligned units:
+   *  +dx moves view to the right, +dy moves view up. */
+  translate(dx: number, dy: number): void {
+    this.targetX += this.rightBasis.x * dx + this.forwardBasisXZ.x * dy;
+    this.targetZ += this.rightBasis.z * dx + this.forwardBasisXZ.z * dy;
   }
 
   getViewProj(): Mat4 {

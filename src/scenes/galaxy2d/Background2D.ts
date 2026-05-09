@@ -4,7 +4,6 @@ import {
   SPIRAL_ARMS,
   SPIRAL_ARM_SWEEP,
   SPIRAL_RADIAL_END,
-  SPIRAL_RADIAL_START,
 } from "../../generation/GalaxyGenerator.ts";
 import type { Mat4 } from "./Camera3D.ts";
 import { getStarGlowTexture } from "./GlowTextures.ts";
@@ -59,6 +58,12 @@ interface NebulaEntry {
   wz: number;
   worldW: number;
   worldH: number;
+  // Unit vector in the disc plane along which the nebula is elongated.
+  // For spiral nebulae this points along the arm tangent so each cloud
+  // streaks along its arm. For random nebulae it's (1, 0) so they only
+  // get the disc rotation.
+  tangentDx: number;
+  tangentDz: number;
 }
 
 interface EmpireHaloEntry {
@@ -194,29 +199,41 @@ export class Background2D {
     this.nebulae.length = 0;
 
     const rng = mulberry32(0xbeef1234);
-    // Half the nebulae lie along the spiral arms; the rest scatter as
-    // background dust so the disc still looks textured between arms.
-    const SPIRAL_NEBULA_COUNT = Math.floor(NEBULA_COUNT * 0.6);
+    // Most nebulae trace the spiral arms from the core outward. A small
+    // fraction scatter as between-arm dust for variation.
+    const SPIRAL_NEBULA_COUNT = Math.floor(NEBULA_COUNT * 0.85);
     const RANDOM_NEBULA_COUNT = NEBULA_COUNT - SPIRAL_NEBULA_COUNT;
 
     // Spiral-aligned nebulae — laid along the same 2-arm logarithmic spiral
-    // the empires sit on, so dust clouds emphasize the arm bands.
+    // the empires sit on, denser at the core and trailing outward.
+    // Inner radius is well below SPIRAL_RADIAL_START so clouds emanate from
+    // the galactic core itself, not from where empires begin.
+    const NEBULA_INNER_R = 0.05;
     for (let i = 0; i < SPIRAL_NEBULA_COUNT; i++) {
       const arm = i % SPIRAL_ARMS;
-      const t = i / SPIRAL_NEBULA_COUNT + rng() * 0.05;
+      // Bias t toward inner regions: t = u² distributes more samples near 0.
+      const u = i / SPIRAL_NEBULA_COUNT;
+      const t = u * u + rng() * 0.04;
       const armOffset = (arm / SPIRAL_ARMS) * Math.PI * 2;
-      const baseAngle = armOffset + t * SPIRAL_ARM_SWEEP + (rng() - 0.5) * 0.25;
-      const baseR =
-        SPIRAL_RADIAL_START + t * (SPIRAL_RADIAL_END - SPIRAL_RADIAL_START);
-      const r = (baseR + (rng() - 0.5) * 0.08) * halfExtent;
+      const baseAngle = armOffset + t * SPIRAL_ARM_SWEEP + (rng() - 0.5) * 0.18;
+      const baseR = NEBULA_INNER_R + t * (SPIRAL_RADIAL_END - NEBULA_INNER_R);
+      const r = (baseR + (rng() - 0.5) * 0.06) * halfExtent;
 
       const color = NEBULA_COLORS[i % NEBULA_COLORS.length];
       const wx = Math.cos(baseAngle) * r + centroidX;
       const wz = Math.sin(baseAngle) * r + centroidZ;
       const wy = (rng() - 0.5) * 6;
-      const worldW = (12 + rng() * 32) * (halfExtent / 80);
-      const worldH = worldW * (0.5 + rng() * 0.6);
-      const opacity = 0.09 + rng() * 0.08;
+      // Tangent direction at this point on the spiral — perpendicular to
+      // the radial, with a small inward lean to match the logarithmic curl.
+      const tangentLean = -0.25;
+      const tDx = -Math.sin(baseAngle + tangentLean);
+      const tDz = Math.cos(baseAngle + tangentLean);
+      // Larger near core, slimmer at arm tips. Stretch along tangent ≈ 2:1.
+      const sizeFalloff = 1 - 0.3 * t;
+      const baseSize = (16 + rng() * 22) * (halfExtent / 80) * sizeFalloff;
+      const worldW = baseSize * 1.8; // along tangent
+      const worldH = baseSize * 0.7; // perpendicular thickness
+      const opacity = 0.11 + rng() * 0.08;
 
       const texKey = this.getOrCreateNebulaTex(color);
       const sprite = this.scene.add.image(0, 0, texKey);
@@ -226,7 +243,16 @@ export class Background2D {
       sprite.setDepth(NEBULA_DEPTH);
       this.container.add(sprite);
 
-      this.nebulae.push({ sprite, wx, wy, wz, worldW, worldH });
+      this.nebulae.push({
+        sprite,
+        wx,
+        wy,
+        wz,
+        worldW,
+        worldH,
+        tangentDx: tDx,
+        tangentDz: tDz,
+      });
     }
 
     // Random scattered nebulae for between-arm dust variation.
@@ -237,9 +263,9 @@ export class Background2D {
       const wx = Math.cos(angle) * r + centroidX;
       const wz = Math.sin(angle) * r + centroidZ;
       const wy = (rng() - 0.5) * 6;
-      const worldW = (6 + rng() * 22) * (halfExtent / 80);
-      const worldH = worldW * (0.5 + rng() * 0.6);
-      const opacity = 0.05 + rng() * 0.05;
+      const worldW = (6 + rng() * 18) * (halfExtent / 80);
+      const worldH = worldW * (0.5 + rng() * 0.5);
+      const opacity = 0.04 + rng() * 0.04;
 
       const texKey = this.getOrCreateNebulaTex(color);
       const sprite = this.scene.add.image(0, 0, texKey);
@@ -249,7 +275,17 @@ export class Background2D {
       sprite.setDepth(NEBULA_DEPTH);
       this.container.add(sprite);
 
-      this.nebulae.push({ sprite, wx, wy, wz, worldW, worldH });
+      this.nebulae.push({
+        sprite,
+        wx,
+        wy,
+        wz,
+        worldW,
+        worldH,
+        // No arm orientation — just sits flat in the disc.
+        tangentDx: 1,
+        tangentDz: 0,
+      });
     }
   }
 
@@ -401,9 +437,25 @@ export class Background2D {
         neb.sprite.setVisible(false);
         continue;
       }
-      neb.sprite.setPosition(proj.x, proj.y);
+      // Per-nebula rotation: project a point offset by the tangent direction
+      // and measure the screen-space angle. This makes each cloud streak
+      // along its arm even under steep camera pitch.
+      const px = proj.x;
+      const py = proj.y;
+      this.scratchWorld.x = neb.wx + neb.tangentDx;
+      this.scratchWorld.y = neb.wy;
+      this.scratchWorld.z = neb.wz + neb.tangentDz;
+      const tProj = projectToScreenDesignInto(
+        this.scratchNdc,
+        this.scratchWorld,
+        viewProj,
+        viewport,
+      );
+      const tangentRot = Math.atan2(tProj.y - py, tProj.x - px);
+
+      neb.sprite.setPosition(px, py);
       neb.sprite.setDisplaySize(neb.worldW * scale, neb.worldH * scale);
-      neb.sprite.setRotation(discRotation);
+      neb.sprite.setRotation(tangentRot);
       neb.sprite.setVisible(true);
     }
 

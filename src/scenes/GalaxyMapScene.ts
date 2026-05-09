@@ -140,6 +140,9 @@ export class GalaxyMapScene extends Phaser.Scene {
       state.borderPorts ?? [],
       empires,
     );
+    this.view3D.setAccessibleEmpireIds(
+      empires.filter((e) => isEmpireAccessible(e.id, state)).map((e) => e.id),
+    );
     const initialVisuals = buildGalaxyRouteTrafficVisuals(state);
     this.view3D.setRoutes(initialVisuals);
     this.routeTrafficStateKey = buildGalaxyRouteTrafficStateKey(state);
@@ -158,6 +161,14 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.rebuildTrafficShips(state, initialVisuals);
     this.installCameraInput();
     this.installInfoCardDismiss();
+
+    // Start the camera zoomed in on the player's homeworld system.
+    const homeworldPlanet = state.galaxy.planets.find(
+      (p) => p.id === state.homeworldPlanetId,
+    );
+    if (homeworldPlanet) {
+      this.view3D.focusOnSystem(homeworldPlanet.systemId, true);
+    }
 
     // ── HUD overlay (top-of-content strip) ─────────────────────────────────
     this.buildHud(state, theme, L);
@@ -230,6 +241,13 @@ export class GalaxyMapScene extends Phaser.Scene {
           this.routeTrafficStateKey = nextKey;
         }
       }
+
+      // Re-tint system labels whenever the unlocked-empires set changes.
+      this.view3D.setAccessibleEmpireIds(
+        nextState.galaxy.empires
+          .filter((e) => isEmpireAccessible(e.id, nextState))
+          .map((e) => e.id),
+      );
     };
     gameStore.on("stateChanged", handleStateChanged);
 
@@ -308,19 +326,20 @@ export class GalaxyMapScene extends Phaser.Scene {
 
   private applyKeyboardPan(delta: number): void {
     if (!this.view3D) return;
-    const speed = 0.4 * delta; // design-px per ms → ~24 px at 60 fps
+    // World-units per ms → ~6 units at 60 fps. Scaled by zoom in view3D.translate.
+    const speed = 0.1 * delta;
     let dx = 0;
     let dy = 0;
 
     const k = this.panKeys;
     const w = this.panKeysWASD;
-    if (k?.left.isDown || w?.["A"]?.isDown) dx += speed;
-    if (k?.right.isDown || w?.["D"]?.isDown) dx -= speed;
+    if (k?.left.isDown || w?.["A"]?.isDown) dx -= speed;
+    if (k?.right.isDown || w?.["D"]?.isDown) dx += speed;
     if (k?.up.isDown || w?.["W"]?.isDown) dy += speed;
     if (k?.down.isDown || w?.["S"]?.isDown) dy -= speed;
 
     if (dx !== 0 || dy !== 0) {
-      this.view3D.pan(dx, dy);
+      this.view3D.translate(dx, dy);
     }
   }
 

@@ -3,6 +3,7 @@ import { NameGenerator } from "./NameGenerator.ts";
 import {
   PlanetType,
   EmpireDisposition,
+  EmpireArchetype,
   GalaxyShape,
   HyperlaneDensity,
 } from "../data/types.ts";
@@ -14,6 +15,7 @@ import type {
   StarSystem,
   Planet,
   Hyperlane,
+  SpecialId,
   GalaxyShape as GalaxyShapeT,
   HyperlaneDensity as HyperlaneDensityT,
   PlanetType as PlanetTypeT,
@@ -33,6 +35,10 @@ import {
   DEFAULT_EMPIRE_POOL_BY_STANCE,
 } from "../data/constants.ts";
 import type { GamePreset } from "../data/constants.ts";
+import { placeSpiralGalaxy } from "./SpiralPlacer.ts";
+import { reconcileEmpireProduction } from "./EmpireReconciler.ts";
+import { placeSpecials } from "./SpecialPlacer.ts";
+import { getBiomesForType } from "../data/biomes.ts";
 
 export interface GalaxyData {
   sectors: Sector[];
@@ -41,6 +47,12 @@ export interface GalaxyData {
   planets: Planet[];
   hyperlanes: Hyperlane[];
 }
+
+// Spiral arm constants — exported so the galaxy renderer can decorate the same arms.
+export const SPIRAL_ARMS = 2;
+export const SPIRAL_RADIAL_START = 0.18;
+export const SPIRAL_RADIAL_END = 1.0;
+export const SPIRAL_ARM_SWEEP = Math.PI * 1.8;
 
 // Planet type weights by orbital zone (inner / middle / outer)
 const INNER_WEIGHTS: [PlanetTypeT, number][] = [
@@ -142,608 +154,6 @@ interface Bounds {
   maxY: number;
 }
 
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
-
-// ── Shape-aware sector center placement ──────────────────────
-
-function generateSectorCenters(
-  rng: SeededRNG,
-  count: number,
-  bounds: Bounds,
-  shape: GalaxyShapeT,
-): Array<{ x: number; y: number }> {
-  switch (shape) {
-    case GalaxyShape.Spiral:
-      return generateSpiralCenters(rng, count, bounds);
-    case GalaxyShape.Elliptical:
-      return generateEllipticalCenters(rng, count, bounds);
-    case GalaxyShape.Ring:
-      return generateRingCenters(rng, count, bounds);
-    case GalaxyShape.Irregular:
-      return generateIrregularCenters(rng, count, bounds);
-    default:
-      return generateSpiralCenters(rng, count, bounds);
-  }
-}
-
-/**
- * Spiral arm parameters — exported so the galaxy renderer can place nebulae
- * and background dust along the same arms the empires sit on.
- *
- * `radialStart` and `radialEnd` are fractions of the galaxy half-extent.
- * `armSweep` is how much each arm wraps (radians) from inner to outer end.
- */
-export const SPIRAL_ARMS = 2;
-export const SPIRAL_RADIAL_START = 0.18;
-export const SPIRAL_RADIAL_END = 1.0;
-export const SPIRAL_ARM_SWEEP = Math.PI * 1.8; // ~324° per arm — pronounced curl
-
-/** Spiral: place empires along 2 logarithmic spiral arms */
-function generateSpiralCenters(
-  rng: SeededRNG,
-  count: number,
-  bounds: Bounds,
-): Array<{ x: number; y: number }> {
-  const cx = (bounds.minX + bounds.maxX) / 2;
-  const cy = (bounds.minY + bounds.maxY) / 2;
-  const radiusX = (bounds.maxX - bounds.minX) * 0.42;
-  const radiusY = (bounds.maxY - bounds.minY) * 0.42;
-  const arms = SPIRAL_ARMS;
-  const startAngle = rng.nextFloat(0, Math.PI * 2);
-  const centers: Array<{ x: number; y: number }> = [];
-
-  for (let i = 0; i < count; i++) {
-    const arm = i % arms;
-    const t = (Math.floor(i / arms) + 1) / (Math.ceil(count / arms) + 1);
-    // Logarithmic spiral: arm offset by armIndex × π, then sweep with t
-    const spiralAngle =
-      startAngle + (arm / arms) * Math.PI * 2 + t * SPIRAL_ARM_SWEEP;
-    const r =
-      SPIRAL_RADIAL_START + t * (SPIRAL_RADIAL_END - SPIRAL_RADIAL_START);
-    const jitterR = rng.nextFloat(-0.05, 0.05);
-    const jitterA = rng.nextFloat(-0.1, 0.1);
-    const x = clamp(
-      cx + Math.cos(spiralAngle + jitterA) * radiusX * (r + jitterR),
-      bounds.minX,
-      bounds.maxX,
-    );
-    const y = clamp(
-      cy + Math.sin(spiralAngle + jitterA) * radiusY * (r + jitterR),
-      bounds.minY,
-      bounds.maxY,
-    );
-    centers.push({ x, y });
-  }
-
-  return centers;
-}
-
-/** Elliptical: gaussian-like cluster toward center */
-function generateEllipticalCenters(
-  rng: SeededRNG,
-  count: number,
-  bounds: Bounds,
-): Array<{ x: number; y: number }> {
-  const cx = (bounds.minX + bounds.maxX) / 2;
-  const cy = (bounds.minY + bounds.maxY) / 2;
-  const radiusX = (bounds.maxX - bounds.minX) * 0.38;
-  const radiusY = (bounds.maxY - bounds.minY) * 0.34;
-  const centers: Array<{ x: number; y: number }> = [];
-  const minDist = Math.min(radiusX, radiusY) * 0.25;
-
-  for (let i = 0; i < count; i++) {
-    let placed = false;
-    for (let attempt = 0; attempt < 80; attempt++) {
-      // Box-Muller approximation via averaging uniform samples
-      const u1 = (rng.next() + rng.next() + rng.next()) / 3;
-      const u2 = (rng.next() + rng.next() + rng.next()) / 3;
-      const angle = rng.nextFloat(0, Math.PI * 2);
-      const r = Math.sqrt(u1 * u2) * 1.4;
-      const px = clamp(
-        cx + Math.cos(angle) * radiusX * r,
-        bounds.minX,
-        bounds.maxX,
-      );
-      const py = clamp(
-        cy + Math.sin(angle) * radiusY * r,
-        bounds.minY,
-        bounds.maxY,
-      );
-      const overlaps = centers.some((c) => {
-        const dx = c.x - px;
-        const dy = c.y - py;
-        return Math.sqrt(dx * dx + dy * dy) < minDist;
-      });
-      if (!overlaps) {
-        centers.push({ x: px, y: py });
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) {
-      // Fallback: place on ring
-      const angle = (i / count) * Math.PI * 2;
-      centers.push({
-        x: clamp(
-          cx + Math.cos(angle) * radiusX * 0.6,
-          bounds.minX,
-          bounds.maxX,
-        ),
-        y: clamp(
-          cy + Math.sin(angle) * radiusY * 0.6,
-          bounds.minY,
-          bounds.maxY,
-        ),
-      });
-    }
-  }
-
-  return centers;
-}
-
-/** Ring: empires distributed around a ring (original layout, refined) */
-function generateRingCenters(
-  rng: SeededRNG,
-  count: number,
-  bounds: Bounds,
-): Array<{ x: number; y: number }> {
-  const cx = (bounds.minX + bounds.maxX) / 2;
-  const cy = (bounds.minY + bounds.maxY) / 2;
-  const radiusX = (bounds.maxX - bounds.minX) * 0.32;
-  const radiusY = (bounds.maxY - bounds.minY) * 0.3;
-  const startAngle = rng.nextFloat(0, Math.PI * 2);
-  const centers: Array<{ x: number; y: number }> = [];
-
-  for (let i = 0; i < count; i++) {
-    const base = startAngle + (i / count) * Math.PI * 2;
-    const jitter = rng.nextFloat(-0.18, 0.18);
-    const rVar = rng.nextFloat(0.85, 1.15);
-    const x = clamp(
-      cx + Math.cos(base + jitter) * radiusX * rVar + rng.nextFloat(-20, 20),
-      bounds.minX,
-      bounds.maxX,
-    );
-    const y = clamp(
-      cy + Math.sin(base + jitter) * radiusY * rVar + rng.nextFloat(-16, 16),
-      bounds.minY,
-      bounds.maxY,
-    );
-    centers.push({ x, y });
-  }
-
-  return centers;
-}
-
-/** Irregular: random clusters scattered across the map */
-function generateIrregularCenters(
-  rng: SeededRNG,
-  count: number,
-  bounds: Bounds,
-): Array<{ x: number; y: number }> {
-  const w = bounds.maxX - bounds.minX;
-  const h = bounds.maxY - bounds.minY;
-  const margin = Math.min(w, h) * 0.1;
-  const minDist = Math.min(w, h) * 0.15;
-  const centers: Array<{ x: number; y: number }> = [];
-
-  for (let i = 0; i < count; i++) {
-    let placed = false;
-    for (let attempt = 0; attempt < 80; attempt++) {
-      const px = rng.nextFloat(bounds.minX + margin, bounds.maxX - margin);
-      const py = rng.nextFloat(bounds.minY + margin, bounds.maxY - margin);
-      const overlaps = centers.some((c) => {
-        const dx = c.x - px;
-        const dy = c.y - py;
-        return Math.sqrt(dx * dx + dy * dy) < minDist;
-      });
-      if (!overlaps) {
-        centers.push({ x: px, y: py });
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) {
-      const angle = (i / count) * Math.PI * 2;
-      const cx = (bounds.minX + bounds.maxX) / 2;
-      const cy = (bounds.minY + bounds.maxY) / 2;
-      centers.push({
-        x: clamp(cx + Math.cos(angle) * w * 0.3, bounds.minX, bounds.maxX),
-        y: clamp(cy + Math.sin(angle) * h * 0.3, bounds.minY, bounds.maxY),
-      });
-    }
-  }
-
-  return centers;
-}
-
-function generateSystemPoints(
-  rng: SeededRNG,
-  count: number,
-  centerX: number,
-  centerY: number,
-  bounds: Bounds,
-  mapScale: number,
-  existingPoints: Array<{ x: number; y: number }> = [],
-  neighborCenters: Array<{ x: number; y: number }> = [],
-  spiralBias = false,
-): Array<{ x: number; y: number }> {
-  const points: Array<{ x: number; y: number }> = [];
-  const localRadiusX = 210 * Math.sqrt(mapScale);
-  const localRadiusY = 175 * Math.sqrt(mapScale);
-  const minDist = 80 * Math.sqrt(mapScale);
-  const globalMinDist = minDist * 0.85;
-
-  // Reserve 1-2 slots for outpost/bridge systems toward neighbors
-  const bridgeCount =
-    neighborCenters.length > 0 ? Math.min(2, Math.floor(count * 0.2)) : 0;
-  const mainCount = count - bridgeCount;
-
-  // Spiral arm tangent — when enabled, elongate the local cluster along the
-  // arm's tangent so each empire's territory looks like a chunk of an arm
-  // rather than a circular blob. The tangent is perpendicular to the radial
-  // direction from the galaxy center, with a small lean to follow the curl.
-  const galaxyCx = (bounds.minX + bounds.maxX) / 2;
-  const galaxyCy = (bounds.minY + bounds.maxY) / 2;
-  const radialAngle = Math.atan2(centerY - galaxyCy, centerX - galaxyCx);
-  const tangentAngle = radialAngle + Math.PI / 2 - 0.25;
-  const cosT = Math.cos(tangentAngle);
-  const sinT = Math.sin(tangentAngle);
-  const tangentStretch = spiralBias ? 1.6 : 1;
-  const radialCompress = spiralBias ? 0.55 : 1;
-
-  for (let i = 0; i < mainCount; i++) {
-    let placed = false;
-    for (let attempt = 0; attempt < 60; attempt++) {
-      const angle = rng.nextFloat(0, Math.PI * 2);
-      const radial = Math.sqrt(rng.next()) * 0.95 + 0.05;
-      // Local offset in cluster frame: x along tangent, y perpendicular.
-      let lx = Math.cos(angle) * localRadiusX * radial * tangentStretch;
-      let ly = Math.sin(angle) * localRadiusY * radial * radialCompress;
-      if (spiralBias) {
-        // Rotate so cluster's long axis aligns with arm tangent.
-        const rx = lx * cosT - ly * sinT;
-        const ry = lx * sinT + ly * cosT;
-        lx = rx;
-        ly = ry;
-      }
-      const px = clamp(centerX + lx, bounds.minX, bounds.maxX);
-      const py = clamp(centerY + ly, bounds.minY, bounds.maxY);
-
-      const overlapsLocal = points.some((p) => {
-        const dx = p.x - px;
-        const dy = p.y - py;
-        return dx * dx + dy * dy < minDist * minDist;
-      });
-      if (overlapsLocal) continue;
-
-      // Check against all previously-placed systems from other empires
-      const overlapsGlobal = existingPoints.some((p) => {
-        const dx = p.x - px;
-        const dy = p.y - py;
-        return dx * dx + dy * dy < globalMinDist * globalMinDist;
-      });
-      if (overlapsGlobal) continue;
-
-      points.push({ x: px, y: py });
-      placed = true;
-      break;
-    }
-
-    if (!placed) {
-      const fallbackAngle = (i / Math.max(mainCount, 1)) * Math.PI * 2;
-      points.push({
-        x: clamp(
-          centerX + Math.cos(fallbackAngle) * localRadiusX * 0.7,
-          bounds.minX,
-          bounds.maxX,
-        ),
-        y: clamp(
-          centerY + Math.sin(fallbackAngle) * localRadiusY * 0.7,
-          bounds.minY,
-          bounds.maxY,
-        ),
-      });
-    }
-  }
-
-  // Place bridge/outpost systems toward nearest neighbor empire centers
-  for (let bi = 0; bi < bridgeCount; bi++) {
-    const nc = neighborCenters[bi % neighborCenters.length];
-    let placed = false;
-    for (let attempt = 0; attempt < 40; attempt++) {
-      // Position 50-70% of the way toward the neighbor center
-      const t = rng.nextFloat(0.5, 0.72);
-      const jitterX = rng.nextFloat(-40, 40) * Math.sqrt(mapScale);
-      const jitterY = rng.nextFloat(-35, 35) * Math.sqrt(mapScale);
-      const px = clamp(
-        centerX + (nc.x - centerX) * t + jitterX,
-        bounds.minX,
-        bounds.maxX,
-      );
-      const py = clamp(
-        centerY + (nc.y - centerY) * t + jitterY,
-        bounds.minY,
-        bounds.maxY,
-      );
-
-      const overlapsLocal = points.some((p) => {
-        const dx = p.x - px;
-        const dy = p.y - py;
-        return dx * dx + dy * dy < minDist * minDist;
-      });
-      if (overlapsLocal) continue;
-
-      const overlapsGlobal = existingPoints.some((p) => {
-        const dx = p.x - px;
-        const dy = p.y - py;
-        return dx * dx + dy * dy < globalMinDist * globalMinDist;
-      });
-      if (overlapsGlobal) continue;
-
-      points.push({ x: px, y: py });
-      placed = true;
-      break;
-    }
-
-    if (!placed) {
-      // Fallback: just place near the edge of the main cluster toward neighbor
-      const dirX = nc.x - centerX;
-      const dirY = nc.y - centerY;
-      const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
-      points.push({
-        x: clamp(
-          centerX + (dirX / dirLen) * localRadiusX * 0.9,
-          bounds.minX,
-          bounds.maxX,
-        ),
-        y: clamp(
-          centerY + (dirY / dirLen) * localRadiusY * 0.9,
-          bounds.minY,
-          bounds.maxY,
-        ),
-      });
-    }
-  }
-
-  return points;
-}
-
-export function generateGalaxy(
-  seed: number,
-  gamePreset: GamePreset = "standard",
-  galaxyShape: GalaxyShapeT = "spiral",
-  hyperlaneDensity: HyperlaneDensityT = HyperlaneDensity.Medium,
-): GalaxyData {
-  const rng = new SeededRNG(seed);
-  const nameGen = new NameGenerator(rng);
-
-  const config = GAME_LENGTH_PRESETS[gamePreset];
-
-  const sectors: Sector[] = [];
-  const empires: Empire[] = [];
-  const systems: StarSystem[] = [];
-  const planets: Planet[] = [];
-
-  const numSectors = config.empireCount;
-  const scale = config.mapScale;
-  const baseW = 2160; // 2280 - 120
-  const baseH = 1360; // 1480 - 120
-  const mapBounds: Bounds = {
-    minX: 120,
-    maxX: 120 + baseW * scale,
-    minY: 120,
-    maxY: 120 + baseH * scale,
-  };
-  const sectorCenters = generateSectorCenters(
-    rng,
-    numSectors,
-    mapBounds,
-    galaxyShape,
-  );
-
-  // Shuffle dispositions — first empire always friendly (player home candidate)
-  const usedPrefixes = new Set<number>();
-
-  // Track all placed system points globally for deconfliction
-  const allSystemPoints: Array<{ x: number; y: number }> = [];
-
-  // Position sectors and empires across the coordinate space
-  for (let si = 0; si < numSectors; si++) {
-    const sectorX = sectorCenters[si].x;
-    const sectorY = sectorCenters[si].y;
-    const sector: Sector = {
-      id: `sector-${si}`,
-      name: nameGen.generateSectorName(),
-      x: sectorX,
-      y: sectorY,
-      color: SECTOR_COLORS[si % SECTOR_COLORS.length],
-    };
-    sectors.push(sector);
-
-    // Generate empire for this sector
-    let prefixIdx: number;
-    do {
-      prefixIdx = rng.nextInt(0, EMPIRE_NAME_PREFIXES.length - 1);
-    } while (
-      usedPrefixes.has(prefixIdx) &&
-      usedPrefixes.size < EMPIRE_NAME_PREFIXES.length
-    );
-    usedPrefixes.add(prefixIdx);
-
-    const suffixIdx = rng.nextInt(0, EMPIRE_NAME_SUFFIXES.length - 1);
-    const empireName = `${EMPIRE_NAME_PREFIXES[prefixIdx]} ${EMPIRE_NAME_SUFFIXES[suffixIdx]}`;
-
-    // Assign disposition — distribute evenly
-    const disposition = DISPOSITIONS[si % DISPOSITIONS.length];
-
-    let tariffMin: number;
-    let tariffMax: number;
-    switch (disposition) {
-      case EmpireDisposition.Friendly:
-        tariffMin = TARIFF_FRIENDLY_MIN;
-        tariffMax = TARIFF_FRIENDLY_MAX;
-        break;
-      case EmpireDisposition.Hostile:
-        tariffMin = TARIFF_HOSTILE_MIN;
-        tariffMax = TARIFF_HOSTILE_MAX;
-        break;
-      default:
-        tariffMin = TARIFF_NEUTRAL_MIN;
-        tariffMax = TARIFF_NEUTRAL_MAX;
-        break;
-    }
-    const tariffRate = rng.nextFloat(tariffMin, tariffMax);
-
-    const empireId = `empire-${si}`;
-
-    const numSystems = rng.nextInt(
-      config.systemsPerEmpireMin,
-      config.systemsPerEmpireMax,
-    );
-
-    // Find nearest other sector centers as neighbor targets for bridge systems
-    const neighborCenters = sectorCenters
-      .filter((_, idx) => idx !== si)
-      .map((c) => ({
-        x: c.x,
-        y: c.y,
-        dist: Math.sqrt(
-          (c.x - sectorX) * (c.x - sectorX) + (c.y - sectorY) * (c.y - sectorY),
-        ),
-      }))
-      .sort((a, b) => a.dist - b.dist)
-      .slice(0, 3);
-
-    const systemPoints = generateSystemPoints(
-      rng,
-      numSystems,
-      sectorX,
-      sectorY,
-      mapBounds,
-      scale,
-      allSystemPoints,
-      neighborCenters,
-      galaxyShape === GalaxyShape.Spiral,
-    );
-    allSystemPoints.push(...systemPoints);
-
-    let homeSystemId = "";
-
-    for (let syi = 0; syi < numSystems; syi++) {
-      const systemX = systemPoints[syi].x;
-      const systemY = systemPoints[syi].y;
-      const system: StarSystem = {
-        id: `system-${si}-${syi}`,
-        name: nameGen.generateSystemName(),
-        sectorId: sector.id,
-        empireId,
-        x: systemX,
-        y: systemY,
-        starColor: rng.pick(STAR_COLORS),
-      };
-      systems.push(system);
-
-      if (syi === 0) homeSystemId = system.id;
-
-      const numPlanets = rng.nextInt(
-        config.planetsPerSystemMin,
-        config.planetsPerSystemMax,
-      );
-      for (let pi = 0; pi < numPlanets; pi++) {
-        // Orbital position determines zone
-        const orbitalFraction = numPlanets > 1 ? pi / (numPlanets - 1) : 0.5;
-        let planetTypeWeights: [PlanetTypeT, number][];
-        if (orbitalFraction < 0.33) {
-          planetTypeWeights = INNER_WEIGHTS;
-        } else if (orbitalFraction < 0.67) {
-          planetTypeWeights = MIDDLE_WEIGHTS;
-        } else {
-          planetTypeWeights = OUTER_WEIGHTS;
-        }
-        const planetType = weightedPick(rng, planetTypeWeights);
-
-        // Position planets around the system
-        const angle = rng.nextFloat(0, Math.PI * 2);
-        const dist = rng.nextFloat(1, 5);
-        const planetX = system.x + Math.cos(angle) * dist;
-        const planetY = system.y + Math.sin(angle) * dist;
-
-        const population = generatePopulation(rng, planetType);
-
-        // 3D orbital params for the system view. Inner-slot planets orbit
-        // faster (shorter period in quarters) and at smaller radius —
-        // preserves the existing "inner industry → outer leisure" feel.
-        const orbitRadius = 4 + orbitalFraction * 12;
-        const orbitPeriodQuarters = 4 + pi * 2;
-        const orbitPhase = rng.nextFloat(0, Math.PI * 2);
-        const orbitInclination = (rng.nextFloat(0, 1) - 0.5) * 0.3;
-
-        const planet: Planet = {
-          id: `planet-${si}-${syi}-${pi}`,
-          name: nameGen.generatePlanetName(),
-          systemId: system.id,
-          type: planetType,
-          x: planetX,
-          y: planetY,
-          population,
-          orbitRadius,
-          orbitPeriodQuarters,
-          orbitPhase,
-          orbitInclination,
-        };
-        planets.push(planet);
-      }
-    }
-
-    // Charter pool stance is loosely correlated with disposition:
-    //   friendly  → open       (more foreign charters, fewer domestic)
-    //   hostile   → isolationist (mostly domestic, almost no foreign)
-    //   else      → regulated   (balanced)
-    const policyStance: "isolationist" | "regulated" | "open" =
-      disposition === "friendly"
-        ? "open"
-        : disposition === "hostile"
-          ? "isolationist"
-          : "regulated";
-    const poolSizes = DEFAULT_EMPIRE_POOL_BY_STANCE[policyStance];
-
-    const empire: Empire = {
-      id: empireId,
-      name: empireName,
-      color: EMPIRE_COLORS[si % EMPIRE_COLORS.length],
-      tariffRate: Math.round(tariffRate * 1000) / 1000,
-      disposition,
-      homeSystemId,
-      leaderName: generateLeaderName(rng),
-      leaderPortrait: pickRandomLeaderPortrait(rng),
-      routeSlotPool: {
-        policyStance,
-        domesticTotal: poolSizes.domesticTotal,
-        foreignTotal: poolSizes.foreignTotal,
-        domesticOpen: poolSizes.domesticTotal,
-        foreignOpen: poolSizes.foreignTotal,
-      },
-    };
-    empires.push(empire);
-  }
-
-  // Ensure at least 1 of each planet type exists
-  ensureAllPlanetTypes(rng, planets);
-
-  // Generate hyperlane connections between systems
-  const hyperlanes = generateHyperlanes(
-    rng,
-    systems,
-    galaxyShape,
-    hyperlaneDensity,
-    mapBounds,
-  );
-
-  return { sectors, empires, systems, planets, hyperlanes };
-}
-
 function generatePopulation(rng: SeededRNG, type: PlanetTypeT): number {
   switch (type) {
     case PlanetType.CoreWorld:
@@ -765,30 +175,332 @@ function generatePopulation(rng: SeededRNG, type: PlanetTypeT): number {
   }
 }
 
+/**
+ * Build a complete Planet with biome-derived production fields. Biome is picked
+ * from the parent planet type's biome pool; productionScale gets ±30% jitter.
+ */
+function buildPlanet(opts: {
+  rng: SeededRNG;
+  id: string;
+  name: string;
+  systemId: string;
+  type: PlanetTypeT;
+  x: number;
+  y: number;
+  population: number;
+  orbitRadius: number;
+  orbitPeriodQuarters: number;
+  orbitPhase: number;
+  orbitInclination: number;
+}): Planet {
+  const { rng, type, population } = opts;
+  const biomeOptions = getBiomesForType(type);
+  const biomeDef = biomeOptions[rng.nextInt(0, biomeOptions.length - 1)];
+  const productionScale = biomeDef.productionScale * rng.nextFloat(0.7, 1.3);
+  const populationCap = Math.max(
+    population,
+    Math.round(population * biomeDef.popCapMultiplier),
+  );
+  const specialResource: SpecialId | undefined = undefined;
+  return {
+    id: opts.id,
+    name: opts.name,
+    systemId: opts.systemId,
+    type,
+    x: opts.x,
+    y: opts.y,
+    population,
+    orbitRadius: opts.orbitRadius,
+    orbitPeriodQuarters: opts.orbitPeriodQuarters,
+    orbitPhase: opts.orbitPhase,
+    orbitInclination: opts.orbitInclination,
+    biome: biomeDef.id,
+    productionTags: [...biomeDef.produces],
+    consumptionTags: [...biomeDef.consumes],
+    productionScale,
+    populationCap,
+    specialResource,
+  };
+}
+
+export function generateGalaxy(
+  seed: number,
+  gamePreset: GamePreset = "standard",
+  galaxyShape: GalaxyShapeT = "spiral",
+  hyperlaneDensity: HyperlaneDensityT = HyperlaneDensity.Medium,
+): GalaxyData {
+  const rng = new SeededRNG(seed);
+  const nameGen = new NameGenerator(rng);
+  const config = GAME_LENGTH_PRESETS[gamePreset];
+
+  const empireCount = config.empireCount;
+  // Total system count derived from preset's per-empire range (midpoint).
+  const sysPerEmpireMid = Math.round(
+    (config.systemsPerEmpireMin + config.systemsPerEmpireMax) / 2,
+  );
+  const systemCount = empireCount * sysPerEmpireMid;
+
+  // Map bounds — kept compatible with renderer expectations (0..2400 × 0..1600).
+  const scale = config.mapScale;
+  const baseW = 2160;
+  const baseH = 1360;
+  const mapBounds: Bounds = {
+    minX: 120,
+    maxX: 120 + baseW * scale,
+    minY: 120,
+    maxY: 120 + baseH * scale,
+  };
+  const cx = (mapBounds.minX + mapBounds.maxX) / 2;
+  const cy = (mapBounds.minY + mapBounds.maxY) / 2;
+  const mapRadius =
+    Math.min(mapBounds.maxX - mapBounds.minX, mapBounds.maxY - mapBounds.minY) *
+    0.45;
+
+  // 1) Place systems and assign to empires via the spiral pipeline.
+  const placement = placeSpiralGalaxy({
+    rng,
+    systemCount,
+    empireCount,
+    radius: mapRadius,
+  });
+
+  // Translate placement-local coordinates (centered on origin) to map coordinates.
+  const systemPositions = placement.systemPositions.map((p) => ({
+    x: p.x + cx,
+    y: p.y + cy,
+  }));
+  const empireCentroids = placement.empireCentroids.map((p) => ({
+    x: p.x + cx,
+    y: p.y + cy,
+  }));
+  const territoriesTranslated = placement.empireTerritories.map((poly) => ({
+    vertices: poly.vertices.map((v) => ({ x: v.x + cx, y: v.y + cy })),
+  }));
+
+  // 2) Build empires (one sector per empire for backwards compatibility).
+  const sectors: Sector[] = [];
+  const empires: Empire[] = [];
+  const usedPrefixes = new Set<number>();
+
+  for (let ei = 0; ei < empireCount; ei++) {
+    const center = empireCentroids[ei];
+    const sector: Sector = {
+      id: `sector-${ei}`,
+      name: nameGen.generateSectorName(),
+      x: center.x,
+      y: center.y,
+      color: SECTOR_COLORS[ei % SECTOR_COLORS.length],
+    };
+    sectors.push(sector);
+
+    let prefixIdx: number;
+    do {
+      prefixIdx = rng.nextInt(0, EMPIRE_NAME_PREFIXES.length - 1);
+    } while (
+      usedPrefixes.has(prefixIdx) &&
+      usedPrefixes.size < EMPIRE_NAME_PREFIXES.length
+    );
+    usedPrefixes.add(prefixIdx);
+    const suffixIdx = rng.nextInt(0, EMPIRE_NAME_SUFFIXES.length - 1);
+    const empireName = `${EMPIRE_NAME_PREFIXES[prefixIdx]} ${EMPIRE_NAME_SUFFIXES[suffixIdx]}`;
+
+    const disposition = DISPOSITIONS[ei % DISPOSITIONS.length];
+    let tariffMin: number;
+    let tariffMax: number;
+    switch (disposition) {
+      case EmpireDisposition.Friendly:
+        tariffMin = TARIFF_FRIENDLY_MIN;
+        tariffMax = TARIFF_FRIENDLY_MAX;
+        break;
+      case EmpireDisposition.Hostile:
+        tariffMin = TARIFF_HOSTILE_MIN;
+        tariffMax = TARIFF_HOSTILE_MAX;
+        break;
+      default:
+        tariffMin = TARIFF_NEUTRAL_MIN;
+        tariffMax = TARIFF_NEUTRAL_MAX;
+        break;
+    }
+    const tariffRate = rng.nextFloat(tariffMin, tariffMax);
+
+    const policyStance: "isolationist" | "regulated" | "open" =
+      disposition === "friendly"
+        ? "open"
+        : disposition === "hostile"
+          ? "isolationist"
+          : "regulated";
+    const poolSizes = DEFAULT_EMPIRE_POOL_BY_STANCE[policyStance];
+
+    const empire: Empire = {
+      id: `empire-${ei}`,
+      name: empireName,
+      color: EMPIRE_COLORS[ei % EMPIRE_COLORS.length],
+      tariffRate: Math.round(tariffRate * 1000) / 1000,
+      disposition,
+      homeSystemId: "", // assigned below once systems are built
+      leaderName: generateLeaderName(rng),
+      leaderPortrait: pickRandomLeaderPortrait(rng),
+      routeSlotPool: {
+        policyStance,
+        domesticTotal: poolSizes.domesticTotal,
+        foreignTotal: poolSizes.foreignTotal,
+        domesticOpen: poolSizes.domesticTotal,
+        foreignOpen: poolSizes.foreignTotal,
+      },
+      archetype: EmpireArchetype.Balanced,
+      ownedSpecials: [],
+      territoryPolygon: territoriesTranslated[ei],
+    };
+    empires.push(empire);
+  }
+
+  // 3) Build systems. Group system indices by empire for stable id/name ordering.
+  const systems: StarSystem[] = [];
+  const empireSystemIndices: number[][] = empires.map(() => []);
+  for (let i = 0; i < systemPositions.length; i++) {
+    const empireIdx = placement.empireAssignments[i];
+    empireSystemIndices[empireIdx].push(i);
+  }
+
+  for (let ei = 0; ei < empires.length; ei++) {
+    const indices = empireSystemIndices[ei];
+    // Sort by distance from empire centroid so home system is the closest one.
+    const cen = empireCentroids[ei];
+    indices.sort((a, b) => {
+      const da =
+        (systemPositions[a].x - cen.x) ** 2 +
+        (systemPositions[a].y - cen.y) ** 2;
+      const db =
+        (systemPositions[b].x - cen.x) ** 2 +
+        (systemPositions[b].y - cen.y) ** 2;
+      return da - db;
+    });
+    indices.forEach((globalIdx, localIdx) => {
+      const pos = systemPositions[globalIdx];
+      const system: StarSystem = {
+        id: `system-${ei}-${localIdx}`,
+        name: nameGen.generateSystemName(),
+        sectorId: sectors[ei].id,
+        empireId: empires[ei].id,
+        x: pos.x,
+        y: pos.y,
+        starColor: rng.pick(STAR_COLORS),
+      };
+      systems.push(system);
+      if (localIdx === 0) {
+        empires[ei].homeSystemId = system.id;
+      }
+    });
+  }
+
+  // 4) Build planets per system, with biome assignment.
+  const planets: Planet[] = [];
+  for (let ei = 0; ei < empires.length; ei++) {
+    const indices = empireSystemIndices[ei];
+    indices.forEach((_globalIdx, localIdx) => {
+      const system = systems.find(
+        (s) => s.id === `system-${ei}-${localIdx}`,
+      ) as StarSystem;
+      const numPlanets = rng.nextInt(
+        config.planetsPerSystemMin,
+        config.planetsPerSystemMax,
+      );
+      for (let pi = 0; pi < numPlanets; pi++) {
+        const orbitalFraction = numPlanets > 1 ? pi / (numPlanets - 1) : 0.5;
+        let weights: [PlanetTypeT, number][];
+        if (orbitalFraction < 0.33) weights = INNER_WEIGHTS;
+        else if (orbitalFraction < 0.67) weights = MIDDLE_WEIGHTS;
+        else weights = OUTER_WEIGHTS;
+        const planetType = weightedPick(rng, weights);
+
+        const angle = rng.nextFloat(0, Math.PI * 2);
+        const dist = rng.nextFloat(1, 5);
+        const planetX = system.x + Math.cos(angle) * dist;
+        const planetY = system.y + Math.sin(angle) * dist;
+        const population = generatePopulation(rng, planetType);
+
+        const orbitRadius = 4 + orbitalFraction * 12;
+        const orbitPeriodQuarters = 4 + pi * 2;
+        const orbitPhase = rng.nextFloat(0, Math.PI * 2);
+        const orbitInclination = (rng.nextFloat(0, 1) - 0.5) * 0.3;
+
+        planets.push(
+          buildPlanet({
+            rng,
+            id: `planet-${ei}-${localIdx}-${pi}`,
+            name: nameGen.generatePlanetName(),
+            systemId: system.id,
+            type: planetType,
+            x: planetX,
+            y: planetY,
+            population,
+            orbitRadius,
+            orbitPeriodQuarters,
+            orbitPhase,
+            orbitInclination,
+          }),
+        );
+      }
+    });
+  }
+
+  // Ensure at least 1 of each planet type exists (rebuilds biome fields too).
+  ensureAllPlanetTypes(rng, planets);
+
+  // 5) Reconcile empire-level production coverage.
+  for (const empire of empires) {
+    const empireSystemIds = new Set(
+      systems.filter((s) => s.empireId === empire.id).map((s) => s.id),
+    );
+    const empirePlanets = planets.filter((p) =>
+      empireSystemIds.has(p.systemId),
+    );
+    reconcileEmpireProduction({ empire, worlds: empirePlanets, rng });
+  }
+
+  // 6) Place special resources.
+  placeSpecials({ empires, systems, planets, rng });
+
+  // 7) Generate hyperlanes (existing MST-first logic, unchanged).
+  const hyperlanes = generateHyperlanes(
+    rng,
+    systems,
+    galaxyShape,
+    hyperlaneDensity,
+    mapBounds,
+  );
+
+  return { sectors, empires, systems, planets, hyperlanes };
+}
+
 function ensureAllPlanetTypes(rng: SeededRNG, planets: Planet[]): void {
   const existingTypes = new Set(planets.map((p) => p.type));
   const missingTypes = ALL_PLANET_TYPES.filter((t) => !existingTypes.has(t));
 
   for (const missingType of missingTypes) {
-    // Replace a random planet that has a type with more than 1 representative
     const typeCounts = new Map<PlanetTypeT, number>();
     for (const p of planets) {
       typeCounts.set(p.type, (typeCounts.get(p.type) ?? 0) + 1);
     }
-
-    // Find a planet whose type has multiple representatives
     const candidates = planets.filter((p) => (typeCounts.get(p.type) ?? 0) > 1);
     if (candidates.length > 0) {
       const target = rng.pick(candidates);
       const idx = planets.indexOf(target);
-      planets[idx] = {
-        ...target,
+      const newPop = generatePopulation(rng, missingType);
+      planets[idx] = buildPlanet({
+        rng,
+        id: target.id,
+        name: target.name,
+        systemId: target.systemId,
         type: missingType,
-        population: generatePopulation(rng, missingType),
-      };
-      // Update counts
-      typeCounts.set(target.type, (typeCounts.get(target.type) ?? 0) - 1);
-      typeCounts.set(missingType, (typeCounts.get(missingType) ?? 0) + 1);
+        x: target.x,
+        y: target.y,
+        population: newPop,
+        orbitRadius: target.orbitRadius ?? 8,
+        orbitPeriodQuarters: target.orbitPeriodQuarters ?? 4,
+        orbitPhase: target.orbitPhase ?? 0,
+        orbitInclination: target.orbitInclination ?? 0,
+      });
     }
   }
 }
@@ -829,16 +541,10 @@ function hasSharedNeighbor(
   return false;
 }
 
-// ── Geometric helpers for crossing detection ─────────────────
-
 function cross2d(ax: number, ay: number, bx: number, by: number): number {
   return ax * by - ay * bx;
 }
 
-/**
- * Test whether two line segments (p1-p2) and (p3-p4) properly cross.
- * Segments sharing an endpoint are NOT considered crossing.
- */
 function segmentsCross(
   ax1: number,
   ay1: number,
@@ -849,7 +555,6 @@ function segmentsCross(
   bx2: number,
   by2: number,
 ): boolean {
-  // Skip if segments share an endpoint
   const eps = 0.01;
   if (
     (Math.abs(ax1 - bx1) < eps && Math.abs(ay1 - by1) < eps) ||
@@ -859,21 +564,16 @@ function segmentsCross(
   ) {
     return false;
   }
-
   const d1 = cross2d(bx2 - bx1, by2 - by1, ax1 - bx1, ay1 - by1);
   const d2 = cross2d(bx2 - bx1, by2 - by1, ax2 - bx1, ay2 - by1);
   const d3 = cross2d(ax2 - ax1, ay2 - ay1, bx1 - ax1, by1 - ay1);
   const d4 = cross2d(ax2 - ax1, ay2 - ay1, bx2 - ax1, by2 - ay1);
-
   return (
     ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
     ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
   );
 }
 
-/**
- * Check if an edge would visually cross any already-kept edge.
- */
 function wouldCrossKeptEdges(
   a: number,
   b: number,
@@ -885,7 +585,6 @@ function wouldCrossKeptEdges(
   const ax2 = systems[b].x;
   const ay2 = systems[b].y;
   for (const [ka, kb] of keptEdgeList) {
-    // Skip if shares an endpoint
     if (ka === a || ka === b || kb === a || kb === b) continue;
     if (
       segmentsCross(
@@ -905,15 +604,6 @@ function wouldCrossKeptEdges(
   return false;
 }
 
-/**
- * MST-first hyperlane generation with edge-crossing avoidance.
- *
- * Steps:
- *   1. Compute pairwise distances and distance statistics
- *   2. Build MST (Kruskal's) for guaranteed connectivity (always planar)
- *   3. Add short non-crossing edges for density, with shape bias
- *   4. Ensure minimum connections per system
- */
 function generateHyperlanes(
   rng: SeededRNG,
   systems: StarSystem[],
@@ -928,7 +618,6 @@ function generateHyperlanes(
   const maxConn = densityCfg.maxConn;
   const targetEdges = edgeCountTarget(systems.length, densityCfg.keepRatio);
 
-  // 1. Compute all pairwise distances
   const allEdges: Edge[] = [];
   const nearestNeighborDist = new Float64Array(systems.length);
   for (let i = 0; i < systems.length; i++)
@@ -945,7 +634,6 @@ function generateHyperlanes(
   }
   allEdges.sort((a, b) => a.dist - b.dist);
 
-  // Distance statistics for edge limits
   const nnSorted = Array.from(nearestNeighborDist)
     .filter((v) => Number.isFinite(v))
     .sort((a, b) => a - b);
@@ -954,13 +642,11 @@ function generateHyperlanes(
   const mapH = bounds.maxY - bounds.minY;
   const mapDiagonal = Math.sqrt(mapW * mapW + mapH * mapH);
   const absoluteMaxEdge = mapDiagonal * 0.35;
-  // Tributary edges capped much shorter than MST allowance
   const longEdgeLimit = Math.min(
     nn75 * (2.5 + densityCfg.keepRatio * 1.0),
     absoluteMaxEdge,
   );
 
-  // 2. DSU + data structures
   const parent = new Int32Array(systems.length);
   for (let i = 0; i < systems.length; i++) parent[i] = i;
   function find(x: number): number {
@@ -979,7 +665,6 @@ function generateHyperlanes(
   }
 
   const keptEdges = new Set<string>();
-  // Also keep an ordered list for fast crossing checks
   const keptEdgeList: Array<[number, number]> = [];
   const connCount = new Int32Array(systems.length);
   const adjacency: Array<Set<number>> = Array.from(
@@ -1002,7 +687,6 @@ function generateHyperlanes(
     return true;
   }
 
-  // MST edges bypass degree caps (connectivity is paramount)
   function addMSTEdge(a: number, b: number): boolean {
     const key = edgeKey(a, b);
     if (keptEdges.has(key)) return false;
@@ -1016,21 +700,16 @@ function generateHyperlanes(
     return true;
   }
 
-  // 3. MST (Kruskal's) — shortest edges first, guaranteed connectivity.
-  //    MST is always planar so no crossing check needed.
-  //    Cap at absoluteMaxEdge; remaining islands merge with closest short bridges.
   for (const e of allEdges) {
     if (find(e.a) === find(e.b)) continue;
     if (e.dist > absoluteMaxEdge) continue;
     addMSTEdge(e.a, e.b);
   }
-  // Fallback for any remaining disconnected components (very rare)
   for (const e of allEdges) {
     if (find(e.a) === find(e.b)) continue;
     addMSTEdge(e.a, e.b);
   }
 
-  // 4. Add short non-crossing edges for density, with shape and anti-web bias
   const cx = (bounds.minX + bounds.maxX) / 2;
   const cy = (bounds.minY + bounds.maxY) / 2;
 
@@ -1040,13 +719,9 @@ function generateHyperlanes(
     if (connCount[e.a] >= maxConn || connCount[e.b] >= maxConn) continue;
     if (e.dist > longEdgeLimit) continue;
 
-    // Anti-web: strongly discourage triangles
     if (hasSharedNeighbor(adjacency, e.a, e.b) && rng.next() < 0.8) continue;
-
-    // Crossing avoidance: skip edges that visually cross existing lanes
     if (wouldCrossKeptEdges(e.a, e.b, systems, keptEdgeList)) continue;
 
-    // Shape-aware scoring
     const edgeScore = scoreEdgeForShape(
       systems[e.a],
       systems[e.b],
@@ -1055,7 +730,6 @@ function generateHyperlanes(
       cy,
     );
     const distanceScore = Math.max(0, 1 - e.dist / longEdgeLimit);
-
     const keepChance =
       (edgeScore * shapeBias + (1 - shapeBias) * distanceScore) *
       densityCfg.keepRatio;
@@ -1064,7 +738,6 @@ function generateHyperlanes(
     }
   }
 
-  // 5. Ensure minimum connections (relax crossing check for connectivity)
   for (let i = 0; i < systems.length; i++) {
     if (connCount[i] >= HYPERLANE_MIN_CONNECTIONS) continue;
     const candidates = allEdges.filter(
@@ -1077,7 +750,6 @@ function generateHyperlanes(
       if (connCount[i] >= HYPERLANE_MIN_CONNECTIONS) break;
       const other = c.a === i ? c.b : c.a;
       if (connCount[other] >= maxConn + 1) continue;
-      // Allow crossing here if needed for connectivity
       const key = edgeKey(c.a, c.b);
       if (keptEdges.has(key)) continue;
       keptEdges.add(key);
@@ -1089,7 +761,6 @@ function generateHyperlanes(
     }
   }
 
-  // 6. Convert to Hyperlane objects
   const hyperlanes: Hyperlane[] = [];
   let hIdx = 0;
   for (const key of keptEdges) {
@@ -1109,10 +780,6 @@ function generateHyperlanes(
   return hyperlanes;
 }
 
-/**
- * Score how well an edge fits the galaxy shape (0..1).
- * Higher = more aligned with the shape's characteristic connectivity.
- */
 function scoreEdgeForShape(
   sysA: StarSystem,
   sysB: StarSystem,
@@ -1128,21 +795,18 @@ function scoreEdgeForShape(
 
   switch (shape) {
     case GalaxyShape.Spiral: {
-      // Prefer along-arm (tangential) connections over radial crossings
       const toCenter = Math.atan2(midY - cy, midX - cx);
       const edgeAngle = Math.atan2(dy, dx);
       const angleDiff = Math.abs(Math.sin(edgeAngle - toCenter - Math.PI / 2));
-      return 0.3 + 0.7 * angleDiff; // tangential gets higher score
+      return 0.3 + 0.7 * angleDiff;
     }
     case GalaxyShape.Ring: {
-      // Prefer circumferential over radial
       const toCenter = Math.atan2(midY - cy, midX - cx);
       const edgeAngle = Math.atan2(dy, dx);
       const angleDiff = Math.abs(Math.sin(edgeAngle - toCenter - Math.PI / 2));
       return 0.2 + 0.8 * angleDiff;
     }
     case GalaxyShape.Elliptical: {
-      // Prefer shorter edges (denser core)
       const maxDist = Math.max(
         Math.abs(sysA.x - cx) + Math.abs(sysB.x - cx),
         200,
@@ -1150,7 +814,6 @@ function scoreEdgeForShape(
       return Math.max(0.2, 1 - dist / maxDist);
     }
     case GalaxyShape.Irregular: {
-      // Prefer same-empire connections (cluster coherence)
       return sysA.empireId === sysB.empireId ? 0.8 : 0.3;
     }
     default:

@@ -31,14 +31,15 @@ describe("GalaxyGenerator", () => {
     }
   });
 
-  it("generates 6-8 systems per sector (small map)", () => {
+  it("every empire has at least one system (spiral pipeline)", () => {
     const galaxy = generateGalaxy(42);
     for (const sector of galaxy.sectors) {
       const systemsInSector = galaxy.systems.filter(
         (s) => s.sectorId === sector.id,
       );
-      expect(systemsInSector.length).toBeGreaterThanOrEqual(6);
-      expect(systemsInSector.length).toBeLessThanOrEqual(8);
+      // Spiral k-means clustering produces variable cluster sizes — every
+      // empire/sector still gets at least one system after rebalancing.
+      expect(systemsInSector.length).toBeGreaterThanOrEqual(1);
     }
   });
 

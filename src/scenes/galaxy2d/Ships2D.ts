@@ -6,12 +6,40 @@ import { getStarGlowTexture } from "./GlowTextures.ts";
 import { perspectiveScale, projectToScreenDesignInto } from "./projection.ts";
 import type { Vec3, ViewportRect } from "./types.ts";
 
-const SHIP_PLAYER_COLOR = 0xffd178;
-const SHIP_AI_COLOR = 0x9aa6c8;
+const SHIP_PLAYER_COLOR = 0xffe89a; // warm bright gold
 const SHIP_DEPTH_BASE = 700;
 const SHIP_DEPTH_RANGE = -10;
-const SHIP_WORLD_SIZE = 4.5;
-const SHIP_ALPHA = 0.95;
+const SHIP_WORLD_SIZE = 10;
+const SHIP_PLAYER_SIZE_MULT = 1.25; // player ships render 25% larger
+const SHIP_PLAYER_ALPHA = 1.0;
+const SHIP_AI_ALPHA = 0.7;
+
+/**
+ * Saturated palette of distinct hues for AI company ship glows. Picked by
+ * a stable hash of the company id so the same company always reads the
+ * same color across sessions.
+ */
+const SHIP_COMPANY_COLORS: readonly number[] = [
+  0x6dc8ff, // cyan
+  0xff7060, // coral red
+  0xa78bfa, // violet
+  0x66dd88, // emerald
+  0xff9d3e, // orange
+  0xff6dc8, // hot pink
+  0x77ffe6, // teal
+  0xffe066, // amber
+  0x9bc4ff, // sky blue
+  0xc0a07a, // tan
+];
+
+function hashCompanyToColor(ownerId: string): number {
+  if (ownerId === "player") return SHIP_PLAYER_COLOR;
+  let h = 0;
+  for (let i = 0; i < ownerId.length; i++) {
+    h = ((h << 5) - h + ownerId.charCodeAt(i)) | 0;
+  }
+  return SHIP_COMPANY_COLORS[Math.abs(h) % SHIP_COMPANY_COLORS.length];
+}
 const SHIP_Y_OFFSET = 0.5;
 const SHIP_WAIT_CHANCE = 0.45;
 const SHIP_WAIT_MIN = 0.8;
@@ -23,6 +51,7 @@ interface ShipInstance2D {
   sprite: Phaser.GameObjects.Image;
   routeId: string;
   ownerId: string;
+  isPlayer: boolean;
   // Captured at spawn time — avoids per-frame Map lookup in update().
   curve: Curve3;
   t: number;
@@ -72,13 +101,13 @@ export class Ships2D {
       if (!curve) continue;
 
       const player = isPlayerOwned(visual.routeId);
-      const tint = player ? SHIP_PLAYER_COLOR : SHIP_AI_COLOR;
+      const tint = hashCompanyToColor(visual.ownerId);
 
       for (let i = 0; i < visual.visibleUnits; i++) {
         const sprite = this.scene.add.image(0, 0, texKey);
         sprite.setBlendMode(Phaser.BlendModes.ADD);
         sprite.setTint(tint);
-        sprite.setAlpha(SHIP_ALPHA);
+        sprite.setAlpha(player ? SHIP_PLAYER_ALPHA : SHIP_AI_ALPHA);
         sprite.setVisible(false);
         this.container.add(sprite);
 
@@ -86,6 +115,7 @@ export class Ships2D {
           sprite,
           routeId: visual.routeId,
           ownerId: visual.ownerId,
+          isPlayer: player,
           curve,
           t: i / Math.max(1, visual.visibleUnits),
           speed: SHIP_SPEED_BASE + Math.random() * SHIP_SPEED_RANGE,
@@ -106,10 +136,12 @@ export class Ships2D {
     focalLength: number,
     viewport: ViewportRect,
     camDist: number = Infinity,
+    galaxyHalfExtent: number = 80,
   ): void {
-    // Ships only visible when zoomed in close enough. Fade in/out smoothly.
-    const shipVisibilityStart = 60;
-    const shipVisibilityEnd = 20;
+    // Ships fade out when zoomed way out past the whole galaxy. Thresholds
+    // scale with galaxy size so this stays correct regardless of world scale.
+    const shipVisibilityStart = galaxyHalfExtent * 2.5;
+    const shipVisibilityEnd = galaxyHalfExtent * 1.0;
     let shipAlpha = 1;
     if (camDist > shipVisibilityStart) {
       shipAlpha = 0;
@@ -180,13 +212,15 @@ export class Ships2D {
         continue;
       }
 
-      const displaySize = SHIP_WORLD_SIZE * screenScale;
+      const sizeMult = ship.isPlayer ? SHIP_PLAYER_SIZE_MULT : 1;
+      const displaySize = SHIP_WORLD_SIZE * sizeMult * screenScale;
       ship.sprite.setPosition(proj.x, proj.y);
       ship.sprite.setDisplaySize(displaySize, displaySize);
       ship.sprite.setDepth(
         Math.floor(SHIP_DEPTH_BASE + proj.depth * SHIP_DEPTH_RANGE),
       );
-      ship.sprite.setAlpha(shipAlpha);
+      const baseAlpha = ship.isPlayer ? SHIP_PLAYER_ALPHA : SHIP_AI_ALPHA;
+      ship.sprite.setAlpha(shipAlpha * baseAlpha);
       ship.sprite.setVisible(shipAlpha > 0.01);
     }
   }

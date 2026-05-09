@@ -158,6 +158,9 @@ export class GalaxyView2D {
 
   private readonly systemPositions = new Map<string, Vec3>();
   private readonly systemColors = new Map<string, number>();
+  private readonly systemEmpireIds = new Map<string, string>();
+  private readonly empireColors = new Map<string, number>();
+  private accessibleEmpireIds: Set<string> = new Set();
   private centroidX = 0;
   private centroidZ = 0;
   private galaxyHalfExtent = 80;
@@ -383,6 +386,12 @@ export class GalaxyView2D {
   ): void {
     if (this.destroyed) return;
 
+    // Cache empire colors and per-system empire id so labels can be tinted.
+    this.empireColors.clear();
+    for (const emp of empires) this.empireColors.set(emp.id, emp.color);
+    this.systemEmpireIds.clear();
+    for (const sys of systems) this.systemEmpireIds.set(sys.id, sys.empireId);
+
     this.computeCentroidAndExtent(systems);
     this.rebuildSystems(systems);
     this.rebuildHyperlanes(hyperlanes, borderPorts);
@@ -468,7 +477,7 @@ export class GalaxyView2D {
             1 - (camDist - fadeStart) / (fadeEnd - fadeStart),
           );
         }
-        label.setAlpha(labelAlpha * 0.92);
+        label.setAlpha(labelAlpha * 0.85);
         label.setVisible(true);
       } else if (label) {
         label.setVisible(false);
@@ -631,6 +640,7 @@ export class GalaxyView2D {
       focalLength,
       this.viewport,
       this.camera.distance,
+      this.galaxyHalfExtent,
     );
   }
 
@@ -672,6 +682,23 @@ export class GalaxyView2D {
     this.camera.recompute();
   }
 
+  /**
+   * Translate the camera target (move the view in X/Y on the disc plane).
+   * dx/dy are in screen-aligned units; magnitude scales with camera distance
+   * so the feel is consistent at any zoom. Target is clamped to the galaxy
+   * extent so the user can't pan off into empty space.
+   */
+  translate(dxScreen: number, dyScreen: number): void {
+    if (this.destroyed) return;
+    const scale = this.camera.distance / 120;
+    this.camera.translate(dxScreen * scale, dyScreen * scale);
+    // Clamp target to the galaxy disc with a small breathing margin.
+    const limit = this.galaxyHalfExtent * 1.1;
+    this.camera.targetX = clamp(this.camera.targetX, -limit, limit);
+    this.camera.targetZ = clamp(this.camera.targetZ, -limit, limit);
+    this.camera.recompute();
+  }
+
   zoom(delta: number): void {
     if (this.destroyed) return;
     this.camera.zoom(delta, this.cameraDistanceMin, this.cameraDistanceMax);
@@ -698,18 +725,28 @@ export class GalaxyView2D {
     );
   }
 
-  focusOnSystem(systemId: string): void {
+  focusOnSystem(systemId: string, zoomedIn = false): void {
     if (this.destroyed) return;
     const pos = this.systemPositions.get(systemId);
     if (!pos) return;
-    this.camera.focusOnWorldPoint(pos);
-    const dist = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
-    const targetDist = clamp(
-      this.galaxyHalfExtent * 0.9 + dist * 0.4,
-      this.cameraDistanceMin,
-      this.cameraDistanceMax,
-    );
-    this.camera.distance = targetDist;
+    // Translate the camera target onto the system so it's centered on screen.
+    this.camera.targetX = pos.x;
+    this.camera.targetZ = pos.z;
+    if (zoomedIn) {
+      // Tight zoom for "start on homeworld" — see ~30% of galaxy.
+      this.camera.distance = clamp(
+        this.galaxyHalfExtent * 0.6,
+        this.cameraDistanceMin,
+        this.cameraDistanceMax,
+      );
+    } else {
+      // Looser frame — show the system in context of nearby empires.
+      this.camera.distance = clamp(
+        this.galaxyHalfExtent * 0.9,
+        this.cameraDistanceMin,
+        this.cameraDistanceMax,
+      );
+    }
     this.camera.recompute();
   }
 
@@ -978,18 +1015,62 @@ export class GalaxyView2D {
       this.starSprites.set(sys.id, img);
 
       const label = this.scene.add.text(0, 0, sys.name, {
-        fontSize: "12px",
+        fontSize: "10px",
         fontFamily: "monospace",
-        color: "#cfd8e8",
+        color: this.computeSystemLabelColor(sys.empireId),
         stroke: "#000000",
-        strokeThickness: 3,
+        strokeThickness: 2,
       });
       label.setOrigin(0.5, 1); // bottom-center: text grows up from the star
-      label.setAlpha(0.92);
+      label.setAlpha(0.9);
       label.setDepth(SYSTEM_LABEL_DEPTH);
       label.setVisible(false);
       this.galaxyContainer.add(label);
       this.systemLabels.set(sys.id, label);
+    }
+  }
+
+  /**
+   * Compute the hex color string for a system label, tinted by its empire
+   * and dimmed if that empire is not accessible to the player.
+   */
+  private computeSystemLabelColor(empireId: string): string {
+    const empColor = this.empireColors.get(empireId) ?? 0xa8b4c4;
+    // Mix empire color toward neutral so names stay readable against the
+    // black backdrop without being a saturated blob.
+    const mix = 0.55; // 0 = pure empire color, 1 = neutral gray
+    const neutral = 0xb8c0cc;
+    const er = (empColor >> 16) & 0xff;
+    const eg = (empColor >> 8) & 0xff;
+    const eb = empColor & 0xff;
+    const nr = (neutral >> 16) & 0xff;
+    const ng = (neutral >> 8) & 0xff;
+    const nb = neutral & 0xff;
+    let r = Math.floor(er * (1 - mix) + nr * mix);
+    let g = Math.floor(eg * (1 - mix) + ng * mix);
+    let b = Math.floor(eb * (1 - mix) + nb * mix);
+    // Inaccessible empires: dim 50% so they read as "not yours / closed".
+    if (
+      this.accessibleEmpireIds.size > 0 &&
+      !this.accessibleEmpireIds.has(empireId)
+    ) {
+      r = Math.floor(r * 0.5);
+      g = Math.floor(g * 0.5);
+      b = Math.floor(b * 0.5);
+    }
+    return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
+  }
+
+  /**
+   * Update the set of empires the player can interact with. Re-tints all
+   * existing system labels so inaccessible-empire systems appear dimmer.
+   */
+  setAccessibleEmpireIds(ids: Iterable<string>): void {
+    this.accessibleEmpireIds = new Set(ids);
+    for (const [systemId, label] of this.systemLabels) {
+      const empireId = this.systemEmpireIds.get(systemId);
+      if (!empireId) continue;
+      label.setColor(this.computeSystemLabelColor(empireId));
     }
   }
 
@@ -1001,15 +1082,20 @@ export class GalaxyView2D {
 
     for (const emp of empires) {
       if (!this.empireCentroids.has(emp.id)) continue;
+      // Dim the empire color by 30% so the label isn't too bright/saturated.
+      const r = Math.floor(((emp.color >> 16) & 0xff) * 0.7);
+      const g = Math.floor(((emp.color >> 8) & 0xff) * 0.7);
+      const b = Math.floor((emp.color & 0xff) * 0.7);
+      const dimColor = ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
       const text = this.scene.add.text(0, 0, emp.name.toUpperCase(), {
-        fontSize: "20px",
+        fontSize: "14px",
         fontFamily: "monospace",
-        color: "#" + emp.color.toString(16).padStart(6, "0"),
+        color: "#" + dimColor,
         stroke: "#000000",
-        strokeThickness: 4,
+        strokeThickness: 3,
       });
       text.setOrigin(0.5, 0.5);
-      text.setAlpha(0.45);
+      text.setAlpha(0.4);
       text.setDepth(EMPIRE_LABEL_DEPTH);
       text.setVisible(false);
       this.galaxyContainer.add(text);
