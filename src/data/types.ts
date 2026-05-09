@@ -279,6 +279,68 @@ export const PlanetType = {
 } as const;
 export type PlanetType = (typeof PlanetType)[keyof typeof PlanetType];
 
+export const GoodCategory = {
+  Bulk: "bulk",
+  Strategic: "strategic",
+  Premium: "premium",
+} as const;
+export type GoodCategory = (typeof GoodCategory)[keyof typeof GoodCategory];
+
+export type GoodTag = CargoType;
+
+export const SpecialId = {
+  FoodGenesis: "food_genesis",
+  RawAdamantine: "raw_adamantine",
+  TechJokaero: "tech_jokaero",
+  LuxPleasureGarden: "lux_pleasure_garden",
+  HzmAntimatterTap: "hzm_antimatter_tap",
+  MedPanacea: "med_panacea",
+  PaxPilgrimage: "pax_pilgrimage",
+} as const;
+export type SpecialId = (typeof SpecialId)[keyof typeof SpecialId];
+
+export const PlanetBiome = {
+  // Agricultural
+  Breadbasket: "breadbasket",
+  Subsistence: "subsistence",
+  Aquaculture: "aquaculture",
+  // Mining
+  CoreExtraction: "coreExtraction",
+  GasGiantSkim: "gasGiantSkim",
+  AsteroidBelt: "asteroidBelt",
+  // TechWorld
+  ResearchCluster: "researchCluster",
+  DataHaven: "dataHaven",
+  ForgeAcademy: "forgeAcademy",
+  // Manufacturing
+  HeavyIndustry: "heavyIndustry",
+  PrecisionFab: "precisionFab",
+  Shipyards: "shipyards",
+  // LuxuryWorld
+  Resort: "resort",
+  ArtisanGuild: "artisanGuild",
+  SpiceJungle: "spiceJungle",
+  // CoreWorld
+  Capital: "capital",
+  Metropolitan: "metropolitan",
+  AdminHub: "adminHub",
+  // Frontier
+  Colony: "colony",
+  Outpost: "outpost",
+  Refuge: "refuge",
+} as const;
+export type PlanetBiome = (typeof PlanetBiome)[keyof typeof PlanetBiome];
+
+export interface Polygon {
+  vertices: Array<{ x: number; y: number }>;
+}
+
+export const EmpireArchetype = {
+  Balanced: "balanced",
+} as const;
+export type EmpireArchetype =
+  (typeof EmpireArchetype)[keyof typeof EmpireArchetype];
+
 export const ShipClass = {
   CargoShuttle: "cargoShuttle",
   PassengerShuttle: "passengerShuttle",
@@ -508,6 +570,9 @@ export interface Empire {
    * should treat `undefined` as a default pool derived from disposition.
    */
   routeSlotPool?: EmpireRouteSlotPool;
+  archetype: EmpireArchetype;
+  ownedSpecials: SpecialId[];
+  territoryPolygon?: Polygon;
 }
 
 export interface StarSystem {
@@ -536,6 +601,15 @@ export interface Planet {
   orbitPeriodQuarters?: number;
   orbitPhase?: number;
   orbitInclination?: number;
+  biome: PlanetBiome;
+  productionTags: GoodTag[];
+  consumptionTags: GoodTag[];
+  /** 0.4–1.8 */
+  productionScale: number;
+  /** Soft population cap */
+  populationCap: number;
+  /** Undefined for normal worlds */
+  specialResource?: SpecialId;
 }
 
 export interface CargoMarketEntry {
