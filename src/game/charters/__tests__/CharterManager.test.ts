@@ -9,15 +9,18 @@ import type {
   Planet,
   StarSystem,
 } from "../../../data/types.ts";
+import { SpecialId } from "../../../data/types.ts";
 import {
   PLAYER_COMPANY_ID,
   DEFAULT_EMPIRE_POOL_BY_STANCE,
 } from "../../../data/constants.ts";
+import { SPECIAL_PRICE_MULTIPLIER } from "../../../data/specialResources.ts";
 import {
   classifyRoutePool,
   defaultPoolFor,
   findChartersForRoute,
   forfeitCharter,
+  generateSpecialCharterOffers,
   getEmpirePool,
   getHeldCharters,
   getUpkeepDue,
@@ -642,5 +645,112 @@ describe("getUpkeepDue", () => {
       ],
     });
     expect(getUpkeepDue(state, PLAYER_COMPANY_ID)).toBe(3300);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generateSpecialCharterOffers
+// ---------------------------------------------------------------------------
+
+describe("generateSpecialCharterOffers", () => {
+  it("returns no offers when player reputation is below respected (< 50)", () => {
+    const planet = {
+      ...makePlanet("p-special", "sys-a"),
+      specialResource: SpecialId.FoodGenesis,
+    };
+    const state = makeState({
+      empires: [makeEmpire("solaris")],
+      systems: [makeSystem("sys-a", "solaris")],
+      planets: [planet],
+      empireReputation: { solaris: 40 },
+      turn: 1,
+    });
+    // Override global reputation to be below threshold
+    const stateWithLowRep = {
+      ...state,
+      reputation: 40,
+      empireReputation: { solaris: 40 },
+    };
+    const offers = generateSpecialCharterOffers(
+      stateWithLowRep as unknown as GameState,
+    );
+    expect(offers).toHaveLength(0);
+  });
+
+  it("returns offers when player reputation is exactly at respected threshold (50)", () => {
+    const planet = {
+      ...makePlanet("p-special", "sys-a"),
+      specialResource: SpecialId.FoodGenesis,
+    };
+    const state = makeState({
+      empires: [makeEmpire("solaris")],
+      systems: [makeSystem("sys-a", "solaris")],
+      planets: [planet as unknown as Planet],
+      empireReputation: { solaris: 50 },
+      turn: 1,
+    });
+    const offers = generateSpecialCharterOffers(state);
+    expect(offers).toHaveLength(1);
+    expect(offers[0].planetId).toBe("p-special");
+    expect(offers[0].specialResourceId).toBe(SpecialId.FoodGenesis);
+    expect(offers[0].cargoType).toBe("food");
+    expect(offers[0].payoutMultiplier).toBe(SPECIAL_PRICE_MULTIPLIER);
+  });
+
+  it("returns offers for all special-resource planets when reputation is high", () => {
+    const planet1 = {
+      ...makePlanet("p-food", "sys-a"),
+      specialResource: SpecialId.FoodGenesis,
+    };
+    const planet2 = {
+      ...makePlanet("p-tech", "sys-b"),
+      specialResource: SpecialId.TechJokaero,
+    };
+    const planet3 = makePlanet("p-normal", "sys-a"); // no specialResource
+    const state = makeState({
+      empires: [makeEmpire("solaris")],
+      systems: [makeSystem("sys-a", "solaris"), makeSystem("sys-b", "solaris")],
+      planets: [
+        planet1 as unknown as Planet,
+        planet2 as unknown as Planet,
+        planet3,
+      ],
+      empireReputation: { solaris: 80 },
+      turn: 5,
+    });
+    const offers = generateSpecialCharterOffers(state);
+    expect(offers).toHaveLength(2);
+    const planetIds = offers.map((o) => o.planetId);
+    expect(planetIds).toContain("p-food");
+    expect(planetIds).toContain("p-tech");
+  });
+
+  it("returns no offers when there are no special-resource planets", () => {
+    const state = makeState({
+      empires: [makeEmpire("solaris")],
+      systems: [makeSystem("sys-a", "solaris")],
+      planets: [makePlanet("p1", "sys-a"), makePlanet("p2", "sys-a")],
+      empireReputation: { solaris: 75 },
+      turn: 1,
+    });
+    const offers = generateSpecialCharterOffers(state);
+    expect(offers).toHaveLength(0);
+  });
+
+  it("offer ids include the planet id and current turn", () => {
+    const planet = {
+      ...makePlanet("p-lux", "sys-a"),
+      specialResource: SpecialId.LuxPleasureGarden,
+    };
+    const state = makeState({
+      empires: [makeEmpire("solaris")],
+      systems: [makeSystem("sys-a", "solaris")],
+      planets: [planet as unknown as Planet],
+      empireReputation: { solaris: 90 },
+      turn: 7,
+    });
+    const offers = generateSpecialCharterOffers(state);
+    expect(offers[0].id).toContain("p-lux");
+    expect(offers[0].id).toContain("7");
   });
 });

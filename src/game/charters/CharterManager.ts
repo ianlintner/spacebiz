@@ -1,18 +1,29 @@
 import type {
+  CargoType,
   Charter,
   CharterTerm,
   Empire,
   EmpireRouteSlotPool,
   GameState,
   Planet,
+  SpecialId,
 } from "../../data/types.ts";
 import {
   BASE_DOMESTIC_UPKEEP,
   BASE_FOREIGN_UPKEEP,
   DEFAULT_EMPIRE_POOL_BY_STANCE,
   PLAYER_COMPANY_ID,
+  SPECIAL_CHARTER_TIER_THRESHOLD,
 } from "../../data/constants.ts";
-import { getEmpireRep } from "../reputation/ReputationEffects.ts";
+import {
+  computeFameRep,
+  computeReputationTier,
+  getEmpireRep,
+} from "../reputation/ReputationEffects.ts";
+import {
+  SPECIALS,
+  SPECIAL_PRICE_MULTIPLIER,
+} from "../../data/specialResources.ts";
 
 /**
  * Charter ownership and route gating live here. The empire owns the slot
@@ -508,6 +519,86 @@ function applyPoolRefund(
     const next = Math.min(p[totalField], p[openField] + 1);
     return { ...e, routeSlotPool: { ...p, [openField]: next } };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Special-cargo charter offers
+// ---------------------------------------------------------------------------
+
+/**
+ * A one-turn offer describing a special-cargo charter the player may accept.
+ * These are presented in the planning phase and expire each turn.
+ */
+export interface SpecialCharterOffer {
+  /** Unique id for this offer (re-generated each turn). */
+  id: string;
+  /** The planet that hosts the special resource. */
+  planetId: string;
+  /** The special resource id attached to that planet. */
+  specialResourceId: SpecialId;
+  /**
+   * Parent cargo type of the special resource (e.g. "food" for FoodGenesis).
+   * Routes should be set up with this cargo type to earn the offer payout.
+   */
+  cargoType: CargoType;
+  /**
+   * Indicative payout multiplier relative to a normal route of the same
+   * cargo type. Equals `SPECIAL_PRICE_MULTIPLIER` (2.5×).
+   */
+  payoutMultiplier: number;
+  /** Human-readable name of the special resource. */
+  specialName: string;
+}
+
+/**
+ * Generate special-cargo charter offers for the current turn.
+ *
+ * Offers are only produced when the player's fame reputation is at or above
+ * the `SPECIAL_CHARTER_TIER_THRESHOLD` ("respected", score ≥ 50). Below that
+ * tier the player simply has not yet earned access to these exclusive routes.
+ *
+ * One offer is created per planet with a `specialResource` defined. This is
+ * intentionally un-filtered — the caller can apply additional constraints
+ * (e.g. only show planets in reachable empires).
+ *
+ * Pure — no side effects; caller decides which offers to surface.
+ */
+export function generateSpecialCharterOffers(
+  state: GameState,
+): SpecialCharterOffer[] {
+  const fameRep = computeFameRep(state);
+  const tier = computeReputationTier(fameRep);
+
+  // Gate: only "respected" (≥ 50) or higher tiers unlock special charters.
+  const TIER_ORDER: string[] = [
+    "notorious",
+    "unknown",
+    SPECIAL_CHARTER_TIER_THRESHOLD,
+    "renowned",
+    "legendary",
+  ];
+  if (
+    TIER_ORDER.indexOf(tier) <
+    TIER_ORDER.indexOf(SPECIAL_CHARTER_TIER_THRESHOLD)
+  ) {
+    return [];
+  }
+
+  const offers: SpecialCharterOffer[] = [];
+  for (const planet of state.galaxy.planets) {
+    if (!planet.specialResource) continue;
+    const special = SPECIALS[planet.specialResource];
+    if (!special) continue;
+    offers.push({
+      id: `special-offer-${planet.id}-${state.turn}`,
+      planetId: planet.id,
+      specialResourceId: planet.specialResource,
+      cargoType: special.parentCargo,
+      payoutMultiplier: SPECIAL_PRICE_MULTIPLIER,
+      specialName: special.name,
+    });
+  }
+  return offers;
 }
 
 // ---------------------------------------------------------------------------
