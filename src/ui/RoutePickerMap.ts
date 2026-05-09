@@ -6,7 +6,6 @@ import type {
   PlanetType,
   CargoType as CargoTypeValue,
 } from "../data/types.ts";
-import { PLANET_CARGO_PROFILES } from "../data/constants.ts";
 import { getTheme } from "@spacebiz/ui";
 
 const PLANET_TYPE_COLORS: Record<PlanetType, number> = {
@@ -246,7 +245,7 @@ export class RoutePickerMap {
 
       // Demand halo when cargo selected
       if (opts.cargoType) {
-        const intensity = demandIntensity(planet.type, opts.cargoType);
+        const intensity = demandIntensity(planet, opts.cargoType);
         if (intensity > 0) {
           this.graphics.fillStyle(theme.colors.profit, 0.18 * intensity);
           this.graphics.fillCircle(pos.mx, pos.my, 5 + 2 * intensity);
@@ -342,19 +341,14 @@ export class RoutePickerMap {
 }
 
 /**
- * Demand intensity (0..1) for a cargo type at a planet of the given type.
- * 1.0 = strong demand, 0.6 = strong production, 0 = no fit.
+ * Demand intensity (0..1) for a cargo type at a planet.
+ * 1.0 = strong demand (consumptionTags), 0.6 = strong production (productionTags), 0 = no fit.
  * For Passengers we treat all planets as moderate demand.
  */
-function demandIntensity(
-  planetType: PlanetType,
-  cargoType: CargoTypeValue,
-): number {
+function demandIntensity(planet: Planet, cargoType: CargoTypeValue): number {
   if (cargoType === "passengers") return 0.5;
-  const profile = PLANET_CARGO_PROFILES[planetType];
-  if (!profile) return 0;
-  if (profile.demands.includes(cargoType as never)) return 1.0;
-  if (profile.produces.includes(cargoType as never)) return 0.6;
+  if (planet.consumptionTags.includes(cargoType)) return 1.0;
+  if (planet.productionTags.includes(cargoType)) return 0.6;
   return 0;
 }
 
