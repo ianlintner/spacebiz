@@ -10,7 +10,7 @@ import type {
 import {
   BASE_FUEL_PRICE,
   SATURATION_DECAY_RATE,
-  PLANET_CARGO_PROFILES,
+  PER_CAPITA_DEMAND,
   INDUSTRY_INPUT_SUPPLY_MULTIPLIER,
   INDUSTRY_INPUT_DECAY_MULTIPLIER,
 } from "../../data/constants.ts";
@@ -25,11 +25,12 @@ const ALL_CARGO_TYPES: CargoTypeT[] = Object.values(CargoType);
  * Steps:
  * 1. Decay saturation (boosted for active industry producer output)
  * 2. Random-walk trends with momentum
- * 3. Recalculate currentPrice (boosted supply for active industry producer output)
+ * 3. Recalculate currentPrice (boosted supply for active industry producer output;
+ *    per-capita demand added transiently via PER_CAPITA_DEMAND × population)
  * 4. Fluctuate fuel price with +-0.5 walk, clamped to [50%, 150%] of BASE_FUEL_PRICE
  *
  * activeProducerIds: set of planet IDs whose industry input is active this turn.
- * planets: the galaxy planet list, needed to look up planet type → output cargo.
+ * planets: the galaxy planet list, needed to look up planet productionTags and population.
  * Both default to empty — omitting them disables the industry boost (used by tests
  * that pre-date the feature).
  */
@@ -48,8 +49,9 @@ export function updateMarket(
 
     const planet = planetById.get(planetId);
     const isActiveProducer = activeProducerIds.has(planetId);
+    // Use productionTags (tag-based) instead of PLANET_CARGO_PROFILES
     const outputCargo: CargoTypeT | null = planet
-      ? (PLANET_CARGO_PROFILES[planet.type]?.produces[0] ?? null)
+      ? (planet.productionTags?.[0] ?? null)
       : null;
 
     for (const cargoType of ALL_CARGO_TYPES) {
@@ -81,13 +83,21 @@ export function updateMarket(
       // Step 3: Recalculate price — apply supply multiplier transiently for
       // active producer output (baseSupply is not mutated; the boost only
       // affects the recalculated currentPrice each turn).
-      const effectiveEntry: CargoMarketEntry = isOutputCargo
-        ? {
-            ...updatedEntry,
-            baseSupply:
-              updatedEntry.baseSupply * INDUSTRY_INPUT_SUPPLY_MULTIPLIER,
-          }
-        : updatedEntry;
+      // Also apply per-capita demand transiently: population × PER_CAPITA_DEMAND[cargoType]
+      // is added to baseDemand so higher-population planets drive up prices for
+      // food/medical/luxury/passengers. Neither baseDemand nor baseSupply is mutated.
+      const perCapitaAddend =
+        planet && PER_CAPITA_DEMAND[cargoType] !== undefined
+          ? planet.population * (PER_CAPITA_DEMAND[cargoType] as number)
+          : 0;
+
+      const effectiveEntry: CargoMarketEntry = {
+        ...updatedEntry,
+        baseSupply: isOutputCargo
+          ? updatedEntry.baseSupply * INDUSTRY_INPUT_SUPPLY_MULTIPLIER
+          : updatedEntry.baseSupply,
+        baseDemand: updatedEntry.baseDemand + perCapitaAddend,
+      };
       updatedEntry.currentPrice = calculatePrice(effectiveEntry, cargoType);
 
       newEntries[cargoType] = updatedEntry;
