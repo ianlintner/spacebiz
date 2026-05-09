@@ -367,6 +367,7 @@ function generateSystemPoints(
   mapScale: number,
   existingPoints: Array<{ x: number; y: number }> = [],
   neighborCenters: Array<{ x: number; y: number }> = [],
+  spiralBias = false,
 ): Array<{ x: number; y: number }> {
   const points: Array<{ x: number; y: number }> = [];
   const localRadiusX = 210 * Math.sqrt(mapScale);
@@ -379,21 +380,36 @@ function generateSystemPoints(
     neighborCenters.length > 0 ? Math.min(2, Math.floor(count * 0.2)) : 0;
   const mainCount = count - bridgeCount;
 
+  // Spiral arm tangent — when enabled, elongate the local cluster along the
+  // arm's tangent so each empire's territory looks like a chunk of an arm
+  // rather than a circular blob. The tangent is perpendicular to the radial
+  // direction from the galaxy center, with a small lean to follow the curl.
+  const galaxyCx = (bounds.minX + bounds.maxX) / 2;
+  const galaxyCy = (bounds.minY + bounds.maxY) / 2;
+  const radialAngle = Math.atan2(centerY - galaxyCy, centerX - galaxyCx);
+  const tangentAngle = radialAngle + Math.PI / 2 - 0.25;
+  const cosT = Math.cos(tangentAngle);
+  const sinT = Math.sin(tangentAngle);
+  const tangentStretch = spiralBias ? 1.6 : 1;
+  const radialCompress = spiralBias ? 0.55 : 1;
+
   for (let i = 0; i < mainCount; i++) {
     let placed = false;
     for (let attempt = 0; attempt < 60; attempt++) {
       const angle = rng.nextFloat(0, Math.PI * 2);
       const radial = Math.sqrt(rng.next()) * 0.95 + 0.05;
-      const px = clamp(
-        centerX + Math.cos(angle) * localRadiusX * radial,
-        bounds.minX,
-        bounds.maxX,
-      );
-      const py = clamp(
-        centerY + Math.sin(angle) * localRadiusY * radial,
-        bounds.minY,
-        bounds.maxY,
-      );
+      // Local offset in cluster frame: x along tangent, y perpendicular.
+      let lx = Math.cos(angle) * localRadiusX * radial * tangentStretch;
+      let ly = Math.sin(angle) * localRadiusY * radial * radialCompress;
+      if (spiralBias) {
+        // Rotate so cluster's long axis aligns with arm tangent.
+        const rx = lx * cosT - ly * sinT;
+        const ry = lx * sinT + ly * cosT;
+        lx = rx;
+        ly = ry;
+      }
+      const px = clamp(centerX + lx, bounds.minX, bounds.maxX);
+      const py = clamp(centerY + ly, bounds.minY, bounds.maxY);
 
       const overlapsLocal = points.some((p) => {
         const dx = p.x - px;
@@ -609,6 +625,7 @@ export function generateGalaxy(
       scale,
       allSystemPoints,
       neighborCenters,
+      galaxyShape === GalaxyShape.Spiral,
     );
     allSystemPoints.push(...systemPoints);
 

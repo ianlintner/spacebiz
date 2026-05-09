@@ -311,12 +311,45 @@ export class Background2D {
     }
   }
 
+  /**
+   * Compute the screen-space rotation of the disc plane by projecting two
+   * points along the world +X axis and measuring the angle between them.
+   * Sprites attached to the disc rotate by this value so they appear to
+   * stick to the galaxy as the camera orbits.
+   */
+  private computeDiscRotation(viewProj: Mat4, viewport: ViewportRect): number {
+    this.scratchWorld.x = 0;
+    this.scratchWorld.y = 0;
+    this.scratchWorld.z = 0;
+    const a = projectToScreenDesignInto(
+      this.scratchNdc,
+      this.scratchWorld,
+      viewProj,
+      viewport,
+    );
+    const ax = a.x;
+    const ay = a.y;
+    this.scratchWorld.x = 1;
+    const b = projectToScreenDesignInto(
+      this.scratchNdc,
+      this.scratchWorld,
+      viewProj,
+      viewport,
+    );
+    return Math.atan2(b.y - ay, b.x - ax);
+  }
+
   update(
     viewProj: Mat4,
     viewMat: Mat4,
     focalLength: number,
     viewport: ViewportRect,
   ): void {
+    // Compute the disc's rotation in screen space by projecting the +X
+    // world direction. Sprites attached to the disc plane rotate by this
+    // angle so they appear "stuck" to the galaxy as the camera orbits.
+    const discRotation = this.computeDiscRotation(viewProj, viewport);
+
     // Galactic core — bright glow at galaxy center.
     if (this.galacticCoreSprite) {
       this.scratchWorld.x = this.galacticCoreCentroid.x;
@@ -338,6 +371,7 @@ export class Background2D {
           const coreSize = this.galacticCoreWorldSize * coreScale;
           this.galacticCoreSprite.setPosition(coreProj.x, coreProj.y);
           this.galacticCoreSprite.setDisplaySize(coreSize, coreSize);
+          this.galacticCoreSprite.setRotation(discRotation);
           this.galacticCoreSprite.setVisible(true);
         } else {
           this.galacticCoreSprite.setVisible(false);
@@ -369,6 +403,7 @@ export class Background2D {
       }
       neb.sprite.setPosition(proj.x, proj.y);
       neb.sprite.setDisplaySize(neb.worldW * scale, neb.worldH * scale);
+      neb.sprite.setRotation(discRotation);
       neb.sprite.setVisible(true);
     }
 

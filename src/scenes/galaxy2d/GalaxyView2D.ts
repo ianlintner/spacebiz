@@ -387,19 +387,14 @@ export class GalaxyView2D {
     this.rebuildSystems(systems);
     this.rebuildHyperlanes(hyperlanes, borderPorts);
 
-    this.background.buildGalacticCore(
-      this.galaxyHalfExtent,
-      this.centroidX,
-      this.centroidZ,
-    );
+    // System world positions are centered at origin (worldPosFor subtracts
+    // the centroid), so the core and nebulae anchor at (0, 0) — not at the
+    // game-space centroid which would put them far from the systems.
+    this.background.buildGalacticCore(this.galaxyHalfExtent, 0, 0);
     // Regenerate bg stars now that we know the actual galaxy extent. The
     // spiral dust stars depend on `galaxyHalfExtent` to align with the arms.
     this.generateBackgroundStars();
-    this.background.buildNebulae(
-      this.galaxyHalfExtent,
-      this.centroidX,
-      this.centroidZ,
-    );
+    this.background.buildNebulae(this.galaxyHalfExtent, 0, 0);
     this.background.buildEmpireHalos(systems, empires, this.systemPositions);
 
     this.computeEmpireCentroids(systems, empires);
