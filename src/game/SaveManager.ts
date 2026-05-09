@@ -1,6 +1,7 @@
 import { gameStore } from "../data/GameStore.ts";
 import type { GameState, TechState } from "../data/types.ts";
 import { EMPTY_DIPLOMACY_STATE } from "../data/types.ts";
+import { SAVE_VERSION } from "../data/constants.ts";
 import { initAdviserState } from "./adviser/AdviserEngine.ts";
 
 const SAVE_KEY = "sft_save";
@@ -11,7 +12,7 @@ const DRAFT_KEY = "sft_draft";
 const DRAFT_MAX_AGE_MS = 60_000;
 
 interface SaveEnvelope {
-  version: 1;
+  version: number;
   timestamp: number;
   turn: number;
   state: GameState;
@@ -19,7 +20,7 @@ interface SaveEnvelope {
 
 function writeSave(key: string, state: GameState): void {
   const envelope: SaveEnvelope = {
-    version: 1,
+    version: SAVE_VERSION,
     timestamp: Date.now(),
     turn: state.turn,
     state,
@@ -32,17 +33,20 @@ function readSave(key: string): GameState | null {
   if (raw === null) return null;
   try {
     const envelope = JSON.parse(raw) as SaveEnvelope;
-    if (
-      envelope &&
-      typeof envelope === "object" &&
-      envelope.version === 1 &&
-      envelope.state &&
-      typeof envelope.state.turn === "number"
-    ) {
+    if (!envelope || typeof envelope !== "object") return null;
+    if (envelope.version !== SAVE_VERSION) {
+      throw new Error(
+        `Incompatible save (v${envelope.version}). This alpha build requires save v${SAVE_VERSION}. Please start a new game.`,
+      );
+    }
+    if (envelope.state && typeof envelope.state.turn === "number") {
       return envelope.state;
     }
     return null;
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Incompatible save")) {
+      throw err;
+    }
     return null;
   }
 }
@@ -147,7 +151,7 @@ function readSaveMeta(key: string): SaveMeta | null {
     if (
       envelope &&
       typeof envelope === "object" &&
-      envelope.version === 1 &&
+      envelope.version === SAVE_VERSION &&
       typeof envelope.timestamp === "number" &&
       typeof envelope.turn === "number"
     ) {

@@ -17,6 +17,7 @@ import {
 import { gameStore } from "../../data/GameStore.ts";
 import type { GameState } from "../../data/types.ts";
 import { initAdviserState } from "../adviser/AdviserEngine.ts";
+import { SAVE_VERSION } from "../../data/constants.ts";
 
 /** Minimal but complete GameState for testing purposes. */
 function createTestState(overrides: Partial<GameState> = {}): GameState {
@@ -196,7 +197,7 @@ describe("SaveManager", () => {
       const raw = storage["sft_save"];
       const envelope = JSON.parse(raw);
 
-      expect(envelope.version).toBe(1);
+      expect(envelope.version).toBe(SAVE_VERSION);
       expect(envelope.turn).toBe(5);
       expect(typeof envelope.timestamp).toBe("number");
       expect(envelope.timestamp).toBeGreaterThan(0);
@@ -233,27 +234,27 @@ describe("SaveManager", () => {
       expect(loadGame()).toBeNull();
     });
 
-    it("returns null for valid JSON but wrong structure", () => {
+    it("throws on valid JSON but wrong structure (no version)", () => {
       storage["sft_save"] = JSON.stringify({ foo: "bar" });
-      expect(loadGame()).toBeNull();
+      expect(() => loadGame()).toThrow(/Incompatible save/);
     });
 
-    it("returns null for missing version field", () => {
+    it("throws on missing version field (treated as version mismatch)", () => {
       storage["sft_save"] = JSON.stringify({
         timestamp: Date.now(),
         turn: 1,
         state: createTestState(),
       });
-      expect(loadGame()).toBeNull();
+      expect(() => loadGame()).toThrow(/Incompatible save/);
     });
 
-    it("returns null for missing state field", () => {
+    it("throws on wrong version even when state is missing", () => {
       storage["sft_save"] = JSON.stringify({
         version: 1,
         timestamp: Date.now(),
         turn: 1,
       });
-      expect(loadGame()).toBeNull();
+      expect(() => loadGame()).toThrow(/Incompatible save/);
     });
 
     it("returns null when localStorage has no entry", () => {
@@ -447,7 +448,7 @@ describe("SaveManager", () => {
       delete legacy.adviser;
       delete legacy.stationHub;
       storage["sft_autosave"] = JSON.stringify({
-        version: 1,
+        version: SAVE_VERSION,
         timestamp: Date.now(),
         turn: legacy.turn,
         state: legacy,
@@ -502,6 +503,21 @@ describe("SaveManager", () => {
 
       expect(getSaveMeta()).toBeNull();
       expect(getAutoSaveMeta()).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // save-version compatibility
+  // -------------------------------------------------------------------------
+  describe("save-version compatibility", () => {
+    it("rejects saves older than current SAVE_VERSION with a friendly message", () => {
+      storage["sft_save"] = JSON.stringify({
+        version: SAVE_VERSION - 1,
+        timestamp: Date.now(),
+        turn: 1,
+        state: createTestState(),
+      });
+      expect(() => loadGame()).toThrow(/Incompatible save/);
     });
   });
 });
