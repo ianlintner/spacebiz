@@ -302,10 +302,11 @@ export const PLANET_CHEAT_SHEET: CheatSheetCard[] = Object.entries(
   PLANET_CARGO_PROFILES,
 ).map(([planetType, profile]) => ({
   title: labelFor(planetType),
-  caption: "Typical production and demand",
+  caption: "Typical production and demand by planet family",
   bullets: [
     `Produces: ${profile.produces.map(labelFor).join(", ") || "No primary exports"}`,
     `Demands: ${profile.demands.map(labelFor).join(", ") || "Low structured demand"}`,
+    "Each world's biome refines what it actually produces and consumes — open the planet detail screen to see exact tags.",
     "Use this as a starting heuristic — then trust the live market screen over the cheat sheet.",
   ],
 }));
