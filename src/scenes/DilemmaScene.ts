@@ -12,7 +12,7 @@ import {
 } from "../ui/index.ts";
 import { resolveChoiceEvent } from "../game/events/ChoiceEventResolver.ts";
 import { tagLabel } from "../game/events/SuccessFormula.ts";
-import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
+import { setGalaxy3DVisible } from "./galaxy2d/ActiveGalaxyView.ts";
 import type {
   ChoiceEvent,
   ChoiceOption,

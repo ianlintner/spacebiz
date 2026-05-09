@@ -168,7 +168,19 @@ function generateSectorCenters(
   }
 }
 
-/** Spiral: place empires along 2–4 logarithmic spiral arms */
+/**
+ * Spiral arm parameters — exported so the galaxy renderer can place nebulae
+ * and background dust along the same arms the empires sit on.
+ *
+ * `radialStart` and `radialEnd` are fractions of the galaxy half-extent.
+ * `armSweep` is how much each arm wraps (radians) from inner to outer end.
+ */
+export const SPIRAL_ARMS = 2;
+export const SPIRAL_RADIAL_START = 0.18;
+export const SPIRAL_RADIAL_END = 1.0;
+export const SPIRAL_ARM_SWEEP = Math.PI * 1.8; // ~324° per arm — pronounced curl
+
+/** Spiral: place empires along 2 logarithmic spiral arms */
 function generateSpiralCenters(
   rng: SeededRNG,
   count: number,
@@ -178,19 +190,20 @@ function generateSpiralCenters(
   const cy = (bounds.minY + bounds.maxY) / 2;
   const radiusX = (bounds.maxX - bounds.minX) * 0.42;
   const radiusY = (bounds.maxY - bounds.minY) * 0.42;
-  const arms = count <= 6 ? 2 : count <= 9 ? 3 : 4;
+  const arms = SPIRAL_ARMS;
   const startAngle = rng.nextFloat(0, Math.PI * 2);
   const centers: Array<{ x: number; y: number }> = [];
 
   for (let i = 0; i < count; i++) {
     const arm = i % arms;
     const t = (Math.floor(i / arms) + 1) / (Math.ceil(count / arms) + 1);
-    // Logarithmic spiral: r grows with angle
+    // Logarithmic spiral: arm offset by armIndex × π, then sweep with t
     const spiralAngle =
-      startAngle + (arm / arms) * Math.PI * 2 + t * Math.PI * 1.2;
-    const r = 0.2 + t * 0.8;
-    const jitterR = rng.nextFloat(-0.06, 0.06);
-    const jitterA = rng.nextFloat(-0.15, 0.15);
+      startAngle + (arm / arms) * Math.PI * 2 + t * SPIRAL_ARM_SWEEP;
+    const r =
+      SPIRAL_RADIAL_START + t * (SPIRAL_RADIAL_END - SPIRAL_RADIAL_START);
+    const jitterR = rng.nextFloat(-0.05, 0.05);
+    const jitterA = rng.nextFloat(-0.1, 0.1);
     const x = clamp(
       cx + Math.cos(spiralAngle + jitterA) * radiusX * (r + jitterR),
       bounds.minX,

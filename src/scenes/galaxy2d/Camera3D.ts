@@ -13,9 +13,9 @@ export const CAMERA_FOV_Y = (Math.PI * 50) / 180; // 50° vertical, matches Pers
 export const CAMERA_NEAR = 0.1;
 export const CAMERA_FAR = 2000;
 
-export const CAMERA_PITCH_MIN = Math.PI * 0.18;
-export const CAMERA_PITCH_MAX = Math.PI * 0.46;
-export const CAMERA_YAW_RANGE = Math.PI * 0.5;
+export const CAMERA_PITCH_MIN = Math.PI * 0.06;
+export const CAMERA_PITCH_MAX = Math.PI * 0.49;
+// Full 360° yaw — pan() no longer clamps, allowing complete polar orbit.
 
 function clamp(v: number, min: number, max: number): number {
   return v < min ? min : v > max ? max : v;
@@ -255,11 +255,12 @@ export class Camera3D {
     return this.position;
   }
 
-  /** Apply user pan input (drag delta in design pixels). Re-clamps yaw/pitch. */
+  /** Apply user pan/orbit input (drag delta in design pixels). Yaw is unrestricted
+   *  so the camera can rotate fully around the galaxy (polar orbit). */
   pan(dxScreen: number, dyScreen: number): void {
     const yawDelta = (-dxScreen / 320) * Math.PI;
     const pitchDelta = (-dyScreen / 320) * Math.PI;
-    this.yaw = clamp(this.yaw + yawDelta, -CAMERA_YAW_RANGE, CAMERA_YAW_RANGE);
+    this.yaw += yawDelta; // unbounded — sin/cos handle any value
     this.pitch = clamp(
       this.pitch + pitchDelta,
       CAMERA_PITCH_MIN,

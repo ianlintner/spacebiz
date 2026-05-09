@@ -1,5 +1,4 @@
 import * as Phaser from "phaser";
-import * as THREE from "three";
 import { gameStore } from "../data/GameStore.ts";
 import { simulateTurn } from "../game/simulation/TurnSimulator.ts";
 import { SeededRNG } from "../utils/SeededRNG.ts";
@@ -21,7 +20,8 @@ import { buildGalaxyRouteTrafficVisuals } from "../game/routes/RouteManager.ts";
 import {
   getActiveGalaxyView,
   setGalaxy3DDimmed,
-} from "./galaxy3d/GalaxyView3D.ts";
+} from "./galaxy2d/ActiveGalaxyView.ts";
+import type { GalaxyMapScene } from "./GalaxyMapScene.ts";
 
 function formatCash(amount: number): string {
   return "§" + Math.round(amount).toLocaleString("en-US");
@@ -91,7 +91,19 @@ export class SimPlaybackScene extends Phaser.Scene {
     // Speed up ship movement to reflect an active simulation quarter.
     getActiveGalaxyView()?.setShipSpeedMultiplier(12);
 
-    // ── Revenue pop timers (projected onto 3D route curves) ───────────────────
+    // Hide GalaxyMapScene's HUD so it doesn't overlap our panels. The galaxy
+    // (rendered into the same Phaser canvas at low depth) stays visible.
+    const galaxyScene = this.scene.get("GalaxyMapScene") as
+      | GalaxyMapScene
+      | undefined;
+    galaxyScene?.setHudVisible(false);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      (
+        this.scene.get("GalaxyMapScene") as GalaxyMapScene | undefined
+      )?.setHudVisible(true);
+    });
+
+    // ── Revenue pop timers (projected onto galaxy route curves) ───────────────
     const routeRevenueMap = new Map<string, number>();
     for (const rp of this.turnResult.routePerformance) {
       routeRevenueMap.set(rp.routeId, rp.revenue);
@@ -105,13 +117,8 @@ export class SimPlaybackScene extends Phaser.Scene {
         if (!view) return;
         const curve = view.getRouteCurve(routeId);
         if (!curve) return;
-        const mid = new THREE.Vector3();
-        curve.getPointAt(0.5, mid);
-        const proj = view.projectToScreenDesign({
-          x: mid.x,
-          y: mid.y,
-          z: mid.z,
-        });
+        const mid = curve.getPointAt(0.5);
+        const proj = view.projectToScreenDesign(mid);
         if (!proj.visible) return;
         new FloatingText(
           this,

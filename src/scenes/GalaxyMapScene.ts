@@ -27,13 +27,10 @@ import {
   getUsedGalacticRouteSlots,
 } from "../game/routes/RouteManager.ts";
 import type { RouteTrafficVisual } from "../game/routes/RouteManager.ts";
-import { GalaxyView3D, setActiveGalaxyView } from "./galaxy3d/GalaxyView3D.ts";
-import type {
-  HQMarker3D,
-  ProjectedScreen,
-  Vec3,
-} from "./galaxy3d/GalaxyView3D.ts";
+import { setActiveGalaxyView } from "./galaxy2d/ActiveGalaxyView.ts";
 import { GalaxyView2D } from "./galaxy2d/GalaxyView2D.ts";
+import type { HQMarker3D } from "./galaxy2d/GalaxyView2D.ts";
+import type { ProjectedScreen, Vec3 } from "./galaxy2d/types.ts";
 
 import type { GameHUDScene } from "./GameHUDScene.ts";
 import type { Empire, GameState, StarSystem } from "../data/types.ts";
@@ -59,7 +56,7 @@ const TOGGLE_ROW_GAP = 8;
 const TOGGLE_FILTER_WIDTH = 220;
 
 export class GalaxyMapScene extends Phaser.Scene {
-  private view3D: GalaxyView3D | null = null;
+  private view3D: GalaxyView2D | null = null;
   private vizRect = { x: 0, y: 0, w: 0, h: 0 };
   private systemMarkers: SystemMarker[] = [];
   private empireInfoCard: Phaser.GameObjects.Container | null = null;
@@ -83,6 +80,10 @@ export class GalaxyMapScene extends Phaser.Scene {
   private routeOriginSystemId: string | null = null;
   private holdTimerEvent: Phaser.Time.TimerEvent | null = null;
   private holdFired = false;
+
+  // ── Keyboard pan (WASD + arrow keys) ─────────────────────────────────────
+  private panKeys: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
+  private panKeysWASD: Record<string, Phaser.Input.Keyboard.Key> | null = null;
 
   // ── Navigation dropdown (top-strip, right side) ───────────────────────────
   private navDropdown: Dropdown | null = null;
@@ -126,24 +127,12 @@ export class GalaxyMapScene extends Phaser.Scene {
     // chrome. The left sidebar slot becomes the galaxy info panel.
     this.vizRect = this.computeVizRect(L);
 
-    // TODO(galaxy2d): replace with proper union type in Phase 6
-    const USE_GALAXY_2D = false; // Phase 1 — flip locally to test the Phaser-only renderer
-    if (USE_GALAXY_2D) {
-      const view2D = new GalaxyView2D({
-        scene: this,
-        designWidth: L.gameWidth,
-        designHeight: L.gameHeight,
-      });
-      this.view3D = view2D as unknown as GalaxyView3D;
-    } else {
-      const phaserCanvas = this.game.canvas;
-      this.view3D = new GalaxyView3D({
-        phaserCanvas,
-        designWidth: L.gameWidth,
-        designHeight: L.gameHeight,
-      });
-      setActiveGalaxyView(this.view3D);
-    }
+    this.view3D = new GalaxyView2D({
+      scene: this,
+      designWidth: L.gameWidth,
+      designHeight: L.gameHeight,
+    });
+    setActiveGalaxyView(this.view3D);
     this.view3D.setViewport(this.vizRect);
     this.view3D.setGalaxy(
       systems,
@@ -313,7 +302,26 @@ export class GalaxyMapScene extends Phaser.Scene {
   override update(_time: number, delta: number): void {
     if (!this.view3D) return;
     this.updateSystemMarkers();
+    this.applyKeyboardPan(delta);
     this.view3D.update(delta / 1000);
+  }
+
+  private applyKeyboardPan(delta: number): void {
+    if (!this.view3D) return;
+    const speed = 0.4 * delta; // design-px per ms → ~24 px at 60 fps
+    let dx = 0;
+    let dy = 0;
+
+    const k = this.panKeys;
+    const w = this.panKeysWASD;
+    if (k?.left.isDown || w?.["A"]?.isDown) dx += speed;
+    if (k?.right.isDown || w?.["D"]?.isDown) dx -= speed;
+    if (k?.up.isDown || w?.["W"]?.isDown) dy += speed;
+    if (k?.down.isDown || w?.["S"]?.isDown) dy -= speed;
+
+    if (dx !== 0 || dy !== 0) {
+      this.view3D.pan(dx, dy);
+    }
   }
 
   /**
@@ -346,6 +354,33 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.hudHintText?.setText(
       "Hold a star to start a route · Click to view system\nScroll to zoom · Drag to pan",
     );
+  }
+
+  /** Show or hide the HUD chrome (title, slots, hints, sidebar, toggles,
+   *  system hitboxes). GalaxyView2D galaxy rendering is intentionally left
+   *  visible so SimPlaybackScene can use it as a live backdrop. */
+  setHudVisible(visible: boolean): void {
+    this.hudBackdropLeft?.setVisible(visible);
+    this.hudBackdropRight?.setVisible(visible);
+    this.hudTitleLabel?.setVisible(visible);
+    this.hudSlotsLabel?.setVisible(visible);
+    this.hudHintText?.setVisible(visible);
+    this.navDropdown?.setVisible(visible);
+    this.sidebar?.setVisible(visible);
+    for (const t of this.layerToggles) {
+      t.bg.setVisible(visible);
+      t.label.setVisible(visible);
+      t.hit.setVisible(visible);
+    }
+    if (this.companyFilterButton) {
+      this.companyFilterButton.bg.setVisible(visible);
+      this.companyFilterButton.label.setVisible(visible);
+      this.companyFilterButton.hit.setVisible(visible);
+    }
+    for (const m of this.systemMarkers) {
+      m.hitbox.setVisible(visible);
+    }
+    if (!visible) this.mapTooltip?.setVisible(false);
   }
 
   private openRouteBuilderFor(
@@ -1061,6 +1096,14 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.input.on("pointerup", onUp);
     this.input.on("pointerupoutside", onUp);
     this.input.on("pointermove", onMove);
+
+    // Keyboard pan — arrow keys + WASD
+    this.panKeys = this.input.keyboard?.createCursorKeys() ?? null;
+    this.panKeysWASD =
+      (this.input.keyboard?.addKeys("W,A,S,D") as Record<
+        string,
+        Phaser.Input.Keyboard.Key
+      >) ?? null;
 
     const cleanup = (): void => {
       this.input.off("wheel", onWheel);

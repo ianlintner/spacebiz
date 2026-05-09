@@ -69,7 +69,7 @@ import {
   PORTRAIT_PLACEHOLDER_KEY,
 } from "../game/PortraitLoader.ts";
 import { getNewlyUnlockedTabs } from "../game/nav/NavUnlocks.ts";
-import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
+import { setGalaxy3DVisible } from "./galaxy2d/ActiveGalaxyView.ts";
 import { openCommunicationModal } from "../ui/CommunicationModal.ts";
 import { getStandingTier } from "../game/diplomacy/StandingTiers.ts";
 import { buildAmbassadorGreeting } from "../game/diplomacy/AmbassadorGreetings.ts";

@@ -11,7 +11,7 @@ import {
   attachReflowHandler,
 } from "../ui/index.ts";
 import type { SimulationResult } from "../game/simulation/SimulationLogger.ts";
-import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
+import { setGalaxy3DVisible } from "./galaxy2d/ActiveGalaxyView.ts";
 
 // ── Company color palette ──────────────────────────────────────
 

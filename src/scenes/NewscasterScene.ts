@@ -6,7 +6,7 @@ import {
   Panel,
   Button,
 } from "../ui/index.ts";
-import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
+import { setGalaxy3DVisible } from "./galaxy2d/ActiveGalaxyView.ts";
 import {
   getNewscasterForCategory,
   NEWSCASTER_DEFS,

@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  Camera3D,
-  CAMERA_PITCH_MAX,
-  CAMERA_PITCH_MIN,
-  CAMERA_YAW_RANGE,
-} from "../Camera3D.ts";
+import { Camera3D, CAMERA_PITCH_MAX, CAMERA_PITCH_MIN } from "../Camera3D.ts";
 
 describe("Camera3D", () => {
   it("default position is along +Z axis at distance 120 with default pitch", () => {
@@ -21,12 +16,14 @@ describe("Camera3D", () => {
     expect(p.z).toBeCloseTo(Math.sin(Math.PI * 0.3) * 120);
   });
 
-  it("pan clamps yaw to ±YAW_RANGE", () => {
+  it("pan accumulates yaw unboundedly for full polar orbit", () => {
     const c = new Camera3D();
-    c.pan(-100000, 0); // huge positive yaw delta (dx negative → yaw +)
-    expect(c.yaw).toBeCloseTo(CAMERA_YAW_RANGE);
-    c.pan(100000, 0); // huge negative yaw delta — overshoot
-    expect(c.yaw).toBeCloseTo(-CAMERA_YAW_RANGE);
+    // One full clockwise orbit (dx = 640 → yawDelta = -2π)
+    c.pan(640, 0);
+    expect(c.yaw).toBeCloseTo(-2 * Math.PI);
+    // Another orbit — yaw continues past -4π
+    c.pan(640, 0);
+    expect(c.yaw).toBeCloseTo(-4 * Math.PI);
   });
 
   it("pan clamps pitch to PITCH_MIN..PITCH_MAX", () => {
@@ -53,10 +50,10 @@ describe("Camera3D", () => {
     expect(c.pitch).toBeCloseTo(Math.PI * 0.32);
   });
 
-  it("focusOnWorldPoint allows yaw beyond the user's pan range", () => {
+  it("focusOnWorldPoint sets yaw for any direction in the hemisphere", () => {
     const c = new Camera3D();
     c.focusOnWorldPoint({ x: -1, y: 0, z: -1 });
-    // atan2(-1, -1) = -3π/4 — outside ±π/2 user pan range, should still be set
+    // atan2(-1, -1) = -3π/4
     expect(c.yaw).toBeCloseTo(-Math.PI * 0.75);
   });
 

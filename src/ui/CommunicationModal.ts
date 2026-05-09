@@ -12,7 +12,7 @@ import {
   portraitLoader,
   PORTRAIT_PLACEHOLDER_KEY,
 } from "../game/PortraitLoader.ts";
-import { setGalaxy3DDimmed } from "../scenes/galaxy3d/GalaxyView3D.ts";
+import { setGalaxy3DDimmed } from "../scenes/galaxy2d/ActiveGalaxyView.ts";
 
 export interface CommunicationDialogue {
   speakerName: string;

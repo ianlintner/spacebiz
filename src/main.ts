@@ -862,6 +862,9 @@ function mountGame(): void {
   ]);
 
   activeGame = new Phaser.Game(config);
+  // Place the Phaser canvas above the Three.js galaxy canvas (z-index 1) so
+  // Phaser UI elements always render on top of the galaxy regardless of depth.
+  activeGame.canvas.style.zIndex = "2";
   // The initial calculateGameSize() in createGameConfig() uses window
   // dimensions, but the game-container's actual box is usually narrower
   // (constrained by a column on the marketing page). Fire one extra resize

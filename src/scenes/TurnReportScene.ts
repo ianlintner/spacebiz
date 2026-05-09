@@ -18,7 +18,7 @@ import { autoSave } from "../game/SaveManager.ts";
 import type { TurnResult } from "../data/types.ts";
 import type { GameHUDScene } from "./GameHUDScene.ts";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
-import { setGalaxy3DVisible } from "./galaxy3d/GalaxyView3D.ts";
+import { setGalaxy3DVisible } from "./galaxy2d/ActiveGalaxyView.ts";
 
 function formatCash(amount: number): string {
   const sign = amount < 0 ? "-" : "";

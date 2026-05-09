@@ -39,7 +39,9 @@ export function createGameConfig(
     // Enable preserveDrawingBuffer in dev so canvas.toDataURL() works for
     // PR-screenshot capture from the Claude Preview MCP. Costs an extra
     // buffer copy per frame, so we keep it off in production builds.
-    render: import.meta.env.DEV ? { preserveDrawingBuffer: true } : undefined,
+    render: {
+      ...(import.meta.env.DEV ? { preserveDrawingBuffer: true } : {}),
+    },
     ...({ resolution: dpr } as unknown as Phaser.Types.Core.GameConfig),
   };
 }
