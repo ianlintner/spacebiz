@@ -6,7 +6,6 @@ import type {
   StarSystem,
   CargoType as CargoTypeT,
 } from "../../data/types.ts";
-import { PLANET_CARGO_PROFILES } from "../../data/constants.ts";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 
 // ---------------------------------------------------------------------------
@@ -96,8 +95,9 @@ function getEmpirePlanets(
 function getEmpireProduces(empirePlanets: Planet[]): CargoTypeT[] {
   const produced = new Set<CargoTypeT>();
   for (const planet of empirePlanets) {
-    const profile = PLANET_CARGO_PROFILES[planet.type];
-    for (const cargo of profile.produces) produced.add(cargo);
+    for (const cargo of planet.productionTags ?? []) {
+      produced.add(cargo as CargoTypeT);
+    }
   }
   return [...produced];
 }
@@ -105,8 +105,9 @@ function getEmpireProduces(empirePlanets: Planet[]): CargoTypeT[] {
 function getEmpireDemands(empirePlanets: Planet[]): CargoTypeT[] {
   const demanded = new Set<CargoTypeT>();
   for (const planet of empirePlanets) {
-    const profile = PLANET_CARGO_PROFILES[planet.type];
-    for (const cargo of profile.demands) demanded.add(cargo);
+    for (const cargo of planet.consumptionTags ?? []) {
+      demanded.add(cargo as CargoTypeT);
+    }
   }
   return [...demanded];
 }
