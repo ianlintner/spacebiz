@@ -100,6 +100,30 @@ function weightedPick(
   return weights[weights.length - 1][0];
 }
 
+/**
+ * Pick the planet count for a system using a weighted distribution biased
+ * toward barren and single-planet systems. Many systems exist as nav-only
+ * waypoints so the hyperlane network feels rich without inflating market
+ * complexity. Returns a value in [min, max].
+ */
+function pickPlanetCount(rng: SeededRNG, min: number, max: number): number {
+  // Weights for counts 0, 1, 2, 3, 4 — barren is most common, then single,
+  // tapering off for larger systems. The sum doesn't need to be 100; only
+  // the ratios matter.
+  const WEIGHTS = [30, 28, 22, 14, 6];
+  const total: number[] = [];
+  let sum = 0;
+  for (let n = min; n <= max; n++) {
+    sum += WEIGHTS[Math.min(n, WEIGHTS.length - 1)] ?? 1;
+    total.push(sum);
+  }
+  const roll = rng.next() * sum;
+  for (let i = 0; i < total.length; i++) {
+    if (roll <= total[i]) return min + i;
+  }
+  return max;
+}
+
 const SECTOR_COLORS = [
   0x4488cc, 0xcc6644, 0x66cc88, 0xbb88cc, 0xcccc44, 0xcc4466, 0x44cccc,
   0x88cc44, 0xcc8844, 0x4466cc, 0xcc44bb, 0x44cc66,
@@ -401,7 +425,8 @@ export function generateGalaxy(
       const system = systems.find(
         (s) => s.id === `system-${ei}-${localIdx}`,
       ) as StarSystem;
-      const numPlanets = rng.nextInt(
+      const numPlanets = pickPlanetCount(
+        rng,
         config.planetsPerSystemMin,
         config.planetsPerSystemMax,
       );

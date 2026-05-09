@@ -21,10 +21,10 @@ export function placeSpiralGalaxy(opts: {
   const armSweep = opts.armSweep ?? 1.8 * Math.PI;
   const radius = opts.radius ?? 1000;
 
-  // 1) Candidate generation along arms — thicker bands so the spiral reads
-  // as a wide swept disc instead of a thin pencil line. Tangent jitter (along
-  // the arm) and radial jitter (perpendicular thickness) are applied
-  // separately and scale up with t so outer arms are wider than the core.
+  // 1) Candidate generation along arms — wide swept belts, not thin lines.
+  // Each arm centerline is generated, then candidates are scattered into a
+  // thick belt around it (perpendicular radial jitter is much larger than
+  // the tangent jitter so empires fill 2D regions, not 1D streaks).
   const candidateMultiplier = 2.0;
   const candidates: Array<{ x: number; y: number }> = [];
   const numCandidates = Math.ceil(systemCount * candidateMultiplier);
@@ -38,14 +38,18 @@ export function placeSpiralGalaxy(opts: {
     const curl = 0.4;
     const cx = r * Math.cos(angle + curl * Math.log(1 + (r / radius) * 5));
     const cy = r * Math.sin(angle + curl * Math.log(1 + (r / radius) * 5));
-    // Perpendicular (radial) jitter — widens the arm band. 0.06 at the core,
-    // up to 0.16 at the outer rim — outer arms always look thicker.
-    const radialMag = radius * (0.06 + 0.1 * t) * (rng.nextFloat(0, 1) * 2 - 1);
+    // Perpendicular (radial) jitter — the belt's half-thickness. 18% of
+    // radius at the core, up to 32% at the outer rim. Triangular distribution
+    // (sum of two uniforms) so most candidates sit closer to the centerline
+    // but the tails reach the full belt width — gives a soft Gaussian-like
+    // density falloff instead of a hard band.
+    const beltHalf = radius * (0.18 + 0.14 * t);
+    const radialN = rng.nextFloat(0, 1) + rng.nextFloat(0, 1) - 1; // ~triangular [-1, 1]
+    const radialMag = beltHalf * radialN;
     const jx = -Math.sin(angle) * radialMag;
     const jy = Math.cos(angle) * radialMag;
-    // Tangential jitter along the arm — breaks up the visible "stringing"
-    // of points along the centerline.
-    const tangentMag = radius * 0.05 * (rng.nextFloat(0, 1) * 2 - 1);
+    // Tangential jitter — modest, just enough to break up alignment.
+    const tangentMag = radius * 0.08 * (rng.nextFloat(0, 1) * 2 - 1);
     const tx = Math.cos(angle) * tangentMag;
     const ty = Math.sin(angle) * tangentMag;
     candidates.push({ x: cx + jx + tx, y: cy + jy + ty });

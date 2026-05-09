@@ -83,12 +83,12 @@ describe("NewGameSetup", () => {
       expect(systemsInSector.length).toBeGreaterThanOrEqual(1);
     }
 
-    // 1-3 planets per system
+    // 0-3 planets per system (barren transit nodes allowed)
     for (const system of galaxy.systems) {
       const planetsInSystem = galaxy.planets.filter(
         (p) => p.systemId === system.id,
       );
-      expect(planetsInSystem.length).toBeGreaterThanOrEqual(1);
+      expect(planetsInSystem.length).toBeGreaterThanOrEqual(0);
       expect(planetsInSystem.length).toBeLessThanOrEqual(3);
     }
 

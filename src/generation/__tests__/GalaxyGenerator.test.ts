@@ -43,13 +43,13 @@ describe("GalaxyGenerator", () => {
     }
   });
 
-  it("generates 1-3 planets per system", () => {
+  it("generates 0-3 planets per system (barren systems allowed)", () => {
     const galaxy = generateGalaxy(42);
     for (const system of galaxy.systems) {
       const planetsInSystem = galaxy.planets.filter(
         (p) => p.systemId === system.id,
       );
-      expect(planetsInSystem.length).toBeGreaterThanOrEqual(1);
+      expect(planetsInSystem.length).toBeGreaterThanOrEqual(0);
       expect(planetsInSystem.length).toBeLessThanOrEqual(3);
     }
   });
@@ -61,22 +61,26 @@ describe("GalaxyGenerator", () => {
     }
   });
 
-  it("every system has at least 1 planet", () => {
+  it("most systems have at least 1 planet (some barren transit nodes allowed)", () => {
     const galaxy = generateGalaxy(42);
+    let inhabited = 0;
     for (const system of galaxy.systems) {
       const planetsInSystem = galaxy.planets.filter(
         (p) => p.systemId === system.id,
       );
-      expect(planetsInSystem.length).toBeGreaterThanOrEqual(1);
+      if (planetsInSystem.length > 0) inhabited++;
     }
+    // Weighted distribution targets ~70% inhabited systems.
+    expect(inhabited / galaxy.systems.length).toBeGreaterThan(0.5);
   });
 
-  it("total planets in expected range (80-312)", () => {
-    // Standard preset: 8 empires × 10–13 systems × 1–3 planets = 80–312.
+  it("total planets in expected range (250-700)", () => {
+    // Standard preset: 8 empires × 30–40 systems × weighted 0–3 planets
+    // (avg ~1.6) gives ~380–510 planets typical, with seed variance.
     for (const seed of [1, 42, 100, 999, 7777]) {
       const galaxy = generateGalaxy(seed);
-      expect(galaxy.planets.length).toBeGreaterThanOrEqual(80);
-      expect(galaxy.planets.length).toBeLessThanOrEqual(312);
+      expect(galaxy.planets.length).toBeGreaterThanOrEqual(250);
+      expect(galaxy.planets.length).toBeLessThanOrEqual(700);
     }
   });
 

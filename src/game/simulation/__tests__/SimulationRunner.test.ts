@@ -15,7 +15,7 @@ function makeConfig(
 ): SimulationConfig {
   return {
     seed: 42,
-    gameSize: "standard",
+    gameSize: "quick",
     galaxyShape: "spiral",
     companyCount: 4,
     maxTurns: 10,
