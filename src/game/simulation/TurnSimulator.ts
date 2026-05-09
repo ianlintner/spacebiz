@@ -79,6 +79,12 @@ import {
   getSaturationMultiplier,
 } from "../hub/HubBonusCalculator.ts";
 import { tickRouteMarket } from "../routes/RouteMarket.ts";
+import {
+  tickPopulation,
+  type PopulationTickState,
+} from "../economy/PopulationLoop.ts";
+import { computeCompanyBonuses } from "../economy/CompanyBonusCalculator.ts";
+import type { SpecialId } from "../../data/types.ts";
 import { computeReputationTier } from "../reputation/ReputationEffects.ts";
 import { processQueuedDiplomacyActions } from "../diplomacy/DiplomacyResolver.ts";
 import { selectDiplomacyOffer } from "../diplomacy/DiplomacyAI.ts";
@@ -649,6 +655,66 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
     nextState.galaxy.planets,
   );
   nextState = { ...nextState, market: updatedMarket };
+
+  // ----- Step 7b: Population tick per planet -----
+  // foodBalance = baseSupply - baseDemand for the planet's Food market entry.
+  // medicalSatisfied = saturation > 0 for Medical (a route is delivering).
+  {
+    const prevPopState = nextState.planetPopState ?? {};
+    const nextPopState: Record<string, PopulationTickState> = {};
+    const updatedPlanets = nextState.galaxy.planets.map((planet) => {
+      const planetMarket = nextState.market.planetMarkets[planet.id];
+      const foodEntry = planetMarket?.[CargoType.Food];
+      const foodBalance = foodEntry
+        ? foodEntry.baseSupply - foodEntry.baseDemand
+        : 0;
+      const medicalEntry = planetMarket?.[CargoType.Medical];
+      const medicalSatisfied = medicalEntry
+        ? medicalEntry.saturation > 0
+        : true;
+
+      const state: PopulationTickState = prevPopState[planet.id] ?? {
+        foodDeficitStreak: 0,
+        foodSurplusStreak: 0,
+      };
+
+      const { newPopulation, newState } = tickPopulation({
+        currentPopulation: planet.population,
+        foodBalance,
+        medicalSatisfied,
+        state,
+      });
+
+      nextPopState[planet.id] = newState;
+      return newPopulation === planet.population
+        ? planet
+        : { ...planet, population: newPopulation };
+    });
+
+    nextState = {
+      ...nextState,
+      galaxy: { ...nextState.galaxy, planets: updatedPlanets },
+      planetPopState: nextPopState,
+    };
+  }
+
+  // ----- Step 7c: Compute company bonus bundle from active special routes -----
+  {
+    const activeSpecialRoutes: SpecialId[] = [];
+    const planetById = new Map(nextState.galaxy.planets.map((p) => [p.id, p]));
+    for (const route of nextState.activeRoutes) {
+      if (route.paused) continue;
+      const origin = planetById.get(route.originPlanetId);
+      const dest = planetById.get(route.destinationPlanetId);
+      if (origin?.specialResource)
+        activeSpecialRoutes.push(origin.specialResource);
+      if (dest?.specialResource) activeSpecialRoutes.push(dest.specialResource);
+    }
+    nextState = {
+      ...nextState,
+      companyBonuses: computeCompanyBonuses({ activeSpecialRoutes }),
+    };
+  }
 
   // ----- Step 8: Events -----
   const newEvents = selectEvents(

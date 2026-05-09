@@ -1403,6 +1403,39 @@ export interface GameState {
 
   /** Rival CEO communications queued to show at the start of the next turn. */
   pendingRivalMessages?: RivalMessage[];
+
+  /**
+   * Per-planet population tick state (food deficit/surplus streaks). Lazily
+   * initialized in the simulator; missing entries default to zero streaks.
+   */
+  planetPopState?: Record<string, PopulationTickStateRef>;
+
+  /**
+   * Company-wide bonuses derived from active special-resource routes. Computed
+   * each turn and consumed by downstream systems (price calc, hull shop, etc.).
+   */
+  companyBonuses?: CompanyBonusBundleRef;
+}
+
+/**
+ * Forward-declared shape of `PopulationTickState` from
+ * `src/game/economy/PopulationLoop.ts`. Inlined to avoid a cross-layer
+ * import cycle from data/types.ts back to game logic.
+ */
+export interface PopulationTickStateRef {
+  foodDeficitStreak: number;
+  foodSurplusStreak: number;
+}
+
+/** Forward-declared shape of CompanyBonusBundle. See CompanyBonusCalculator.ts. */
+export interface CompanyBonusBundleRef {
+  popGrowthMultiplier: number;
+  hullCostMultiplier: number;
+  cargoCapacityBonus: number;
+  reputationGainMultiplier: number;
+  fuelCostMultiplier: number;
+  damageRecoveryMultiplier: number;
+  passengerPayoutMultiplier: number;
 }
 
 // ---------------------------------------------------------------------------
