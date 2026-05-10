@@ -50,7 +50,6 @@ test.describe("Styleguide visual regression", () => {
     // StyleguideScene.create()).
     await page.waitForFunction(
       () => (window as unknown as StyleguideHooks).__styleguideReady === true,
-      undefined,
       { timeout: 30_000 },
     );
 
