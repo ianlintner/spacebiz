@@ -401,6 +401,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       this.companyFilterButton.label.setVisible(visible);
       this.companyFilterButton.hit.setVisible(visible);
     }
+    this.toolbar?.setVisible(visible);
     for (const m of this.systemMarkers) {
       m.hitbox.setVisible(visible);
     }

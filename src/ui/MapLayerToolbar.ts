@@ -26,7 +26,6 @@ interface GroupBtn {
   icon: Phaser.GameObjects.Image;
   hit: Phaser.GameObjects.Zone;
   group: LayerGroup;
-  label: string;
 }
 
 export class MapLayerToolbar {
@@ -80,6 +79,18 @@ export class MapLayerToolbar {
     this.tooltip = null;
     this.escKey?.destroy();
     this.escKey = null;
+  }
+
+  setVisible(visible: boolean): void {
+    if (!visible) {
+      this.closeDrawer();
+      this.hideTooltip();
+    }
+    for (const btn of this.buttons) {
+      btn.bg.setVisible(visible);
+      btn.icon.setVisible(visible);
+      btn.hit.setVisible(visible);
+    }
   }
 
   private showTooltip(text: string, x: number, y: number): void {
@@ -165,7 +176,7 @@ export class MapLayerToolbar {
       }
     });
 
-    this.buttons.push({ bg, icon, hit, group, label: GROUP_LABELS[group] });
+    this.buttons.push({ bg, icon, hit, group });
   }
 
   private openDrawer(group: LayerGroup): void {
