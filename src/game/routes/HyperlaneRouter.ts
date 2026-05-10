@@ -1,3 +1,4 @@
+import TinyQueue from "tinyqueue";
 import type {
   Hyperlane,
   HyperlanePath,
@@ -63,17 +64,14 @@ export function findPath(
   dist.set(fromSystemId, 0);
   prev.set(fromSystemId, null);
 
-  // Simple priority queue via sorted array (graph is small, ~80-120 nodes)
-  const queue: Array<{ id: string; d: number }> = [{ id: fromSystemId, d: 0 }];
+  // Min-heap priority queue for O(n log n) Dijkstra (graph now 240-320 nodes)
+  const queue = new TinyQueue<{ id: string; d: number }>(
+    [{ id: fromSystemId, d: 0 }],
+    (a, b) => a.d - b.d,
+  );
 
   while (queue.length > 0) {
-    // Find min
-    let minIdx = 0;
-    for (let i = 1; i < queue.length; i++) {
-      if (queue[i].d < queue[minIdx].d) minIdx = i;
-    }
-    const current = queue[minIdx];
-    queue.splice(minIdx, 1);
+    const current = queue.pop()!;
 
     if (visited.has(current.id)) continue;
     visited.add(current.id);
