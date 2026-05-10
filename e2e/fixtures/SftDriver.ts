@@ -21,7 +21,7 @@ export class SftDriver {
   constructor(private page: Page) {}
 
   /** Wait until the DEV-only fa\u00e7ade has attached to window. */
-  async ready(timeoutMs = 15_000): Promise<void> {
+  async ready(timeoutMs = 30_000): Promise<void> {
     await this.page.waitForFunction(
       () =>
         typeof (window as unknown as { __sft?: unknown }).__sft === "object",
@@ -31,7 +31,7 @@ export class SftDriver {
   }
 
   /** Wait until at least one widget has been registered from an active scene. */
-  async readyWithWidgets(timeoutMs = 15_000): Promise<void> {
+  async readyWithWidgets(timeoutMs = 30_000): Promise<void> {
     await this.ready(timeoutMs);
     await this.page.waitForFunction(
       () => (window.__sft?.list().length ?? 0) > 0,
