@@ -14,6 +14,8 @@ import {
 import type { GalaxySidebarData } from "../ui/index.ts";
 import { openRouteBuilder } from "../ui/RouteBuilderPanel.ts";
 import { MapLayerToolbar } from "../ui/MapLayerToolbar.ts";
+import { mapLayerController } from "../game/map/MapLayerController.ts";
+import type { LayerId } from "../game/map/MapLayerRegistry.ts";
 import { generateEmpireFlags } from "@rogue-universe/shared";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
 import { isEmpireAccessible } from "../game/empire/EmpireAccessManager.ts";
@@ -53,7 +55,6 @@ interface LayerToggleButton {
 
 const VIZ_TOP_STRIP = 60;
 const VIZ_BOTTOM_STRIP = 60; // layer toggle row height
-const TOGGLE_ROW_GAP = 8;
 const TOGGLE_FILTER_WIDTH = 220;
 
 export class GalaxyMapScene extends Phaser.Scene {
@@ -63,16 +64,12 @@ export class GalaxyMapScene extends Phaser.Scene {
   private empireInfoCard: Phaser.GameObjects.Container | null = null;
   private routeTrafficStateKey: string | null = null;
 
-  // ── Layer state (toggleable via the bottom button row) ────────────────────
-  private showEmpires = true;
   private showSystemNames = true;
-  private showShips = true;
   // Cycle through: null (all) → "player" → each AI company id → null …
   // Routes/ships not matching the filter are ghosted; full hide is via the
   // ship layer toggle.
   private companyFilter: string | null = null;
   private companyFilterCycle: (string | null)[] = [null];
-  private layerToggles: LayerToggleButton[] = [];
   private companyFilterButton: LayerToggleButton | null = null;
   private toolbar: MapLayerToolbar | null = null;
   private sidebar: GalaxySidebarPanel | null = null;
@@ -177,6 +174,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.buildSidebar(state, L);
     this.buildLayerToggleRow(state, theme, L);
     this.toolbar = new MapLayerToolbar(this);
+    this.installLayerController();
 
     attachReflowHandler(this, () => this.relayout());
 
@@ -262,12 +260,6 @@ export class GalaxyMapScene extends Phaser.Scene {
       this.systemMarkers = [];
       this.sidebar?.destroy();
       this.sidebar = null;
-      for (const t of this.layerToggles) {
-        t.bg.destroy();
-        t.label.destroy();
-        t.hit.destroy();
-      }
-      this.layerToggles = [];
       if (this.companyFilterButton) {
         this.companyFilterButton.bg.destroy();
         this.companyFilterButton.label.destroy();
@@ -391,11 +383,6 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.hudHintText?.setVisible(visible);
     this.navDropdown?.setVisible(visible);
     this.sidebar?.setVisible(visible);
-    for (const t of this.layerToggles) {
-      t.bg.setVisible(visible);
-      t.label.setVisible(visible);
-      t.hit.setVisible(visible);
-    }
     if (this.companyFilterButton) {
       this.companyFilterButton.bg.setVisible(visible);
       this.companyFilterButton.label.setVisible(visible);
@@ -529,15 +516,9 @@ export class GalaxyMapScene extends Phaser.Scene {
       this.navDropdown.setPosition(navX, hudLabelTop - 2);
     }
 
-    // Layer toggle row — reposition existing buttons sequentially.
+    // Layer toggle row — reposition company filter button.
     const rowY = L.contentTop + L.contentHeight - 56;
-    let x = L.mainContentLeft + 8;
-    for (const btn of this.layerToggles) {
-      btn.bg.setPosition(x, rowY);
-      btn.label.setPosition(x + btn.width / 2, rowY + 18);
-      btn.hit.setPosition(x, rowY);
-      x += btn.width + TOGGLE_ROW_GAP;
-    }
+    const x = L.mainContentLeft + 8;
     if (this.companyFilterButton) {
       const cf = this.companyFilterButton;
       cf.bg.setPosition(x, rowY);
@@ -742,90 +723,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     };
 
     const rowY = L.contentTop + L.contentHeight - 56;
-    let x = L.mainContentLeft + 8;
-
-    const makeToggle = (
-      label: string,
-      isOn: () => boolean,
-      onClick: () => void,
-      width: number,
-    ): LayerToggleButton => {
-      const bg = this.add
-        .rectangle(x, rowY, width, 36, theme.colors.panelBg, 0.85)
-        .setStrokeStyle(1, theme.colors.panelBorder, 0.6)
-        .setOrigin(0, 0)
-        .setDepth(902);
-      const text = this.add
-        .text(x + width / 2, rowY + 18, label, {
-          fontSize: `${theme.fonts.caption.size}px`,
-          fontFamily: theme.fonts.caption.family,
-          color: colorToString(theme.colors.text),
-        })
-        .setOrigin(0.5, 0.5)
-        .setDepth(903);
-      const hit = this.add
-        .zone(x, rowY, width, 36)
-        .setOrigin(0, 0)
-        .setInteractive({ cursor: "pointer", useHandCursor: true });
-      const refresh = (): void => {
-        const on = isOn();
-        bg.setFillStyle(
-          on ? theme.colors.accent : theme.colors.panelBg,
-          on ? 0.5 : 0.85,
-        );
-        bg.setStrokeStyle(
-          1,
-          on ? theme.colors.accent : theme.colors.panelBorder,
-          on ? 0.9 : 0.6,
-        );
-        text.setColor(
-          colorToString(on ? theme.colors.text : theme.colors.textDim),
-        );
-      };
-      hit.on("pointerup", () => {
-        getAudioDirector().sfx("ui_tab_switch");
-        onClick();
-        refresh();
-      });
-      const btn: LayerToggleButton = {
-        bg,
-        label: text,
-        hit,
-        width,
-        isOn,
-        setOn: () => refresh(),
-      };
-      refresh();
-      x += width + TOGGLE_ROW_GAP;
-      return btn;
-    };
-
-    this.layerToggles.push(
-      makeToggle(
-        "Empires",
-        () => this.showEmpires,
-        () => this.setEmpiresVisible(!this.showEmpires),
-        90,
-      ),
-    );
-    this.layerToggles.push(
-      makeToggle(
-        "Names",
-        () => this.showSystemNames,
-        () => {
-          this.showSystemNames = !this.showSystemNames;
-        },
-        80,
-      ),
-    );
-    this.layerToggles.push(
-      makeToggle(
-        "Ships",
-        () => this.showShips,
-        () => this.setShipsVisible(!this.showShips),
-        80,
-      ),
-    );
+    const x = L.mainContentLeft + 8;
 
     // Company filter — wider button, separate row slot. Custom isOn() returns
     // true whenever a filter is active so the styling reflects "filtering on".
@@ -884,15 +782,61 @@ export class GalaxyMapScene extends Phaser.Scene {
     };
   }
 
-  private setEmpiresVisible(on: boolean): void {
-    this.showEmpires = on;
-    this.view3D?.setEmpireHalosVisible(on);
-    this.view3D?.setEmpireLabelsVisible(on);
-  }
+  private installLayerController(): void {
+    if (!this.view3D) return;
 
-  private setShipsVisible(on: boolean): void {
-    this.showShips = on;
-    this.view3D?.setShipsVisible(on);
+    this.view3D.setEmpireLabelsVisible(
+      mapLayerController.isVisible("empire-names"),
+    );
+    this.view3D.setEmpireHalosVisible(
+      mapLayerController.isVisible("empire-borders"),
+    );
+    this.view3D.setTerritoryBordersVisible(
+      mapLayerController.isVisible("empire-borders"),
+    );
+    this.view3D.setSystemsVisible(mapLayerController.isVisible("systems"));
+    this.showSystemNames = mapLayerController.isVisible("system-names");
+    this.view3D.setHyperlanesVisible(
+      mapLayerController.isVisible("hyperlanes"),
+    );
+    this.view3D.setShipsVisible(mapLayerController.isVisible("ships"));
+
+    const onLayerChange = (id: unknown): void => {
+      if (!this.view3D) return;
+      const layerId = id as LayerId;
+      const on = mapLayerController.isVisible(layerId);
+      switch (layerId) {
+        case "empire-names":
+          this.view3D.setEmpireLabelsVisible(on);
+          break;
+        case "empire-borders":
+          this.view3D.setEmpireHalosVisible(on);
+          this.view3D.setTerritoryBordersVisible(on);
+          break;
+        case "system-names":
+          this.showSystemNames = on;
+          break;
+        case "systems":
+          this.view3D.setSystemsVisible(on);
+          break;
+        case "hyperlanes":
+          this.view3D.setHyperlanesVisible(on);
+          break;
+        case "ships":
+          this.view3D.setShipsVisible(on);
+          break;
+        default:
+          break;
+      }
+    };
+
+    mapLayerController.on("change", onLayerChange);
+    this.events.once("shutdown", () =>
+      mapLayerController.off("change", onLayerChange),
+    );
+    this.events.once("destroy", () =>
+      mapLayerController.off("change", onLayerChange),
+    );
   }
 
   private cycleCompanyFilter(): void {
@@ -1001,7 +945,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       return visuals.find((v) => v.routeId === routeId)?.ownerId === "player";
     });
     // Apply current layer/filter state to newly spawned ships.
-    view.setShipsVisible(this.showShips);
+    view.setShipsVisible(mapLayerController.isVisible("ships"));
     if (this.companyFilter !== null) {
       view.setRouteCompanyFilter(this.companyFilter);
     }

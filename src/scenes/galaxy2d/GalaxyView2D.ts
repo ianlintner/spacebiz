@@ -189,6 +189,9 @@ export class GalaxyView2D {
   private readonly empireCentroids = new Map<string, Vec3>();
   private readonly empireLabels = new Map<string, Phaser.GameObjects.Text>();
   private empireLabelsVisible = true;
+  private hyperlanesVisible = true;
+  private territoryVisible = true;
+  private systemsVisible = true;
 
   // HQ markers — small chevron sprites above home systems.
   private readonly hqMarkerSprites: Phaser.GameObjects.Image[] = [];
@@ -512,7 +515,7 @@ export class GalaxyView2D {
       sprite.setDepth(
         Math.floor(STAR_DEPTH_BASE + proj.depth * STAR_DEPTH_RANGE),
       );
-      sprite.setVisible(true);
+      sprite.setVisible(this.systemsVisible);
 
       const label = this.systemLabels.get(systemId);
       if (label && this.systemLabelsVisible) {
@@ -650,43 +653,46 @@ export class GalaxyView2D {
     // Empire territory fills — drawn as earcut triangles one depth below the border.
     if (this.fillTerritoryGfx) {
       this.fillTerritoryGfx.clear();
-      for (const poly of this.territoryPolygons) {
-        if (poly.worldVerts.length < 3 || poly.triangleIndices.length < 3)
-          continue;
-        // Project all verts once.
-        const screenPts: Array<{ x: number; y: number; visible: boolean }> = [];
-        for (const wv of poly.worldVerts) {
-          this.scratchNdcA.x = wv.x;
-          this.scratchNdcA.y = wv.y;
-          this.scratchNdcA.z = wv.z;
-          const proj = projectToScreenDesignInto(
-            this.scratchNdcB,
-            this.scratchNdcA,
-            viewProj,
-            this.viewport,
-          );
-          screenPts.push({ x: proj.x, y: proj.y, visible: proj.visible });
-        }
-        this.fillTerritoryGfx.fillStyle(poly.color, 0.08);
-        for (let t = 0; t < poly.triangleIndices.length; t += 3) {
-          const ia = poly.triangleIndices[t];
-          const ib = poly.triangleIndices[t + 1];
-          const ic = poly.triangleIndices[t + 2];
-          if (ia === undefined || ib === undefined || ic === undefined)
+      if (this.territoryVisible) {
+        for (const poly of this.territoryPolygons) {
+          if (poly.worldVerts.length < 3 || poly.triangleIndices.length < 3)
             continue;
-          const pa = screenPts[ia];
-          const pb = screenPts[ib];
-          const pc = screenPts[ic];
-          if (!pa || !pb || !pc) continue;
-          if (!pa.visible && !pb.visible && !pc.visible) continue;
-          this.fillTerritoryGfx.fillTriangle(
-            pa.x,
-            pa.y,
-            pb.x,
-            pb.y,
-            pc.x,
-            pc.y,
-          );
+          // Project all verts once.
+          const screenPts: Array<{ x: number; y: number; visible: boolean }> =
+            [];
+          for (const wv of poly.worldVerts) {
+            this.scratchNdcA.x = wv.x;
+            this.scratchNdcA.y = wv.y;
+            this.scratchNdcA.z = wv.z;
+            const proj = projectToScreenDesignInto(
+              this.scratchNdcB,
+              this.scratchNdcA,
+              viewProj,
+              this.viewport,
+            );
+            screenPts.push({ x: proj.x, y: proj.y, visible: proj.visible });
+          }
+          this.fillTerritoryGfx.fillStyle(poly.color, 0.08);
+          for (let t = 0; t < poly.triangleIndices.length; t += 3) {
+            const ia = poly.triangleIndices[t];
+            const ib = poly.triangleIndices[t + 1];
+            const ic = poly.triangleIndices[t + 2];
+            if (ia === undefined || ib === undefined || ic === undefined)
+              continue;
+            const pa = screenPts[ia];
+            const pb = screenPts[ib];
+            const pc = screenPts[ic];
+            if (!pa || !pb || !pc) continue;
+            if (!pa.visible && !pb.visible && !pc.visible) continue;
+            this.fillTerritoryGfx.fillTriangle(
+              pa.x,
+              pa.y,
+              pb.x,
+              pb.y,
+              pc.x,
+              pc.y,
+            );
+          }
         }
       }
     }
@@ -697,31 +703,34 @@ export class GalaxyView2D {
     // whole polygon when you pan to a corner.
     if (this.territoryGfx) {
       this.territoryGfx.clear();
-      for (const poly of this.territoryPolygons) {
-        if (poly.worldVerts.length < 3) continue;
-        const screenPts: Array<{ x: number; y: number; visible: boolean }> = [];
-        for (const wv of poly.worldVerts) {
-          this.scratchNdcA.x = wv.x;
-          this.scratchNdcA.y = wv.y;
-          this.scratchNdcA.z = wv.z;
-          const proj = projectToScreenDesignInto(
-            this.scratchNdcB,
-            this.scratchNdcA,
-            viewProj,
-            this.viewport,
+      if (this.territoryVisible) {
+        for (const poly of this.territoryPolygons) {
+          if (poly.worldVerts.length < 3) continue;
+          const screenPts: Array<{ x: number; y: number; visible: boolean }> =
+            [];
+          for (const wv of poly.worldVerts) {
+            this.scratchNdcA.x = wv.x;
+            this.scratchNdcA.y = wv.y;
+            this.scratchNdcA.z = wv.z;
+            const proj = projectToScreenDesignInto(
+              this.scratchNdcB,
+              this.scratchNdcA,
+              viewProj,
+              this.viewport,
+            );
+            screenPts.push({ x: proj.x, y: proj.y, visible: proj.visible });
+          }
+          this.territoryGfx.lineStyle(
+            TERRITORY_STROKE_WIDTH,
+            poly.color,
+            TERRITORY_STROKE_ALPHA,
           );
-          screenPts.push({ x: proj.x, y: proj.y, visible: proj.visible });
-        }
-        this.territoryGfx.lineStyle(
-          TERRITORY_STROKE_WIDTH,
-          poly.color,
-          TERRITORY_STROKE_ALPHA,
-        );
-        for (let i = 0; i < screenPts.length; i++) {
-          const a = screenPts[i];
-          const b = screenPts[(i + 1) % screenPts.length];
-          if (!a.visible || !b.visible) continue;
-          this.territoryGfx.lineBetween(a.x, a.y, b.x, b.y);
+          for (let i = 0; i < screenPts.length; i++) {
+            const a = screenPts[i];
+            const b = screenPts[(i + 1) % screenPts.length];
+            if (!a.visible || !b.visible) continue;
+            this.territoryGfx.lineBetween(a.x, a.y, b.x, b.y);
+          }
         }
       }
     }
@@ -729,37 +738,39 @@ export class GalaxyView2D {
     // Hyperlanes — redrawn per frame.
     if (this.hyperlanesGfx) {
       this.hyperlanesGfx.clear();
-      for (const seg of this.hyperlaneSegments) {
-        this.scratchNdcA.x = seg.ax;
-        this.scratchNdcA.y = seg.ay;
-        this.scratchNdcA.z = seg.az;
-        const a = projectToScreenDesignInto(
-          this.scratchNdcB,
-          this.scratchNdcA,
-          viewProj,
-          this.viewport,
-        );
-        if (!a.visible) continue;
-        const ax = a.x;
-        const ay = a.y;
+      if (this.hyperlanesVisible) {
+        for (const seg of this.hyperlaneSegments) {
+          this.scratchNdcA.x = seg.ax;
+          this.scratchNdcA.y = seg.ay;
+          this.scratchNdcA.z = seg.az;
+          const a = projectToScreenDesignInto(
+            this.scratchNdcB,
+            this.scratchNdcA,
+            viewProj,
+            this.viewport,
+          );
+          if (!a.visible) continue;
+          const ax = a.x;
+          const ay = a.y;
 
-        this.scratchNdcA.x = seg.bx;
-        this.scratchNdcA.y = seg.by;
-        this.scratchNdcA.z = seg.bz;
-        const b = projectToScreenDesignInto(
-          this.scratchNdcB,
-          this.scratchNdcA,
-          viewProj,
-          this.viewport,
-        );
-        if (!b.visible) continue;
+          this.scratchNdcA.x = seg.bx;
+          this.scratchNdcA.y = seg.by;
+          this.scratchNdcA.z = seg.bz;
+          const b = projectToScreenDesignInto(
+            this.scratchNdcB,
+            this.scratchNdcA,
+            viewProj,
+            this.viewport,
+          );
+          if (!b.visible) continue;
 
-        this.hyperlanesGfx.lineStyle(
-          HYPERLANE_LINE_WIDTH,
-          seg.color,
-          HYPERLANE_LINE_ALPHA,
-        );
-        this.hyperlanesGfx.lineBetween(ax, ay, b.x, b.y);
+          this.hyperlanesGfx.lineStyle(
+            HYPERLANE_LINE_WIDTH,
+            seg.color,
+            HYPERLANE_LINE_ALPHA,
+          );
+          this.hyperlanesGfx.lineBetween(ax, ay, b.x, b.y);
+        }
       }
     }
 
@@ -1055,6 +1066,31 @@ export class GalaxyView2D {
     if (!v) {
       for (const label of this.empireLabels.values()) {
         label.setVisible(false);
+      }
+    }
+  }
+
+  setHyperlanesVisible(on: boolean): void {
+    if (this.destroyed) return;
+    this.hyperlanesVisible = on;
+    if (!on && this.hyperlanesGfx) this.hyperlanesGfx.clear();
+  }
+
+  setTerritoryBordersVisible(on: boolean): void {
+    if (this.destroyed) return;
+    this.territoryVisible = on;
+    if (!on) {
+      this.fillTerritoryGfx?.clear();
+      this.territoryGfx?.clear();
+    }
+  }
+
+  setSystemsVisible(on: boolean): void {
+    if (this.destroyed) return;
+    this.systemsVisible = on;
+    if (!on) {
+      for (const sprite of this.starSprites.values()) {
+        sprite.setVisible(false);
       }
     }
   }
