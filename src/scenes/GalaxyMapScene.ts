@@ -120,7 +120,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     generateEmpireFlags(this, empires, state.seed);
 
     // Carve a 3D viewport out of the main content area, leaving strips at
-    // top (HUD: title, slot count) and bottom (layer toggles) for 2D Phaser
+    // top (HUD: title, slot count) and bottom (company filter) for 2D Phaser
     // chrome. The left sidebar slot becomes the galaxy info panel.
     this.vizRect = this.computeVizRect(L);
 
@@ -697,10 +697,9 @@ export class GalaxyMapScene extends Phaser.Scene {
   }
 
   /**
-   * Bottom toggle row: layer visibility (Empires/Names/Ships) + a company
-   * filter that cycles through `null → player → each AI co → null`. Routes
-   * and ships not matching the filter are ghosted to a low alpha; hiding
-   * the Ships layer outright removes them entirely.
+   * Bottom row: company filter that cycles `null → player → each AI co → null`.
+   * Routes/ships not matching the filter are ghosted; layer visibility is
+   * owned by MapLayerToolbar + MapLayerController.
    */
   private buildLayerToggleRow(
     state: GameState,
