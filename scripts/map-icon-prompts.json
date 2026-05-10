@@ -1,0 +1,66 @@
+[
+  {
+    "id": "group-politics",
+    "prompt": "crown icon, white silhouette, game map UI button, pixel art, minimal"
+  },
+  {
+    "id": "group-geography",
+    "prompt": "galaxy star cluster icon, white silhouette, game map UI button, pixel art, minimal"
+  },
+  {
+    "id": "group-movement",
+    "prompt": "rocket ship icon, white silhouette, game map UI button, pixel art, minimal"
+  },
+  {
+    "id": "group-economy",
+    "prompt": "cargo crate icon, white silhouette, game map UI button, pixel art, minimal"
+  },
+  {
+    "id": "group-events",
+    "prompt": "lightning bolt icon, white silhouette, game map UI button, pixel art, minimal"
+  },
+  {
+    "id": "empire-names",
+    "prompt": "crown with text label, white silhouette, game map UI icon, pixel art, minimal"
+  },
+  {
+    "id": "empire-borders",
+    "prompt": "hexagonal territory border outline, white silhouette, game map UI icon, pixel art, minimal"
+  },
+  {
+    "id": "company-names",
+    "prompt": "corporation building silhouette, white icon, game map UI, pixel art, minimal"
+  },
+  {
+    "id": "systems",
+    "prompt": "star dot node icon, white silhouette, game map UI icon, pixel art, minimal"
+  },
+  {
+    "id": "system-names",
+    "prompt": "star with text tag label, white silhouette, game map UI icon, pixel art, minimal"
+  },
+  {
+    "id": "hyperlanes",
+    "prompt": "two dots connected by a line, white silhouette, game map UI icon, pixel art, minimal"
+  },
+  {
+    "id": "ships",
+    "prompt": "top-down spaceship icon, white silhouette, game map UI icon, pixel art, minimal"
+  },
+  {
+    "id": "navies",
+    "prompt": "three ships in formation, white silhouette, game map UI icon, pixel art, minimal"
+  },
+  {
+    "id": "import-goods",
+    "prompt": "arrow pointing into a box, white silhouette, game map UI icon, pixel art, minimal"
+  },
+  {
+    "id": "export-goods",
+    "prompt": "arrow pointing out of a box, white silhouette, game map UI icon, pixel art, minimal"
+  },
+  {
+    "id": "space-events",
+    "prompt": "cosmic explosion burst icon, white silhouette, game map UI icon, pixel art, minimal"
+  }
+]

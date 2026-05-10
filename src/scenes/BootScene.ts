@@ -123,6 +123,12 @@ export class BootScene extends Phaser.Scene {
     for (const key of dilemmaImageKeys) {
       this.load.image(key, `dilemmas/${key}.png`);
     }
+
+    // Map layer toolbar icon spritesheet — 4×4 grid of 24×24 px icons.
+    this.load.spritesheet("ui-icons", "ui-icons-24.png", {
+      frameWidth: 24,
+      frameHeight: 24,
+    });
   }
 
   create(): void {
