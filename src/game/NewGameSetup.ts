@@ -1,4 +1,6 @@
 import { SeededRNG } from "../utils/SeededRNG.ts";
+import { createContext } from "@lexicon/core";
+import { megacorpName } from "@lexicon/scifi";
 import { generateGalaxy } from "../generation/GalaxyGenerator.ts";
 import { initializeMarkets } from "../generation/MarketInitializer.ts";
 import { ShipClass, AIPersonality, GalaxyShape } from "../data/types.ts";
@@ -137,31 +139,9 @@ function selectStartingSystems(
 
 // ── AI Company Names ─────────────────────────────────────────
 
-export const AI_COMPANY_NAME_PREFIXES = [
-  "Nova",
-  "Stellar",
-  "Deep",
-  "Cosmic",
-  "Astral",
-  "Quantum",
-  "Nebula",
-  "Void",
-  "Apex",
-  "Prime",
-];
+export const AI_COMPANY_NAME_PREFIXES: string[] = [];
 
-export const AI_COMPANY_NAME_SUFFIXES = [
-  "Freight Lines",
-  "Logistics",
-  "Haulers",
-  "Transport Co.",
-  "Shipping Corp",
-  "Cargo Ltd.",
-  "Express",
-  "Trading Guild",
-  "Fleet Services",
-  "Star Carriers",
-];
+export const AI_COMPANY_NAME_SUFFIXES: string[] = [];
 
 export const AI_PERSONALITIES: (typeof AIPersonality)[keyof typeof AIPersonality][] =
   [
@@ -177,9 +157,11 @@ function createAICompanies(
   rng: SeededRNG,
   systems: StarSystem[],
   planets: Planet[],
+  seed: number,
 ): AICompany[] {
   const companies: AICompany[] = [];
   const usedNames = new Set<string>();
+  const compCtx = createContext({ seed: `sft-companies-${seed}` });
 
   // Allocate 1 AI per empire (excluding player's empire first)
   const availableEmpires = empireIds.filter((id) => id !== playerEmpireId);
@@ -193,32 +175,15 @@ function createAICompanies(
     }
   }
 
-  // Prefer a unique prefix per company — previously two rivals could share
-  // the prefix ("Prime Freight Lines" + "Prime Express") and read as the
-  // same company in compact feeds that only show the first word or two.
-  // Shuffle a pool so prefixes are consumed without replacement. Fall back
-  // to the old prefix+suffix dedupe only when the prefix pool is empty.
-  const prefixPool = [...AI_COMPANY_NAME_PREFIXES];
-  rng.shuffle(prefixPool);
-
   for (let i = 0; i < count; i++) {
     let name: string;
-    if (prefixPool.length > 0) {
-      const prefix = prefixPool.pop() as string;
-      const suffix = rng.pick(AI_COMPANY_NAME_SUFFIXES);
-      name = `${prefix} ${suffix}`;
-      // Extremely rare — same prefix+suffix pulled twice because prefix
-      // pool is disjoint — but guard anyway.
-      if (usedNames.has(name)) {
-        name = `${prefix} ${suffix} ${i + 1}`;
-      }
-    } else {
-      do {
-        const prefix = rng.pick(AI_COMPANY_NAME_PREFIXES);
-        const suffix = rng.pick(AI_COMPANY_NAME_SUFFIXES);
-        name = `${prefix} ${suffix}`;
-      } while (usedNames.has(name));
-    }
+    let nameAttempt = 0;
+    do {
+      name = megacorpName.generate(
+        compCtx.child(`company:${i}:${nameAttempt}`),
+      );
+      nameAttempt++;
+    } while (usedNames.has(name) && nameAttempt < 50);
     usedNames.add(name);
 
     const empireId = empireQueue[i];
@@ -337,6 +302,7 @@ export function createNewGame(
     rng,
     galaxyData.systems,
     galaxyData.planets,
+    seed,
   );
 
   // Player homeworld: first planet in the default starting system.
