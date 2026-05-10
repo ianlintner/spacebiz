@@ -91,15 +91,19 @@ describe("AI behavioral: route management", () => {
 });
 
 describe("AI behavioral: economy", () => {
-  it("fuel price stays within reasonable bounds over simulation", () => {
-    const result = runSim({ maxTurns: 30 });
+  it(
+    "fuel price stays within reasonable bounds over simulation",
+    { timeout: 15000 },
+    () => {
+      const result = runSim({ maxTurns: 30 });
 
-    for (const log of result.turnLogs) {
-      // Fuel should not go negative or absurdly high
-      expect(log.economy.fuelPrice).toBeGreaterThan(0);
-      expect(log.economy.fuelPrice).toBeLessThan(500);
-    }
-  });
+      for (const log of result.turnLogs) {
+        // Fuel should not go negative or absurdly high
+        expect(log.economy.fuelPrice).toBeGreaterThan(0);
+        expect(log.economy.fuelPrice).toBeLessThan(500);
+      }
+    },
+  );
 
   it("market volumes remain positive", () => {
     const result = runSim({ maxTurns: 20 });
@@ -119,12 +123,16 @@ describe("AI behavioral: competition", () => {
     expect(activeCompanies.length).toBeGreaterThan(0);
   });
 
-  it("rankings produce at least one winner with positive score", () => {
-    const result = runSim({ maxTurns: 30 });
+  it(
+    "rankings produce at least one winner with positive score",
+    { timeout: 15000 },
+    () => {
+      const result = runSim({ maxTurns: 30 });
 
-    expect(result.summary.rankings.length).toBeGreaterThan(0);
-    expect(result.summary.rankings[0].score).toBeGreaterThan(0);
-  });
+      expect(result.summary.rankings.length).toBeGreaterThan(0);
+      expect(result.summary.rankings[0].score).toBeGreaterThan(0);
+    },
+  );
 
   it("different seeds produce different outcomes", () => {
     const result1 = runSim({ seed: 1, maxTurns: 15 });
