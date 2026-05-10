@@ -11,13 +11,13 @@ export default defineConfig({
   // platforms; if a snapshot becomes flaky cross-OS, prefer narrowing the
   // capture (`clip:`) over re-introducing platform-specific baselines.
   snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}{ext}",
-  fullyParallel: false,
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: 1,
-  reporter: process.env.CI
-    ? [["list"], ["html", { open: "never" }]]
-    : [["list"]],
+  // 4 workers on CI (ubuntu-latest has 4 vCPUs); keep 1 locally to avoid
+  // interfering with other work while developing.
+  workers: process.env.CI ? 4 : 1,
+  reporter: process.env.CI ? [["list"], ["blob"]] : [["list"]],
   timeout: 60_000,
   expect: {
     timeout: 10_000,
