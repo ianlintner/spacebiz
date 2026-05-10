@@ -488,12 +488,17 @@ export function generateGalaxy(
   placeSpecials({ empires, systems, planets, rng });
 
   // 7) Generate hyperlanes (existing MST-first logic, unchanged).
-  const hyperlanes = generateHyperlanes(
+  const rawHyperlanes = generateHyperlanes(
     rng,
     systems,
     galaxyShape,
     hyperlaneDensity,
     mapBounds,
+  );
+  const hyperlanes = pruneEmpireBorderChokepoints(
+    rawHyperlanes,
+    systems,
+    HYPERLANE_DENSITY_CONFIGS[hyperlaneDensity].chokepoints,
   );
 
   return { sectors, empires, systems, planets, hyperlanes };
@@ -751,6 +756,71 @@ function generateHyperlanes(
   }
 
   return hyperlanes;
+}
+
+function pruneEmpireBorderChokepoints(
+  hyperlanes: Hyperlane[],
+  systems: StarSystem[],
+  maxPerPair: number,
+): Hyperlane[] {
+  const sysById = new Map(systems.map((s) => [s.id, s]));
+  const sysIdx = new Map(systems.map((s, i) => [s.id, i]));
+  const intraEmpire: Hyperlane[] = [];
+  const crossByPair = new Map<string, Hyperlane[]>();
+
+  for (const hl of hyperlanes) {
+    const empA = sysById.get(hl.systemA)?.empireId;
+    const empB = sysById.get(hl.systemB)?.empireId;
+    if (!empA || !empB || empA === empB) {
+      intraEmpire.push(hl);
+    } else {
+      const key = empA < empB ? `${empA}|${empB}` : `${empB}|${empA}`;
+      const arr = crossByPair.get(key) ?? [];
+      arr.push(hl);
+      crossByPair.set(key, arr);
+    }
+  }
+
+  const kept: Hyperlane[] = [];
+  const pruned: Hyperlane[] = [];
+  for (const [, lanes] of crossByPair) {
+    lanes.sort((a, b) => a.distance - b.distance);
+    kept.push(...lanes.slice(0, maxPerPair));
+    pruned.push(...lanes.slice(maxPerPair));
+  }
+
+  const parent = new Int32Array(systems.length);
+  for (let i = 0; i < systems.length; i++) parent[i] = i;
+  const ufFind = (x: number): number => {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  };
+  const ufUnion = (a: number, b: number): boolean => {
+    const ra = ufFind(a);
+    const rb = ufFind(b);
+    if (ra === rb) return false;
+    parent[ra] = rb;
+    return true;
+  };
+
+  for (const hl of [...intraEmpire, ...kept]) {
+    ufUnion(sysIdx.get(hl.systemA)!, sysIdx.get(hl.systemB)!);
+  }
+
+  pruned.sort((a, b) => a.distance - b.distance);
+  for (const hl of pruned) {
+    const a = sysIdx.get(hl.systemA)!;
+    const b = sysIdx.get(hl.systemB)!;
+    if (ufFind(a) !== ufFind(b)) {
+      kept.push(hl);
+      ufUnion(a, b);
+    }
+  }
+
+  return [...intraEmpire, ...kept];
 }
 
 function scoreEdgeForShape(

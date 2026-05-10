@@ -247,11 +247,11 @@ export const MAX_SHIPS_PER_ROUTE = 5;
 /** Density presets — fraction of Delaunay edges to keep */
 export const HYPERLANE_DENSITY_CONFIGS: Record<
   HyperlaneDensity,
-  { keepRatio: number; maxConn: number }
+  { keepRatio: number; maxConn: number; chokepoints: number }
 > = {
-  [HyperlaneDensity.Low]: { keepRatio: 0.45, maxConn: 3 },
-  [HyperlaneDensity.Medium]: { keepRatio: 0.6, maxConn: 4 },
-  [HyperlaneDensity.High]: { keepRatio: 0.75, maxConn: 5 },
+  [HyperlaneDensity.Low]: { keepRatio: 0.45, maxConn: 3, chokepoints: 1 },
+  [HyperlaneDensity.Medium]: { keepRatio: 0.6, maxConn: 4, chokepoints: 2 },
+  [HyperlaneDensity.High]: { keepRatio: 0.75, maxConn: 5, chokepoints: 3 },
 };
 
 /** Shape-specific edge bias when pruning (fraction favoring along-shape edges) */

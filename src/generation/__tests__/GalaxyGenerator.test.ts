@@ -222,4 +222,60 @@ describe("GalaxyGenerator", () => {
       expect(averageDegree).toBeLessThanOrEqual(3.8);
     }
   });
+
+  it("galaxy remains fully connected after chokepoint pruning", () => {
+    for (const seed of [1, 42, 100]) {
+      const galaxy = generateGalaxy(seed);
+      const adj = new Map<string, string[]>();
+      for (const hl of galaxy.hyperlanes) {
+        if (!adj.has(hl.systemA)) adj.set(hl.systemA, []);
+        if (!adj.has(hl.systemB)) adj.set(hl.systemB, []);
+        adj.get(hl.systemA)!.push(hl.systemB);
+        adj.get(hl.systemB)!.push(hl.systemA);
+      }
+      const start = galaxy.systems[0].id;
+      const visited = new Set([start]);
+      const queue = [start];
+      while (queue.length > 0) {
+        const cur = queue.shift()!;
+        for (const nb of adj.get(cur) ?? []) {
+          if (!visited.has(nb)) {
+            visited.add(nb);
+            queue.push(nb);
+          }
+        }
+      }
+      expect(visited.size).toBe(galaxy.systems.length);
+    }
+  });
+
+  it("empire border hyperlanes are limited to chokepoint max (Medium = 2), with connectivity repair", () => {
+    for (const seed of [1, 42, 100]) {
+      const galaxy = generateGalaxy(
+        seed,
+        "standard",
+        GalaxyShape.Spiral,
+        HyperlaneDensity.Medium,
+      );
+      const sysById = new Map(galaxy.systems.map((s) => [s.id, s]));
+      const crossCount = new Map<string, number>();
+      for (const hl of galaxy.hyperlanes) {
+        const empA = sysById.get(hl.systemA)!.empireId;
+        const empB = sysById.get(hl.systemB)!.empireId;
+        if (empA === empB) continue;
+        const key = empA < empB ? `${empA}|${empB}` : `${empB}|${empA}`;
+        crossCount.set(key, (crossCount.get(key) ?? 0) + 1);
+      }
+      // Most pairs must respect the chokepoint limit; a small number of pairs
+      // may have one extra lane restored by the connectivity repair pass.
+      const violators = [...crossCount.values()].filter((c) => c > 2);
+      // No pair should ever have more than maxPerPair + 1 lanes
+      for (const count of crossCount.values()) {
+        expect(count).toBeLessThanOrEqual(3);
+      }
+      // The vast majority of pairs must be at or under the chokepoint limit
+      const total = crossCount.size;
+      expect(violators.length).toBeLessThanOrEqual(Math.ceil(total * 0.1));
+    }
+  });
 });
