@@ -518,7 +518,7 @@ export class GalaxyView2D {
       sprite.setVisible(this.systemsVisible);
 
       const label = this.systemLabels.get(systemId);
-      if (label && this.systemLabelsVisible) {
+      if (label && this.systemLabelsVisible && this.systemsVisible) {
         // Float the label above the star halo. Offset shrinks with screenScale
         // so it stays anchored as the camera pulls back.
         const offset = displaySize * 0.55;
@@ -1091,6 +1091,9 @@ export class GalaxyView2D {
     if (!on) {
       for (const sprite of this.starSprites.values()) {
         sprite.setVisible(false);
+      }
+      for (const label of this.systemLabels.values()) {
+        label.setVisible(false);
       }
     }
   }

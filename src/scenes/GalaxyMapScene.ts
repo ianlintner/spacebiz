@@ -49,12 +49,10 @@ interface LayerToggleButton {
   label: Phaser.GameObjects.Text;
   hit: Phaser.GameObjects.Zone;
   width: number;
-  isOn: () => boolean;
-  setOn: (on: boolean) => void;
 }
 
 const VIZ_TOP_STRIP = 60;
-const VIZ_BOTTOM_STRIP = 60; // layer toggle row height
+const VIZ_BOTTOM_STRIP = 60; // company filter row height
 const TOGGLE_FILTER_WIDTH = 220;
 
 export class GalaxyMapScene extends Phaser.Scene {
@@ -777,8 +775,6 @@ export class GalaxyMapScene extends Phaser.Scene {
       label: filterText,
       hit: filterHit,
       width: filterWidth,
-      isOn: () => this.companyFilter !== null,
-      setOn: () => refreshFilter(),
     };
   }
 
