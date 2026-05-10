@@ -18,8 +18,9 @@ for (let i = 0; i < prompts.length; i++) {
   const { id, prompt } = prompts[i];
   const outPath = join(OUT_DIR, `${id}.png`);
   console.log(`Generating ${i + 1} of ${prompts.length}: ${id}…`);
+  const provider = process.env.PIXEL_ART_PROVIDER ?? "fal";
   execSync(
-    `python3 "${GENERATOR}" --prompt "${prompt}" --size 32 --transparent-bg --palette db16 --output "${outPath}"`,
+    `python3 "${GENERATOR}" --prompt "${prompt}" --size 32 --transparent-bg --palette db16 --provider ${provider} --output "${outPath}"`,
     { stdio: "inherit" },
   );
 }
