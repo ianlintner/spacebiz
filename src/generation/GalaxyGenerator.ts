@@ -257,6 +257,8 @@ export function generateGalaxy(
   const rng = new SeededRNG(seed);
   const nameGen = new NameGenerator(rng);
   const config = GAME_LENGTH_PRESETS[gamePreset];
+  // TODO: Migrate galaxy sizing (empireCount, systemCount, planetsPerSystem) to
+  // GALAXY_TIERS once the route scanner is optimised for larger system counts.
 
   const empireCount = config.empireCount;
   // Total system count derived from preset's per-empire range (midpoint).

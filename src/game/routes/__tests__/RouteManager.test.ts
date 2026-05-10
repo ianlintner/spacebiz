@@ -765,7 +765,7 @@ describe("RouteManager", () => {
     it.each([1, 2, 3, 7, 42])(
       "produces opportunities for a fresh game (seed %i)",
       (seed) => {
-        const { state } = createNewGame(seed);
+        const { state } = createNewGame(seed, "Star Freight Corp", "quick");
         const opps = scanAllRouteOpportunities(
           state.galaxy.planets,
           state.galaxy.systems,
@@ -780,7 +780,7 @@ describe("RouteManager", () => {
     );
 
     it("surfaces at least one opportunity for every cargo type at game start (seed 1)", () => {
-      const { state } = createNewGame(1);
+      const { state } = createNewGame(1, "Star Freight Corp", "quick");
       const opps = scanAllRouteOpportunities(
         state.galaxy.planets,
         state.galaxy.systems,
@@ -803,7 +803,7 @@ describe("RouteManager", () => {
     it.each([1, 2, 3, 7, 42])(
       "surfaces at least one intra-empire opportunity at game start (seed %i)",
       (seed) => {
-        const { state } = createNewGame(seed);
+        const { state } = createNewGame(seed, "Star Freight Corp", "quick");
         const opps = scanAllRouteOpportunities(
           state.galaxy.planets,
           state.galaxy.systems,

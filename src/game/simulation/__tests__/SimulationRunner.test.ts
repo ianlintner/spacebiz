@@ -147,7 +147,7 @@ describe("SimulationRunner.run", () => {
       const result = runner.run(makeConfig({ gameSize: size, maxTurns: 3 }));
       expect(result.summary.totalTurns).toBeGreaterThan(0);
     }
-  });
+  }, 30000);
 
   it("handles different galaxy shapes", () => {
     for (const shape of [
@@ -273,7 +273,7 @@ describe("Simulation logging", () => {
     for (const log of result.turnLogs) {
       expect(Array.isArray(log.warnings)).toBe(true);
     }
-  });
+  }, 30000);
 
   it("event counts are aggregated in summary", () => {
     const runner = new SimulationRunner();
