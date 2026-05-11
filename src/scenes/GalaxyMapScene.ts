@@ -18,6 +18,7 @@ import { mapLayerController } from "../game/map/MapLayerController.ts";
 import type { LayerId } from "../game/map/MapLayerRegistry.ts";
 import { generateEmpireFlags } from "@rogue-universe/shared";
 import { getAudioDirector } from "../audio/AudioDirector.ts";
+import { fillChamferedRect, strokeChamferedRect } from "@spacebiz/ui";
 import { isEmpireAccessible } from "../game/empire/EmpireAccessManager.ts";
 import {
   buildGalaxyRouteTrafficVisuals,
@@ -1155,9 +1156,9 @@ export class GalaxyMapScene extends Phaser.Scene {
 
     const bg = this.add.graphics();
     bg.fillStyle(theme.colors.panelBg, 0.92);
-    bg.fillRoundedRect(0, 0, cardW, cardH, 6);
+    fillChamferedRect(bg, 0, 0, cardW, cardH, theme.shape.container.chamfer);
     bg.lineStyle(1, theme.colors.panelBorder, 0.6);
-    bg.strokeRoundedRect(0, 0, cardW, cardH, 6);
+    strokeChamferedRect(bg, 0, 0, cardW, cardH, theme.shape.container.chamfer);
     container.add(bg);
 
     for (let i = 0; i < lines.length; i++) {
