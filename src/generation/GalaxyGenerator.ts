@@ -1,8 +1,8 @@
 import Delaunator from "delaunator";
 import { SeededRNG } from "../utils/SeededRNG.ts";
 import { NameGenerator } from "./NameGenerator.ts";
-import { createContext } from "@lexicon/core";
-import { factionName } from "@lexicon/scifi";
+import { createContext } from "@lexiconlang/core";
+import { factionName } from "@lexiconlang/scifi";
 import {
   PlanetType,
   EmpireDisposition,

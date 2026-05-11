@@ -1,6 +1,5 @@
 node_modules/
 dist/
-!packages/lexicon-*/dist/
 .env
 *.local
 .vite/

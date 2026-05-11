@@ -1,6 +1,6 @@
 import { SeededRNG } from "../utils/SeededRNG.ts";
-import { createContext } from "@lexicon/core";
-import { megacorpName } from "@lexicon/scifi";
+import { createContext } from "@lexiconlang/core";
+import { megacorpName } from "@lexiconlang/scifi";
 import { generateGalaxy } from "../generation/GalaxyGenerator.ts";
 import { initializeMarkets } from "../generation/MarketInitializer.ts";
 import { ShipClass, AIPersonality, GalaxyShape } from "../data/types.ts";

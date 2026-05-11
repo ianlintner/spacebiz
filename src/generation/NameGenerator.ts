@@ -1,6 +1,6 @@
-import { createContext } from "@lexicon/core";
-import type { Context } from "@lexicon/core";
-import { starName, planetName, factionName } from "@lexicon/scifi";
+import { createContext } from "@lexiconlang/core";
+import type { Context } from "@lexiconlang/core";
+import { starName, planetName, factionName } from "@lexiconlang/scifi";
 
 export class NameGenerator {
   private ctx: Context;

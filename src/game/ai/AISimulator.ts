@@ -16,8 +16,8 @@ import {
 import { calculateShipValue } from "../fleet/FleetManager.ts";
 import { ageFleet, calculateMaintenanceCosts } from "../fleet/FleetManager.ts";
 import { AI_PERSONALITIES } from "../NewGameSetup.ts";
-import { createContext } from "@lexicon/core";
-import { megacorpName } from "@lexicon/scifi";
+import { createContext } from "@lexiconlang/core";
+import { megacorpName } from "@lexiconlang/scifi";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 import { pickRandomPortrait } from "../../data/portraits.ts";
 import {

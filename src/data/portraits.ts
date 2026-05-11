@@ -6,8 +6,8 @@ import type {
   PortraitCategory,
 } from "./types.ts";
 import type { SeededRNG } from "../utils/SeededRNG.ts";
-import { createContext } from "@lexicon/core";
-import { humanoidName } from "@lexicon/scifi";
+import { createContext } from "@lexiconlang/core";
+import { humanoidName } from "@lexiconlang/scifi";
 
 export interface PortraitDefinition {
   id: string;
