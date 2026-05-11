@@ -9,6 +9,7 @@ import {
   getLayout,
   attachReflowHandler,
 } from "../ui/index.ts";
+import { applyClippingMask } from "@spacebiz/ui";
 import { gameStore } from "../data/GameStore.ts";
 import { createNewGame } from "../game/NewGameSetup.ts";
 import type { GameState, StarSystem, GalaxyShape } from "../data/types.ts";
@@ -69,6 +70,7 @@ export class GalaxySetupScene extends Phaser.Scene {
   private startingOptions: StarSystem[] = [];
   private currentState!: GameState;
   private portraitImage: Phaser.GameObjects.Image | null = null;
+  private portraitContainer: Phaser.GameObjects.Container | null = null;
   private portraitLabel: Label | null = null;
   private portraitMask: Phaser.GameObjects.Graphics | null = null;
   private portraitBorder!: Phaser.GameObjects.Arc;
@@ -94,6 +96,9 @@ export class GalaxySetupScene extends Phaser.Scene {
   private shapeDropdown!: Dropdown;
   private selectStartingLabel!: Label;
   private launchButton!: Button;
+  private tutorialCheckBox!: Phaser.GameObjects.Rectangle;
+  private tutorialCheckMark!: Label;
+  private tutorialCheckLabel!: Label;
 
   constructor() {
     super({ key: "GalaxySetupScene" });
@@ -138,10 +143,14 @@ export class GalaxySetupScene extends Phaser.Scene {
     });
 
     // ── CEO Portrait (large, circular) ──
+    this.portraitContainer = this.add.container(0, 0);
+
     // Start with placeholder; swap when first portrait loads
     this.portraitImage = this.add
       .image(0, 0, PORTRAIT_PLACEHOLDER_KEY)
       .setOrigin(0.5, 0.5);
+    this.portraitContainer.add(this.portraitImage);
+
     // Load CEO portrait (restored or first) on-demand and swap in
     const initialPortraitId = CEO_PORTRAITS[this.portraitIndex].id;
     portraitLoader
@@ -149,16 +158,22 @@ export class GalaxySetupScene extends Phaser.Scene {
       .then((key) => {
         if (this.portraitImage) {
           this.portraitImage.setTexture(key);
-          this.fitPortraitInCircle(this.portraitImage, this.portraitDiameter);
+          if (this.portraitDiameter > 0) {
+            this.portraitImage.setDisplaySize(
+              this.portraitDiameter,
+              this.portraitDiameter,
+            );
+          }
         }
       })
       .catch(() => {
         /* leave placeholder */
       });
 
-    this.portraitMask = this.add.graphics();
-    this.portraitMask.setVisible(false);
-    this.portraitImage.filters?.internal.addMask(this.portraitMask);
+    this.portraitMask = this.make.graphics({});
+    if (this.portraitContainer) {
+      applyClippingMask(this.portraitContainer, this.portraitMask);
+    }
 
     // Accent border ring
     this.portraitBorder = this.add
@@ -372,6 +387,41 @@ export class GalaxySetupScene extends Phaser.Scene {
       },
     });
 
+    // ── Tutorial skip checkbox ──
+    const tutorialDisabled = !!localStorage.getItem("sft-tutorial-disabled");
+    this.tutorialCheckBox = this.add
+      .rectangle(0, 0, 16, 16, 0x000000, 0)
+      .setStrokeStyle(1, theme.colors.textDim)
+      .setInteractive({ useHandCursor: true });
+    this.tutorialCheckMark = new Label(this, {
+      x: 0,
+      y: 0,
+      text: tutorialDisabled ? "✓" : "",
+      style: "caption",
+      color: theme.colors.accent,
+    });
+    this.tutorialCheckMark.setOrigin(0.5, 0.5);
+    this.tutorialCheckLabel = new Label(this, {
+      x: 0,
+      y: 0,
+      text: "Skip advisor tutorial",
+      style: "caption",
+      color: theme.colors.textDim,
+    });
+    this.tutorialCheckLabel.setOrigin(0, 0.5);
+    this.tutorialCheckLabel.setInteractive({ useHandCursor: true });
+    const toggleTutorial = (): void => {
+      const nowDisabled = !localStorage.getItem("sft-tutorial-disabled");
+      if (nowDisabled) {
+        localStorage.setItem("sft-tutorial-disabled", "1");
+      } else {
+        localStorage.removeItem("sft-tutorial-disabled");
+      }
+      this.tutorialCheckMark.setText(nowDisabled ? "✓" : "");
+    };
+    this.tutorialCheckBox.on("pointerup", toggleTutorial);
+    this.tutorialCheckLabel.on("pointerup", toggleTutorial);
+
     this.relayout();
     // Generate the initial galaxy state + starting-system cards. Layout
     // fields (configX/configW/cardsTopY/cardsBottomY) are populated by the
@@ -403,19 +453,20 @@ export class GalaxySetupScene extends Phaser.Scene {
     const portraitCenterX = panelX + pad + portraitSize / 2;
     const portraitCenterY = contentTop + portraitSize / 2;
 
+    if (this.portraitContainer) {
+      this.portraitContainer.setPosition(portraitCenterX, portraitCenterY);
+    }
+
     if (this.portraitImage) {
-      this.portraitImage.setPosition(portraitCenterX, portraitCenterY);
-      this.fitPortraitInCircle(this.portraitImage, portraitSize);
+      this.portraitImage.setPosition(0, 0);
+      this.portraitImage.setDisplaySize(portraitSize, portraitSize);
     }
 
     if (this.portraitMask) {
       this.portraitMask.clear();
       this.portraitMask.fillStyle(0xffffff);
-      this.portraitMask.fillCircle(
-        portraitCenterX,
-        portraitCenterY,
-        portraitSize / 2,
-      );
+      this.portraitMask.fillCircle(0, 0, portraitSize / 2);
+      this.portraitMask.setPosition(portraitCenterX, portraitCenterY);
     }
 
     this.portraitBorder.setPosition(portraitCenterX, portraitCenterY);
@@ -497,7 +548,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.configX = panelX;
     this.configW = panelW;
     this.cardsTopY = rowY + 28;
-    this.cardsBottomY = panelY + panelH - 76;
+    this.cardsBottomY = panelY + panelH - 100;
 
     // Rebuild starting-system cards at the new geometry.
     this.buildSystemCards();
@@ -506,9 +557,16 @@ export class GalaxySetupScene extends Phaser.Scene {
     const launchW = 220;
     this.launchButton.setPosition(
       panelX + (panelW - launchW) / 2,
-      panelY + panelH - 62,
+      panelY + panelH - 82,
     );
     this.launchButton.setSize(launchW, 44);
+
+    // ── Tutorial skip checkbox (below launch button with 10px gap) ──
+    const checkY = panelY + panelH - 82 + 44 + 10 + 8; // button top + button h + gap + half row h
+    const checkX = panelX + (panelW - launchW) / 2;
+    this.tutorialCheckBox.setPosition(checkX + 8, checkY);
+    this.tutorialCheckMark.setPosition(checkX + 8, checkY);
+    this.tutorialCheckLabel.setPosition(checkX + 22, checkY);
   }
 
   private regenerate(): void {
@@ -559,7 +617,10 @@ export class GalaxySetupScene extends Phaser.Scene {
       if (this.textures.exists(key)) {
         this.portraitImage.setTexture(key);
         if (this.portraitDiameter > 0) {
-          this.fitPortraitInCircle(this.portraitImage, this.portraitDiameter);
+          this.portraitImage.setDisplaySize(
+            this.portraitDiameter,
+            this.portraitDiameter,
+          );
         }
       } else {
         // Show placeholder while loading
@@ -574,8 +635,8 @@ export class GalaxySetupScene extends Phaser.Scene {
             ) {
               this.portraitImage.setTexture(loadedKey);
               if (this.portraitDiameter > 0) {
-                this.fitPortraitInCircle(
-                  this.portraitImage,
+                this.portraitImage.setDisplaySize(
+                  this.portraitDiameter,
                   this.portraitDiameter,
                 );
               }
@@ -586,17 +647,6 @@ export class GalaxySetupScene extends Phaser.Scene {
           });
       }
     }
-  }
-
-  private fitPortraitInCircle(
-    image: Phaser.GameObjects.Image,
-    diameter: number,
-  ): void {
-    const srcW = Math.max(1, image.width);
-    const srcH = Math.max(1, image.height);
-    // Cover fit for circular masks (fills the circle without distortion)
-    const scale = Math.max(diameter / srcW, diameter / srcH);
-    image.setDisplaySize(srcW * scale, srcH * scale);
   }
 
   private buildSystemCards(): void {
@@ -635,6 +685,7 @@ export class GalaxySetupScene extends Phaser.Scene {
         width: cardW,
         height: cardH,
         title: system.name,
+        titleFontSize: theme.fonts.body.size,
       });
       this.cardObjects.push(panel);
       this.systemCards.push(panel);

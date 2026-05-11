@@ -69,7 +69,7 @@ export class TutorialRunner {
     this.callbacks.navigateTo("RoutesScene");
     this.callbacks.showNamedHighlight("routesNav");
 
-    this.scene.time.delayedCall(2500, () => {
+    this.scene.time.delayedCall(1250, () => {
       this.callbacks.hideHighlight();
       this.rexDialogue({
         mood: "standby",
@@ -105,7 +105,7 @@ export class TutorialRunner {
     );
 
     if (opportunities.length === 0) {
-      this.scene.time.delayedCall(200, () => {
+      this.scene.time.delayedCall(100, () => {
         this.showFinalModal(
           "No routes are available yet — that can happen when all empires are still locked. Once diplomatic access opens up, come back here and tap any row to open your first route.",
         );
@@ -204,7 +204,7 @@ export class TutorialRunner {
         ? `${fleet.find((s) => s.id === shipId)?.name} is assigned and ready to haul.`
         : "Assign a ship from the Fleet screen when you're ready.";
 
-    this.scene.time.delayedCall(2200, () => {
+    this.scene.time.delayedCall(1100, () => {
       this.showFinalModal(
         `Route opened: ${opp.originName} → ${opp.destinationName} (${opp.bestCargoType}). ${shipNote} Hit the End Turn button to run the simulation — your ships will haul cargo and revenue will roll in!`,
       );

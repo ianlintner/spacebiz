@@ -12,7 +12,6 @@ import {
   portraitLoader,
   PORTRAIT_PLACEHOLDER_KEY,
 } from "../game/PortraitLoader.ts";
-import { setGalaxy3DDimmed } from "../scenes/galaxy2d/ActiveGalaxyView.ts";
 
 export interface CommunicationDialogue {
   speakerName: string;
@@ -37,11 +36,8 @@ export function openCommunicationModal(
   const layer = ui.openLayer({ key: "communication" });
   const theme = getTheme();
 
-  setGalaxy3DDimmed(true);
-  layer.onDestroy(() => setGalaxy3DDimmed(false));
-
   layer.createOverlay({
-    alpha: 0.88,
+    alpha: 0,
     color: theme.colors.modalOverlay,
     closeOnPointerUp: false,
     activationDelayMs: 300,
