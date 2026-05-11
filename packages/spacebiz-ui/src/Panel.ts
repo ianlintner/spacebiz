@@ -7,6 +7,7 @@ export interface PanelConfig {
   width: number;
   height: number;
   title?: string;
+  titleFontSize?: number;
   draggable?: boolean;
   showGlow?: boolean;
 }
@@ -95,12 +96,13 @@ export class Panel extends Phaser.GameObjects.Container {
         .setOrigin(0, 0)
         .setAlpha(0.7);
 
+      const titleFontSize = config.titleFontSize ?? theme.fonts.heading.size;
       const titleText = scene.add.text(
         theme.spacing.md,
         theme.spacing.sm,
         config.title,
         {
-          fontSize: `${theme.fonts.heading.size}px`,
+          fontSize: `${titleFontSize}px`,
           fontFamily: theme.fonts.heading.family,
           color: colorToString(theme.color.accent.primary),
           wordWrap: { width: config.width - theme.spacing.md * 3 },

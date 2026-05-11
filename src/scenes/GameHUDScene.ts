@@ -799,7 +799,8 @@ export class GameHUDScene extends Phaser.Scene {
       state.turn === 1 &&
       state.activeRoutes.length === 0 &&
       !state.adviser?.tutorialSkipped &&
-      !state.adviser?.tutorialComplete
+      !state.adviser?.tutorialComplete &&
+      !localStorage.getItem("sft-tutorial-disabled")
     ) {
       const runner = new TutorialRunner(this, this.sceneUi, {
         navigateTo: (sceneName) => this.switchContentScene(sceneName),

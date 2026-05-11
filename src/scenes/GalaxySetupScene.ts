@@ -9,6 +9,7 @@ import {
   getLayout,
   attachReflowHandler,
 } from "../ui/index.ts";
+import { applyClippingMask } from "@spacebiz/ui";
 import { gameStore } from "../data/GameStore.ts";
 import { createNewGame } from "../game/NewGameSetup.ts";
 import type { GameState, StarSystem, GalaxyShape } from "../data/types.ts";
@@ -94,6 +95,9 @@ export class GalaxySetupScene extends Phaser.Scene {
   private shapeDropdown!: Dropdown;
   private selectStartingLabel!: Label;
   private launchButton!: Button;
+  private tutorialCheckBox!: Phaser.GameObjects.Rectangle;
+  private tutorialCheckMark!: Label;
+  private tutorialCheckLabel!: Label;
 
   constructor() {
     super({ key: "GalaxySetupScene" });
@@ -158,7 +162,7 @@ export class GalaxySetupScene extends Phaser.Scene {
 
     this.portraitMask = this.add.graphics();
     this.portraitMask.setVisible(false);
-    this.portraitImage.filters?.internal.addMask(this.portraitMask);
+    applyClippingMask(this.portraitImage, this.portraitMask);
 
     // Accent border ring
     this.portraitBorder = this.add
@@ -372,6 +376,41 @@ export class GalaxySetupScene extends Phaser.Scene {
       },
     });
 
+    // ── Tutorial skip checkbox ──
+    const tutorialDisabled = !!localStorage.getItem("sft-tutorial-disabled");
+    this.tutorialCheckBox = this.add
+      .rectangle(0, 0, 16, 16, 0x000000, 0)
+      .setStrokeStyle(1, theme.colors.textDim)
+      .setInteractive({ useHandCursor: true });
+    this.tutorialCheckMark = new Label(this, {
+      x: 0,
+      y: 0,
+      text: tutorialDisabled ? "✓" : "",
+      style: "caption",
+      color: theme.colors.accent,
+    });
+    this.tutorialCheckMark.setOrigin(0.5, 0.5);
+    this.tutorialCheckLabel = new Label(this, {
+      x: 0,
+      y: 0,
+      text: "Skip advisor tutorial",
+      style: "caption",
+      color: theme.colors.textDim,
+    });
+    this.tutorialCheckLabel.setOrigin(0, 0.5);
+    this.tutorialCheckLabel.setInteractive({ useHandCursor: true });
+    const toggleTutorial = (): void => {
+      const nowDisabled = !localStorage.getItem("sft-tutorial-disabled");
+      if (nowDisabled) {
+        localStorage.setItem("sft-tutorial-disabled", "1");
+      } else {
+        localStorage.removeItem("sft-tutorial-disabled");
+      }
+      this.tutorialCheckMark.setText(nowDisabled ? "✓" : "");
+    };
+    this.tutorialCheckBox.on("pointerup", toggleTutorial);
+    this.tutorialCheckLabel.on("pointerup", toggleTutorial);
+
     this.relayout();
     // Generate the initial galaxy state + starting-system cards. Layout
     // fields (configX/configW/cardsTopY/cardsBottomY) are populated by the
@@ -497,7 +536,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.configX = panelX;
     this.configW = panelW;
     this.cardsTopY = rowY + 28;
-    this.cardsBottomY = panelY + panelH - 76;
+    this.cardsBottomY = panelY + panelH - 100;
 
     // Rebuild starting-system cards at the new geometry.
     this.buildSystemCards();
@@ -506,9 +545,16 @@ export class GalaxySetupScene extends Phaser.Scene {
     const launchW = 220;
     this.launchButton.setPosition(
       panelX + (panelW - launchW) / 2,
-      panelY + panelH - 62,
+      panelY + panelH - 82,
     );
     this.launchButton.setSize(launchW, 44);
+
+    // ── Tutorial skip checkbox (below launch button with 10px gap) ──
+    const checkY = panelY + panelH - 82 + 44 + 10 + 8; // button top + button h + gap + half row h
+    const checkX = panelX + (panelW - launchW) / 2;
+    this.tutorialCheckBox.setPosition(checkX + 8, checkY);
+    this.tutorialCheckMark.setPosition(checkX + 8, checkY);
+    this.tutorialCheckLabel.setPosition(checkX + 22, checkY);
   }
 
   private regenerate(): void {
@@ -635,6 +681,7 @@ export class GalaxySetupScene extends Phaser.Scene {
         width: cardW,
         height: cardH,
         title: system.name,
+        titleFontSize: theme.fonts.body.size,
       });
       this.cardObjects.push(panel);
       this.systemCards.push(panel);
