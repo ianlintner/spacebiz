@@ -18,6 +18,8 @@ import {
   createStarfield,
   getLayout,
   Slider,
+  chamferedRectPoints,
+  makeChamferedMaskShape,
 } from "@spacebiz/ui";
 import { attachReflowHandler } from "../ui/index.ts";
 import { PortraitPanel } from "@rogue-universe/shared";
@@ -58,8 +60,8 @@ export class FinanceScene extends Phaser.Scene {
   private tabGroup!: TabGroup;
   // CEO portrait overlay — raw Phaser GameObjects, no setSize(); rebuilt on resize.
   private ceoImg!: Phaser.GameObjects.Image;
-  private ceoMaskCircle!: Phaser.GameObjects.Arc;
-  private ceoBorderCircle!: Phaser.GameObjects.Arc;
+  private ceoMaskCircle!: Phaser.GameObjects.Polygon;
+  private ceoBorderCircle!: Phaser.GameObjects.Graphics;
   // Loans tab scroll frame + table — sized to mainContentWidth, rebuilt on resize.
   private loanTableFrame!: ScrollFrame;
   private loanTable!: DataTable;
@@ -167,7 +169,6 @@ export class FinanceScene extends Phaser.Scene {
     sidebarLeft: number,
     sidebarWidth: number,
     contentTop: number,
-    theme: ReturnType<typeof getTheme>,
   ): void {
     const state = gameStore.getState();
     const ceoPortraitKey = getPortraitTextureKey(state.ceoPortrait.portraitId);
@@ -190,30 +191,44 @@ export class FinanceScene extends Phaser.Scene {
       .setDepth(10);
     fitImageCover(this.ceoImg, pSize, pSize);
 
-    // Round mask (Phaser 4 Mask filter)
-    this.ceoMaskCircle = this.add
-      .circle(pX, pY, pSize / 2, 0xffffff)
-      .setVisible(false);
+    // Chamfered mask (Phaser 4 filter-based mask)
+    const c = getTheme().shape.portrait.chamfer;
+    this.ceoMaskCircle = makeChamferedMaskShape(
+      this,
+      pX - pSize / 2,
+      pY - pSize / 2,
+      pSize,
+      pSize,
+      c,
+      0xffffff,
+    );
     this.ceoImg.filters?.internal.addMask(this.ceoMaskCircle);
 
-    // Border
-    this.ceoBorderCircle = this.add
-      .circle(pX, pY, pSize / 2 + 1)
-      .setStrokeStyle(2, theme.colors.accent)
-      .setFillStyle(0x000000, 0)
-      .setDepth(11);
+    // Chamfered border ring (Graphics stroke)
+    const borderSize = pSize + 2;
+    const borderPts = chamferedRectPoints(0, 0, borderSize, borderSize, c + 1);
+    this.ceoBorderCircle = this.add.graphics();
+    this.ceoBorderCircle.lineStyle(1, getTheme().colors.accent, 0.8);
+    this.ceoBorderCircle.beginPath();
+    this.ceoBorderCircle.moveTo(borderPts[0], borderPts[1]);
+    for (let i = 2; i < borderPts.length; i += 2) {
+      this.ceoBorderCircle.lineTo(borderPts[i], borderPts[i + 1]);
+    }
+    this.ceoBorderCircle.closePath();
+    this.ceoBorderCircle.strokePath();
+    this.ceoBorderCircle.setPosition(pX - borderSize / 2, pY - borderSize / 2);
+    this.ceoBorderCircle.setDepth(11);
   }
 
   private relayout(): void {
     const L = getLayout();
-    const theme = getTheme();
 
     // Sidebar portrait panel.
     this.portrait.setPosition(L.sidebarLeft, L.contentTop);
     this.portrait.setSize(L.sidebarWidth, L.contentHeight);
 
     // CEO portrait overlay — destroy and rebuild at updated geometry.
-    this.buildCeoOverlay(L.sidebarLeft, L.sidebarWidth, L.contentTop, theme);
+    this.buildCeoOverlay(L.sidebarLeft, L.sidebarWidth, L.contentTop);
 
     // Main content panel.
     this.mainPanel.setPosition(L.mainContentLeft, L.contentTop);
