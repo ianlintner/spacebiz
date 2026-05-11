@@ -346,28 +346,6 @@ export class BootScene extends Phaser.Scene {
   private generateButtonTextures(theme: ThemeConfig): void {
     const size = 64;
     const { colors } = theme;
-    const r = 3; // corner radius in pixels on 64×64 canvas
-
-    const traceRounded = (
-      ctx: CanvasRenderingContext2D,
-      x: number,
-      y: number,
-      w: number,
-      h: number,
-      radius: number,
-    ) => {
-      ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + w - radius, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-      ctx.lineTo(x + w, y + h - radius);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-      ctx.lineTo(x + radius, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
-      ctx.closePath();
-    };
 
     const buttons: ReadonlyArray<[string, number]> = [
       ["btn-normal", colors.buttonBg],
@@ -381,11 +359,10 @@ export class BootScene extends Phaser.Scene {
       const isDisabled = key === "btn-disabled";
       const isPressed = key === "btn-pressed";
 
-      // Fill
+      // Fill (hard-square)
       const fillAlpha = isDisabled ? 0.75 : 0.95;
       ctx.fillStyle = this.rgba(baseColor, fillAlpha);
-      traceRounded(ctx, 0, 0, size, size, r);
-      ctx.fill();
+      ctx.fillRect(0, 0, size, size);
 
       // Top-edge highlight (subtle depth on non-pressed)
       if (!isPressed && !isDisabled) {
@@ -393,7 +370,7 @@ export class BootScene extends Phaser.Scene {
         ctx.fillRect(2, 1, size - 4, 1);
       }
 
-      // Border: panelBorder color, lightened toward accent on hover
+      // Border
       const borderBase = colors.panelBorder;
       const borderColor =
         key === "btn-hover"
@@ -402,8 +379,7 @@ export class BootScene extends Phaser.Scene {
       const borderAlpha = isDisabled ? 0.3 : isPressed ? 0.5 : 0.75;
       ctx.lineWidth = 1;
       ctx.strokeStyle = this.rgba(borderColor, borderAlpha);
-      traceRounded(ctx, 0.5, 0.5, size - 1, size - 1, r);
-      ctx.stroke();
+      ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
 
       // Bottom accent line (skip disabled)
       if (!isDisabled) {
