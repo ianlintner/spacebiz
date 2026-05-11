@@ -58,11 +58,11 @@
     "vitest": "^4.1.0"
   },
   "dependencies": {
-    "@lexicon/core": "file:../../projects/content-gen/packages/core",
-    "@lexicon/grammar": "file:../../projects/content-gen/packages/grammar",
-    "@lexicon/language": "file:../../projects/content-gen/packages/language",
-    "@lexicon/markov": "file:../../projects/content-gen/packages/markov",
-    "@lexicon/scifi": "file:../../projects/content-gen/packages/scifi",
+    "@lexicon/core": "file:packages/lexicon-core",
+    "@lexicon/grammar": "file:packages/lexicon-grammar",
+    "@lexicon/language": "file:packages/lexicon-language",
+    "@lexicon/markov": "file:packages/lexicon-markov",
+    "@lexicon/scifi": "file:packages/lexicon-scifi",
     "@types/three": "^0.184.0",
     "delaunator": "^5.1.0",
     "earcut": "^3.0.2",
@@ -70,12 +70,5 @@
     "phaser": "^4.0.0",
     "three": "^0.184.0",
     "tinyqueue": "^3.0.0"
-  },
-  "overrides": {
-    "@lexicon/core": "file:../../projects/content-gen/packages/core",
-    "@lexicon/grammar": "file:../../projects/content-gen/packages/grammar",
-    "@lexicon/language": "file:../../projects/content-gen/packages/language",
-    "@lexicon/markov": "file:../../projects/content-gen/packages/markov",
-    "@lexicon/scifi": "file:../../projects/content-gen/packages/scifi"
   }
 }

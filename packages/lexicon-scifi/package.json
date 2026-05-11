@@ -1,0 +1,26 @@
+{
+  "name": "@lexicon/scifi",
+  "version": "0.1.0",
+  "description": "Sci-fi genre content pack for content-gen — star systems, ships, species, megacorps",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "dependencies": {
+    "@lexicon/core": "file:../lexicon-core",
+    "@lexicon/grammar": "file:../lexicon-grammar",
+    "@lexicon/language": "file:../lexicon-language",
+    "@lexicon/markov": "file:../lexicon-markov"
+  }
+}
