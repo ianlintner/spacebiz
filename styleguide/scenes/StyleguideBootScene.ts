@@ -69,7 +69,8 @@ export class StyleguideBootScene extends Phaser.Scene {
 
   private generatePanelBg(theme: ThemeConfig): void {
     const size = 64;
-    const { glass, chamfer, panel, colors } = theme;
+    const { glass, shape, panel, colors } = theme;
+    const chamferSize = shape.container.chamfer;
     const { tex, ctx } = this.makeCanvas("panel-bg", size, size);
     const grad = ctx.createLinearGradient(0, 0, 0, size);
     grad.addColorStop(0, this.rgba(glass.topTint, glass.bgAlpha));
@@ -78,7 +79,7 @@ export class StyleguideBootScene extends Phaser.Scene {
     ctx.fillRect(0, 0, size, size);
     ctx.lineWidth = panel.borderWidth;
     ctx.strokeStyle = this.rgba(colors.panelBorder, 0.8);
-    this.traceChamferedRect(ctx, 1, 1, size - 2, size - 2, chamfer.size);
+    this.traceChamferedRect(ctx, 1, 1, size - 2, size - 2, chamferSize);
     ctx.stroke();
     const inset = panel.borderWidth + 1;
     ctx.lineWidth = 1;
@@ -89,7 +90,7 @@ export class StyleguideBootScene extends Phaser.Scene {
       inset,
       size - inset * 2,
       size - inset * 2,
-      Math.max(chamfer.size - inset, 1),
+      Math.max(chamferSize - inset, 1),
     );
     ctx.stroke();
     tex.refresh();
@@ -97,7 +98,8 @@ export class StyleguideBootScene extends Phaser.Scene {
 
   private generatePanelGlow(theme: ThemeConfig): void {
     const size = 72;
-    const { glow, chamfer, colors } = theme;
+    const { glow, shape, colors } = theme;
+    const chamferSize = shape.container.chamfer;
     const { tex, ctx } = this.makeCanvas("panel-glow", size, size);
     const layers = 3;
     for (let i = 0; i < layers; i++) {
@@ -111,7 +113,7 @@ export class StyleguideBootScene extends Phaser.Scene {
         offset,
         size - offset * 2,
         size - offset * 2,
-        chamfer.size + (layers - i),
+        chamferSize + (layers - i),
       );
       ctx.stroke();
     }
@@ -120,7 +122,8 @@ export class StyleguideBootScene extends Phaser.Scene {
 
   private generateButtonTextures(theme: ThemeConfig): void {
     const size = 64;
-    const { chamfer, panel, glass, colors } = theme;
+    const { shape, panel, glass, colors } = theme;
+    const chamferSize = shape.container.chamfer;
     const buttons: ReadonlyArray<[string, number]> = [
       ["btn-normal", colors.buttonBg],
       ["btn-hover", colors.buttonHover],
@@ -138,9 +141,9 @@ export class StyleguideBootScene extends Phaser.Scene {
       ctx.fillRect(0, 0, size, size);
       ctx.lineWidth = panel.borderWidth;
       ctx.strokeStyle = this.rgba(colors.panelBorder, 1);
-      this.traceChamferedRect(ctx, 1, 1, size - 2, size - 2, chamfer.size);
+      this.traceChamferedRect(ctx, 1, 1, size - 2, size - 2, chamferSize);
       ctx.stroke();
-      const c = chamfer.size;
+      const c = chamferSize;
       ctx.lineWidth = 1;
       ctx.strokeStyle = this.rgba(colors.accent, 0.4);
       ctx.beginPath();

@@ -27,7 +27,7 @@ describe("Theme", () => {
       expect(DEFAULT_THEME).toHaveProperty("button");
       expect(DEFAULT_THEME).toHaveProperty("glow");
       expect(DEFAULT_THEME).toHaveProperty("glass");
-      expect(DEFAULT_THEME).toHaveProperty("chamfer");
+      expect(DEFAULT_THEME).toHaveProperty("shape");
       expect(DEFAULT_THEME).toHaveProperty("ambient");
     });
 

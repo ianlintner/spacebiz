@@ -122,7 +122,6 @@ export interface ThemeConfig {
   };
   panel: {
     borderWidth: number;
-    cornerRadius: number;
     titleHeight: number;
   };
   button: {
@@ -144,9 +143,6 @@ export interface ThemeConfig {
     topTint: number;
     bottomTint: number;
     innerBorderAlpha: number;
-  };
-  chamfer: {
-    size: number;
   };
   shape: {
     container: {
@@ -203,7 +199,7 @@ const SHARED_TYPOGRAPHY = {
     value: { size: 18, family: "monospace" },
   },
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
-  panel: { borderWidth: 2, cornerRadius: 4, titleHeight: 36 },
+  panel: { borderWidth: 2, titleHeight: 36 },
   button: { height: 40, minWidth: 120, borderWidth: 1, fontSize: 13 },
   glow: {
     width: 6,
@@ -219,7 +215,6 @@ const SHARED_TYPOGRAPHY = {
     bottomTint: 0x181838,
     innerBorderAlpha: 0.3,
   },
-  chamfer: { size: 8 },
   shape: {
     container: { chamfer: 8, borderWidth: 2 },
     control: { chamfer: 0, borderWidth: 1 },
