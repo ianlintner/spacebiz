@@ -6,6 +6,8 @@ import type {
   PortraitCategory,
 } from "./types.ts";
 import type { SeededRNG } from "../utils/SeededRNG.ts";
+import { createContext } from "@lexiconlang/core";
+import { humanoidName } from "@lexiconlang/scifi";
 
 export interface PortraitDefinition {
   id: string;
@@ -1226,62 +1228,6 @@ export const CEO_CURATED_PORTRAITS: PortraitDefinition[] = [
 ] as PortraitDefinition[];
 
 /** Names used for auto-generated AI company CEOs and empire leaders. */
-const AI_CEO_FIRST_NAMES = [
-  "Aris",
-  "Bex",
-  "Calo",
-  "Drev",
-  "Eska",
-  "Fynn",
-  "Geth",
-  "Hana",
-  "Ixen",
-  "Jael",
-  "Koro",
-  "Lyth",
-  "Mira",
-  "Nyx",
-  "Orek",
-  "Pax",
-  "Qira",
-  "Rho",
-  "Solen",
-  "Tav",
-  "Ulri",
-  "Vex",
-  "Wren",
-  "Xael",
-  "Yara",
-  "Zane",
-];
-
-const AI_CEO_LAST_NAMES = [
-  "Strand",
-  "Voss",
-  "Thane",
-  "Kiral",
-  "Mora",
-  "Orin",
-  "Delph",
-  "Rask",
-  "Helm",
-  "Cade",
-  "Brynn",
-  "Lenn",
-  "Tarq",
-  "Shen",
-  "Noor",
-  "Valk",
-  "Korr",
-  "Dex",
-  "Pell",
-  "Wyn",
-  "Grath",
-  "Sola",
-  "Venn",
-  "Tak",
-  "Moor",
-];
 
 const EMPIRE_LEADER_TITLES = [
   "Emperor",
@@ -1343,13 +1289,14 @@ export function pickRandomPortrait(
 
 /** Generate a random CEO name. */
 export function generateCEOName(rng: SeededRNG): string {
-  return `${rng.pick(AI_CEO_FIRST_NAMES)} ${rng.pick(AI_CEO_LAST_NAMES)}`;
+  const sub = Math.floor(rng.next() * 0x100000000);
+  return humanoidName.generate(createContext({ seed: sub })).form;
 }
 
 /** Generate a random empire leader name with title. */
 export function generateLeaderName(rng: SeededRNG): string {
+  const sub = Math.floor(rng.next() * 0x100000000);
+  const name = humanoidName.generate(createContext({ seed: sub })).form;
   const title = rng.pick(EMPIRE_LEADER_TITLES);
-  const first = rng.pick(AI_CEO_FIRST_NAMES);
-  const last = rng.pick(AI_CEO_LAST_NAMES);
-  return `${title} ${first} ${last}`;
+  return `${title} ${name}`;
 }

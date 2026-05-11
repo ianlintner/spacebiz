@@ -1,4 +1,5 @@
 import "./site.css";
+import { installTestAPI } from "./testing/index.ts";
 import * as Phaser from "phaser";
 import { createGameConfig, calculateGameSize } from "./game/config.ts";
 import { updateLayout } from "@spacebiz/ui";
@@ -890,10 +891,7 @@ function mountGame(): void {
       ? "debug"
       : null;
   if (sftMode && activeGame) {
-    const game = activeGame;
-    void import("./testing/index.ts").then((m) =>
-      m.installTestAPI(game, sftMode),
-    );
+    installTestAPI(activeGame, sftMode);
   }
 
   // Track resizes via a ResizeObserver on the canvas parent. This is more

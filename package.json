@@ -58,6 +58,11 @@
     "vitest": "^4.1.0"
   },
   "dependencies": {
+    "@lexiconlang/core": "^0.1.0",
+    "@lexiconlang/grammar": "^0.1.0",
+    "@lexiconlang/language": "^0.2.0",
+    "@lexiconlang/markov": "^0.1.0",
+    "@lexiconlang/scifi": "^0.2.0",
     "@types/three": "^0.184.0",
     "delaunator": "^5.1.0",
     "earcut": "^3.0.2",

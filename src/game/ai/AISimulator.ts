@@ -15,11 +15,9 @@ import {
 } from "../../data/constants.ts";
 import { calculateShipValue } from "../fleet/FleetManager.ts";
 import { ageFleet, calculateMaintenanceCosts } from "../fleet/FleetManager.ts";
-import {
-  AI_COMPANY_NAME_PREFIXES,
-  AI_COMPANY_NAME_SUFFIXES,
-  AI_PERSONALITIES,
-} from "../NewGameSetup.ts";
+import { AI_PERSONALITIES } from "../NewGameSetup.ts";
+import { createContext } from "@lexiconlang/core";
+import { megacorpName } from "@lexiconlang/scifi";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 import { pickRandomPortrait } from "../../data/portraits.ts";
 import {
@@ -276,9 +274,10 @@ function replaceBankruptCompanies(
     let name: string;
     let attempts = 0;
     do {
-      const prefix = rng.pick(AI_COMPANY_NAME_PREFIXES);
-      const suffix = rng.pick(AI_COMPANY_NAME_SUFFIXES);
-      name = `${prefix} ${suffix}`;
+      const lexCtx = createContext({
+        seed: `replace-${company.id}-t${state.turn}-a${attempts}`,
+      });
+      name = megacorpName.generate(lexCtx.child("name"));
       attempts++;
     } while (existingNames.has(name) && attempts < 50);
     existingNames.add(name);

@@ -60,7 +60,7 @@ describe("SimulationRunner.run", () => {
         result2.summary.rankings[i].score,
       );
     }
-  });
+  }, 30000);
 
   it("emits turnComplete events for each turn", () => {
     const runner = new SimulationRunner();

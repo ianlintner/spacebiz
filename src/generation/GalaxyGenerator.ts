@@ -1,6 +1,8 @@
 import Delaunator from "delaunator";
 import { SeededRNG } from "../utils/SeededRNG.ts";
 import { NameGenerator } from "./NameGenerator.ts";
+import { createContext } from "@lexiconlang/core";
+import { factionName } from "@lexiconlang/scifi";
 import {
   PlanetType,
   EmpireDisposition,
@@ -138,34 +140,6 @@ const EMPIRE_COLORS = [
   0x88cc44, 0xcc8844, 0x4466cc, 0xcc44bb, 0x44cc66,
 ];
 
-const EMPIRE_NAME_PREFIXES = [
-  "Terran",
-  "Kral",
-  "Voss",
-  "Althari",
-  "Nexari",
-  "Dravian",
-  "Solari",
-  "Rekthan",
-  "Omathi",
-  "Zenthari",
-  "Pyrathi",
-  "Lorathi",
-];
-
-const EMPIRE_NAME_SUFFIXES = [
-  "Federation",
-  "Dominion",
-  "Republic",
-  "Collective",
-  "Sovereignty",
-  "Commonwealth",
-  "Hegemony",
-  "Alliance",
-  "Imperium",
-  "Confederacy",
-];
-
 const DISPOSITIONS: EmpireDispositionT[] = [
   EmpireDisposition.Friendly,
   EmpireDisposition.Neutral,
@@ -255,7 +229,8 @@ export function generateGalaxy(
   hyperlaneDensity: HyperlaneDensityT = HyperlaneDensity.Medium,
 ): GalaxyData {
   const rng = new SeededRNG(seed);
-  const nameGen = new NameGenerator(rng);
+  const nameGen = new NameGenerator(seed);
+  const empireCtx = createContext({ seed: `sft-empire-${seed}` });
   const config = GAME_LENGTH_PRESETS[gamePreset];
   // TODO: Migrate galaxy sizing (empireCount, systemCount, planetsPerSystem) to
   // GALAXY_TIERS once the route scanner is optimised for larger system counts.
@@ -307,7 +282,7 @@ export function generateGalaxy(
   // 2) Build empires (one sector per empire for backwards compatibility).
   const sectors: Sector[] = [];
   const empires: Empire[] = [];
-  const usedPrefixes = new Set<number>();
+  const usedEmpireNames = new Set<string>();
 
   for (let ei = 0; ei < empireCount; ei++) {
     const center = empireCentroids[ei];
@@ -320,16 +295,15 @@ export function generateGalaxy(
     };
     sectors.push(sector);
 
-    let prefixIdx: number;
+    let empireName: string;
+    let nameAttempt = 0;
     do {
-      prefixIdx = rng.nextInt(0, EMPIRE_NAME_PREFIXES.length - 1);
-    } while (
-      usedPrefixes.has(prefixIdx) &&
-      usedPrefixes.size < EMPIRE_NAME_PREFIXES.length
-    );
-    usedPrefixes.add(prefixIdx);
-    const suffixIdx = rng.nextInt(0, EMPIRE_NAME_SUFFIXES.length - 1);
-    const empireName = `${EMPIRE_NAME_PREFIXES[prefixIdx]} ${EMPIRE_NAME_SUFFIXES[suffixIdx]}`;
+      empireName = factionName.generate(
+        empireCtx.child(`empire:${ei}:${nameAttempt}`),
+      );
+      nameAttempt++;
+    } while (usedEmpireNames.has(empireName) && nameAttempt < 50);
+    usedEmpireNames.add(empireName);
 
     const disposition = DISPOSITIONS[ei % DISPOSITIONS.length];
     let tariffMin: number;

@@ -6,7 +6,7 @@ export const test = base.extend<{ sft: SftDriver }>({
     { page }: { page: Page },
     use: (d: SftDriver) => Promise<void>,
   ) => {
-    await page.goto("/");
+    await page.goto("/?debug=1");
     const driver = new SftDriver(page);
     await driver.ready();
     await use(driver);
