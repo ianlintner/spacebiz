@@ -9,7 +9,7 @@ import {
   getLayout,
   attachReflowHandler,
 } from "../ui/index.ts";
-import { applyClippingMask } from "@spacebiz/ui";
+import { applyClippingMask, chamferedRectPoints } from "@spacebiz/ui";
 import { gameStore } from "../data/GameStore.ts";
 import { createNewGame } from "../game/NewGameSetup.ts";
 import type { GameState, StarSystem, GalaxyShape } from "../data/types.ts";
@@ -463,9 +463,28 @@ export class GalaxySetupScene extends Phaser.Scene {
     }
 
     if (this.portraitMask) {
+      const c = getTheme().shape.portrait.chamfer;
+      const half = portraitSize / 2;
+      const pts = chamferedRectPoints(
+        -half,
+        -half,
+        portraitSize,
+        portraitSize,
+        c,
+      );
       this.portraitMask.clear();
       this.portraitMask.fillStyle(0xffffff);
-      this.portraitMask.fillCircle(0, 0, portraitSize / 2);
+      this.portraitMask.beginPath();
+      this.portraitMask.moveTo(pts[0], pts[1]);
+      this.portraitMask.lineTo(pts[2], pts[3]);
+      this.portraitMask.lineTo(pts[4], pts[5]);
+      this.portraitMask.lineTo(pts[6], pts[7]);
+      this.portraitMask.lineTo(pts[8], pts[9]);
+      this.portraitMask.lineTo(pts[10], pts[11]);
+      this.portraitMask.lineTo(pts[12], pts[13]);
+      this.portraitMask.lineTo(pts[14], pts[15]);
+      this.portraitMask.closePath();
+      this.portraitMask.fillPath();
       this.portraitMask.setPosition(portraitCenterX, portraitCenterY);
     }
 
