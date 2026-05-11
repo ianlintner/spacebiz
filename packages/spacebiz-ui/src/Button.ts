@@ -246,7 +246,6 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
     const theme = getTheme();
     const w = this.widthPx;
     const h = this.heightPx;
-    const r = 3;
 
     this.bg.clear();
     // Track dimensions on the Graphics object so tests and layout code can
@@ -290,7 +289,7 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
     }
 
     this.bg.fillStyle(fillColor, fillAlpha);
-    this.bg.fillRoundedRect(0, 0, w, h, r);
+    this.bg.fillRect(0, 0, w, h);
 
     // Subtle 1px top-edge highlight adds gentle depth
     if (state !== "pressed" && state !== "disabled") {
@@ -298,8 +297,12 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
       this.bg.fillRect(2, 1, w - 4, 1);
     }
 
-    this.bg.lineStyle(1, borderColor, borderAlpha);
-    this.bg.strokeRoundedRect(0.5, 0.5, w - 1, h - 1, r);
+    this.bg.lineStyle(
+      theme.shape.control.borderWidth,
+      borderColor,
+      borderAlpha,
+    );
+    this.bg.strokeRect(0.5, 0.5, w - 1, h - 1);
   }
 
   setDisabled(disabled: boolean): void {

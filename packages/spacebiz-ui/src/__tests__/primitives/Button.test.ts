@@ -155,3 +155,38 @@ describe("Button.destroy", () => {
     expect(hitZone.destroyed).toBe(true);
   });
 });
+
+describe("Button shape (chamfered redesign)", () => {
+  it("draws a hard-square bg, never a rounded rect", () => {
+    const calls: Array<string> = [];
+    const mockScene = createMockScene("ShapeTestScene");
+    const origGraphics = mockScene.add.graphics.bind(mockScene.add);
+    mockScene.add.graphics = (() => {
+      const g = origGraphics();
+      const wrap = (name: string) => {
+        const orig = (g as any)[name];
+        (g as any)[name] = (...args: unknown[]) => {
+          calls.push(name);
+          return orig?.(...args);
+        };
+      };
+      wrap("fillRect");
+      wrap("strokeRect");
+      wrap("fillRoundedRect");
+      wrap("strokeRoundedRect");
+      return g;
+    }) as never;
+
+    new Button(mockScene as never, {
+      x: 0,
+      y: 0,
+      label: "Test",
+      onClick: () => {},
+    });
+
+    expect(calls).toContain("fillRect");
+    expect(calls).toContain("strokeRect");
+    expect(calls).not.toContain("fillRoundedRect");
+    expect(calls).not.toContain("strokeRoundedRect");
+  });
+});
