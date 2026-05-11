@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   DEFAULT_THEME,
+  darkTheme,
+  lightTheme,
+  highContrastTheme,
   getTheme,
   setTheme,
   colorToString,
@@ -124,4 +127,28 @@ describe("Theme", () => {
       expect(result).toBe(0x010101);
     });
   });
+});
+
+describe("shape tokens", () => {
+  const variants = [
+    ["dark", darkTheme],
+    ["light", lightTheme],
+    ["high-contrast", highContrastTheme],
+  ] as const;
+
+  for (const [name, theme] of variants) {
+    describe(name, () => {
+      it("exposes container shape token", () => {
+        expect(theme.shape.container.chamfer).toBe(8);
+        expect(theme.shape.container.borderWidth).toBe(2);
+      });
+      it("exposes control shape token", () => {
+        expect(theme.shape.control.chamfer).toBe(0);
+        expect(theme.shape.control.borderWidth).toBe(1);
+      });
+      it("exposes portrait shape token", () => {
+        expect(theme.shape.portrait.chamfer).toBe(6);
+      });
+    });
+  }
 });

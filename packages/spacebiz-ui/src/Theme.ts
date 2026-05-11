@@ -148,6 +148,19 @@ export interface ThemeConfig {
   chamfer: {
     size: number;
   };
+  shape: {
+    container: {
+      chamfer: number;
+      borderWidth: number;
+    };
+    control: {
+      chamfer: number;
+      borderWidth: number;
+    };
+    portrait: {
+      chamfer: number;
+    };
+  };
   ambient: {
     /** Fastest twinkle cycle half-duration (ms). */
     starTwinkleDurationMin: number;
@@ -207,6 +220,11 @@ const SHARED_TYPOGRAPHY = {
     innerBorderAlpha: 0.3,
   },
   chamfer: { size: 8 },
+  shape: {
+    container: { chamfer: 8, borderWidth: 2 },
+    control: { chamfer: 0, borderWidth: 1 },
+    portrait: { chamfer: 6 },
+  },
   ambient: {
     starTwinkleDurationMin: 2000,
     starTwinkleDurationMax: 6000,
