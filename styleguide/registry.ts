@@ -1,4 +1,5 @@
 import { legacySections } from "./sections/legacy.ts";
+import { shapeAudit } from "./sections/shapeAudit.ts";
 import type { StyleguideSection } from "./sectionGrouping.ts";
 
 export type { StyleguideSection } from "./sectionGrouping.ts";
@@ -15,4 +16,5 @@ export { groupByCategory } from "./sectionGrouping.ts";
  */
 export const styleguideSections: ReadonlyArray<StyleguideSection> = [
   ...legacySections,
+  shapeAudit,
 ];
