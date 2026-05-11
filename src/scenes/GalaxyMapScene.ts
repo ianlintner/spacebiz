@@ -960,12 +960,9 @@ export class GalaxyMapScene extends Phaser.Scene {
     // LOD and toggle control there.
     this.view3D.updateSystemLabelLOD(camDist, halfExtent, this.showSystemNames);
 
-    // Grid-based collision avoidance: bucket each visible system's projected
-    // centre into a fixed cell. The first system in a cell shows its label,
-    // any later system in the same cell hides its label. O(n) per frame;
-    // accessible (player-relevant) systems win cell ownership over locked
-    // ones so the politically-important names aren't suppressed.
-    const cellSize = 56;
+    // Cell size scales with the galaxy so a 160-unit galaxy (~halfExtent 80)
+    // gets ~68-unit cells — wider buckets = fewer labels shown at full zoom-out.
+    const cellSize = Math.max(56, Math.floor(halfExtent * 0.85));
     const occupied = new Set<string>();
     type Project = { proj: ProjectedScreen; world: Vec3 } | null;
     const projects: Project[] = new Array(this.systemMarkers.length);
@@ -1000,6 +997,16 @@ export class GalaxyMapScene extends Phaser.Scene {
         }
       }
     }
+
+    // Apply grid-collision label decisions: collect suppressed system IDs and
+    // push them to the view so its per-frame render loop skips them.
+    const suppressed: string[] = [];
+    for (let i = 0; i < this.systemMarkers.length; i++) {
+      if (labelDecisions[i] === false) {
+        suppressed.push(this.systemMarkers[i].system.id);
+      }
+    }
+    this.view3D.setSuppressedSystemLabels(suppressed);
 
     for (let i = 0; i < this.systemMarkers.length; i++) {
       const m = this.systemMarkers[i];

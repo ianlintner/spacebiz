@@ -169,6 +169,8 @@ export class GalaxyView2D {
   private readonly systemEmpireIds = new Map<string, string>();
   private readonly empireColors = new Map<string, number>();
   private accessibleEmpireIds: Set<string> = new Set();
+  // Per-system label suppression set by the grid-collision pass in GalaxyMapScene.
+  private suppressedSystemLabels: Set<string> = new Set();
   private centroidX = 0;
   private centroidZ = 0;
   private galaxyHalfExtent = 80;
@@ -525,13 +527,13 @@ export class GalaxyView2D {
         label.setPosition(proj.x, proj.y - offset);
         // Scale label with perspective so it shrinks/grows with zoom.
         // Clamped so text never gets unreadably small or comically huge.
-        const labelScale = Phaser.Math.Clamp(screenScale * 0.45, 0.5, 1.4);
+        const labelScale = Phaser.Math.Clamp(screenScale * 0.45, 0.65, 1.4);
         label.setScale(labelScale);
         // Fade label alpha based on camera distance: full opacity when close,
         // fade out as camera pulls back.
         const camDist = this.camera.distance;
-        const fadeStart = this.galaxyHalfExtent * 1.8;
-        const fadeEnd = this.galaxyHalfExtent * 2.2;
+        const fadeStart = this.galaxyHalfExtent * 1.3;
+        const fadeEnd = this.galaxyHalfExtent * 1.6;
         let labelAlpha = 1;
         if (camDist > fadeStart) {
           labelAlpha = Math.max(
@@ -540,7 +542,7 @@ export class GalaxyView2D {
           );
         }
         label.setAlpha(labelAlpha * 0.85);
-        label.setVisible(true);
+        label.setVisible(!this.suppressedSystemLabels.has(systemId));
       } else if (label) {
         label.setVisible(false);
       }
@@ -567,12 +569,20 @@ export class GalaxyView2D {
         label.setVisible(false);
         continue;
       }
-      // Fade empire labels: visible at mid-zoom, fade out when very close.
+      // Fade empire labels: visible at mid-zoom, fade at close AND far zoom.
       const camDist = this.camera.distance;
       const closeZoomFadeEnd = this.galaxyHalfExtent * 0.8;
+      const farZoomFadeStart = this.galaxyHalfExtent * 1.2;
+      const farZoomFadeEnd = this.galaxyHalfExtent * 1.5;
       let empireAlpha = 1;
       if (camDist < closeZoomFadeEnd) {
         empireAlpha = Math.max(0, camDist / closeZoomFadeEnd);
+      } else if (camDist > farZoomFadeStart) {
+        empireAlpha = Math.max(
+          0,
+          1 -
+            (camDist - farZoomFadeStart) / (farZoomFadeEnd - farZoomFadeStart),
+        );
       }
       // Scale empire labels with perspective so they shrink at zoom-out.
       const empireScreenScale = perspectiveScale(
@@ -1060,6 +1070,15 @@ export class GalaxyView2D {
     this.ensureRingsGfx();
   }
 
+  /**
+   * Replace the set of system labels that the grid-collision pass has decided
+   * to suppress (too crowded). Called once per frame from GalaxyMapScene before
+   * view3D.update() so the render loop can skip showing suppressed labels.
+   */
+  setSuppressedSystemLabels(suppressed: Iterable<string>): void {
+    this.suppressedSystemLabels = new Set(suppressed);
+  }
+
   setEmpireLabelsVisible(v: boolean): void {
     if (this.destroyed) return;
     this.empireLabelsVisible = v;
@@ -1105,7 +1124,7 @@ export class GalaxyView2D {
   ): void {
     // Match GalaxyView3D behavior: hide names when zoomed out past 2.2× the
     // galaxy's half-extent (labels would crowd unreadable) or when toggled off.
-    this.systemLabelsVisible = namesOn && camDist < halfExtent * 2.2;
+    this.systemLabelsVisible = namesOn && camDist < halfExtent * 1.6;
     if (!this.systemLabelsVisible) {
       for (const label of this.systemLabels.values()) {
         label.setVisible(false);
