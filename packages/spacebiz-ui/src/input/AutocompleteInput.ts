@@ -66,7 +66,6 @@ export class AutocompleteInput<
   private rowTexts: Phaser.GameObjects.Text[] = [];
   private currentMatches: T[] = [];
   private highlightedIndex = 0;
-  private listVisible = false;
 
   constructor(scene: Phaser.Scene, config: AutocompleteInputConfig<T>) {
     super(scene, config.x, config.y);
@@ -115,27 +114,18 @@ export class AutocompleteInput<
   }
 
   /**
-   * Wire arrow-key + Esc handlers to the DOM input element. We can't
-   * inspect TextInput's private input directly, so we attach a capturing
-   * keydown listener at the document level and dispatch only when the
-   * focused element is *our* DOM input.
+   * Attach arrow-key and Esc handlers directly to the DOM `<input>` element
+   * owned by the inner TextInput. Because the listener lives on the specific
+   * element, it fires only when *this* input is focused — no document-level
+   * capturing or `activeElement` heuristics needed. This also means multiple
+   * AutocompleteInput instances on the same scene work correctly without any
+   * cross-talk.
    */
   private attachKeyboardListeners(): void {
-    if (typeof document === "undefined") return;
+    const el = this.textInput.getInputElement();
+    if (!el) return; // headless / test environment — no DOM available
 
     const handler = (ev: KeyboardEvent) => {
-      const active = document.activeElement;
-      // Only react when the focused element belongs to this textbox.
-      // TextInput appends a single <input> per instance to document.body,
-      // and there's no API for fetching it, so we check by-reference via
-      // the focused element being an HTMLInputElement whose previous
-      // sibling chain places it inside body and our component is mounted.
-      if (!(active instanceof HTMLInputElement)) return;
-      // Cheap proxy: only listen when this widget's list is visible OR
-      // the input value matches what we last saw.
-      if (!this.listVisible && active.value !== this.textInput.getValue()) {
-        return;
-      }
       if (ev.key === "ArrowDown") {
         if (this.currentMatches.length === 0) return;
         ev.preventDefault();
@@ -158,9 +148,9 @@ export class AutocompleteInput<
       }
     };
 
-    document.addEventListener("keydown", handler, true);
+    el.addEventListener("keydown", handler);
     this.once(Phaser.GameObjects.Events.DESTROY, () => {
-      document.removeEventListener("keydown", handler, true);
+      el.removeEventListener("keydown", handler);
     });
   }
 
@@ -252,7 +242,6 @@ export class AutocompleteInput<
     });
 
     this.listContainer.setVisible(true);
-    this.listVisible = true;
     this.highlight(this.highlightedIndex);
   }
 
@@ -273,7 +262,6 @@ export class AutocompleteInput<
   private hideList(): void {
     this.listBg.setVisible(false);
     this.listContainer.setVisible(false);
-    this.listVisible = false;
   }
 
   /** Programmatically clear the input. */

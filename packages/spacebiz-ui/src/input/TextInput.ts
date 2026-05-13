@@ -193,6 +193,16 @@ export class TextInput extends Phaser.GameObjects.Container {
     this.domInput?.focus();
   }
 
+  /**
+   * Returns the underlying DOM `<input>` element, or `null` in headless
+   * environments where no DOM is available. Consumers that need to attach
+   * keyboard listeners directly (e.g. AutocompleteInput) should use this
+   * rather than relying on a global document-level handler.
+   */
+  getInputElement(): HTMLInputElement | null {
+    return this.domInput;
+  }
+
   private teardownDom(): void {
     if (this.destroyed) return;
     this.destroyed = true;
