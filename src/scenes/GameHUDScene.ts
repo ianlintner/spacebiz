@@ -36,6 +36,14 @@ import { TUTORIAL_STEPS } from "../game/adviser/TutorialDefinitions.ts";
 import type { GameState } from "../data/types.ts";
 import { generateTickerFeed } from "../generation/news/tickerFeed.ts";
 import { generateOpeningFeed } from "../generation/news/openingFeed.ts";
+import { drainDialogueQueue } from "../game/dialogue/DialogueOrchestrator.ts";
+import { newsSpeakerFor } from "../game/dialogue/SpeakerDefinitions.ts";
+import {
+  openDialogueModal,
+  openSfxKeyForVariant,
+} from "../ui/DialogueModal.ts";
+import type { SfxKey } from "../audio/AudioDirector.ts";
+import type { DialogueRequest } from "../data/types.ts";
 import type { RoutesScene } from "./RoutesScene.ts";
 
 /**
@@ -212,7 +220,10 @@ export class GameHUDScene extends Phaser.Scene {
     "TurnReportScene",
   ];
 
-  private readonly overlaySceneKeys = ["PlanetDetailScene", "DilemmaScene"];
+  private readonly overlaySceneKeys = ["PlanetDetailScene"];
+
+  /** True while the post-Review dialogue queue is being drained; freezes nav. */
+  private drainingDialogues = false;
 
   private stateListener = (_data: unknown) => {
     const state = gameStore.getState();
@@ -242,7 +253,6 @@ export class GameHUDScene extends Phaser.Scene {
       }
     }
     this.updateHUD();
-    this.maybeShowDilemma();
     if (this.newsTicker) {
       this.newsTicker.updateItems(this.buildTickerItems(state));
     }
@@ -820,8 +830,8 @@ export class GameHUDScene extends Phaser.Scene {
     this.rebuildTabStrip();
     this.scene.bringToTop();
 
-    // If a dilemma was already pending (e.g. resumed save), surface it now.
-    this.maybeShowDilemma();
+    // If dialogues were already pending (e.g. resumed save), drain them now.
+    void this.maybeDrainDialogueQueue();
 
     // Scripted tutorial on fresh game start (turn starts at 1, no routes yet)
     if (
@@ -1002,10 +1012,7 @@ export class GameHUDScene extends Phaser.Scene {
         L.hudTickerHeight,
         {
           onItemClick: (item) => {
-            if (!this.scene.isActive("NewscasterScene")) {
-              this.scene.launch("NewscasterScene", { item });
-              this.scene.bringToTop("NewscasterScene");
-            }
+            this.openNewsDialogue(item);
           },
         },
       );
@@ -1033,17 +1040,75 @@ export class GameHUDScene extends Phaser.Scene {
     }
   }
 
-  private maybeShowDilemma(): void {
+  /**
+   * Kick off the post-Review dialogue drain if any are pending. Idempotent —
+   * re-entrant calls early-exit while a drain is already in progress.
+   * Resolves when the queue is empty.
+   */
+  private async maybeDrainDialogueQueue(): Promise<void> {
+    if (this.drainingDialogues) return;
     const state = gameStore.getState();
-    const hasDilemma = state.pendingChoiceEvents.some(
-      (e) => e.dilemmaId !== undefined,
-    );
-    if (hasDilemma && !this.scene.isActive("DilemmaScene")) {
-      this.scene.launch("DilemmaScene");
-      this.scene.bringToTop("DilemmaScene");
-    } else if (!hasDilemma) {
+    const hasDialogue =
+      (state.pendingDialogues?.length ?? 0) > 0 ||
+      state.pendingChoiceEvents.length > 0;
+    if (!hasDialogue) {
+      // No queued dialogues — fall through to legacy ambassador/rival flows.
       this.maybeShowAmbassadorGreeting();
+      return;
     }
+    this.drainingDialogues = true;
+    try {
+      await drainDialogueQueue(this, this.sceneUi, {
+        onDrainStart: () => this.setNavInteractive(false),
+        onDrainEnd: () => this.setNavInteractive(true),
+      });
+    } finally {
+      this.drainingDialogues = false;
+    }
+    // After dialogues drain, chain into the ambassador/rival queues so the
+    // start-of-turn social beats still play.
+    this.maybeShowAmbassadorGreeting();
+  }
+
+  /**
+   * Enable/disable HUD nav inputs while a required dialogue is on screen.
+   * Best-effort: scenes/widgets that don't expose disable hooks will just
+   * keep their listeners — the dialogue's modal scrim already blocks pointer
+   * events from reaching them.
+   */
+  private setNavInteractive(enabled: boolean): void {
+    if (this.tabStrip && "setInteractive" in this.tabStrip) {
+      const ts = this.tabStrip as unknown as {
+        setInteractive(v: boolean): void;
+      };
+      try {
+        ts.setInteractive(enabled);
+      } catch {
+        // Not all tab strip implementations expose this — ignore.
+      }
+    }
+    // Future: also dim/disable nav sidebar buttons here.
+  }
+
+  /**
+   * Player clicked a news ticker item — open the dialogue modal directly
+   * with the news variant. Not part of the post-Review queue; flavor only.
+   */
+  private openNewsDialogue(
+    item: import("../generation/news/types.ts").TickerItem,
+  ): void {
+    const audio = getAudioDirector();
+    const speaker = newsSpeakerFor(item.category, "standby");
+    const request: DialogueRequest = {
+      id: `news-${item.category}-${Date.now()}`,
+      variant: "news",
+      speaker,
+      introText: item.story ?? item.text,
+      priority: "flavor",
+    };
+    void openDialogueModal(this, this.sceneUi, request, {
+      onOpen: () => audio.sfx(openSfxKeyForVariant("news") as SfxKey),
+    });
   }
 
   private maybeShowAmbassadorGreeting(): void {
@@ -1053,7 +1118,7 @@ export class GameHUDScene extends Phaser.Scene {
       this.maybeShowRivalMessage();
       return;
     }
-    if (this.scene.isActive("DilemmaScene")) return;
+    if (this.drainingDialogues) return;
 
     const empireId = this.sessionAmbassadorQueue.shift()!;
     const state = gameStore.getState();
@@ -1096,7 +1161,7 @@ export class GameHUDScene extends Phaser.Scene {
   private maybeShowRivalMessage(): void {
     if (this.rivalMessageShowing) return;
     if (!this.sessionRivalMessageQueue.length) return;
-    if (this.scene.isActive("DilemmaScene")) return;
+    if (this.drainingDialogues) return;
     if (this.ambassadorGreetingShowing) return;
 
     const msg = this.sessionRivalMessageQueue.shift()!;
@@ -1340,18 +1405,17 @@ export class GameHUDScene extends Phaser.Scene {
     }
 
     // Stop overlay scenes that might be stacked on top.
-    // DilemmaScene is exempt if it has pending choices — it closes itself.
     for (const key of this.overlaySceneKeys) {
       if (this.scene.isActive(key)) {
-        if (key === "DilemmaScene") {
-          const hasPending = gameStore
-            .getState()
-            .pendingChoiceEvents.some((e) => e.dilemmaId !== undefined);
-          if (hasPending) continue;
-        }
         this.scene.stop(key);
       }
     }
+
+    // When leaving TurnReportScene → drain the post-Review dialogue queue
+    // before the player can interact with the new content scene.
+    const wasOnTurnReport = this.activeContentScene === "TurnReportScene";
+    const switchingAwayFromReport =
+      wasOnTurnReport && sceneName !== "TurnReportScene";
 
     for (const key of this.contentSceneKeys) {
       if (key === sceneName) continue;
@@ -1446,6 +1510,11 @@ export class GameHUDScene extends Phaser.Scene {
 
     this.activeContentScene = sceneName;
     this.activeContentData = data;
+
+    // After TurnReportScene closes, drain the dialogue queue (post-Review).
+    if (switchingAwayFromReport) {
+      void this.maybeDrainDialogueQueue();
+    }
 
     // Remember last-visited tab within its group, so re-clicking the group
     // icon (when no urgency fires) returns the player here.

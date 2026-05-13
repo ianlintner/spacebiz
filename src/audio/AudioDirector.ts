@@ -43,7 +43,40 @@ export type SfxKey =
   | "event_hazard"
   | "milestone_profit"
   | "sim_complete"
-  | "streak_increment";
+  | "streak_increment"
+  // Wave 2: file-based dialogue SFX (sourced from public/audio/dialogue/*.ogg)
+  // Falls back to synthesized `ui_confirm` if the file isn't loaded yet.
+  | "dialogue_open_standard"
+  | "dialogue_open_news"
+  | "dialogue_open_alert"
+  | "dialogue_open_memo"
+  | "result_positive_operational"
+  | "result_positive_diplomatic"
+  | "result_positive_financial"
+  | "result_positive_narrative"
+  | "result_negative_operational"
+  | "result_negative_diplomatic"
+  | "result_negative_financial"
+  | "result_negative_narrative";
+
+/**
+ * SfxKeys whose audio is loaded from a file (vs synthesized). Listed here so
+ * the dispatcher in `sfx()` can route them to the file path.
+ */
+export const FILE_SFX_KEYS: ReadonlySet<SfxKey> = new Set<SfxKey>([
+  "dialogue_open_standard",
+  "dialogue_open_news",
+  "dialogue_open_alert",
+  "dialogue_open_memo",
+  "result_positive_operational",
+  "result_positive_diplomatic",
+  "result_positive_financial",
+  "result_positive_narrative",
+  "result_negative_operational",
+  "result_negative_diplomatic",
+  "result_negative_financial",
+  "result_negative_narrative",
+]);
 
 interface SfxPatch {
   type: OscillatorType;
@@ -290,6 +323,13 @@ class AudioDirector {
 
   private musicBus: GainNode | null = null;
   private sfxBus: GainNode | null = null;
+  /** Cache of decoded file-based SFX buffers keyed by SfxKey. */
+  private readonly fileSfxBuffers = new Map<SfxKey, AudioBuffer>();
+  /** In-flight load promises for file-based SFX (dedup). */
+  private readonly fileSfxLoadPromises = new Map<
+    SfxKey,
+    Promise<AudioBuffer | null>
+  >();
   private padGain: GainNode | null = null;
   private pulseGain: GainNode | null = null;
   private textureGain: GainNode | null = null;
@@ -526,9 +566,29 @@ class AudioDirector {
       return;
     }
 
+    // File-based dialogue SFX route. If the buffer is loaded, play it; if
+    // the file is still loading (or 404'd), silently fall back to a
+    // synthesized confirmation so the UI doesn't feel mute.
+    if (FILE_SFX_KEYS.has(key)) {
+      const buffer = this.fileSfxBuffers.get(key);
+      if (buffer) {
+        this.playFileSfxBuffer(buffer);
+        return;
+      }
+      // Fallback to synthesized confirm.
+      const fallback = this.getSfxPatch("ui_confirm");
+      if (fallback) this.playSynthesizedPatch(fallback);
+      return;
+    }
+
     const patch = this.getSfxPatch(key);
     if (!patch) return;
+    this.playSynthesizedPatch(patch);
+  }
 
+  /** Internal — synthesize and play a single SfxPatch via the sfxBus. */
+  private playSynthesizedPatch(patch: SfxPatch): void {
+    if (!this.ctx || !this.sfxBus) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     const filter = this.ctx.createBiquadFilter();
@@ -556,6 +616,51 @@ class AudioDirector {
 
     osc.start(now);
     osc.stop(now + patch.attack + patch.decay + 0.02);
+  }
+
+  /** Internal — play a pre-decoded AudioBuffer through the sfxBus. */
+  private playFileSfxBuffer(buffer: AudioBuffer): void {
+    if (!this.ctx || !this.sfxBus) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(this.sfxBus);
+    src.start(this.ctx.currentTime);
+  }
+
+  /**
+   * Pre-load a file-based SFX. Fetches the audio file, decodes it via the
+   * AudioContext, and caches the AudioBuffer for instant playback. Safe to
+   * call multiple times — dedupes via the in-flight promise map. Resolves
+   * to null if the file 404s or fails to decode; callers should treat that
+   * as "fall back to synth" rather than as an error.
+   */
+  preloadFileSfx(key: SfxKey, url: string): Promise<AudioBuffer | null> {
+    if (this.fileSfxBuffers.has(key)) {
+      return Promise.resolve(this.fileSfxBuffers.get(key) ?? null);
+    }
+    const existing = this.fileSfxLoadPromises.get(key);
+    if (existing) return existing;
+
+    const promise = this.fetchAndDecode(url).then((buffer) => {
+      this.fileSfxLoadPromises.delete(key);
+      if (buffer) this.fileSfxBuffers.set(key, buffer);
+      return buffer;
+    });
+    this.fileSfxLoadPromises.set(key, promise);
+    return promise;
+  }
+
+  private async fetchAndDecode(url: string): Promise<AudioBuffer | null> {
+    this.ensureInitialized();
+    if (!this.ctx) return null;
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) return null;
+      const data = await resp.arrayBuffer();
+      return await this.ctx.decodeAudioData(data);
+    } catch {
+      return null;
+    }
   }
 
   /**

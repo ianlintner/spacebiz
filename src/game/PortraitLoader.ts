@@ -33,6 +33,9 @@ import {
   getAmbassadorTextureKey,
   getAmbassadorAssetUrls,
 } from "../data/ambassadorPortraits.ts";
+import { NEWSCASTER_DEFS } from "../generation/news/newscasters.ts";
+import type { NewscasterType } from "../generation/news/newscasters.ts";
+import type { SpeakerMood } from "../data/types.ts";
 
 /** Placeholder texture key used while a portrait is loading. */
 export const PORTRAIT_PLACEHOLDER_KEY = "panel-bg";
@@ -148,7 +151,45 @@ class PortraitLoader {
     ).then(() => undefined);
   }
 
-  // ── Generic Rex adviser helper (moods loaded at boot, but keep parity) ───
+  // ── Adviser portraits (multi-mood) ───────────────────────────────────────
+
+  /**
+   * Ensure an adviser portrait for a given mood is loaded. Resolves to the
+   * texture key `adviser-<archetypeId>-<mood>` (e.g. `adviser-voss-success`).
+   */
+  ensureAdviserPortrait(
+    scene: Phaser.Scene,
+    archetypeId: string,
+    mood: SpeakerMood,
+  ): Promise<string> {
+    const key = `adviser-${archetypeId}-${mood}`;
+    return this.ensureKey(scene, key, () => {
+      const urls: [string, string] = [
+        `portraits/adviser/${archetypeId}-${mood}.webp`,
+        `portraits/adviser/${archetypeId}-${mood}.png`,
+      ];
+      return Promise.resolve(urls);
+    });
+  }
+
+  // ── Newscaster portraits (single-mood) ───────────────────────────────────
+
+  /**
+   * Ensure a newscaster portrait is loaded. Resolves to the texture key in
+   * NEWSCASTER_DEFS[type].portraitKey (e.g. `newscaster-finance`).
+   */
+  ensureNewscasterPortrait(scene: Phaser.Scene, type: string): Promise<string> {
+    const def = NEWSCASTER_DEFS[type as NewscasterType];
+    const key = def?.portraitKey ?? `newscaster-${type}`;
+    const stem = key.replace("newscaster-", "");
+    return this.ensureKey(scene, key, () => {
+      const urls: [string, string] = [
+        `portraits/newscaster/${stem}.webp`,
+        `portraits/newscaster/${stem}.png`,
+      ];
+      return Promise.resolve(urls);
+    });
+  }
 
   /**
    * Check if a texture key is already loaded (instant, sync).

@@ -14,7 +14,7 @@ import {
 
 // ── Save Version ───────────────────────────────────────────────
 /** Increment when GameState shape changes in a save-incompatible way */
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 // ── Action Points ──────────────────────────────────────────────
 export const ACTION_POINTS_PER_TURN = 2;
