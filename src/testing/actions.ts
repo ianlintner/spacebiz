@@ -132,10 +132,11 @@ export interface SemanticActions {
   getSeed: () => number;
   /**
    * Push a deterministic dilemma into `pendingChoiceEvents` and switch to
-   * DilemmaScene. Used by e2e visual specs so the modal can be screenshotted
-   * without playing through enough turns to get the storyteller to fire one
-   * organically. `templateId` defaults to the first registered dilemma; pass
-   * one explicitly to capture a specific category. Returns the event id.
+   * GameHUDScene so the DialogueModal drains it. Used by e2e visual specs
+   * so the modal can be screenshotted without playing through enough turns
+   * to get the storyteller to fire one organically. `templateId` defaults
+   * to the first registered dilemma; pass one explicitly to capture a
+   * specific category. Returns the event id.
    */
   triggerDilemma: (templateId?: string) => string;
   /**
@@ -240,9 +241,13 @@ export function makeSemanticActions(): SemanticActions {
         pendingChoiceEvents: [...state.pendingChoiceEvents, event],
       });
 
+      // Switch into the HUD with the Galaxy Map content scene. GameHUDScene's
+      // create() detects the pending event and drains it through the unified
+      // DialogueModal (see DialogueOrchestrator).
       const mgr = game.scene;
       for (const s of mgr.getScenes(true)) mgr.stop(s.scene.key);
-      mgr.start("DilemmaScene");
+      mgr.start("GalaxyMapScene");
+      mgr.start("GameHUDScene", { restoreScene: "GalaxyMapScene" });
       logs.sft.info("triggerDilemma", {
         id: event.id,
         dilemmaId: event.dilemmaId,

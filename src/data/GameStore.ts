@@ -72,6 +72,7 @@ function createDefaultState(): GameState {
     },
     turnBrief: [],
     pendingChoiceEvents: [],
+    pendingDialogues: [],
     activeEventChains: [],
     universeRoster: {
       sportsTeams: [],

@@ -107,9 +107,63 @@ export interface DilemmaTemplate {
   eligibility?: "anyTime" | "midGame" | "lateGame";
   /**
    * Pre-generated banner illustration key, loaded by BootScene from
-   * `public/dilemmas/<imageKey>.png`. When undefined, the DilemmaScene
-   * renders a category-tinted placeholder instead.
+   * `public/dilemmas/<imageKey>.png`. Wave-2 DialogueModal uses this only
+   * for the `standard` variant; other variants ignore it.
    */
+  imageKey?: string;
+  /**
+   * Optional modal variant override. Defaults to
+   * `defaultVariantForCategory(category)` if absent.
+   */
+  variant?: DialogueVariant;
+  /**
+   * Optional adviser archetype id (e.g. "voss", "chen"). Defaults to the
+   * `DILEMMA_SPEAKER_BY_CATEGORY` mapping. See SpeakerDefinitions.ts.
+   */
+  speakerArchetype?: string;
+}
+
+// ── Dialogue system (Wave 2: unified modal + post-Review queue) ────────────
+
+export type DialogueVariant = "standard" | "news" | "alert" | "memo";
+export type DialogueStage = "intro" | "choice" | "result";
+export type OutcomeTier = "positive" | "neutral" | "negative";
+export type SpeakerMood = "standby" | "analyzing" | "alert" | "success";
+export type SpeakerPool = "adviser" | "newscaster";
+
+export interface SpeakerRef {
+  /** Archetype id within the pool (e.g. "rex", "chen", "anchor"). */
+  archetypeId: string;
+  pool: SpeakerPool;
+  mood: SpeakerMood;
+}
+
+export interface DialogueRequest {
+  id: string;
+  variant: DialogueVariant;
+  speaker: SpeakerRef;
+  /** Header line — speaker name fallback used if absent. */
+  title?: string;
+  introText: string;
+  /**
+   * When set, this is a player-choice dilemma. The orchestrator pops a
+   * follow-up result dialogue to the front of the queue once resolved.
+   */
+  choiceEventId?: string;
+  /** Authored on result items only. Rendered as the body text. */
+  resultText?: string;
+  /** Outcome tier for a result item — drives portrait mood + SFX. */
+  outcomeTier?: OutcomeTier;
+  /** Dilemma category — drives result-SFX category and accent. */
+  category?: DilemmaCategory;
+  /**
+   * `required` blocks the HUD until resolved. `flavor` is dismissible via
+   * Continue/ESC but still serial (FIFO, one at a time).
+   */
+  priority: "required" | "flavor";
+  /** Optional accent override; otherwise derived from variant + category. */
+  accentColor?: number;
+  /** Optional banner texture key (only used for variant === "standard"). */
   imageKey?: string;
 }
 
@@ -1403,6 +1457,16 @@ export interface GameState {
 
   /** Rival CEO communications queued to show at the start of the next turn. */
   pendingRivalMessages?: RivalMessage[];
+
+  /**
+   * Presentation-layer dialogue queue. Drained FIFO after TurnReportScene
+   * closes; freezes the HUD while non-empty. Sourced from dilemma resolution,
+   * news ticker clicks, ambassador greetings, and rival messages. The
+   * authoritative event data still lives in `pendingChoiceEvents` etc.; this
+   * queue tracks the UI presentation order only. Optional for save-compat
+   * with pre-Wave-2 saves; helpers default missing values to [].
+   */
+  pendingDialogues?: DialogueRequest[];
 
   /**
    * Per-planet population tick state (food deficit/surplus streaks). Lazily

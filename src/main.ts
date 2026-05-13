@@ -16,8 +16,6 @@ import { FinanceScene } from "./scenes/FinanceScene.ts";
 import { MarketScene } from "./scenes/MarketScene.ts";
 import { SimPlaybackScene } from "./scenes/SimPlaybackScene.ts";
 import { TurnReportScene } from "./scenes/TurnReportScene.ts";
-import { DilemmaScene } from "./scenes/DilemmaScene.ts";
-import { NewscasterScene } from "./scenes/NewscasterScene.ts";
 import { GameOverScene } from "./scenes/GameOverScene.ts";
 import { ContractsScene } from "./scenes/ContractsScene.ts";
 import { TechTreeScene } from "./scenes/TechTreeScene.ts";
@@ -850,8 +848,6 @@ function mountGame(): void {
     MarketScene,
     SimPlaybackScene,
     TurnReportScene,
-    DilemmaScene,
-    NewscasterScene,
     GameOverScene,
     SandboxSetupScene,
     AISandboxScene,

@@ -1,0 +1,55 @@
+{
+  "$comment": "Source-of-truth manifest for Wave-2 dialogue SFX. Used by scripts/generate-dialogue-sfx.mjs to (re)generate the 12 files via the Google Gemini API. Edit prompts here, then re-run the generator. Outputs land at public/audio/dialogue/<key>.ogg and are committed.",
+  "version": 1,
+  "style": "modern sci-fi UI sound effect, sub-1.5 seconds, mono, subtle but unambiguous valence. No vocal samples. No music.",
+  "sfx": [
+    {
+      "key": "dialogue_open_standard",
+      "prompt": "A soft synth chime — single neutral attention cue. Warm sine wave with a brief shimmer overtone. 0.6s total. Modern sci-fi UI open."
+    },
+    {
+      "key": "dialogue_open_news",
+      "prompt": "GNN news broadcast sting — three-tone descending arpeggio (E5-C5-A4) on a clean digital synth, slight reverb tail. 0.9s. Cable-news-channel ID feel."
+    },
+    {
+      "key": "dialogue_open_alert",
+      "prompt": "Muted klaxon pulse — two beats of a low-pass-filtered sine sweep around 440Hz, urgent but not piercing. 0.7s. Spaceship bridge alarm at low volume."
+    },
+    {
+      "key": "dialogue_open_memo",
+      "prompt": "Paper-rustle into a low confirm tone — brief brown-noise sweep transitioning into a soft 220Hz sine tap. 0.8s. Boardroom memo arriving on a terminal."
+    },
+    {
+      "key": "result_positive_operational",
+      "prompt": "Confident mechanical click followed by a rising perfect fifth on a clean synth (C5 to G5). 0.8s. Crisp engineering-bay 'task complete' cue."
+    },
+    {
+      "key": "result_positive_diplomatic",
+      "prompt": "Warm major chord swell (C major triad) on smooth synth pads with harmonious overtones, fades quickly. 1.0s. Treaty-signing flourish."
+    },
+    {
+      "key": "result_positive_financial",
+      "prompt": "Crisp digital coin shimmer ascending arpeggio — three quick bell hits ascending an octave. 0.6s. Stock-ticker green-tick."
+    },
+    {
+      "key": "result_positive_narrative",
+      "prompt": "Bright synth bell, single sustained note (A5) with slight chorus and short reverb. 0.9s. Story-beat resolved positively."
+    },
+    {
+      "key": "result_negative_operational",
+      "prompt": "Hydraulic hiss into a low thud — short white-noise burst with low-pass envelope, ending on a 60Hz sub-bass thump. 0.8s. Equipment failure cue."
+    },
+    {
+      "key": "result_negative_diplomatic",
+      "prompt": "Dissonant minor second chord (C and Db) on synth, brief tense flutter, no resolution. 0.7s. Diplomatic incident sting."
+    },
+    {
+      "key": "result_negative_financial",
+      "prompt": "Sharp downward glissando — single descending tone from C5 to A3 on a slightly distorted square wave. 0.6s. Market crash blip."
+    },
+    {
+      "key": "result_negative_narrative",
+      "prompt": "Hollow descending synth pad — two-note minor third dropping (F4 to D4) with airy reverb tail. 1.0s. Story-beat gone wrong."
+    }
+  ]
+}

@@ -47,7 +47,7 @@ export interface TickerItem {
   priority: number;
   /** Optional color override (e.g., stock up/down). RGB hex int, theme-token compatible. */
   color?: number;
-  /** Optional rendered story body (longer narrative shown in NewscasterScene). */
+  /** Optional rendered story body (longer narrative shown in the news-variant DialogueModal). */
   story?: string;
   /** Story depth hint used for UI badges (e.g., [DEVELOPING] for "long"). */
   storyDepth?: StoryDepth;
