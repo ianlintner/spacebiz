@@ -143,23 +143,136 @@ type RouteEndpoints = Pick<
   "originPlanetId" | "destinationPlanetId"
 >;
 
+// Identity cache of (planets, systems) → lookup maps. Rebuilt only when the
+// galaxy arrays are replaced (which only happens on new-game / load), so the
+// per-keystroke route builder preview and the per-filter route finder both
+// reuse the same maps for free.
+let cachedGalaxyPlanetsRef:
+  | Pick<GameState, "galaxy">["galaxy"]["planets"]
+  | null = null;
+let cachedGalaxySystemsRef:
+  | Pick<GameState, "galaxy">["galaxy"]["systems"]
+  | null = null;
+let cachedPlanetById: Map<string, Planet> | null = null;
+let cachedSystemById: Map<string, StarSystem> | null = null;
+
+function getGalaxyIndexes(galaxy: Pick<GameState, "galaxy">["galaxy"]): {
+  planetById: Map<string, Planet>;
+  systemById: Map<string, StarSystem>;
+} {
+  if (
+    cachedPlanetById !== null &&
+    cachedSystemById !== null &&
+    cachedGalaxyPlanetsRef === galaxy.planets &&
+    cachedGalaxySystemsRef === galaxy.systems
+  ) {
+    return {
+      planetById: cachedPlanetById,
+      systemById: cachedSystemById,
+    };
+  }
+  const planetById = new Map(galaxy.planets.map((p) => [p.id, p]));
+  const systemById = new Map(galaxy.systems.map((s) => [s.id, s]));
+  cachedGalaxyPlanetsRef = galaxy.planets;
+  cachedGalaxySystemsRef = galaxy.systems;
+  cachedPlanetById = planetById;
+  cachedSystemById = systemById;
+  return { planetById, systemById };
+}
+
+/** Test-only hook for the route-manager memoization caches. */
+export function _clearRouteManagerCaches(): void {
+  cachedGalaxyPlanetsRef = null;
+  cachedGalaxySystemsRef = null;
+  cachedPlanetById = null;
+  cachedSystemById = null;
+  cachedSlotUsage = null;
+  cachedSlotUsageRoutesRef = null;
+  cachedSlotUsagePlanetsRef = null;
+  cachedSlotUsageSystemsRef = null;
+}
+
 export function getRouteScope(
   route: RouteEndpoints,
   state: Pick<GameState, "galaxy">,
 ): RouteScope {
-  const { planets, systems } = state.galaxy;
-  const origin = planets.find((p) => p.id === route.originPlanetId);
-  const dest = planets.find((p) => p.id === route.destinationPlanetId);
+  const { planetById, systemById } = getGalaxyIndexes(state.galaxy);
+  const origin = planetById.get(route.originPlanetId);
+  const dest = planetById.get(route.destinationPlanetId);
   if (!origin || !dest) return RouteScopeEnum.Empire;
   if (origin.systemId === dest.systemId) return RouteScopeEnum.System;
 
-  const originSystem = systems.find((s) => s.id === origin.systemId);
-  const destSystem = systems.find((s) => s.id === dest.systemId);
+  const originSystem = systemById.get(origin.systemId);
+  const destSystem = systemById.get(dest.systemId);
   if (!originSystem || !destSystem) return RouteScopeEnum.Empire;
   if (originSystem.empireId !== destSystem.empireId) {
     return RouteScopeEnum.Galactic;
   }
   return RouteScopeEnum.Empire;
+}
+
+export interface RouteSlotUsage {
+  system: number;
+  empire: number;
+  galactic: number;
+}
+
+// Memoize by (activeRoutes, planets, systems) identity. The 3-tier slot UI
+// calls each scope getter independently, and each formerly scanned the full
+// activeRoutes array.
+let cachedSlotUsage: RouteSlotUsage | null = null;
+let cachedSlotUsageRoutesRef: GameState["activeRoutes"] | null = null;
+let cachedSlotUsagePlanetsRef:
+  | Pick<GameState, "galaxy">["galaxy"]["planets"]
+  | null = null;
+let cachedSlotUsageSystemsRef:
+  | Pick<GameState, "galaxy">["galaxy"]["systems"]
+  | null = null;
+
+/**
+ * Single-pass tally of slot consumption by scope. Replaces three separate
+ * `state.activeRoutes.filter(...)` scans when the UI needs all three counts
+ * (the 3-tier slot summary, the route finder header, etc.).
+ */
+export function getRouteSlotUsage(state: GameState): RouteSlotUsage {
+  if (
+    cachedSlotUsage !== null &&
+    cachedSlotUsageRoutesRef === state.activeRoutes &&
+    cachedSlotUsagePlanetsRef === state.galaxy.planets &&
+    cachedSlotUsageSystemsRef === state.galaxy.systems
+  ) {
+    return cachedSlotUsage;
+  }
+  const usage: RouteSlotUsage = { system: 0, empire: 0, galactic: 0 };
+  const { planetById, systemById } = getGalaxyIndexes(state.galaxy);
+  for (const route of state.activeRoutes) {
+    const origin = planetById.get(route.originPlanetId);
+    const dest = planetById.get(route.destinationPlanetId);
+    if (!origin || !dest) {
+      usage.empire++;
+      continue;
+    }
+    if (origin.systemId === dest.systemId) {
+      usage.system++;
+      continue;
+    }
+    const oSys = systemById.get(origin.systemId);
+    const dSys = systemById.get(dest.systemId);
+    if (!oSys || !dSys) {
+      usage.empire++;
+      continue;
+    }
+    if (oSys.empireId !== dSys.empireId) {
+      usage.galactic++;
+    } else {
+      usage.empire++;
+    }
+  }
+  cachedSlotUsage = usage;
+  cachedSlotUsageRoutesRef = state.activeRoutes;
+  cachedSlotUsagePlanetsRef = state.galaxy.planets;
+  cachedSlotUsageSystemsRef = state.galaxy.systems;
+  return usage;
 }
 
 /**
@@ -234,9 +347,7 @@ export function getAvailableGalacticRouteSlots(state: GameState): number {
 
 /** Empire-tier slots in use (intra-empire interstellar only). */
 export function getUsedRouteSlots(state: GameState): number {
-  return state.activeRoutes.filter(
-    (r) => getRouteScope(r, state) === RouteScopeEnum.Empire,
-  ).length;
+  return getRouteSlotUsage(state).empire;
 }
 
 /** Alias used by 3-tier UI — same value as `getUsedRouteSlots`. */
@@ -246,9 +357,7 @@ export function getUsedEmpireRouteSlots(state: GameState): number {
 
 /** System-tier slots in use. */
 export function getUsedLocalRouteSlots(state: GameState): number {
-  return state.activeRoutes.filter(
-    (r) => getRouteScope(r, state) === RouteScopeEnum.System,
-  ).length;
+  return getRouteSlotUsage(state).system;
 }
 
 /** Alias used by 3-tier UI — same value as `getUsedLocalRouteSlots`. */
@@ -258,9 +367,7 @@ export function getUsedSystemRouteSlots(state: GameState): number {
 
 /** Galactic-tier slots in use. */
 export function getUsedGalacticRouteSlots(state: GameState): number {
-  return state.activeRoutes.filter(
-    (r) => getRouteScope(r, state) === RouteScopeEnum.Galactic,
-  ).length;
+  return getRouteSlotUsage(state).galactic;
 }
 
 /** Free empire-tier slots remaining. */
@@ -881,24 +988,6 @@ export interface RouteOpportunity {
 }
 
 /**
- * Classify a (origin, dest) pair given galaxy data. Used by the opportunity
- * scanner where we have raw planet/system arrays in scope.
- */
-function classifyScope(
-  origin: Planet,
-  dest: Planet,
-  systems: StarSystem[],
-): RouteScope {
-  if (origin.systemId === dest.systemId) return RouteScopeEnum.System;
-  const oSys = systems.find((s) => s.id === origin.systemId);
-  const dSys = systems.find((s) => s.id === dest.systemId);
-  if (!oSys || !dSys) return RouteScopeEnum.Empire;
-  return oSys.empireId !== dSys.empireId
-    ? RouteScopeEnum.Galactic
-    : RouteScopeEnum.Empire;
-}
-
-/**
  * Scan all origin→destination pairs and rank by estimated profit.
  * For each pair, shows ALL profitable cargo types so players can discover
  * passenger routes, food runs, etc. alongside high-value luxury hauls.
@@ -917,11 +1006,26 @@ export function scanAllRouteOpportunities(
 ): RouteOpportunity[] {
   const cargoTypes = Object.values(CargoTypeEnum) as CargoType[];
   const availableShips = fleet.filter((s) => !s.assignedRouteId);
+  const shipCandidatesByCargo = buildShipCandidatesByCargo(
+    availableShips,
+    cash,
+  );
 
   // Pre-build set of active route keys for quick lookup
   const activeRouteKeys = new Set(
     activeRoutes.map((r) => `${r.originPlanetId}→${r.destinationPlanetId}`),
   );
+
+  // O(1) indexes for planet/system/empire lookups. The inner loop runs
+  // P×P×C times (~100k entries on a standard galaxy) and previously called
+  // getEmpireForPlanet 4× per pair, each doing two linear `find`s — that
+  // single hot spot dominated the route-finder refresh.
+  const systemById = new Map(systems.map((s) => [s.id, s]));
+  const planetEmpireById = new Map<string, string | null>();
+  for (const p of planets) {
+    const sys = systemById.get(p.systemId);
+    planetEmpireById.set(p.id, sys?.empireId ?? null);
+  }
 
   // Pre-compute reachable systems via hyperlanes if available
   const hyperlanes = state?.hyperlanes ?? [];
@@ -929,36 +1033,46 @@ export function scanAllRouteOpportunities(
   const hasHyperlanes = hyperlanes.length > 0;
   const reachableBySystem = new Map<string, Set<string>>();
   if (hasHyperlanes) {
-    const systemIds = new Set(systems.map((s) => s.id));
-    for (const sid of systemIds) {
-      if (!reachableBySystem.has(sid)) {
-        reachableBySystem.set(
-          sid,
-          getReachableSystems(sid, hyperlanes, borderPorts),
-        );
-      }
+    for (const sys of systems) {
+      if (reachableBySystem.has(sys.id)) continue;
+      // Reachability is symmetric, so getReachableSystems now returns a
+      // shared Set per connected component — the loop populates the map
+      // by component, not by system.
+      const reachable = getReachableSystems(sys.id, hyperlanes, borderPorts);
+      for (const member of reachable) reachableBySystem.set(member, reachable);
     }
   }
 
   const opportunities: RouteOpportunity[] = [];
 
   for (const origin of planets) {
+    const originEmpireId = planetEmpireById.get(origin.id) ?? null;
+
+    // Filter by empire access if state provided — origin gate hoisted out
+    // of the inner loop since it depends only on the origin.
+    if (state && originEmpireId && !isEmpireAccessible(originEmpireId, state)) {
+      continue;
+    }
+
+    const reachable = hasHyperlanes
+      ? (reachableBySystem.get(origin.systemId) ?? null)
+      : null;
+
     for (const dest of planets) {
       if (origin.id === dest.id) continue;
 
-      // Filter by empire access if state provided
-      if (state) {
-        const originEmpireId = getEmpireForPlanet(origin.id, systems, planets);
-        const destEmpireId = getEmpireForPlanet(dest.id, systems, planets);
-        if (originEmpireId && !isEmpireAccessible(originEmpireId, state))
-          continue;
-        if (destEmpireId && !isEmpireAccessible(destEmpireId, state)) continue;
-      }
+      const destEmpireId = planetEmpireById.get(dest.id) ?? null;
+      if (state && destEmpireId && !isEmpireAccessible(destEmpireId, state))
+        continue;
 
       // Filter by hyperlane reachability
-      if (hasHyperlanes && origin.systemId !== dest.systemId) {
-        const reachable = reachableBySystem.get(origin.systemId);
-        if (reachable && !reachable.has(dest.systemId)) continue;
+      if (
+        hasHyperlanes &&
+        origin.systemId !== dest.systemId &&
+        reachable &&
+        !reachable.has(dest.systemId)
+      ) {
+        continue;
       }
 
       const distance = calculateDistance(
@@ -974,39 +1088,44 @@ export function scanAllRouteOpportunities(
 
       const alreadyActive = activeRouteKeys.has(`${origin.id}→${dest.id}`);
       const licenseFee = calculateLicenseFee(distance, activeRoutes.length);
+      const crossEmpire =
+        originEmpireId !== null &&
+        destEmpireId !== null &&
+        originEmpireId !== destEmpireId;
+      const scope =
+        origin.systemId === dest.systemId
+          ? RouteScopeEnum.System
+          : crossEmpire
+            ? RouteScopeEnum.Galactic
+            : RouteScopeEnum.Empire;
 
       // Emit an entry for EACH profitable cargo type on this pair
       for (const cargoType of cargoTypes) {
         // Filter by trade policies and cargo locks if state provided
-        if (state) {
-          const oEid = getEmpireForPlanet(origin.id, systems, planets);
-          const dEid = getEmpireForPlanet(dest.id, systems, planets);
-          if (oEid && dEid && oEid !== dEid) {
-            if (
-              checkTradePolicyViolation(
-                oEid,
-                dEid,
-                cargoType,
-                state.empireTradePolicies,
-              )
+        if (state && crossEmpire && originEmpireId && destEmpireId) {
+          if (
+            checkTradePolicyViolation(
+              originEmpireId,
+              destEmpireId,
+              cargoType,
+              state.empireTradePolicies,
             )
-              continue;
-            if (
-              checkCargoLockViolation(
-                oEid,
-                dEid,
-                cargoType,
-                state.interEmpireCargoLocks,
-                state,
-              )
+          )
+            continue;
+          if (
+            checkCargoLockViolation(
+              originEmpireId,
+              destEmpireId,
+              cargoType,
+              state.interEmpireCargoLocks,
+              state,
             )
-              continue;
-          }
+          )
+            continue;
         }
 
         const destEntry = destMarket[cargoType];
         const price = calculatePrice(destEntry, cargoType);
-        const scope = classifyScope(origin, dest, systems);
         const scopeMult = getScopeDemandMultiplier(cargoType, scope);
         const distancePremium =
           scope === RouteScopeEnum.System
@@ -1015,15 +1134,14 @@ export function scanAllRouteOpportunities(
         const revenueMultiplier = scopeMult * (1 + distancePremium);
 
         // Pick the *most profitable* ship the player can field on this
-        // specific route (owned, or affordable to buy). Trying only the
-        // cheapest template made low-priced cargo (food/rawMat/hazmat)
-        // permanently unprofitable, since a $15k Tug with 20 capacity
-        // can't beat fuel costs at those prices — even when a
-        // RefrigeratedHauler is well within the player's budget.
-        const best = pickBestShipForRoute(
-          availableShips,
+        // specific route (owned, or affordable to buy). The candidate list
+        // is precomputed per cargo type once per scan — see
+        // buildShipCandidatesByCargo — so the inner loop is pure scoring,
+        // no allocation.
+        const candidates = shipCandidatesByCargo.get(cargoType) ?? [];
+        const best = pickBestFromCandidates(
+          candidates,
           cargoType,
-          cash,
           distance,
           price,
           market.fuelPrice,
@@ -1114,49 +1232,37 @@ interface RouteShipPick {
 }
 
 /**
- * For one (origin → destination, cargo type) pair, choose the ship that
- * yields the highest profit per turn — drawn from idle owned ships plus
- * any ship template the player can currently afford. Owned ships break
- * ties since they require no capital outlay.
- *
- * Returns null when neither owned nor affordable templates can carry the
- * cargo. The caller still needs to check `profit > 0` to decide whether
- * to surface the route.
+ * Build the static set of ship candidates that don't depend on the
+ * (origin, dest, cargo) tuple. Hoisting this out of `pickBestShipForRoute`
+ * matters because the scanner calls that function ~P×P×C times per pass
+ * — rebuilding the owned + affordable-template list every iteration was
+ * pure waste since the inputs (fleet, cash, SHIP_TEMPLATES) are fixed for
+ * the whole scan.
  */
-function pickBestShipForRoute(
+function buildShipCandidatesByCargo(
   availableShips: Ship[],
-  cargoType: CargoType,
   cash: number,
-  distance: number,
-  price: number,
-  fuelPrice: number,
-  revenueMultiplier: number,
-): RouteShipPick | null {
-  const isPassenger = cargoType === "passengers";
-  const candidates: ShipCandidate[] = [];
+): Map<CargoType, ShipCandidate[]> {
+  const byCargo = new Map<CargoType, ShipCandidate[]>();
+  const cargoTypes = Object.values(CargoTypeEnum) as CargoType[];
 
-  for (const ship of availableShips) {
-    const cap = isPassenger ? ship.passengerCapacity : ship.cargoCapacity;
-    if (cap <= 0) continue;
-    candidates.push({
-      name: ship.name,
-      class: ship.class,
-      cargoCapacity: ship.cargoCapacity,
-      passengerCapacity: ship.passengerCapacity,
-      speed: ship.speed,
-      fuelEfficiency: ship.fuelEfficiency,
-      source: "owned",
-      purchaseCost: 0,
-    });
-  }
+  const ownedTemplates: ShipCandidate[] = availableShips.map((ship) => ({
+    name: ship.name,
+    class: ship.class,
+    cargoCapacity: ship.cargoCapacity,
+    passengerCapacity: ship.passengerCapacity,
+    speed: ship.speed,
+    fuelEfficiency: ship.fuelEfficiency,
+    source: "owned",
+    purchaseCost: 0,
+  }));
 
   const shipClasses = Object.keys(SHIP_TEMPLATES) as ShipClass[];
+  const affordableTemplates: ShipCandidate[] = [];
   for (const sc of shipClasses) {
     const t = SHIP_TEMPLATES[sc];
-    const cap = isPassenger ? t.passengerCapacity : t.cargoCapacity;
-    if (cap <= 0) continue;
     if (t.purchaseCost > cash) continue;
-    candidates.push({
+    affordableTemplates.push({
       name: t.name,
       class: t.class,
       cargoCapacity: t.cargoCapacity,
@@ -1168,6 +1274,36 @@ function pickBestShipForRoute(
     });
   }
 
+  for (const cargo of cargoTypes) {
+    const isPassenger = cargo === "passengers";
+    const list: ShipCandidate[] = [];
+    for (const c of ownedTemplates) {
+      if ((isPassenger ? c.passengerCapacity : c.cargoCapacity) > 0)
+        list.push(c);
+    }
+    for (const c of affordableTemplates) {
+      if ((isPassenger ? c.passengerCapacity : c.cargoCapacity) > 0)
+        list.push(c);
+    }
+    byCargo.set(cargo, list);
+  }
+  return byCargo;
+}
+
+/**
+ * Score a precomputed candidate set against a specific (distance, price,
+ * fuelPrice, revenueMultiplier). Inner loop only — no allocation.
+ */
+function pickBestFromCandidates(
+  candidates: ShipCandidate[],
+  cargoType: CargoType,
+  distance: number,
+  price: number,
+  fuelPrice: number,
+  revenueMultiplier: number,
+): RouteShipPick | null {
+  if (candidates.length === 0) return null;
+  const isPassenger = cargoType === "passengers";
   let best: RouteShipPick | null = null;
   for (const c of candidates) {
     const cap = isPassenger ? c.passengerCapacity : c.cargoCapacity;
@@ -1178,7 +1314,6 @@ function pickBestShipForRoute(
     const fuelCost =
       Math.round(totalDist * c.fuelEfficiency * fuelPrice * 100) / 100;
     const profit = revenue - fuelCost;
-
     const beats =
       best === null ||
       profit > best.profit ||
@@ -1189,6 +1324,5 @@ function pickBestShipForRoute(
       best = { candidate: c, trips, revenue, fuelCost, profit };
     }
   }
-
   return best;
 }

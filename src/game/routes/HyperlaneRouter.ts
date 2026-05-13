@@ -7,33 +7,154 @@ import type {
   Planet,
 } from "../../data/types.ts";
 
-/**
- * Build adjacency list from hyperlanes, excluding edges blocked by closed border ports.
- */
+type Adjacency = Map<string, Array<{ systemId: string; hyperlane: Hyperlane }>>;
+
+// Identity cache: GameStore is immutable (spread-replaced + frozen in dev),
+// so reference equality on the input arrays is a safe invalidator. This
+// matters because findPath / getReachableSystems are called in tight loops
+// (scanAllRouteOpportunities, route builder previews, traffic visuals) and
+// rebuilding the adjacency from scratch every call was the dominant cost.
+let cachedAdj: Adjacency | null = null;
+let cachedHyperlanesRef: Hyperlane[] | null = null;
+let cachedBorderPortsRef: BorderPort[] | null = null;
+
+let cachedComponents: Map<string, Set<string>> | null = null;
+let cachedComponentsAdj: Adjacency | null = null;
+
 function buildAdjacency(
   hyperlanes: Hyperlane[],
   borderPorts: BorderPort[],
-): Map<string, Array<{ systemId: string; hyperlane: Hyperlane }>> {
+): Adjacency {
   const closedHyperlaneIds = new Set<string>();
   for (const bp of borderPorts) {
     if (bp.status === "closed") closedHyperlaneIds.add(bp.hyperlaneId);
   }
 
-  const adj = new Map<
-    string,
-    Array<{ systemId: string; hyperlane: Hyperlane }>
-  >();
+  const adj: Adjacency = new Map();
 
   for (const hl of hyperlanes) {
     if (closedHyperlaneIds.has(hl.id)) continue;
 
-    if (!adj.has(hl.systemA)) adj.set(hl.systemA, []);
-    if (!adj.has(hl.systemB)) adj.set(hl.systemB, []);
-    adj.get(hl.systemA)!.push({ systemId: hl.systemB, hyperlane: hl });
-    adj.get(hl.systemB)!.push({ systemId: hl.systemA, hyperlane: hl });
+    let a = adj.get(hl.systemA);
+    if (!a) {
+      a = [];
+      adj.set(hl.systemA, a);
+    }
+    let b = adj.get(hl.systemB);
+    if (!b) {
+      b = [];
+      adj.set(hl.systemB, b);
+    }
+    a.push({ systemId: hl.systemB, hyperlane: hl });
+    b.push({ systemId: hl.systemA, hyperlane: hl });
   }
 
   return adj;
+}
+
+function getAdjacency(
+  hyperlanes: Hyperlane[],
+  borderPorts: BorderPort[],
+): Adjacency {
+  if (
+    cachedAdj !== null &&
+    cachedHyperlanesRef === hyperlanes &&
+    cachedBorderPortsRef === borderPorts
+  ) {
+    return cachedAdj;
+  }
+  cachedAdj = buildAdjacency(hyperlanes, borderPorts);
+  cachedHyperlanesRef = hyperlanes;
+  cachedBorderPortsRef = borderPorts;
+  // Components are derived from this adjacency, so invalidate them too.
+  cachedComponents = null;
+  cachedComponentsAdj = null;
+  return cachedAdj;
+}
+
+// Single-source distance cache, keyed by adjacency identity then by source
+// system. Built lazily on first request. The route-finder pair scan is the
+// motivating case: for each origin system it asks the distance to every
+// other system, so doing one Dijkstra per origin instead of P×P pathfinds
+// turns 57k findPath calls into 240.
+let cachedDistFromAdj: Adjacency | null = null;
+let cachedDistFrom: Map<string, Map<string, number>> | null = null;
+
+function getSingleSourceDistances(
+  fromSystemId: string,
+  hyperlanes: Hyperlane[],
+  borderPorts: BorderPort[],
+): Map<string, number> {
+  const adj = getAdjacency(hyperlanes, borderPorts);
+  if (cachedDistFromAdj !== adj) {
+    cachedDistFromAdj = adj;
+    cachedDistFrom = new Map();
+  }
+  const store = cachedDistFrom!;
+  const hit = store.get(fromSystemId);
+  if (hit) return hit;
+
+  const dist = new Map<string, number>();
+  dist.set(fromSystemId, 0);
+  const queue = new TinyQueue<{ id: string; d: number }>(
+    [{ id: fromSystemId, d: 0 }],
+    (a, b) => a.d - b.d,
+  );
+  const visited = new Set<string>();
+  while (queue.length > 0) {
+    const current = queue.pop()!;
+    if (visited.has(current.id)) continue;
+    visited.add(current.id);
+    const neighbors = adj.get(current.id);
+    if (!neighbors) continue;
+    for (const n of neighbors) {
+      if (visited.has(n.systemId)) continue;
+      const newDist = current.d + n.hyperlane.distance;
+      const oldDist = dist.get(n.systemId);
+      if (oldDist === undefined || newDist < oldDist) {
+        dist.set(n.systemId, newDist);
+        queue.push({ id: n.systemId, d: newDist });
+      }
+    }
+  }
+  store.set(fromSystemId, dist);
+  return dist;
+}
+
+/**
+ * Distance-only fast path. When the caller doesn't need the segment list
+ * (just the number), this avoids the per-pair Dijkstra by computing
+ * single-source distances once per origin and reusing them across all
+ * destinations. Returns -1 when unreachable.
+ */
+export function getHyperlaneDistance(
+  fromSystemId: string,
+  toSystemId: string,
+  hyperlanes: Hyperlane[],
+  borderPorts: BorderPort[],
+): number {
+  if (fromSystemId === toSystemId) return 0;
+  const distances = getSingleSourceDistances(
+    fromSystemId,
+    hyperlanes,
+    borderPorts,
+  );
+  return distances.get(toSystemId) ?? -1;
+}
+
+/**
+ * Test-only hook to drop all module-level caches. Production state is
+ * immutable so the identity check handles invalidation, but tests that
+ * reuse array references across cases need a manual reset.
+ */
+export function _clearHyperlaneRouterCaches(): void {
+  cachedAdj = null;
+  cachedHyperlanesRef = null;
+  cachedBorderPortsRef = null;
+  cachedComponents = null;
+  cachedComponentsAdj = null;
+  cachedDistFromAdj = null;
+  cachedDistFrom = null;
 }
 
 /**
@@ -51,7 +172,7 @@ export function findPath(
     return { segments: [], totalDistance: 0, systems: [fromSystemId] };
   }
 
-  const adj = buildAdjacency(hyperlanes, borderPorts);
+  const adj = getAdjacency(hyperlanes, borderPorts);
 
   // Dijkstra
   const dist = new Map<string, number>();
@@ -127,24 +248,56 @@ export function getReachableSystems(
   hyperlanes: Hyperlane[],
   borderPorts: BorderPort[],
 ): Set<string> {
-  const adj = buildAdjacency(hyperlanes, borderPorts);
-  const visited = new Set<string>();
-  const queue = [fromSystemId];
-  visited.add(fromSystemId);
+  // Reachability is symmetric, so every system in the same connected
+  // component shares the same reachable set. Compute components once per
+  // (hyperlanes, borderPorts) tuple and look up the membership instead of
+  // running a fresh BFS for each caller — the scanner pays this for every
+  // origin planet, which dwarfed the rest of the route finder.
+  const components = getReachabilityComponents(hyperlanes, borderPorts);
+  const found = components.get(fromSystemId);
+  if (found) return found;
 
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    const neighbors = adj.get(current);
-    if (!neighbors) continue;
-    for (const n of neighbors) {
-      if (!visited.has(n.systemId)) {
-        visited.add(n.systemId);
-        queue.push(n.systemId);
-      }
-    }
+  // System has no hyperlane edges — it's its own singleton component.
+  const singleton = new Set<string>([fromSystemId]);
+  components.set(fromSystemId, singleton);
+  return singleton;
+}
+
+function getReachabilityComponents(
+  hyperlanes: Hyperlane[],
+  borderPorts: BorderPort[],
+): Map<string, Set<string>> {
+  const adj = getAdjacency(hyperlanes, borderPorts);
+  if (cachedComponents !== null && cachedComponentsAdj === adj) {
+    return cachedComponents;
   }
 
-  return visited;
+  const components = new Map<string, Set<string>>();
+  for (const startId of adj.keys()) {
+    if (components.has(startId)) continue;
+    const component = new Set<string>();
+    const stack = [startId];
+    component.add(startId);
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      const neighbors = adj.get(current);
+      if (!neighbors) continue;
+      for (const n of neighbors) {
+        if (!component.has(n.systemId)) {
+          component.add(n.systemId);
+          stack.push(n.systemId);
+        }
+      }
+    }
+    // Share the same Set instance for every member of the component so the
+    // caller's identity check (e.g. `reachable.has(x)`) is O(1) and we don't
+    // duplicate memory per system.
+    for (const sysId of component) components.set(sysId, component);
+  }
+
+  cachedComponents = components;
+  cachedComponentsAdj = adj;
+  return components;
 }
 
 /**
@@ -166,15 +319,12 @@ export function calculateHyperlaneDistance(
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  const path = findPath(
+  return getHyperlaneDistance(
     planet1.systemId,
     planet2.systemId,
     hyperlanes,
     borderPorts,
   );
-  if (!path) return -1;
-
-  return path.totalDistance;
 }
 
 /**
