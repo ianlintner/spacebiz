@@ -830,8 +830,13 @@ export class GameHUDScene extends Phaser.Scene {
     this.rebuildTabStrip();
     this.scene.bringToTop();
 
-    // If dialogues were already pending (e.g. resumed save), drain them now.
-    void this.maybeDrainDialogueQueue();
+    // Dialogue drain intentionally omitted here.
+    // Dilemma dialogs and post-review social beats (ambassador, rival) only
+    // fire after the player dismisses TurnReportScene — see switchContentScene()
+    // where maybeDrainDialogueQueue() is called when switchingAwayFromReport.
+    // Firing here would surface required dilemmas during planning (on any
+    // content scene the player last had open), which breaks the intended
+    // Sim → Review → Dialogue sequence.
 
     // Scripted tutorial on fresh game start (turn starts at 1, no routes yet)
     if (

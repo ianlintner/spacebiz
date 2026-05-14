@@ -75,7 +75,7 @@ export function openDialogueModal(
     const layer = ui.openLayer({ key: "dialogue" });
     const theme = getTheme();
     layer.createOverlay({
-      alpha: 0,
+      alpha: 0.65,
       color: theme.colors.modalOverlay,
       closeOnPointerUp: false,
       activationDelayMs: 300,
@@ -270,6 +270,7 @@ class DialogueModalRenderer {
   private typewriterEvent: Phaser.Time.TimerEvent | null = null;
   private typewriterDone = false;
   private revealables: Phaser.GameObjects.GameObject[] = [];
+  private skipZone?: Phaser.GameObjects.Rectangle;
   private resolved = false;
 
   constructor(
@@ -503,14 +504,15 @@ class DialogueModalRenderer {
       .setDepth(DEPTH_MODAL + 2);
     this.layer.track(this.bodyText);
 
-    // Click anywhere on body area to skip typewriter
-    const skipZone = this.scene.add
+    // Click anywhere on body area to skip typewriter. Disabled once the
+    // typewriter finishes so it does not block choice card buttons.
+    this.skipZone = this.scene.add
       .rectangle(bodyX, bodyY, bodyW, innerH, 0x000000, 0)
       .setOrigin(0, 0)
       .setDepth(DEPTH_MODAL + 4)
       .setInteractive({ useHandCursor: false });
-    skipZone.on("pointerdown", () => this.skipTypewriter());
-    this.layer.track(skipZone);
+    this.skipZone.on("pointerdown", () => this.skipTypewriter());
+    this.layer.track(this.skipZone);
 
     // ── Reveal targets: option cards OR Continue button ──────────────────
     if (showChoices) {
@@ -610,6 +612,10 @@ class DialogueModalRenderer {
       label: "Choose",
       onClick: () => this.handleChoose(event, option, success),
     });
+    // Explicitly depth the button above the skipZone (DEPTH_MODAL+4) so its
+    // hitZone wins in Phaser's top-only pointer dispatch once skipZone is
+    // disabled on typewriter completion.
+    chooseBtn.setDepth(DEPTH_MODAL + 5);
     card.add(chooseBtn);
 
     // Left side — label + chips
@@ -712,6 +718,10 @@ class DialogueModalRenderer {
 
   private revealAfterTypewriter(): void {
     this.typewriterDone = true;
+    // Remove the click-to-skip zone so it no longer intercepts pointer
+    // events destined for the choice card buttons (which live at DEPTH_MODAL+2,
+    // below the skipZone's DEPTH_MODAL+4).
+    this.skipZone?.disableInteractive();
     for (const obj of this.revealables) {
       if ("setVisible" in obj) {
         (obj as { setVisible(v: boolean): void }).setVisible(true);
