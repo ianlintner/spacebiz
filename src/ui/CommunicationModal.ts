@@ -37,7 +37,7 @@ export function openCommunicationModal(
   const theme = getTheme();
 
   layer.createOverlay({
-    alpha: 0,
+    alpha: 0.65,
     color: theme.colors.modalOverlay,
     closeOnPointerUp: false,
     activationDelayMs: 300,

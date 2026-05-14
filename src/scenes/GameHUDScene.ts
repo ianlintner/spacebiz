@@ -1052,9 +1052,6 @@ export class GameHUDScene extends Phaser.Scene {
    */
   private async maybeDrainDialogueQueue(): Promise<void> {
     if (this.drainingDialogues) return;
-    // Dialogues only fire after the player closes the turn report.
-    // switchContentScene() re-calls this when navigating away from TurnReportScene.
-    if (this.activeContentScene === "TurnReportScene") return;
     const state = gameStore.getState();
     const hasDialogue =
       (state.pendingDialogues?.length ?? 0) > 0 ||
@@ -1421,12 +1418,6 @@ export class GameHUDScene extends Phaser.Scene {
       }
     }
 
-    // When leaving TurnReportScene → drain the post-Review dialogue queue
-    // before the player can interact with the new content scene.
-    const wasOnTurnReport = this.activeContentScene === "TurnReportScene";
-    const switchingAwayFromReport =
-      wasOnTurnReport && sceneName !== "TurnReportScene";
-
     for (const key of this.contentSceneKeys) {
       if (key === sceneName) continue;
       // Keep GalaxyMapScene running as backdrop when launching SimPlaybackScene
@@ -1455,6 +1446,8 @@ export class GameHUDScene extends Phaser.Scene {
       gameStore.update({ phase: "planning" });
       audio.setMusicState("report");
       audio.sfx("ui_confirm");
+      // Drain queued dialogues — they appear as modals over the turn report.
+      void this.maybeDrainDialogueQueue();
     } else {
       audio.setMusicState("planning");
       switch (sceneName) {
@@ -1520,11 +1513,6 @@ export class GameHUDScene extends Phaser.Scene {
 
     this.activeContentScene = sceneName;
     this.activeContentData = data;
-
-    // After TurnReportScene closes, drain the dialogue queue (post-Review).
-    if (switchingAwayFromReport) {
-      void this.maybeDrainDialogueQueue();
-    }
 
     // Remember last-visited tab within its group, so re-clicking the group
     // icon (when no urgency fires) returns the player here.

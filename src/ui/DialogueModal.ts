@@ -623,8 +623,8 @@ class DialogueModalRenderer {
     const leftWidth = width - colWidth - 32;
 
     const labelText = this.scene.add.text(leftPad, 8, option.label, {
-      fontSize: `${theme.fonts.heading.size - 2}px`,
-      fontFamily: theme.fonts.heading.family,
+      fontSize: `${theme.fonts.body.size}px`,
+      fontFamily: theme.fonts.body.family,
       color: colorToString(theme.colors.text),
       wordWrap: { width: leftWidth },
     });
