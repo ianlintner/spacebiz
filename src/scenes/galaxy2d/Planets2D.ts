@@ -50,6 +50,10 @@ export class Planets2D {
   private readonly scratchWorld: Vec3 = { x: 0, y: 0, z: 0 };
   private readonly scratchNdc: Vec3 = { x: 0, y: 0, z: 0 };
 
+  // World-space positions of each focused planet, refreshed every frame.
+  // Other sub-modules (e.g. Traffic2D) read this to aim at orbiting planets.
+  private readonly focusedPlanetWorldPositions = new Map<string, Vec3>();
+
   constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container) {
     this.scene = scene;
     this.container = container;
@@ -109,6 +113,14 @@ export class Planets2D {
     return this.focusedSystemId;
   }
 
+  /**
+   * World-space positions of each planet currently in the focused system.
+   * Repopulated every frame by `update()`. Empty when no system is focused.
+   */
+  getFocusedPlanetWorldPositions(): ReadonlyMap<string, Vec3> {
+    return this.focusedPlanetWorldPositions;
+  }
+
   setHoverHandler(handler: ((planetId: string | null) => void) | null): void {
     this.hoverHandler = handler;
   }
@@ -130,6 +142,7 @@ export class Planets2D {
     viewport: ViewportRect,
   ): void {
     if (this.orbitGfx) this.orbitGfx.clear();
+    this.focusedPlanetWorldPositions.clear();
 
     if (!this.focusedSystemId) return;
     const systemPos = this.systemPositions.get(this.focusedSystemId);
@@ -156,6 +169,12 @@ export class Planets2D {
       this.scratchWorld.y =
         systemPos.y +
         Math.sin(angle) * o.orbitRadius * Math.sin(o.orbitInclination);
+
+      this.focusedPlanetWorldPositions.set(e.planet.id, {
+        x: this.scratchWorld.x,
+        y: this.scratchWorld.y,
+        z: this.scratchWorld.z,
+      });
 
       const proj = projectToScreenDesignInto(
         this.scratchNdc,

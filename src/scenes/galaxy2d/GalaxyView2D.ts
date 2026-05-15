@@ -909,6 +909,7 @@ export class GalaxyView2D {
       this.viewport,
       systemMode,
       this.focusedSystemId,
+      this.planets.getFocusedPlanetWorldPositions(),
     );
 
     // Station orbit — player HQ system only, replaces the chevron in close view.
