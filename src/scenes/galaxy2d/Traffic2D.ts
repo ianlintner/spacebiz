@@ -10,7 +10,7 @@ const TRAFFIC_FREQ_SPARSE_MS = 250; // ms between emissions on quiet lanes
 const TRAFFIC_FREQ_DENSE_MS = 80; // ms between emissions on busy lanes
 const TRAFFIC_GALAXY_LIFESPAN = 700; // ms
 const TRAFFIC_GALAXY_DEPTH = 350;
-const TRAFFIC_GALAXY_SPEED_BASE = 55; // px/s — updated per-frame but set at creation
+const TRAFFIC_GALAXY_SPEED_BASE = 55; // px/s — updated per-frame
 
 const TRAFFIC_SYSTEM_LIFESPAN = 800; // ms
 const TRAFFIC_SYSTEM_FREQ_SPARSE_MS = 300;
@@ -67,14 +67,14 @@ export class Traffic2D {
     null;
   private systemAmbientRunning = false;
 
-  private _hyperlanes: Hyperlane[] = [];
-  private _systemPositions = new Map<string, Vec3>();
-  private _planetCounts = new Map<string, number>();
+  private hyperlanes: Hyperlane[] = [];
+  private systemPositions = new Map<string, Vec3>();
+  private planetCounts = new Map<string, number>();
 
   private lastFocusedSystemId: string | null = null;
 
-  private readonly _scratchA: Vec3 = { x: 0, y: 0, z: 0 };
-  private readonly _scratchB: Vec3 = { x: 0, y: 0, z: 0 };
+  private readonly scratchA: Vec3 = { x: 0, y: 0, z: 0 };
+  private readonly scratchB: Vec3 = { x: 0, y: 0, z: 0 };
 
   constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container) {
     this.scene = scene;
@@ -85,13 +85,13 @@ export class Traffic2D {
     hyperlanes: Hyperlane[],
     systemPositions: Map<string, Vec3>,
   ): void {
-    this._hyperlanes = hyperlanes;
-    this._systemPositions = systemPositions;
+    this.hyperlanes = hyperlanes;
+    this.systemPositions = systemPositions;
     this.rebuildGalaxyEmitters();
   }
 
   setPlanetCounts(counts: Map<string, number>): void {
-    this._planetCounts = counts;
+    this.planetCounts = counts;
     this.rebuildGalaxyEmitters();
   }
 
@@ -127,25 +127,24 @@ export class Traffic2D {
 
   private rebuildGalaxyEmitters(): void {
     this.clearGalaxyEmitters();
-    if (this._hyperlanes.length === 0) return;
+    if (this.hyperlanes.length === 0) return;
 
     const texKey = getOrCreateSparkTexture(this.scene);
 
-    // Compute per-lane weight (sum of planet counts at both endpoints).
     let maxWeight = 1;
     const weights: number[] = [];
-    for (const hl of this._hyperlanes) {
-      const a = this._planetCounts.get(hl.systemA) ?? 0;
-      const b = this._planetCounts.get(hl.systemB) ?? 0;
+    for (const hl of this.hyperlanes) {
+      const a = this.planetCounts.get(hl.systemA) ?? 0;
+      const b = this.planetCounts.get(hl.systemB) ?? 0;
       const w = a + b;
       weights.push(w);
       if (w > maxWeight) maxWeight = w;
     }
 
-    for (let i = 0; i < this._hyperlanes.length; i++) {
-      const hl = this._hyperlanes[i];
-      const worldA = this._systemPositions.get(hl.systemA);
-      const worldB = this._systemPositions.get(hl.systemB);
+    for (let i = 0; i < this.hyperlanes.length; i++) {
+      const hl = this.hyperlanes[i];
+      const worldA = this.systemPositions.get(hl.systemA);
+      const worldB = this.systemPositions.get(hl.systemB);
       if (!worldA || !worldB) continue;
 
       const t = weights[i] / maxWeight;
@@ -191,13 +190,13 @@ export class Traffic2D {
   private updateGalaxyEmitters(viewProj: Mat4, viewport: ViewportRect): void {
     for (const entry of this.galaxyEmitters) {
       const projA = projectToScreenDesignInto(
-        this._scratchA,
+        this.scratchA,
         entry.worldA,
         viewProj,
         viewport,
       );
       const projB = projectToScreenDesignInto(
-        this._scratchB,
+        this.scratchB,
         entry.worldB,
         viewProj,
         viewport,
@@ -233,20 +232,20 @@ export class Traffic2D {
 
       entry.emitterFwd.x = midX;
       entry.emitterFwd.y = midY;
-      (entry.emitterFwd.angle as any) = {
+      entry.emitterFwd.setEmitterAngle({
         min: angleDeg - 10,
         max: angleDeg + 10,
-      };
-      (entry.emitterFwd.speed as any) = speed;
+      });
+      entry.emitterFwd.setParticleSpeed(speed);
 
       const reverseAngle = angleDeg + 180;
       entry.emitterBwd.x = midX;
       entry.emitterBwd.y = midY;
-      (entry.emitterBwd.angle as any) = {
+      entry.emitterBwd.setEmitterAngle({
         min: reverseAngle - 10,
         max: reverseAngle + 10,
-      };
-      (entry.emitterBwd.speed as any) = speed;
+      });
+      entry.emitterBwd.setParticleSpeed(speed);
 
       if (!entry.running) {
         entry.emitterFwd.start();
@@ -257,9 +256,6 @@ export class Traffic2D {
   }
 
   private stopGalaxyEmitters(): void {
-    // Scratch vectors used in updateGalaxyEmitters when implemented
-    void this._scratchA;
-    void this._scratchB;
     for (const e of this.galaxyEmitters) {
       if (!e.running) continue;
       e.emitterFwd.stop();
@@ -282,12 +278,12 @@ export class Traffic2D {
     this.clearSystemEmitters();
     if (!focusedSystemId) return;
 
-    const focusedPos = this._systemPositions.get(focusedSystemId);
+    const focusedPos = this.systemPositions.get(focusedSystemId);
     if (!focusedPos) return;
 
     const texKey = getOrCreateSparkTexture(this.scene);
 
-    const planetCount = this._planetCounts.get(focusedSystemId) ?? 0;
+    const planetCount = this.planetCounts.get(focusedSystemId) ?? 0;
     const densityT = Math.min(1, planetCount / TRAFFIC_MAX_PLANETS);
     const gateFreqMs = Math.round(
       lerp(
@@ -297,14 +293,14 @@ export class Traffic2D {
       ),
     );
 
-    // One directional emitter per connected hypergate.
-    for (const hl of this._hyperlanes) {
+    // One emitter per hypergate — positioned at the gate, aimed toward the star.
+    for (const hl of this.hyperlanes) {
       const isA = hl.systemA === focusedSystemId;
       const isB = hl.systemB === focusedSystemId;
       if (!isA && !isB) continue;
 
       const connectedId = isA ? hl.systemB : hl.systemA;
-      const connectedPos = this._systemPositions.get(connectedId);
+      const connectedPos = this.systemPositions.get(connectedId);
       if (!connectedPos) continue;
 
       const dx = connectedPos.x - focusedPos.x;
@@ -339,7 +335,7 @@ export class Traffic2D {
       });
     }
 
-    // Ambient emitter at the star — low-density omnidirectional traffic.
+    // Ambient emitter at the star — low-density omnidirectional background traffic.
     const ambientFreqMs = Math.round(lerp(400, 120, densityT));
     const ambientEmitter = this.scene.add.particles(0, 0, texKey, {
       lifespan: TRAFFIC_SYSTEM_LIFESPAN,
@@ -364,11 +360,12 @@ export class Traffic2D {
   ): void {
     if (!focusedSystemId) return;
 
-    const focusedPos = this._systemPositions.get(focusedSystemId);
+    const focusedPos = this.systemPositions.get(focusedSystemId);
     if (!focusedPos) return;
 
+    // Project the star — this is the TARGET for gate emitters (traffic flows gate → star/system).
     const starProj = projectToScreenDesignInto(
-      this._scratchA,
+      this.scratchA,
       focusedPos,
       viewProj,
       viewport,
@@ -379,10 +376,10 @@ export class Traffic2D {
       return;
     }
 
-    // Update each gate emitter: position at star, angle toward gate.
+    // Each gate emitter sits at the gate's screen position and fires toward the star.
     for (const entry of this.systemGateEmitters) {
       const gateProj = projectToScreenDesignInto(
-        this._scratchB,
+        this.scratchB,
         entry.gateWorldPos,
         viewProj,
         viewport,
@@ -396,8 +393,9 @@ export class Traffic2D {
         continue;
       }
 
-      const dx = gateProj.x - starProj.x;
-      const dy = gateProj.y - starProj.y;
+      // Direction from gate toward star.
+      const dx = starProj.x - gateProj.x;
+      const dy = starProj.y - gateProj.y;
       const screenDist = Math.sqrt(dx * dx + dy * dy);
 
       if (screenDist < 4) {
@@ -411,10 +409,11 @@ export class Traffic2D {
       const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
       const speed = screenDist / (TRAFFIC_SYSTEM_LIFESPAN / 1000);
 
-      entry.emitter.x = starProj.x;
-      entry.emitter.y = starProj.y;
-      (entry.emitter.angle as any) = { min: angleDeg - 8, max: angleDeg + 8 };
-      (entry.emitter.speed as any) = speed;
+      // Emitter sits at the gate, not the star.
+      entry.emitter.x = gateProj.x;
+      entry.emitter.y = gateProj.y;
+      entry.emitter.setEmitterAngle({ min: angleDeg - 8, max: angleDeg + 8 });
+      entry.emitter.setParticleSpeed(speed);
 
       if (!entry.running) {
         entry.emitter.start();
@@ -422,7 +421,7 @@ export class Traffic2D {
       }
     }
 
-    // Ambient emitter stays at the star position.
+    // Ambient emitter stays at the star.
     if (this.systemAmbientEmitter) {
       this.systemAmbientEmitter.x = starProj.x;
       this.systemAmbientEmitter.y = starProj.y;
