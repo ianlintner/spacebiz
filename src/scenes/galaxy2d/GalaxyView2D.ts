@@ -249,7 +249,9 @@ export class GalaxyView2D {
   private playerHQSystemId: string | null = null;
   private hubLevel = 1;
   private stationSprite: Phaser.GameObjects.Image | null = null;
+  private stationHitbox: Phaser.GameObjects.Zone | null = null;
   private stationOrbitGfx: Phaser.GameObjects.Graphics | null = null;
+  private stationHoverHandler: ((hovered: boolean) => void) | null = null;
   private readonly scratchStationNdc: Vec3 = { x: 0, y: 0, z: 0 };
   private readonly scratchStationWorld: Vec3 = { x: 0, y: 0, z: 0 };
 
@@ -924,6 +926,7 @@ export class GalaxyView2D {
 
     if (!show) {
       this.stationSprite?.setVisible(false);
+      this.stationHitbox?.setVisible(false);
       this.stationOrbitGfx?.clear();
       return;
     }
@@ -939,6 +942,18 @@ export class GalaxyView2D {
       this.galaxyContainer.add(this.stationSprite);
     } else {
       this.stationSprite.setTexture(stationKey);
+    }
+    if (!this.stationHitbox) {
+      this.stationHitbox = this.scene.add.zone(0, 0, 40, 40);
+      this.stationHitbox.setInteractive({ useHandCursor: true });
+      this.stationHitbox.setDepth(STATION_DEPTH + 10);
+      this.stationHitbox.on("pointerover", () =>
+        this.stationHoverHandler?.(true),
+      );
+      this.stationHitbox.on("pointerout", () =>
+        this.stationHoverHandler?.(false),
+      );
+      this.galaxyContainer.add(this.stationHitbox);
     }
     if (!this.stationOrbitGfx) {
       this.stationOrbitGfx = this.scene.add.graphics();
@@ -969,6 +984,7 @@ export class GalaxyView2D {
 
     if (!proj.visible || scale <= 0) {
       this.stationSprite.setVisible(false);
+      this.stationHitbox?.setVisible(false);
       this.stationOrbitGfx.clear();
       return;
     }
@@ -980,6 +996,13 @@ export class GalaxyView2D {
     this.stationSprite.setPosition(proj.x, proj.y);
     this.stationSprite.setDisplaySize(size, size);
     this.stationSprite.setVisible(true);
+
+    if (this.stationHitbox) {
+      const hitSize = size + 16;
+      this.stationHitbox.setPosition(proj.x, proj.y);
+      this.stationHitbox.setSize(hitSize, hitSize);
+      this.stationHitbox.setVisible(true);
+    }
 
     // Draw station orbit ring — lighter style than planet rings.
     this.stationOrbitGfx.clear();
@@ -1253,6 +1276,8 @@ export class GalaxyView2D {
 
     this.stationSprite?.destroy();
     this.stationSprite = null;
+    this.stationHitbox?.destroy();
+    this.stationHitbox = null;
     this.stationOrbitGfx?.destroy();
     this.stationOrbitGfx = null;
 
@@ -1324,6 +1349,10 @@ export class GalaxyView2D {
 
   setHubLevel(level: number): void {
     this.hubLevel = Math.max(1, Math.min(4, level));
+  }
+
+  setStationHoverHandler(fn: ((hovered: boolean) => void) | null): void {
+    this.stationHoverHandler = fn;
   }
 
   setHQMarkers3D(markers: HQMarker3D[]): void {

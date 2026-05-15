@@ -148,6 +148,10 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.view3D.setPlanetHoverHandler((planetId) =>
       this.showPlanetTooltip(planetId),
     );
+    this.view3D.setStationHoverHandler((hovered) => {
+      if (hovered) this.showStationTooltip();
+      else this.mapTooltip?.hide();
+    });
 
     // Hyperlane gate click → fast pan to the connected system at the same zoom.
     this.view3D.setHyperGateClickHandler((connectedSystemId) => {
@@ -982,6 +986,37 @@ export class GalaxyMapScene extends Phaser.Scene {
     if (planet.specialResource) {
       lines.push(`★ ${planet.specialResource}`);
     }
+    const ptr = this.input.activePointer;
+    this.mapTooltip.showAt(lines.join("\n"), ptr.x + 12, ptr.y + 12);
+  }
+
+  private showStationTooltip(): void {
+    if (!this.mapTooltip) return;
+    const state = gameStore.getState();
+    const hub = state.stationHub;
+    if (!hub) return;
+
+    const levelNames = ["", "Outpost", "Station", "Platform", "Starport"];
+    const levelName = levelNames[hub.level] ?? `Level ${hub.level}`;
+    const system = state.galaxy.systems.find((s) => s.id === hub.systemId);
+    const systemName = system?.name ?? hub.systemId;
+
+    const lines: string[] = [
+      `${levelName} (Lv ${hub.level})`,
+      `Location: ${systemName}`,
+    ];
+
+    if (hub.rooms.length > 0) {
+      lines.push(`Rooms: ${hub.rooms.length}`);
+      const roomLabels = hub.rooms
+        .map((r) => r.type.replace(/([A-Z])/g, " $1").trim())
+        .slice(0, 6);
+      lines.push(...roomLabels.map((r) => `  · ${r}`));
+      if (hub.rooms.length > 6) lines.push(`  · +${hub.rooms.length - 6} more`);
+    } else {
+      lines.push("No modules installed");
+    }
+
     const ptr = this.input.activePointer;
     this.mapTooltip.showAt(lines.join("\n"), ptr.x + 12, ptr.y + 12);
   }
