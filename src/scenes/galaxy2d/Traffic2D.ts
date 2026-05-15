@@ -35,6 +35,10 @@ const TRAFFIC_SYSTEM_ALPHA = 0.85;
 const TRAFFIC_MIN_DISPLAY_PX = 3;
 const TRAFFIC_MAX_DISPLAY_PX = 14;
 
+// Each spawn waits intervalMs * (1 ± JITTER) so the rhythm feels organic
+// instead of metronomic.
+const TRAFFIC_JITTER = 0.55;
+
 const GATE_RADIUS_WORLD = 4.2; // must match HyperGates2D
 const POOL_INITIAL_SIZE = 64;
 
@@ -44,6 +48,10 @@ function lerp(a: number, b: number, t: number): number {
 
 function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
+}
+
+function jitteredInterval(baseMs: number): number {
+  return baseMs * (1 + (Math.random() * 2 - 1) * TRAFFIC_JITTER);
 }
 
 function getOrCreateSparkTexture(scene: Phaser.Scene): string {
@@ -95,6 +103,8 @@ interface SystemStream {
   planetId: string;
   nextSpawnAtMs: number;
   intervalMs: number;
+  // Alternates gate→planet and planet→gate so the route has two-way traffic.
+  outboundNext: boolean;
 }
 
 export class Traffic2D {
@@ -350,7 +360,7 @@ export class Traffic2D {
         TRAFFIC_GALAXY_BASE_SCALE,
         TRAFFIC_GALAXY_DEPTH,
       );
-      stream.nextSpawnAtMs = nowMs + stream.intervalMs;
+      stream.nextSpawnAtMs = nowMs + jitteredInterval(stream.intervalMs);
     }
   }
 
@@ -399,6 +409,7 @@ export class Traffic2D {
           planetId,
           nextSpawnAtMs: baseMs + Math.random() * perStreamFreqMs,
           intervalMs: perStreamFreqMs,
+          outboundNext: Math.random() < 0.5,
         });
       }
     }
@@ -412,20 +423,24 @@ export class Traffic2D {
       if (nowMs < stream.nextSpawnAtMs) continue;
       const planetWorld = focusedPlanetWorldPositions.get(stream.planetId);
       if (!planetWorld) {
-        stream.nextSpawnAtMs = nowMs + stream.intervalMs;
+        stream.nextSpawnAtMs = nowMs + jitteredInterval(stream.intervalMs);
         continue;
       }
+      const outbound = stream.outboundNext;
+      stream.outboundNext = !outbound;
+      const source = outbound ? stream.gateWorldPos : planetWorld;
+      const target = outbound ? planetWorld : stream.gateWorldPos;
       const p = this.acquireParticle();
       this.launchParticle(
         p,
-        stream.gateWorldPos,
-        planetWorld,
+        source,
+        target,
         TRAFFIC_SYSTEM_LIFESPAN_MS,
         TRAFFIC_SYSTEM_ALPHA,
         TRAFFIC_SYSTEM_BASE_SCALE,
         TRAFFIC_SYSTEM_DEPTH,
       );
-      stream.nextSpawnAtMs = nowMs + stream.intervalMs;
+      stream.nextSpawnAtMs = nowMs + jitteredInterval(stream.intervalMs);
     }
   }
 }
