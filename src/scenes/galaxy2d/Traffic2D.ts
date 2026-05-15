@@ -14,12 +14,22 @@ const TRAFFIC_SPARK_TEX_KEY = "traffic2d:spark";
 const TRAFFIC_SPARK_SIZE = 24;
 
 // Galaxy traffic: ships drift between connected star systems along hyperlanes.
+// Intentionally sparse base rate plus a burst mechanism (see GALAXY_BURST_*)
+// so spawns clump irregularly instead of marching at a steady cadence.
 const TRAFFIC_GALAXY_LIFESPAN_MS = 4000;
-const TRAFFIC_GALAXY_FREQ_SPARSE_MS = 900;
-const TRAFFIC_GALAXY_FREQ_DENSE_MS = 280;
+const TRAFFIC_GALAXY_FREQ_SPARSE_MS = 2400;
+const TRAFFIC_GALAXY_FREQ_DENSE_MS = 700;
 const TRAFFIC_GALAXY_DEPTH = 350;
 const TRAFFIC_GALAXY_BASE_SCALE = 0.5;
 const TRAFFIC_GALAXY_ALPHA = 0.75;
+
+// Burst model for galaxy lanes: most emissions schedule the next at the
+// jittered base interval, but BURST_CHANCE of the time the follow-up comes
+// within a short BURST_DELAY window — producing little clumps of 2–4 ships
+// followed by quieter gaps.
+const TRAFFIC_GALAXY_BURST_CHANCE = 0.35;
+const TRAFFIC_GALAXY_BURST_DELAY_MIN_MS = 90;
+const TRAFFIC_GALAXY_BURST_DELAY_MAX_MS = 260;
 
 // System traffic: ships shuttle from each hypergate to each planet.
 const TRAFFIC_SYSTEM_LIFESPAN_MS = 3200;
@@ -89,6 +99,17 @@ function jitteredInterval(baseMs: number): number {
 
 function jitteredLifespan(baseMs: number): number {
   return baseMs * (1 + (Math.random() * 2 - 1) * TRAFFIC_SPEED_JITTER);
+}
+
+function nextGalaxySpawnDelay(intervalMs: number): number {
+  if (Math.random() < TRAFFIC_GALAXY_BURST_CHANCE) {
+    return (
+      TRAFFIC_GALAXY_BURST_DELAY_MIN_MS +
+      Math.random() *
+        (TRAFFIC_GALAXY_BURST_DELAY_MAX_MS - TRAFFIC_GALAXY_BURST_DELAY_MIN_MS)
+    );
+  }
+  return jitteredInterval(intervalMs);
 }
 
 function getOrCreateSparkTexture(scene: Phaser.Scene): string {
@@ -433,7 +454,7 @@ export class Traffic2D {
         TRAFFIC_GALAXY_BASE_SCALE,
         TRAFFIC_GALAXY_DEPTH,
       );
-      stream.nextSpawnAtMs = nowMs + jitteredInterval(stream.intervalMs);
+      stream.nextSpawnAtMs = nowMs + nextGalaxySpawnDelay(stream.intervalMs);
     }
   }
 
