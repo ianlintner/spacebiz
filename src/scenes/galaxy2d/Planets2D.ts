@@ -28,7 +28,7 @@ const HITBOX_DEPTH = 870;
 const PLANET_WORLD_RADIUS = 0.22;
 // Soft cap on rendered planet size in pixels — matches STAR_DISPLAY_SOFT_CAP_PX
 // proportionally so the star:planet visual ratio stays consistent across zoom.
-const PLANET_DISPLAY_SOFT_CAP_PX = 60;
+const PLANET_DISPLAY_SOFT_CAP_PX = 44;
 const ORBIT_LINE_ALPHA = 0.18;
 const ROTATION_SPEED = 0.35; // radians/sec — ~18s per cycle
 

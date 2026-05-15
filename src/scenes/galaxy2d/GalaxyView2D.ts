@@ -92,11 +92,13 @@ const HQ_MARKER_Y_OFFSET_WORLD = 2.4;
 const HQ_MARKER_WORLD_SIZE = 2;
 
 // Station — player HQ orbiting body shown in system mode.
+// Orbit at 3.8 world units: outside max planet orbit (3.0) but inside hyper gates (4.2).
 const STATION_DEPTH = 840;
 const STATION_ORBIT_DEPTH = 755; // just below planet orbit rings (760)
-const STATION_ORBIT_RADIUS = 0.55; // world units — inside innermost planet orbit
+const STATION_ORBIT_RADIUS = 3.8;
+const STATION_WORLD_RADIUS = 0.2; // physical display size, independent of orbit
 const STATION_SIZE_PX_MIN = 12;
-const STATION_SIZE_PX_CAP = 34;
+const STATION_SIZE_PX_CAP = 30;
 
 // Highlight + origin rings — drawn under stars but above hyperlanes.
 const RING_DEPTH = 750;
@@ -135,6 +137,157 @@ function getOrCreateHQMarkerTexture(
   ctx.lineWidth = 2;
   ctx.strokeStyle = stroke;
   ctx.stroke();
+
+  tex.refresh();
+  return key;
+}
+
+/**
+ * Build a procedural station icon as a 64×64 canvas texture, one per level.
+ * Bright cyan-white on transparent — always readable against dark space.
+ */
+function getOrCreateStationGfxTexture(
+  scene: Phaser.Scene,
+  level: number,
+): string {
+  const key = `station:gfx:${level}`;
+  if (scene.textures.exists(key)) return key;
+
+  const S = 64;
+  const c = S / 2; // 32
+  const tex = scene.textures.createCanvas(key, S, S);
+  if (!tex) return key;
+  const ctx = tex.getContext();
+
+  const hull = "rgba(160,220,255,0.95)";
+  const panel = "rgba(30,80,200,0.95)";
+  const core = "rgba(230,248,255,1.0)";
+
+  // Glow backdrop — makes station pop on any background.
+  const glowR = [0, 18, 24, 28, 30][level] ?? 24;
+  const glow = ctx.createRadialGradient(c, c, 2, c, c, glowR);
+  glow.addColorStop(0, "rgba(80,180,255,0.30)");
+  glow.addColorStop(1, "rgba(80,180,255,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, S, S);
+
+  ctx.lineCap = "butt";
+
+  if (level === 1) {
+    // Outpost: single horizontal boom with two solar panel pairs.
+    ctx.fillStyle = hull;
+    ctx.fillRect(c - 20, c - 2, 40, 4);
+    ctx.fillStyle = panel;
+    ctx.fillRect(c - 25, c - 8, 8, 6);
+    ctx.fillRect(c - 25, c + 2, 8, 6);
+    ctx.fillRect(c + 17, c - 8, 8, 6);
+    ctx.fillRect(c + 17, c + 2, 8, 6);
+    ctx.beginPath();
+    ctx.arc(c, c, 6, 0, Math.PI * 2);
+    ctx.fillStyle = core;
+    ctx.fill();
+  } else if (level === 2) {
+    // Station: cross booms, four panel pairs, docking ring.
+    ctx.fillStyle = hull;
+    ctx.fillRect(c - 24, c - 2, 48, 4);
+    ctx.fillRect(c - 2, c - 20, 4, 40);
+    ctx.fillStyle = panel;
+    for (const [dx, dy] of [
+      [-28, -8],
+      [-28, 2],
+      [20, -8],
+      [20, 2],
+      [-8, -28],
+      [2, -28],
+      [-8, 20],
+      [2, 20],
+    ] as [number, number][]) {
+      ctx.fillRect(c + dx, c + dy, 8, 6);
+    }
+    ctx.beginPath();
+    ctx.arc(c, c, 13, 0, Math.PI * 2);
+    ctx.strokeStyle = hull;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(c, c, 8, 0, Math.PI * 2);
+    ctx.fillStyle = core;
+    ctx.fill();
+  } else if (level === 3) {
+    // Platform: three-arm star with outer ring.
+    ctx.strokeStyle = hull;
+    ctx.lineWidth = 5;
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(c + Math.cos(a) * 9, c + Math.sin(a) * 9);
+      ctx.lineTo(c + Math.cos(a) * 23, c + Math.sin(a) * 23);
+      ctx.stroke();
+      // Solar panel perpendicular to arm tip.
+      const pa = a + Math.PI / 2;
+      ctx.strokeStyle = panel;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(
+        c + Math.cos(a) * 23 + Math.cos(pa) * 9,
+        c + Math.sin(a) * 23 + Math.sin(pa) * 9,
+      );
+      ctx.lineTo(
+        c + Math.cos(a) * 23 - Math.cos(pa) * 9,
+        c + Math.sin(a) * 23 - Math.sin(pa) * 9,
+      );
+      ctx.stroke();
+      ctx.strokeStyle = hull;
+      ctx.lineWidth = 5;
+    }
+    ctx.beginPath();
+    ctx.arc(c, c, 21, 0, Math.PI * 2);
+    ctx.strokeStyle = hull;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(c, c, 8, 0, Math.PI * 2);
+    ctx.fillStyle = core;
+    ctx.fill();
+  } else {
+    // Starport (level 4): toroidal ring + four spokes + inner ring + hub.
+    ctx.beginPath();
+    ctx.arc(c, c, 26, 0, Math.PI * 2);
+    ctx.strokeStyle = hull;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    // Four spokes.
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(c + Math.cos(a) * 9, c + Math.sin(a) * 9);
+      ctx.lineTo(c + Math.cos(a) * 22, c + Math.sin(a) * 22);
+      ctx.stroke();
+    }
+    // Radiator fins at 45° between spokes.
+    ctx.strokeStyle = panel;
+    ctx.lineWidth = 5;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const bx = c + Math.cos(a) * 26,
+        by = c + Math.sin(a) * 26;
+      const pa = a + Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(bx + Math.cos(pa) * 7, by + Math.sin(pa) * 7);
+      ctx.lineTo(bx - Math.cos(pa) * 7, by - Math.sin(pa) * 7);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(c, c, 10, 0, Math.PI * 2);
+    ctx.strokeStyle = hull;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(c, c, 7, 0, Math.PI * 2);
+    ctx.fillStyle = core;
+    ctx.fill();
+  }
 
   tex.refresh();
   return key;
@@ -929,7 +1082,7 @@ export class GalaxyView2D {
     const systemPos = this.systemPositions.get(this.focusedSystemId!)!;
 
     // Lazily create station objects on first system-view entry.
-    const stationKey = `station:level${this.hubLevel}`;
+    const stationKey = getOrCreateStationGfxTexture(this.scene, this.hubLevel);
     if (!this.stationSprite) {
       this.stationSprite = this.scene.add.image(0, 0, stationKey);
       this.stationSprite.setDepth(STATION_DEPTH);
@@ -973,7 +1126,7 @@ export class GalaxyView2D {
 
     const size = Math.max(
       STATION_SIZE_PX_MIN,
-      softCapSize(STATION_ORBIT_RADIUS * 2 * scale, STATION_SIZE_PX_CAP),
+      softCapSize(STATION_WORLD_RADIUS * 2 * scale, STATION_SIZE_PX_CAP),
     );
     this.stationSprite.setPosition(proj.x, proj.y);
     this.stationSprite.setDisplaySize(size, size);
@@ -1095,10 +1248,10 @@ export class GalaxyView2D {
     if (this.destroyed) return;
     const pos = this.systemPositions.get(systemId);
     if (!pos) return;
-    // Default lands well below SYSTEM_MODE_ENTER_DISTANCE (8) so the view
-    // is solidly in system mode with all planets + gates visible.
+    // Default lands at 7 — solidly in system mode (<8) with enough field of
+    // view to show hyper gates at GATE_RADIUS_WORLD=4.2 without clipping.
     const targetDistance = clamp(
-      opts.distance ?? 6,
+      opts.distance ?? 7,
       this.cameraDistanceMin,
       this.cameraDistanceMax,
     );

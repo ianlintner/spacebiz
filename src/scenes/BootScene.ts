@@ -114,11 +114,6 @@ export class BootScene extends Phaser.Scene {
       this.load.image(`planet:${biome}`, `planets/${biome}.png`);
     }
 
-    // Hub station sprites by level (1–4)
-    for (let level = 1; level <= 4; level++) {
-      this.load.image(`station:level${level}`, `stations/level${level}.png`);
-    }
-
     // Dilemma banner illustrations (~10 × 480×240 PNG, ~1.2 MB total) — loaded
     // up front so the modal can display instantly when a dilemma fires.
     const dilemmaImageKeys = [
