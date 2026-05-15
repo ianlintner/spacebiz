@@ -358,10 +358,80 @@ export class Traffic2D {
   }
 
   private updateSystemEmitters(
-    _viewProj: Mat4,
-    _viewport: ViewportRect,
-    _focusedSystemId: string | null,
-  ): void {}
+    viewProj: Mat4,
+    viewport: ViewportRect,
+    focusedSystemId: string | null,
+  ): void {
+    if (!focusedSystemId) return;
+
+    const focusedPos = this._systemPositions.get(focusedSystemId);
+    if (!focusedPos) return;
+
+    const starProj = projectToScreenDesignInto(
+      this._scratchA,
+      focusedPos,
+      viewProj,
+      viewport,
+    );
+
+    if (!starProj.visible) {
+      this.stopSystemEmitters();
+      return;
+    }
+
+    // Update each gate emitter: position at star, angle toward gate.
+    for (const entry of this.systemGateEmitters) {
+      const gateProj = projectToScreenDesignInto(
+        this._scratchB,
+        entry.gateWorldPos,
+        viewProj,
+        viewport,
+      );
+
+      if (!gateProj.visible) {
+        if (entry.running) {
+          entry.emitter.stop();
+          entry.running = false;
+        }
+        continue;
+      }
+
+      const dx = gateProj.x - starProj.x;
+      const dy = gateProj.y - starProj.y;
+      const screenDist = Math.sqrt(dx * dx + dy * dy);
+
+      if (screenDist < 4) {
+        if (entry.running) {
+          entry.emitter.stop();
+          entry.running = false;
+        }
+        continue;
+      }
+
+      const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+      const speed = screenDist / (TRAFFIC_SYSTEM_LIFESPAN / 1000);
+
+      entry.emitter.x = starProj.x;
+      entry.emitter.y = starProj.y;
+      (entry.emitter.angle as any) = { min: angleDeg - 8, max: angleDeg + 8 };
+      (entry.emitter.speed as any) = speed;
+
+      if (!entry.running) {
+        entry.emitter.start();
+        entry.running = true;
+      }
+    }
+
+    // Ambient emitter stays at the star position.
+    if (this.systemAmbientEmitter) {
+      this.systemAmbientEmitter.x = starProj.x;
+      this.systemAmbientEmitter.y = starProj.y;
+      if (!this.systemAmbientRunning) {
+        this.systemAmbientEmitter.start();
+        this.systemAmbientRunning = true;
+      }
+    }
+  }
 
   private stopSystemEmitters(): void {
     for (const e of this.systemGateEmitters) {
