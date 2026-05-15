@@ -8,6 +8,12 @@ import {
   softCapSize,
 } from "./projection.ts";
 import type { Vec3, ViewportRect } from "./types.ts";
+import {
+  type PlanetVariation,
+  derivePlanetVariation,
+  isRinged,
+  multiplyBrightness,
+} from "./PlanetVariation.ts";
 
 // Depth ordering inside the galaxy container:
 //   orbit rings  760  (above hyperlanes 300, below planets)
@@ -24,11 +30,15 @@ const PLANET_WORLD_RADIUS = 0.22;
 // proportionally so the star:planet visual ratio stays consistent across zoom.
 const PLANET_DISPLAY_SOFT_CAP_PX = 60;
 const ORBIT_LINE_ALPHA = 0.18;
+const ROTATION_SPEED = 0.35; // radians/sec — ~18s per cycle
 
 interface PlanetEntry {
   planet: Planet;
-  sprite: Phaser.GameObjects.Image;
+  baseSprite: Phaser.GameObjects.Image;
+  ringBackSprite: Phaser.GameObjects.Image | null;
+  ringFrontSprite: Phaser.GameObjects.Image | null;
   hitbox: Phaser.GameObjects.Zone;
+  variation: PlanetVariation;
 }
 
 /**
@@ -70,19 +80,42 @@ export class Planets2D {
   setPlanets(planets: Planet[], systemPositions: Map<string, Vec3>): void {
     // Tear down old entries.
     for (const e of this.entries.values()) {
-      e.sprite.destroy();
+      e.baseSprite.destroy();
+      e.ringBackSprite?.destroy();
+      e.ringFrontSprite?.destroy();
       e.hitbox.destroy();
     }
     this.entries.clear();
     this.systemPositions = systemPositions;
 
     for (const planet of planets) {
-      const color = colorForPlanet(planet);
-      const texKey = getOrCreatePlanetTexture(this.scene, color);
-      const sprite = this.scene.add.image(0, 0, texKey);
-      sprite.setDepth(PLANET_DEPTH);
-      sprite.setVisible(false);
-      this.container.add(sprite);
+      const variation = derivePlanetVariation(planet);
+
+      const baseSprite = this.scene.add.image(0, 0, `planet:${planet.biome}`);
+      baseSprite.setDepth(PLANET_DEPTH);
+      baseSprite.setVisible(false);
+      baseSprite.setTint(variation.baseTint);
+      this.container.add(baseSprite);
+
+      let ringBackSprite: Phaser.GameObjects.Image | null = null;
+      let ringFrontSprite: Phaser.GameObjects.Image | null = null;
+      if (isRinged(planet.biome)) {
+        ringBackSprite = this.scene.add.image(0, 0, "planet:ring");
+        ringBackSprite.setDepth(PLANET_DEPTH - 5);
+        ringBackSprite.setVisible(false);
+        ringBackSprite.setCrop(0, 32, 128, 32); // bottom half of ring texture
+        ringBackSprite.setOrigin(0.5, 0.0); // top edge anchors at position
+        ringBackSprite.setTint(variation.ringTint);
+        this.container.add(ringBackSprite);
+
+        ringFrontSprite = this.scene.add.image(0, 0, "planet:ring");
+        ringFrontSprite.setDepth(PLANET_DEPTH + 5);
+        ringFrontSprite.setVisible(false);
+        ringFrontSprite.setCrop(0, 0, 128, 32); // top half of ring texture
+        ringFrontSprite.setOrigin(0.5, 1.0); // bottom edge anchors at position
+        ringFrontSprite.setTint(variation.ringTint);
+        this.container.add(ringFrontSprite);
+      }
 
       const hitbox = this.scene.add.zone(0, 0, 24, 24);
       hitbox.setInteractive({ useHandCursor: true });
@@ -92,7 +125,14 @@ export class Planets2D {
       hitbox.on("pointerout", () => this.hoverHandler?.(null));
       hitbox.on("pointerup", () => this.clickHandler?.(planet.id));
 
-      this.entries.set(planet.id, { planet, sprite, hitbox });
+      this.entries.set(planet.id, {
+        planet,
+        baseSprite,
+        ringBackSprite,
+        ringFrontSprite,
+        hitbox,
+        variation,
+      });
     }
   }
 
@@ -102,7 +142,9 @@ export class Planets2D {
     if (!systemId) {
       // Leaving system view — hide everything and clear orbit rings.
       for (const e of this.entries.values()) {
-        e.sprite.setVisible(false);
+        e.baseSprite.setVisible(false);
+        e.ringBackSprite?.setVisible(false);
+        e.ringFrontSprite?.setVisible(false);
         e.hitbox.setVisible(false);
       }
       this.orbitGfx?.clear();
@@ -154,7 +196,9 @@ export class Planets2D {
 
     for (const e of this.entries.values()) {
       if (e.planet.systemId !== this.focusedSystemId) {
-        e.sprite.setVisible(false);
+        e.baseSprite.setVisible(false);
+        e.ringBackSprite?.setVisible(false);
+        e.ringFrontSprite?.setVisible(false);
         e.hitbox.setVisible(false);
         continue;
       }
@@ -183,13 +227,17 @@ export class Planets2D {
         viewport,
       );
       if (!proj.visible) {
-        e.sprite.setVisible(false);
+        e.baseSprite.setVisible(false);
+        e.ringBackSprite?.setVisible(false);
+        e.ringFrontSprite?.setVisible(false);
         e.hitbox.setVisible(false);
         continue;
       }
       const scale = perspectiveScale(this.scratchWorld, viewMat, focalLength);
       if (scale <= 0) {
-        e.sprite.setVisible(false);
+        e.baseSprite.setVisible(false);
+        e.ringBackSprite?.setVisible(false);
+        e.ringFrontSprite?.setVisible(false);
         e.hitbox.setVisible(false);
         continue;
       }
@@ -198,9 +246,31 @@ export class Planets2D {
         8,
         softCapSize(desired, PLANET_DISPLAY_SOFT_CAP_PX),
       );
-      e.sprite.setPosition(proj.x, proj.y);
-      e.sprite.setDisplaySize(size, size);
-      e.sprite.setVisible(true);
+
+      const cycle = Math.cos(
+        realtimeSeconds * ROTATION_SPEED + e.variation.rotationPhase,
+      );
+      const brightness = 0.86 + cycle * 0.14; // oscillates [0.72, 1.0]
+
+      e.baseSprite.setPosition(proj.x, proj.y);
+      e.baseSprite.setDisplaySize(size, size);
+      e.baseSprite.setTint(
+        multiplyBrightness(e.variation.baseTint, brightness),
+      );
+      e.baseSprite.setVisible(true);
+
+      if (e.ringBackSprite && e.ringFrontSprite) {
+        const ringW = size * 1.7;
+        const ringHalf = size * 0.425;
+        e.ringBackSprite.setPosition(proj.x, proj.y);
+        e.ringBackSprite.setDisplaySize(ringW, ringHalf);
+        e.ringBackSprite.setAngle(e.variation.ringTiltDeg);
+        e.ringBackSprite.setVisible(true);
+        e.ringFrontSprite.setPosition(proj.x, proj.y);
+        e.ringFrontSprite.setDisplaySize(ringW, ringHalf);
+        e.ringFrontSprite.setAngle(e.variation.ringTiltDeg);
+        e.ringFrontSprite.setVisible(true);
+      }
 
       e.hitbox.setPosition(proj.x, proj.y);
       e.hitbox.setSize(size + 16, size + 16);
@@ -249,78 +319,13 @@ export class Planets2D {
 
   destroy(): void {
     for (const e of this.entries.values()) {
-      e.sprite.destroy();
+      e.baseSprite.destroy();
+      e.ringBackSprite?.destroy();
+      e.ringFrontSprite?.destroy();
       e.hitbox.destroy();
     }
     this.entries.clear();
     this.orbitGfx?.destroy();
     this.orbitGfx = null;
   }
-}
-
-// ---------------------------------------------------------------------------
-// Planet color palette by type/biome
-// ---------------------------------------------------------------------------
-
-function colorForPlanet(planet: Planet): number {
-  switch (planet.type) {
-    case "agricultural":
-      return 0x76b450; // verdant green
-    case "mining":
-      return 0x9a6840; // rusty ore
-    case "techWorld":
-      return 0x9080d0; // violet
-    case "manufacturing":
-      return 0xb88860; // industrial tan
-    case "luxuryWorld":
-      return 0xd4a85a; // gilded warm
-    case "coreWorld":
-      return 0x6ab0d8; // bright cyan-blue
-    case "frontier":
-      return 0x7c8a6a; // muted olive
-    default:
-      return 0xaabbcc;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Procedural planet texture — solid disc with simple radial shading
-// ---------------------------------------------------------------------------
-
-function getOrCreatePlanetTexture(scene: Phaser.Scene, color: number): string {
-  const key = "galaxy2d:planet:" + color.toString(16).padStart(6, "0");
-  if (scene.textures.exists(key)) return key;
-
-  const size = 64;
-  const tex = scene.textures.createCanvas(key, size, size);
-  if (!tex) return key;
-
-  const ctx = tex.getContext();
-  const r = (color >> 16) & 0xff;
-  const g = (color >> 8) & 0xff;
-  const b = color & 0xff;
-  const half = size / 2;
-
-  // Lit-from-upper-left radial gradient gives the disc a sphere-like feel.
-  const grad = ctx.createRadialGradient(
-    half - 8,
-    half - 8,
-    1,
-    half,
-    half,
-    half,
-  );
-  const lit = (c: number) => Math.min(255, Math.round(c + 70));
-  const dim = (c: number) => Math.max(0, Math.round(c * 0.25));
-  grad.addColorStop(0, `rgb(${lit(r)}, ${lit(g)}, ${lit(b)})`);
-  grad.addColorStop(0.55, `rgb(${r}, ${g}, ${b})`);
-  grad.addColorStop(1, `rgb(${dim(r)}, ${dim(g)}, ${dim(b)})`);
-
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(half, half, half - 1, 0, Math.PI * 2);
-  ctx.fill();
-
-  tex.refresh();
-  return key;
 }
