@@ -1,11 +1,13 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/portraits/*", "/concepts/*", "/wiki/*", "/qa/*"]
+    "exclude": ["/assets/*", "/portraits/*", "/concepts/*", "/wiki/*", "/qa/*", "/video/*"]
   },
   "mimeTypes": {
     ".webp": "image/webp",
     ".mp3":  "audio/mpeg",
+    ".mp4":  "video/mp4",
+    ".webm": "video/webm",
     ".wasm": "application/wasm"
   },
   "globalHeaders": {
@@ -33,6 +35,12 @@
     },
     {
       "route": "/concepts/audio/*",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "route": "/video/*",
       "headers": {
         "Cache-Control": "public, max-age=31536000, immutable"
       }

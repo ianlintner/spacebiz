@@ -27,6 +27,7 @@
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build",
     "preview": "vite preview",
     "optimize-assets": "node scripts/optimize-images.mjs",
+    "optimize-videos": "node scripts/optimize-videos.mjs",
     "generate-dialogue-sfx": "node scripts/generate-dialogue-sfx.mjs",
     "prepare": "husky"
   },

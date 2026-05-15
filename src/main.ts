@@ -4,6 +4,7 @@ import * as Phaser from "phaser";
 import { createGameConfig, calculateGameSize } from "./game/config.ts";
 import { updateLayout } from "@spacebiz/ui";
 import { BootScene } from "./scenes/BootScene.ts";
+import { VideoBackdropScene } from "./scenes/VideoBackdropScene.ts";
 import { MainMenuScene } from "./scenes/MainMenuScene.ts";
 import { GalaxySetupScene } from "./scenes/GalaxySetupScene.ts";
 import { GameHUDScene } from "./scenes/GameHUDScene.ts";
@@ -832,6 +833,7 @@ function mountGame(): void {
 
   const config = createGameConfig([
     BootScene,
+    VideoBackdropScene,
     MainMenuScene,
     GalaxySetupScene,
     GameHUDScene,

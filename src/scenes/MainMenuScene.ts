@@ -1,9 +1,6 @@
 import * as Phaser from "phaser";
 import {
   addFloatTween,
-  addPulseTween,
-  Panel,
-  Label,
   Button,
   getTheme,
   getLayout,
@@ -22,53 +19,12 @@ import {
   getActiveSandboxData,
 } from "../game/simulation/SandboxSaveManager.ts";
 
-type HeroConfig = {
-  key: "hero-freight" | "hero-passenger";
-  strap: string;
-  subtitle: string;
-  vignette: string;
-  focusX: number;
-  focusY: number;
-  anchorX: number;
-  anchorY: number;
-  driftX: number;
-  driftY: number;
-  zoom: number;
-};
-
-const HERO_CONFIGS: readonly HeroConfig[] = [
-  {
-    key: "hero-freight",
-    strap: "Heavy Cargo Division",
-    subtitle: "Operate freight corridors that sustain interstellar economies",
-    vignette:
-      "Industrial terminals, cargo cranes, and long-haul logistics across contested space.",
-    focusX: 0.56,
-    focusY: 0.48,
-    anchorX: 0.54,
-    anchorY: 0.47,
-    driftX: 16,
-    driftY: -10,
-    zoom: 1.14,
-  },
-  {
-    key: "hero-passenger",
-    strap: "Passenger & Luxury Lanes",
-    subtitle: "Manage premium passenger routes between high-demand systems",
-    vignette:
-      "Orbital terminals, high-traffic hubs, and service tiers built around reliability.",
-    focusX: 0.58,
-    focusY: 0.46,
-    anchorX: 0.56,
-    anchorY: 0.45,
-    driftX: -14,
-    driftY: -8,
-    zoom: 1.13,
-  },
-];
+// Once the player picks a destination from the menu, we tear the ambient
+// video backdrop down for the rest of the session — it's a boot-time mood
+// piece, not a recurring layer. Survives only until the next full page load.
+let videoDismissed = false;
 
 export class MainMenuScene extends Phaser.Scene {
-  private heroConfig!: HeroConfig;
   private canContinue = false;
   private canResumeSandbox = false;
   private canResumeDraft = false;
@@ -76,18 +32,15 @@ export class MainMenuScene extends Phaser.Scene {
   // Decorative layer (rebuilt on every relayout — raw Phaser objects without setSize)
   private decorativeLayer: Phaser.GameObjects.GameObject[] = [];
 
-  // Title card
-  private titlePanel!: Panel;
-  private strapLabel!: Label;
-  private titleLabel!: Label;
-  private subtitleLabel!: Label;
+  // Title — single text element floating over the video backdrop
+  private titleText!: Phaser.GameObjects.Text;
 
-  // Bottom command dock
-  private dockPanel!: Panel;
-  private deckLabel!: Label;
-  private promptLabel!: Label;
-  private statusLabel!: Label;
-  private vignetteLabel!: Label;
+  // Bottom command dock — flat translucent scrim + thin accent line
+  private dockBg!: Phaser.GameObjects.Rectangle;
+  private dockAccent!: Phaser.GameObjects.Rectangle;
+  private deckText!: Phaser.GameObjects.Text;
+  private promptText!: Phaser.GameObjects.Text;
+  private statusText!: Phaser.GameObjects.Text;
 
   // Buttons
   private newGameButton!: Button;
@@ -103,111 +56,98 @@ export class MainMenuScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
-    this.cameras.main.setBackgroundColor(theme.colors.background);
+    // Transparent camera so the persistent VideoBackdropScene shows through.
+    this.cameras.main.setBackgroundColor("rgba(0,0,0,0)");
+    // Make sure the video scene is below this one in the render order, in
+    // case we returned here from a deeper scene that re-ordered scenes.
+    // Once dismissed (after the first menu pick), it stays gone until reload.
+    if (!videoDismissed) {
+      if (this.scene.isActive("VideoBackdropScene")) {
+        this.scene.sendToBack("VideoBackdropScene");
+      } else {
+        this.scene.launch("VideoBackdropScene");
+        this.scene.sendToBack("VideoBackdropScene");
+      }
+    }
     const audio = getAudioDirector();
     audio.setMusicState("menu");
 
-    this.heroConfig = Phaser.Utils.Array.GetRandom([...HERO_CONFIGS]);
     this.canContinue = hasSaveGame();
     this.canResumeSandbox = hasResumableSandbox();
     this.canResumeDraft = hasFreshDraft();
 
-    // Title card built once — geometry applied in relayout().
-    this.titlePanel = new Panel(this, {
-      x: 0,
-      y: 0,
-      width: 620,
-      height: 132,
-      showGlow: true,
-    });
-
-    this.strapLabel = new Label(this, {
-      x: 0,
-      y: 0,
-      text: this.heroConfig.strap,
-      style: "caption",
-      color: theme.colors.accent,
-    });
-    this.strapLabel.setOrigin(0.5, 0);
-
-    this.titleLabel = new Label(this, {
-      x: 0,
-      y: 0,
-      text: "STAR FREIGHT TYCOON",
-      style: "display",
-      color: theme.colors.accent,
-      glow: true,
-    });
-    this.titleLabel.setOrigin(0.5);
-    addFloatTween(this, this.titleLabel, {
+    // Slick cinematic title: thin, widely-tracked, off-white over the video.
+    // No panel, no strap, no subtitle — the video does the talking.
+    const textDpr = Math.min(
+      typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
+      3,
+    );
+    this.titleText = this.add
+      .text(0, 0, "STAR FREIGHT TYCOON", {
+        fontFamily: "monospace",
+        fontSize: "44px",
+        color: "#f4f8fc",
+        letterSpacing: 14,
+      })
+      .setOrigin(0.5, 0.5)
+      .setAlpha(0.95)
+      .setShadow(0, 2, "rgba(0,0,0,0.7)", 12, false, true)
+      .setResolution(textDpr);
+    addFloatTween(this, this.titleText, {
       dx: 0,
       dy: -4,
       duration: 4000,
       delay: 800,
     });
 
-    this.subtitleLabel = new Label(this, {
-      x: 0,
-      y: 0,
-      text: this.heroConfig.subtitle,
-      style: "caption",
-      color: theme.colors.textDim,
-    });
-    this.subtitleLabel.setOrigin(0.5);
+    // Bottom command dock — flat scrim with a hairline accent edge.
+    this.dockBg = this.add.rectangle(0, 0, 10, 10, 0x05101a, 0.62).setOrigin(0);
+    this.dockAccent = this.add
+      .rectangle(0, 0, 10, 1, theme.colors.accent, 0.55)
+      .setOrigin(0);
 
-    // Bottom command dock built once — geometry applied in relayout().
-    this.dockPanel = new Panel(this, {
-      x: 0,
-      y: 0,
-      width: 760,
-      height: 260,
-      showGlow: true,
-    });
+    // Eyebrow label, wide-tracked uppercase
+    this.deckText = this.add
+      .text(0, 0, "COMMAND DECK", {
+        fontFamily: "monospace",
+        fontSize: "10px",
+        color: "#7eb8d4",
+        letterSpacing: 4,
+      })
+      .setOrigin(0, 0)
+      .setAlpha(0.85)
+      .setResolution(textDpr);
 
-    this.deckLabel = new Label(this, {
-      x: 0,
-      y: 0,
-      text: "Command Deck",
-      style: "caption",
-      color: theme.colors.accent,
-    });
-    this.deckLabel.setOrigin(0, 0);
+    this.promptText = this.add
+      .text(0, 0, "Select your next operation.", {
+        fontFamily: "monospace",
+        fontSize: "20px",
+        color: "#f4f8fc",
+        letterSpacing: 1,
+      })
+      .setOrigin(0, 0)
+      .setAlpha(0.95)
+      .setShadow(0, 1, "rgba(0,0,0,0.7)", 6, false, true)
+      .setResolution(textDpr);
 
-    this.promptLabel = new Label(this, {
-      x: 0,
-      y: 0,
-      text: "Select your next operation.",
-      style: "body",
-      color: theme.colors.text,
-    });
-    this.promptLabel.setOrigin(0, 0);
-
-    const statusText = this.canResumeDraft
+    const statusString = this.canResumeDraft
       ? "Unsaved session detected — resume where you left off or start fresh."
       : this.canResumeSandbox
         ? "Sandbox session detected — resume current simulation or start a new run."
         : this.canContinue
           ? "Saved company detected — continue from the last checkpoint."
           : "No save detected — initialize a new company profile.";
-    this.statusLabel = new Label(this, {
-      x: 0,
-      y: 0,
-      text: statusText,
-      style: "caption",
-      color: theme.colors.textDim,
-      maxWidth: 760 - 56,
-    });
-    this.statusLabel.setOrigin(0, 0);
-
-    this.vignetteLabel = new Label(this, {
-      x: 0,
-      y: 0,
-      text: this.heroConfig.vignette,
-      style: "caption",
-      color: theme.colors.textDim,
-      maxWidth: 760 - 56,
-    });
-    this.vignetteLabel.setOrigin(0, 0);
+    this.statusText = this.add
+      .text(0, 0, statusString, {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        color: "#a8c4d4",
+        letterSpacing: 1,
+        wordWrap: { width: 760 - 56 },
+      })
+      .setOrigin(0, 0)
+      .setAlpha(0.85)
+      .setResolution(textDpr);
 
     this.newGameButton = new Button(this, {
       x: 0,
@@ -216,6 +156,7 @@ export class MainMenuScene extends Phaser.Scene {
       height: 52,
       label: "New Game",
       onClick: () => {
+        this.dismissVideo();
         this.scene.start("GalaxySetupScene");
       },
     });
@@ -229,6 +170,7 @@ export class MainMenuScene extends Phaser.Scene {
       disabled: !this.canContinue,
       onClick: () => {
         if (loadGameIntoStore()) {
+          this.dismissVideo();
           this.scene.start("GameHUDScene");
         }
       },
@@ -241,6 +183,7 @@ export class MainMenuScene extends Phaser.Scene {
       height: 52,
       label: "AI Sandbox",
       onClick: () => {
+        this.dismissVideo();
         this.scene.start("SandboxSetupScene");
       },
     });
@@ -255,6 +198,7 @@ export class MainMenuScene extends Phaser.Scene {
         onClick: () => {
           const data = getActiveSandboxData();
           if (!data) return;
+          this.dismissVideo();
           this.scene.start("AISandboxScene", {
             seed: data.config.seed,
             gameSize: data.config.gameSize,
@@ -278,6 +222,7 @@ export class MainMenuScene extends Phaser.Scene {
         onClick: () => {
           if (loadDraftIntoStore()) {
             deleteDraft();
+            this.dismissVideo();
             this.scene.start("GameHUDScene");
           }
         },
@@ -309,21 +254,12 @@ export class MainMenuScene extends Phaser.Scene {
     // setSize() — destroy and rebuild on each reflow.
     this.rebuildDecorativeLayer();
 
-    // Title card
-    const titlePanelW = 620;
-    const titlePanelH = 132;
-    const titlePanelX = cx - titlePanelW / 2;
-    const titlePanelY = 24;
-    this.titlePanel.setPosition(titlePanelX, titlePanelY);
-    this.titlePanel.setSize(titlePanelW, titlePanelH);
+    // Title — centered horizontally near the top of the frame.
+    this.titleText.setPosition(cx, 84);
 
-    this.strapLabel.setPosition(cx, titlePanelY + 18);
-    this.titleLabel.setPosition(cx, titlePanelY + 52);
-    this.subtitleLabel.setPosition(cx, titlePanelY + 98);
-
-    // Bottom command dock
-    const panelW = 760;
-    const panelH = 260;
+    // Bottom command dock — full-width scrim, content centered.
+    const panelW = 820;
+    const panelH = 200;
     const panelX = cx - panelW / 2;
     const panelY = L.gameHeight - panelH - 22;
     const btnHeight = 52;
@@ -334,16 +270,17 @@ export class MainMenuScene extends Phaser.Scene {
     const btnWidth = totalBtns > 3 ? 168 : 220;
     const totalBtnWidth = btnWidth * totalBtns + btnGap * (totalBtns - 1);
     const btnStartX = panelX + (panelW - totalBtnWidth) / 2;
-    const btnY = panelY + panelH - btnHeight - 28;
+    const btnY = panelY + panelH - btnHeight - 22;
     const textLeftX = panelX + 28;
 
-    this.dockPanel.setPosition(panelX, panelY);
-    this.dockPanel.setSize(panelW, panelH);
+    this.dockBg.setPosition(panelX, panelY);
+    this.dockBg.setSize(panelW, panelH);
+    this.dockAccent.setPosition(panelX, panelY);
+    this.dockAccent.setSize(panelW, 1);
 
-    this.deckLabel.setPosition(textLeftX, panelY + 22);
-    this.promptLabel.setPosition(textLeftX, panelY + 48);
-    this.statusLabel.setPosition(textLeftX, panelY + 80);
-    this.vignetteLabel.setPosition(textLeftX, panelY + 112);
+    this.deckText.setPosition(textLeftX, panelY + 18);
+    this.promptText.setPosition(textLeftX, panelY + 36);
+    this.statusText.setPosition(textLeftX, panelY + 70);
 
     this.newGameButton.setPosition(btnStartX, btnY);
     this.newGameButton.setSize(btnWidth, btnHeight);
@@ -378,11 +315,19 @@ export class MainMenuScene extends Phaser.Scene {
     }
   }
 
-  private rebuildDecorativeLayer(): void {
-    const L = getLayout();
-    const theme = getTheme();
-    const cx = L.gameWidth / 2;
+  private dismissVideo(): void {
+    if (videoDismissed) return;
+    videoDismissed = true;
+    // stop() fires shutdown which destroys the Video GameObject (releasing
+    // the HTMLVideoElement). remove() drops the scene from the manager so
+    // it can't be relaunched without a full page reload.
+    if (this.scene.isActive("VideoBackdropScene")) {
+      this.scene.stop("VideoBackdropScene");
+    }
+    this.scene.remove("VideoBackdropScene");
+  }
 
+  private rebuildDecorativeLayer(): void {
     // Tear down previous decorative objects (and their tweens).
     for (const obj of this.decorativeLayer) {
       this.tweens.killTweensOf(obj);
@@ -390,100 +335,7 @@ export class MainMenuScene extends Phaser.Scene {
     }
     this.decorativeLayer = [];
 
-    // Hero image
-    const heroTexture = this.textures
-      .get(this.heroConfig.key)
-      .getSourceImage() as { width: number; height: number };
-    const coverScale =
-      Math.max(
-        (L.gameWidth + 120) / heroTexture.width,
-        (L.gameHeight + 110) / heroTexture.height,
-      ) * this.heroConfig.zoom;
-
-    const hero = this.add
-      .image(
-        L.gameWidth * this.heroConfig.anchorX,
-        L.gameHeight * this.heroConfig.anchorY,
-        this.heroConfig.key,
-      )
-      .setOrigin(this.heroConfig.focusX, this.heroConfig.focusY)
-      .setScale(coverScale)
-      .setAlpha(0.98);
-    hero.setDepth(-100);
-    this.decorativeLayer.push(hero);
-    this.tweens.add({
-      targets: hero,
-      scaleX: coverScale * 1.035,
-      scaleY: coverScale * 1.035,
-      x: L.gameWidth * this.heroConfig.anchorX + this.heroConfig.driftX,
-      y: L.gameHeight * this.heroConfig.anchorY + this.heroConfig.driftY,
-      duration: 16000,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-    });
-
-    const heroSheen = this.add
-      .rectangle(
-        -220,
-        L.gameHeight * 0.42,
-        220,
-        L.gameHeight * 1.2,
-        theme.colors.accent,
-        0.08,
-      )
-      .setAngle(16)
-      .setBlendMode(Phaser.BlendModes.SCREEN);
-    heroSheen.setDepth(-90);
-    this.decorativeLayer.push(heroSheen);
-    this.tweens.add({
-      targets: heroSheen,
-      x: L.gameWidth + 220,
-      duration: 9000,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-      delay: 1200,
-    });
-
-    // Top and bottom readability scrims so the art stays visible while UI remains legible.
-    const topScrim = this.add
-      .rectangle(0, 0, L.gameWidth, 220, theme.colors.background, 0.54)
-      .setOrigin(0, 0);
-    topScrim.setDepth(-80);
-    this.decorativeLayer.push(topScrim);
-
-    const bottomScrim = this.add
-      .rectangle(
-        0,
-        L.gameHeight - 270,
-        L.gameWidth,
-        270,
-        theme.colors.background,
-        0.78,
-      )
-      .setOrigin(0, 0);
-    bottomScrim.setDepth(-80);
-    this.decorativeLayer.push(bottomScrim);
-
-    const fullScrim = this.add
-      .rectangle(0, 0, L.gameWidth, L.gameHeight, theme.colors.background, 0.16)
-      .setOrigin(0, 0);
-    fullScrim.setDepth(-80);
-    this.decorativeLayer.push(fullScrim);
-
-    const depthCircle = this.add.circle(
-      cx,
-      150,
-      320,
-      theme.colors.panelBg,
-      0.14,
-    );
-    depthCircle.setDepth(-70);
-    this.decorativeLayer.push(depthCircle);
-    addPulseTween(this, depthCircle, {
-      minAlpha: 0.08,
-      maxAlpha: 0.2,
-      duration: 5200,
-    });
+    // Backdrop is now the cycling video (VideoBackdropScene) — no scrims,
+    // bars, or depth overlays on top of it.
   }
 }

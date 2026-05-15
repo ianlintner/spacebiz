@@ -18,6 +18,7 @@ npm run build        # tsc && vite build
 npm run check        # typecheck && test && build (all CI gates)
 npm run preview      # preview production build
 npm run optimize-assets  # re-generate public/portraits/**/*.{webp,png} from assets-source/
+npm run optimize-videos  # re-encode public/video/*.mp4 from assets-source/video/ (needs ffmpeg)
 ```
 
 ## CI Gates
@@ -93,6 +94,32 @@ Textures survive scene transitions (live in Phaser's global TextureManager). Alw
 `scene.textures.exists(key)` before triggering a load to avoid redundant fetches —
 `PortraitLoader` does this internally, but callers can use `portraitLoader.isLoaded(key)`
 for a synchronous pre-check.
+
+**Workflow for adding/updating intro videos:**
+
+1. Drop original MP4/MOV files into `assets-source/video/`.
+2. Run `npm run optimize-videos` to re-encode into `public/video/*.mp4`.
+3. Commit both the source and the generated output.
+
+**Script behavior:** `scripts/optimize-videos.mjs` shells out to `ffmpeg` with
+`-an` (strip audio), `-c:v libx264 -preset slow -crf 26 -profile:v main`,
+`-movflags +faststart` (moov atom at front so playback starts on the first
+bytes), `-pix_fmt yuv420p` (iOS/Safari compat), and `-vf scale=-2:'min(1080,ih)'`
+(cap height at 1080p, no upscaling). Skips files whose output is newer than
+the source (mtime check). Requires `ffmpeg` on PATH.
+
+**Serving:** `public/staticwebapp.config.json` declares `.mp4`/`.webm` MIME
+types, excludes `/video/*` from the SPA navigation fallback (so a 404 doesn't
+silently return the HTML shell), and sets `Cache-Control: public, max-age=31536000, immutable`
+on `/video/*`. Filenames must change to invalidate; rename to `_v2.mp4`
+when content is swapped.
+
+**Video loading at runtime:** [VideoBackdropScene](src/scenes/VideoBackdropScene.ts)
+plays one of the ambient videos at a time, cropped to cover the canvas, with
+fade-to-black transitions. It launches from [BootScene](src/scenes/BootScene.ts)
+and stays alive through the main menu. The scene is `stop()`'d and `remove()`'d
+on the first menu button click via `MainMenuScene.dismissVideo()` so the
+HTMLVideoElement is released and never relaunches until full page reload.
 
 ## Pull Requests
 

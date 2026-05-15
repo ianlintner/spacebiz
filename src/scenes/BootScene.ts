@@ -31,12 +31,24 @@ import {
 import { generateAdviserSpritesheet } from "@rogue-universe/shared";
 import { PlanetBiome } from "../data/types.ts";
 
+const BOOT_MIN_DISPLAY_MS = 2500;
+
 export class BootScene extends Phaser.Scene {
+  private bootStartedAt = 0;
+
   constructor() {
     super({ key: "BootScene" });
   }
 
   preload(): void {
+    // Launch the persistent video backdrop scene beneath us. It outlives boot
+    // and provides the main-menu ambient background as well.
+    this.bootStartedAt = performance.now();
+    if (!this.scene.isActive("VideoBackdropScene")) {
+      this.scene.launch("VideoBackdropScene");
+    }
+    this.scene.sendToBack("VideoBackdropScene");
+
     // ── Draw boot progress bar before any loads begin ─────────────────────
     this.drawBootScreen();
 
@@ -50,15 +62,7 @@ export class BootScene extends Phaser.Scene {
 
     // ── Critical assets only (< 5 MB total with WebP) ─────────────────────
 
-    // Hero images (main menu background) — WebP primary, PNG fallback
-    this.load.image("hero-freight", [
-      "concepts/hero/freight-menu.webp",
-      "concepts/hero/freight-menu.png",
-    ]);
-    this.load.image("hero-passenger", [
-      "concepts/hero/passenger-menu.webp",
-      "concepts/hero/passenger-menu.png",
-    ]);
+    // Hero images removed — MainMenuScene now uses VideoBackdropScene instead.
 
     // Planet portraits (7 types, ~280 KB WebP total) — always shown on maps
     for (const ptype of PLANET_PORTRAIT_TYPES) {
@@ -189,10 +193,19 @@ export class BootScene extends Phaser.Scene {
     generateShipMapSprites(this.textures, this.anims);
     generateAdviserSpritesheet(this.textures);
 
-    // Brief fade-out then hand off to main menu
-    this.cameras.main.fadeOut(200, 0, 0, 0);
-    this.cameras.main.once("camerafadeoutcomplete", () => {
-      this.scene.start("MainMenuScene");
+    // Enforce minimum display so the backdrop video gets screen time, then
+    // fade out and hand off to the main menu.
+    const elapsed = performance.now() - this.bootStartedAt;
+    const remaining = Math.max(0, BOOT_MIN_DISPLAY_MS - elapsed);
+    this.time.delayedCall(remaining, () => {
+      // Fade out boot UI only — leaving the persistent VideoBackdropScene
+      // untouched so the menu can take over the video seamlessly.
+      this.tweens.add({
+        targets: this.children.list,
+        alpha: 0,
+        duration: 200,
+        onComplete: () => this.scene.start("MainMenuScene"),
+      });
     });
   }
 
@@ -208,73 +221,115 @@ export class BootScene extends Phaser.Scene {
     const W = this.scale.width;
     const H = this.scale.height;
 
-    // Dark background
-    const bg = this.add.graphics();
-    bg.fillStyle(0x050a14, 1);
-    bg.fillRect(0, 0, W, H);
+    // Local corner vignette so UI stays legible against bright video frames.
+    this.drawCornerVignette(W, H);
 
-    // Title
-    this.add
-      .text(W / 2, H * 0.38, "STAR FREIGHT TYCOON", {
-        fontFamily: "monospace",
-        fontSize: "22px",
-        color: "#7eb8d4",
-        letterSpacing: 6,
-      })
-      .setOrigin(0.5);
-
-    this.add
-      .text(W / 2, H * 0.44, "Booting systems…", {
-        fontFamily: "monospace",
-        fontSize: "11px",
-        color: "#3a5a70",
-        letterSpacing: 2,
-      })
-      .setOrigin(0.5);
-
-    // Progress bar track
-    const barW = Math.min(360, W * 0.55);
-    const barH = 4;
-    const barX = W / 2 - barW / 2;
-    const barY = H * 0.54;
+    // Right-aligned slick corner stack: title → subtitle → progress bar → file label.
+    const rightX = W - 32;
+    const baseY = H - 48;
+    const barW = 220;
+    const barH = 2;
+    const barX = rightX - barW;
+    const barY = baseY;
     this.bootBarWidth = barW;
     this.bootBarX = barX;
     this.bootBarY = barY;
 
+    const textDpr = Math.min(
+      typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
+      3,
+    );
+
+    // Title — small, wide-tracked, low alpha for subtlety
+    this.add
+      .text(rightX, baseY - 30, "STAR FREIGHT TYCOON", {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        color: "#e8f0f7",
+        letterSpacing: 4,
+      })
+      .setOrigin(1, 0.5)
+      .setAlpha(0.85)
+      .setResolution(textDpr);
+
+    // Tiny subtitle in muted accent
+    this.add
+      .text(rightX, baseY - 14, "BOOTING SYSTEMS", {
+        fontFamily: "monospace",
+        fontSize: "8px",
+        color: "#7eb8d4",
+        letterSpacing: 3,
+      })
+      .setOrigin(1, 0.5)
+      .setAlpha(0.55)
+      .setResolution(textDpr);
+
+    // Hairline track
     const track = this.add.graphics();
-    track.fillStyle(0x0d2033, 1);
-    track.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+    track.fillStyle(0xffffff, 0.08);
+    track.fillRect(barX, barY, barW, barH);
 
     this.bootGfx = this.add.graphics();
     this.updateProgressBar(0);
 
-    // File label below bar
+    // File label, right-aligned under the bar, very muted
     this.bootLabel = this.add
-      .text(W / 2, barY + 14, "", {
+      .text(rightX, barY + 12, "", {
         fontFamily: "monospace",
-        fontSize: "9px",
-        color: "#2a4a5e",
+        fontSize: "8px",
+        color: "#7eb8d4",
+        letterSpacing: 1,
       })
-      .setOrigin(0.5);
+      .setOrigin(1, 0.5)
+      .setResolution(textDpr)
+      .setAlpha(0.45);
+  }
+
+  /**
+   * Radial vignette anchored to the bottom-right corner.
+   * Darkest at the corner where the boot UI sits, fading to fully transparent
+   * across roughly the bottom-right quadrant. Uses a canvas texture because
+   * Phaser Graphics doesn't support radial gradients.
+   */
+  private drawCornerVignette(W: number, H: number): void {
+    const size = 512;
+    const key = "boot-corner-vignette";
+    if (!this.textures.exists(key)) {
+      const { tex, ctx } = this.makeCanvas(key, size, size);
+      // Gradient centered at (size, size) — the bottom-right of the texture
+      const grad = ctx.createRadialGradient(size, size, 0, size, size, size);
+      grad.addColorStop(0, "rgba(5,10,20,0.85)");
+      grad.addColorStop(0.5, "rgba(5,10,20,0.4)");
+      grad.addColorStop(1, "rgba(5,10,20,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+      tex.refresh();
+    }
+    // Stretch a portion of the texture across the bottom-right of the screen.
+    const vw = Math.min(W * 0.55, 560);
+    const vh = Math.min(H * 0.55, 380);
+    this.add
+      .image(W, H, key)
+      .setOrigin(1, 1)
+      .setDisplaySize(vw, vh)
+      .setDepth(-50);
   }
 
   private updateProgressBar(value: number): void {
     if (!this.bootGfx) return;
+    const clamped = Math.min(Math.max(value, 0), 1);
+    const filled = Math.floor(this.bootBarWidth * clamped);
     this.bootGfx.clear();
-    this.bootGfx.fillStyle(0x3a8ab4, 1);
-    this.bootGfx.fillRect(
-      this.bootBarX,
-      this.bootBarY,
-      Math.floor(this.bootBarWidth * Math.min(value, 1)),
-      4,
-    );
-    // Bright leading edge
-    if (value > 0 && value < 1) {
-      this.bootGfx.fillStyle(0x7eb8d4, 1);
+    // Main fill — soft accent
+    this.bootGfx.fillStyle(0x7eb8d4, 0.9);
+    this.bootGfx.fillRect(this.bootBarX, this.bootBarY, filled, 2);
+    // Bright leading pixel for that "live" feel
+    if (clamped > 0 && clamped < 1) {
+      this.bootGfx.fillStyle(0xffffff, 1);
       this.bootGfx.fillRect(
-        this.bootBarX + Math.floor(this.bootBarWidth * value) - 2,
-        this.bootBarY,
-        2,
+        this.bootBarX + filled - 1,
+        this.bootBarY - 1,
+        1,
         4,
       );
     }
