@@ -39,6 +39,11 @@ const TRAFFIC_MAX_DISPLAY_PX = 14;
 // instead of metronomic.
 const TRAFFIC_JITTER = 0.55;
 
+// Per-particle speed variation: lifespan is multiplied by (1 ± SPEED_JITTER),
+// so the same source→target trip takes anywhere from ~70% to ~140% of the
+// base time. Faster ships zip across; slower ones drift.
+const TRAFFIC_SPEED_JITTER = 0.35;
+
 const GATE_RADIUS_WORLD = 4.2; // must match HyperGates2D
 const POOL_INITIAL_SIZE = 64;
 
@@ -52,6 +57,10 @@ function clamp(v: number, lo: number, hi: number): number {
 
 function jitteredInterval(baseMs: number): number {
   return baseMs * (1 + (Math.random() * 2 - 1) * TRAFFIC_JITTER);
+}
+
+function jitteredLifespan(baseMs: number): number {
+  return baseMs * (1 + (Math.random() * 2 - 1) * TRAFFIC_SPEED_JITTER);
 }
 
 function getOrCreateSparkTexture(scene: Phaser.Scene): string {
@@ -355,7 +364,7 @@ export class Traffic2D {
         p,
         source,
         target,
-        TRAFFIC_GALAXY_LIFESPAN_MS,
+        jitteredLifespan(TRAFFIC_GALAXY_LIFESPAN_MS),
         TRAFFIC_GALAXY_ALPHA,
         TRAFFIC_GALAXY_BASE_SCALE,
         TRAFFIC_GALAXY_DEPTH,
@@ -435,7 +444,7 @@ export class Traffic2D {
         p,
         source,
         target,
-        TRAFFIC_SYSTEM_LIFESPAN_MS,
+        jitteredLifespan(TRAFFIC_SYSTEM_LIFESPAN_MS),
         TRAFFIC_SYSTEM_ALPHA,
         TRAFFIC_SYSTEM_BASE_SCALE,
         TRAFFIC_SYSTEM_DEPTH,
