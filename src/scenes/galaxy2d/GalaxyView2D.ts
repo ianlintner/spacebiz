@@ -17,6 +17,7 @@ import { CAMERA_FOV_Y, Camera3D } from "./Camera3D.ts";
 import type { Mat4 } from "./Camera3D.ts";
 import { Background2D } from "./Background2D.ts";
 import { HyperGates2D } from "./HyperGates2D.ts";
+import { Traffic2D } from "./Traffic2D.ts";
 import { Planets2D } from "./Planets2D.ts";
 import { Routes2D } from "./Routes2D.ts";
 import { Ships2D } from "./Ships2D.ts";
@@ -282,6 +283,7 @@ export class GalaxyView2D {
   private readonly background: Background2D;
   private readonly planets: Planets2D;
   private readonly gates: HyperGates2D;
+  private readonly traffic: Traffic2D;
 
   // Station — the player's HQ orbits its home star in system view.
   private playerHQSystemId: string | null = null;
@@ -339,6 +341,7 @@ export class GalaxyView2D {
     );
     this.planets = new Planets2D(this.scene, this.galaxyContainer);
     this.gates = new HyperGates2D(this.scene, this.galaxyContainer);
+    this.traffic = new Traffic2D(this.scene, this.galaxyContainer);
   }
 
   private buildParallaxLayers(): void {
@@ -518,6 +521,7 @@ export class GalaxyView2D {
     this.rebuildTerritoryPolygons(empires);
 
     this.gates.setData(hyperlanes, systems, this.systemPositions);
+    this.traffic.setGalaxyData(hyperlanes, this.systemPositions);
   }
 
   private rebuildTerritoryPolygons(empires: Empire[]): void {
@@ -900,6 +904,13 @@ export class GalaxyView2D {
       systemMode,
     );
 
+    this.traffic.update(
+      viewProj,
+      this.viewport,
+      systemMode,
+      this.focusedSystemId,
+    );
+
     // Station orbit — player HQ system only, replaces the chevron in close view.
     this.updateStationVisual(systemMode, viewProj, viewMat, focalLength);
   }
@@ -1177,6 +1188,11 @@ export class GalaxyView2D {
   setPlanets(planets: import("../../data/types.ts").Planet[]): void {
     if (this.destroyed) return;
     this.planets.setPlanets(planets, this.systemPositions);
+    const counts = new Map<string, number>();
+    for (const planet of planets) {
+      counts.set(planet.systemId, (counts.get(planet.systemId) ?? 0) + 1);
+    }
+    this.traffic.setPlanetCounts(counts);
   }
 
   setPlanetHoverHandler(
@@ -1278,6 +1294,7 @@ export class GalaxyView2D {
     this.background.destroy();
     this.planets.destroy();
     this.gates.destroy();
+    this.traffic.destroy();
 
     this.galaxyContainer.destroy();
     disposeAllGlowTextures(this.scene);
