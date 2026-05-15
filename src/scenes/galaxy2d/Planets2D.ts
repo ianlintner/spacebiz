@@ -41,8 +41,11 @@ interface PlanetEntry {
   variation: PlanetVariation;
 }
 
-// Draw one half of a ring ellipse (back = lower semicircle, front = upper).
-// Called every frame; uses clear() + stroke arcs at multiple radii for a soft band.
+// Draw one half of a ring ellipse around a planet.
+// Phaser y increases downward: sin(0..π) > 0 → bottom arc (near side, front),
+//   sin(π..2π) < 0 → top arc (far side, back).
+// isBack=true  → top semicircle  (angles π..2π), rendered at PLANET_DEPTH-5 (behind planet).
+// isBack=false → bottom semicircle (angles 0..π), rendered at PLANET_DEPTH+5 (in front).
 function drawRingArc(
   gfx: Phaser.GameObjects.Graphics,
   rx: number,
@@ -55,15 +58,16 @@ function drawRingArc(
   const g = (tintColor >> 8) & 0xff;
   const b = tintColor & 0xff;
   const hex = (r << 16) | (g << 8) | b;
-  const startAngle = isBack ? 0 : Math.PI;
-  const endAngle = isBack ? Math.PI : Math.PI * 2;
-  const SEGS = 28;
-  const BANDS = 7;
+  // back = top arc (far side): π → 2π   front = bottom arc (near side): 0 → π
+  const startAngle = isBack ? Math.PI : 0;
+  const endAngle = isBack ? Math.PI * 2 : Math.PI;
+  const SEGS = 32;
+  const BANDS = 8;
   for (let band = 0; band < BANDS; band++) {
     const t = (band + 0.5) / BANDS;
-    const scale = 0.55 + t * 0.45; // inner 55% → outer 100%
+    const scale = 0.52 + t * 0.48; // inner 52% → outer 100%
     const edgeFade = Math.sin(t * Math.PI);
-    gfx.lineStyle(1.5, hex, edgeFade * 0.78);
+    gfx.lineStyle(1.5, hex, edgeFade * 0.82);
     gfx.beginPath();
     for (let j = 0; j <= SEGS; j++) {
       const angle = startAngle + (j / SEGS) * (endAngle - startAngle);
@@ -289,8 +293,8 @@ export class Planets2D {
       e.baseSprite.setVisible(true);
 
       if (e.ringBackGfx && e.ringFrontGfx) {
-        const rx = size * 0.82;
-        const ry = size * 0.22;
+        const rx = size * 0.85;
+        const ry = size * 0.26;
         e.ringBackGfx.setPosition(proj.x, proj.y);
         e.ringBackGfx.setAngle(e.variation.ringTiltDeg);
         drawRingArc(e.ringBackGfx, rx, ry, true, e.variation.ringTint);
