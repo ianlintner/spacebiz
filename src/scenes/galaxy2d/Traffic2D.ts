@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import type { Hyperlane } from "../../data/types.ts";
 import type { Mat4 } from "./Camera3D.ts";
 import type { Vec3, ViewportRect } from "./types.ts";
+import { projectToScreenDesignInto } from "./projection.ts";
 
 const TRAFFIC_SPARK_TEX_KEY = "traffic2d:spark";
 const TRAFFIC_SPARK_SIZE = 24;
@@ -178,10 +179,73 @@ export class Traffic2D {
     }
   }
 
-  private updateGalaxyEmitters(
-    _viewProj: Mat4,
-    _viewport: ViewportRect,
-  ): void {}
+  private updateGalaxyEmitters(viewProj: Mat4, viewport: ViewportRect): void {
+    for (const entry of this.galaxyEmitters) {
+      const projA = projectToScreenDesignInto(
+        this._scratchA,
+        entry.worldA,
+        viewProj,
+        viewport,
+      );
+      const projB = projectToScreenDesignInto(
+        this._scratchB,
+        entry.worldB,
+        viewProj,
+        viewport,
+      );
+
+      if (!projA.visible || !projB.visible) {
+        if (entry.running) {
+          entry.emitterFwd.stop();
+          entry.emitterBwd.stop();
+          entry.running = false;
+        }
+        continue;
+      }
+
+      const dx = projB.x - projA.x;
+      const dy = projB.y - projA.y;
+      const screenDist = Math.sqrt(dx * dx + dy * dy);
+
+      if (screenDist < 4) {
+        if (entry.running) {
+          entry.emitterFwd.stop();
+          entry.emitterBwd.stop();
+          entry.running = false;
+        }
+        continue;
+      }
+
+      const midX = (projA.x + projB.x) / 2;
+      const midY = (projA.y + projB.y) / 2;
+      const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+      // Speed: traverse half the lane in one lifespan (particles spawn at midpoint).
+      const speed = screenDist / 2 / (TRAFFIC_GALAXY_LIFESPAN / 1000);
+
+      entry.emitterFwd.x = midX;
+      entry.emitterFwd.y = midY;
+      (entry.emitterFwd.angle as any) = {
+        min: angleDeg - 10,
+        max: angleDeg + 10,
+      };
+      (entry.emitterFwd.speed as any) = speed;
+
+      const reverseAngle = angleDeg + 180;
+      entry.emitterBwd.x = midX;
+      entry.emitterBwd.y = midY;
+      (entry.emitterBwd.angle as any) = {
+        min: reverseAngle - 10,
+        max: reverseAngle + 10,
+      };
+      (entry.emitterBwd.speed as any) = speed;
+
+      if (!entry.running) {
+        entry.emitterFwd.start();
+        entry.emitterBwd.start();
+        entry.running = true;
+      }
+    }
+  }
 
   private stopGalaxyEmitters(): void {
     // Scratch vectors used in updateGalaxyEmitters when implemented
