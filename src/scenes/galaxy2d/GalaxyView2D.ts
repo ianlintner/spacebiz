@@ -252,6 +252,7 @@ export class GalaxyView2D {
   private stationHitbox: Phaser.GameObjects.Zone | null = null;
   private stationOrbitGfx: Phaser.GameObjects.Graphics | null = null;
   private stationHoverHandler: ((hovered: boolean) => void) | null = null;
+  private stationClickHandler: (() => void) | null = null;
   private readonly scratchStationNdc: Vec3 = { x: 0, y: 0, z: 0 };
   private readonly scratchStationWorld: Vec3 = { x: 0, y: 0, z: 0 };
 
@@ -953,6 +954,7 @@ export class GalaxyView2D {
       this.stationHitbox.on("pointerout", () =>
         this.stationHoverHandler?.(false),
       );
+      this.stationHitbox.on("pointerup", () => this.stationClickHandler?.());
       this.galaxyContainer.add(this.stationHitbox);
     }
     if (!this.stationOrbitGfx) {
@@ -1353,6 +1355,10 @@ export class GalaxyView2D {
 
   setStationHoverHandler(fn: ((hovered: boolean) => void) | null): void {
     this.stationHoverHandler = fn;
+  }
+
+  setStationClickHandler(fn: (() => void) | null): void {
+    this.stationClickHandler = fn;
   }
 
   setHQMarkers3D(markers: HQMarker3D[]): void {

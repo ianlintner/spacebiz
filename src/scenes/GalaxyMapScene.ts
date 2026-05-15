@@ -37,6 +37,7 @@ import type { HQMarker3D } from "./galaxy2d/GalaxyView2D.ts";
 import type { ProjectedScreen, Vec3 } from "./galaxy2d/types.ts";
 
 import type { Empire, GameState, StarSystem } from "../data/types.ts";
+import type { GameHUDScene } from "./GameHUDScene.ts";
 
 interface SystemMarker {
   system: StarSystem;
@@ -151,6 +152,12 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.view3D.setStationHoverHandler((hovered) => {
       if (hovered) this.showStationTooltip();
       else this.mapTooltip?.hide();
+    });
+    this.view3D.setStationClickHandler(() => {
+      this.mapTooltip?.hide();
+      (this.scene.get("GameHUDScene") as GameHUDScene).switchContentScene(
+        "StationBuilderScene",
+      );
     });
 
     // Hyperlane gate click → fast pan to the connected system at the same zoom.
