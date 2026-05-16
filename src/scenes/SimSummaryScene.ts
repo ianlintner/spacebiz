@@ -4,7 +4,7 @@ import {
   colorToString,
   Button,
   Label,
-  Panel,
+  GlassPanel,
   TabGroup,
   getLayout,
   createStarfield,
@@ -207,7 +207,7 @@ export class SimSummaryScene extends Phaser.Scene {
   private backdrop!: Phaser.GameObjects.Rectangle;
   private titleLabel!: Label;
   private subLabel!: Label;
-  private mainPanel!: Panel;
+  private mainPanel!: GlassPanel;
   private tabGroup!: TabGroup;
   private runAgainButton!: Button;
   private exportLogButton!: Button;
@@ -278,7 +278,7 @@ export class SimSummaryScene extends Phaser.Scene {
 
     // ── Main panel ─────────────────────────────────────────
     const panelH = L.gameHeight - this.panelTop - this.panelBottomMargin;
-    this.mainPanel = new Panel(this, {
+    this.mainPanel = new GlassPanel(this, {
       x: L.fullContentLeft,
       y: this.panelTop,
       width: L.fullContentWidth,

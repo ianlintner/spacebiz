@@ -3,7 +3,7 @@ import { gameStore } from "../data/GameStore.ts";
 import {
   getTheme,
   colorToString,
-  Panel,
+  GlassPanel,
   Button,
   DataTable,
   ScrollFrame,
@@ -53,14 +53,14 @@ export class TurnReportScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Rectangle;
   private starfield?: StarfieldHandle;
   private portrait?: PortraitPanel;
-  private plPanel?: Panel;
-  private routePanel?: Panel;
+  private plPanel?: GlassPanel;
+  private routePanel?: GlassPanel;
   private routeTableFrame?: ScrollFrame;
   private routeTable?: DataTable;
-  private aiPanel?: Panel;
+  private aiPanel?: GlassPanel;
   private aiTableFrame?: ScrollFrame;
   private aiTable?: DataTable;
-  private marketPanel?: Panel;
+  private marketPanel?: GlassPanel;
   private fuelLabel?: Phaser.GameObjects.Text;
   private summaryLabel?: Phaser.GameObjects.Text;
   private dipLines: Phaser.GameObjects.Text[] = [];
@@ -173,7 +173,7 @@ export class TurnReportScene extends Phaser.Scene {
     const panelH = L.contentHeight - TR_TAB_H;
 
     // ── Financials tab ───────────────────────────────────────────────────────
-    this.plPanel = new Panel(this, {
+    this.plPanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: panelY,
       width: L.mainContentWidth,
@@ -346,7 +346,7 @@ export class TurnReportScene extends Phaser.Scene {
       lastTurn.netProfit,
       lastTurn.revenue,
     );
-    const titleBarH = theme.panel.titleHeight;
+    const titleBarH = 30;
     this.plGradeLabel = this.add
       .text(L.mainContentWidth - theme.spacing.md, titleBarH / 2, grade, {
         fontSize: "24px",
@@ -453,7 +453,7 @@ export class TurnReportScene extends Phaser.Scene {
       routeLabelMap.set(route.id, `${originName} > ${destName}`);
     }
 
-    this.routePanel = new Panel(this, {
+    this.routePanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: panelY,
       width: L.mainContentWidth,
@@ -511,7 +511,7 @@ export class TurnReportScene extends Phaser.Scene {
     // ── Rivals tab ───────────────────────────────────────────────────────────
     const aiSummaries = lastTurn.aiSummaries ?? [];
     if (aiSummaries.length > 0) {
-      this.aiPanel = new Panel(this, {
+      this.aiPanel = new GlassPanel(this, {
         x: L.mainContentLeft,
         y: panelY,
         width: L.mainContentWidth,
@@ -559,7 +559,7 @@ export class TurnReportScene extends Phaser.Scene {
     }
 
     // ── World tab: Market Changes + Diplomatic Activity ──────────────────────
-    this.marketPanel = new Panel(this, {
+    this.marketPanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: panelY,
       width: L.mainContentWidth,
@@ -799,7 +799,7 @@ export class TurnReportScene extends Phaser.Scene {
       );
       this.plGradeLabel?.setPosition(
         L.mainContentWidth - theme.spacing.md,
-        theme.panel.titleHeight / 2,
+        30 / 2,
       );
       this.plStreakBadge?.setPosition(
         plContent.x + plContent.width / 2,

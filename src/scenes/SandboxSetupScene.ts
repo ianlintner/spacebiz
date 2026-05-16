@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 import {
   createStarfield,
-  Panel,
+  GlassPanel,
   Button,
   Label,
   getTheme,
@@ -47,7 +47,7 @@ export class SandboxSetupScene extends Phaser.Scene {
   private subtitleLabel!: Label;
 
   // Config panel.
-  private configPanel!: Panel;
+  private configPanel!: GlassPanel;
 
   // Seed row.
   private seedTitleLabel!: Label;
@@ -81,7 +81,7 @@ export class SandboxSetupScene extends Phaser.Scene {
 
   // Saved-games panel.
   private hasSaves = false;
-  private savePanel: Panel | null = null;
+  private savePanel: GlassPanel | null = null;
   private savePanelTitle: Label | null = null;
   private saveList: ScrollableList | null = null;
 
@@ -129,7 +129,7 @@ export class SandboxSetupScene extends Phaser.Scene {
     this.subtitleLabel.setOrigin(0.5);
 
     // ── Config panel ──
-    this.configPanel = new Panel(this, {
+    this.configPanel = new GlassPanel(this, {
       x: 0,
       y: 116,
       width: 100,
@@ -367,7 +367,7 @@ export class SandboxSetupScene extends Phaser.Scene {
 
     // ── Saved Games Panel ──
     if (this.hasSaves) {
-      this.savePanel = new Panel(this, {
+      this.savePanel = new GlassPanel(this, {
         x: 0,
         y: 0,
         width: 100,

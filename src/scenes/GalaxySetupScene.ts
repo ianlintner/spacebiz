@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 import {
   createStarfield,
-  Panel,
+  GlassPanel,
   Button,
   Dropdown,
   Label,
@@ -66,7 +66,7 @@ export class GalaxySetupScene extends Phaser.Scene {
   private seedLabel!: Label;
   private nameLabel!: Label;
   private cardObjects: Phaser.GameObjects.GameObject[] = [];
-  private systemCards: Panel[] = [];
+  private systemCards: GlassPanel[] = [];
   private startingOptions: StarSystem[] = [];
   private currentState!: GameState;
   private portraitImage: Phaser.GameObjects.Image | null = null;
@@ -84,7 +84,7 @@ export class GalaxySetupScene extends Phaser.Scene {
   private cardsBottomY = 0;
 
   // ── Layout-dependent fields kept for reflow ──
-  private mainPanel!: Panel;
+  private mainPanel!: GlassPanel;
   private prevPortraitButton!: Button;
   private nextPortraitButton!: Button;
   private companyFieldLabel!: Label;
@@ -134,7 +134,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     createStarfield(this);
 
     // 2. Centered setup panel — initial geometry; relayout() repositions/resizes.
-    this.mainPanel = new Panel(this, {
+    this.mainPanel = new GlassPanel(this, {
       x: 0,
       y: 0,
       width: 100,
@@ -444,7 +444,7 @@ export class GalaxySetupScene extends Phaser.Scene {
     this.mainPanel.setSize(panelW, panelH);
 
     const pad = theme.spacing.lg;
-    const contentTop = panelY + theme.panel.titleHeight + pad;
+    const contentTop = panelY + 30 + pad; // 30 = GlassPanel GLASS_TITLE_HEIGHT
 
     // ── CEO portrait geometry ──
     const portraitSize = 120;
@@ -679,7 +679,7 @@ export class GalaxySetupScene extends Phaser.Scene {
       const systemPlanets = planets.filter((p) => p.systemId === system.id);
 
       // Card panel with title
-      const panel = new Panel(this, {
+      const panel = new GlassPanel(this, {
         x: cardX,
         y: cardsY,
         width: cardW,
@@ -692,7 +692,7 @@ export class GalaxySetupScene extends Phaser.Scene {
 
       // Planet count
       const infoX = cardX + theme.spacing.md;
-      const infoY = cardsY + theme.panel.titleHeight + theme.spacing.md;
+      const infoY = cardsY + 30 + theme.spacing.md; // 30 = GlassPanel GLASS_TITLE_HEIGHT
 
       const countLabel = new Label(this, {
         x: infoX,

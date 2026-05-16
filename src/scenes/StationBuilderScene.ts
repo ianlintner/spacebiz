@@ -4,7 +4,7 @@ import type { HubRoom, HubRoomType, StationHub } from "../data/types.ts";
 import {
   getTheme,
   colorToString,
-  Panel,
+  GlassPanel,
   Button,
   PortraitPanel,
   createStarfield,
@@ -97,9 +97,9 @@ export class StationBuilderScene extends Phaser.Scene {
   private selectedRoomId: string | null = null;
   private roomCardWidth = 110;
   private roomCardHeight = 50;
-  private gridPanel!: Panel;
-  private palettePanel!: Panel;
-  private infoPanel!: Panel;
+  private gridPanel!: GlassPanel;
+  private palettePanel!: GlassPanel;
+  private infoPanel!: GlassPanel;
   private infoContent!: { x: number; y: number; width: number; height: number };
   private infoElements: Phaser.GameObjects.GameObject[] = [];
   private dragGhost: Phaser.GameObjects.Container | null = null;
@@ -141,7 +141,7 @@ export class StationBuilderScene extends Phaser.Scene {
 
     // ── Grid Panel (top of main content) ──
     const gridH = GRID_PANEL_HEIGHT;
-    this.gridPanel = new Panel(this, {
+    this.gridPanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,
@@ -170,7 +170,7 @@ export class StationBuilderScene extends Phaser.Scene {
     // ── Room Palette / Build Panel (middle) ──
     const paletteY = L.contentTop + gridH + PANEL_GAP;
     const paletteH = PALETTE_PANEL_HEIGHT;
-    this.palettePanel = new Panel(this, {
+    this.palettePanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: paletteY,
       width: L.mainContentWidth,
@@ -248,7 +248,7 @@ export class StationBuilderScene extends Phaser.Scene {
     // ── Info / Action Panel (bottom) ──
     const infoY = paletteY + paletteH + PANEL_GAP;
     const infoH = L.contentHeight - gridH - paletteH - PANEL_GAP * 2;
-    this.infoPanel = new Panel(this, {
+    this.infoPanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: infoY,
       width: L.mainContentWidth,

@@ -23,6 +23,7 @@ export class GlassPanel extends Phaser.GameObjects.Container {
   protected contentY: number;
   protected panelWidth: number;
   protected panelHeight: number;
+  private baseBgAlpha: number;
 
   constructor(scene: Phaser.Scene, config: GlassPanelConfig) {
     super(scene, config.x, config.y);
@@ -33,6 +34,7 @@ export class GlassPanel extends Phaser.GameObjects.Container {
     const baseAlpha = config.backgroundAlpha ?? 0.62;
     const bgAlpha =
       config.variant === "elevated" ? Math.min(1, baseAlpha + 0.08) : baseAlpha;
+    this.baseBgAlpha = bgAlpha;
 
     this.bg = scene.add
       .nineslice(
@@ -108,6 +110,28 @@ export class GlassPanel extends Phaser.GameObjects.Container {
 
   setTitle(title: string): this {
     this.titleLabel?.setText(title);
+    return this;
+  }
+
+  override setActive(active: boolean): this {
+    super.setActive(active);
+    const targetAlpha = active
+      ? Math.min(1, this.baseBgAlpha + 0.2)
+      : this.baseBgAlpha;
+    this.scene.tweens.add({
+      targets: this.bg,
+      alpha: targetAlpha,
+      duration: 200,
+      ease: "Power2",
+    });
+    if (this.titleUnderline) {
+      this.scene.tweens.add({
+        targets: this.titleUnderline,
+        alpha: active ? 1.0 : 0.7,
+        duration: 200,
+        ease: "Power2",
+      });
+    }
     return this;
   }
 }

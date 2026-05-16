@@ -3,7 +3,7 @@ import {
   getTheme,
   Button,
   Label,
-  Panel,
+  GlassPanel,
   DataTable,
   ScrollFrame,
   ScrollableList,
@@ -100,10 +100,10 @@ export class AISandboxScene extends Phaser.Scene {
   private warningLabel!: Label;
 
   // Panels
-  private topBarPanel!: Panel;
-  private leftPanel!: Panel;
-  private rightPanel!: Panel;
-  private bottomBarPanel!: Panel;
+  private topBarPanel!: GlassPanel;
+  private leftPanel!: GlassPanel;
+  private rightPanel!: GlassPanel;
+  private bottomBarPanel!: GlassPanel;
 
   // Buttons
   private pauseBtn!: Button;
@@ -155,7 +155,7 @@ export class AISandboxScene extends Phaser.Scene {
     const padding = 16;
 
     // ── Top bar: Title + turn + progress ─────────────────────
-    this.topBarPanel = new Panel(this, {
+    this.topBarPanel = new GlassPanel(this, {
       x: 0,
       y: 0,
       width: L.gameWidth,
@@ -207,7 +207,7 @@ export class AISandboxScene extends Phaser.Scene {
     const rightW = L.gameWidth - leftW;
 
     // ── Left column: Rankings ────────────────────────────────
-    this.leftPanel = new Panel(this, {
+    this.leftPanel = new GlassPanel(this, {
       x: 0,
       y: topBarH,
       width: leftW,
@@ -312,7 +312,7 @@ export class AISandboxScene extends Phaser.Scene {
     });
 
     // ── Right column: Activity feed ──────────────────────────
-    this.rightPanel = new Panel(this, {
+    this.rightPanel = new GlassPanel(this, {
       x: leftW,
       y: topBarH,
       width: rightW,
@@ -336,7 +336,7 @@ export class AISandboxScene extends Phaser.Scene {
     });
 
     // ── Bottom control bar ───────────────────────────────────
-    this.bottomBarPanel = new Panel(this, {
+    this.bottomBarPanel = new GlassPanel(this, {
       x: 0,
       y: L.gameHeight - bottomBarH,
       width: L.gameWidth,

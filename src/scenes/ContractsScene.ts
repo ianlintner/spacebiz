@@ -13,6 +13,7 @@ import {
   ScrollFrame,
   Modal,
   Panel,
+  GlassPanel,
   TabGroup,
   PortraitPanel,
   SceneUiDirector,
@@ -107,7 +108,7 @@ function rewardSummary(c: Contract): string {
 }
 
 // Layout-derived geometry constants.
-const PANEL_TITLE_HEIGHT = 38;
+const PANEL_TITLE_HEIGHT = 30;
 const TAB_BAR_HEIGHT = 40;
 const SUMMARY_HEIGHT = 50;
 const BUTTON_AREA_HEIGHT = 52;
@@ -120,7 +121,7 @@ const CONTENT_INNER_INSET = 12;
 export class ContractsScene extends Phaser.Scene {
   private ui!: SceneUiDirector;
   private portrait!: PortraitPanel;
-  private mainPanel!: Panel;
+  private mainPanel!: GlassPanel;
   private tabGroup!: TabGroup;
   private availableTable!: DataTable;
   private availableTableFrame!: ScrollFrame;
@@ -161,7 +162,7 @@ export class ContractsScene extends Phaser.Scene {
     const activeContent = this.add.container(0, 0);
 
     // ── Main Panel with TabGroup ──
-    this.mainPanel = new Panel(this, {
+    this.mainPanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,

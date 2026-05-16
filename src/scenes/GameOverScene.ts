@@ -5,7 +5,7 @@ import {
   colorToString,
   Label,
   Button,
-  Panel,
+  GlassPanel,
   DataTable,
   ScrollFrame,
   createStarfield,
@@ -46,16 +46,16 @@ const REVEAL_TAB_WIDTH = 36; // mirrors AdviserPanel TAB_WIDTH
 export class GameOverScene extends Phaser.Scene {
   private heading!: Label;
   private subtitle!: Label;
-  private scorePanel!: Panel;
+  private scorePanel!: GlassPanel;
   private scoreRowLabels: Phaser.GameObjects.Text[] = [];
   private scoreRowValues: Phaser.GameObjects.Text[] = [];
   private scoreSeparator!: Phaser.GameObjects.Rectangle;
   private totalLabel!: Phaser.GameObjects.Text;
   private totalValue!: Phaser.GameObjects.Text;
-  private hsPanel!: Panel;
+  private hsPanel!: GlassPanel;
   private hsTableFrame!: ScrollFrame;
   private hsTable!: DataTable;
-  private rankPanel!: Panel;
+  private rankPanel!: GlassPanel;
   private rankTableFrame!: ScrollFrame;
   private rankTable!: DataTable;
   private playAgainButton!: Button;
@@ -163,7 +163,7 @@ export class GameOverScene extends Phaser.Scene {
     // -----------------------------------------------------------------------
     // Score breakdown panel (left side, glass panel)
     // -----------------------------------------------------------------------
-    this.scorePanel = new Panel(this, {
+    this.scorePanel = new GlassPanel(this, {
       x: L.fullContentLeft,
       y: L.contentTop + 90,
       width: SCORE_PANEL_WIDTH,
@@ -288,7 +288,7 @@ export class GameOverScene extends Phaser.Scene {
     const hsPanelX = L.fullContentLeft + HS_PANEL_X_OFFSET;
     const hsPanelY = L.contentTop + 90;
 
-    this.hsPanel = new Panel(this, {
+    this.hsPanel = new GlassPanel(this, {
       x: hsPanelX,
       y: hsPanelY,
       width: HS_PANEL_WIDTH,
@@ -300,9 +300,9 @@ export class GameOverScene extends Phaser.Scene {
 
     this.hsTableFrame = new ScrollFrame(this, {
       x: hsPanelX + 10,
-      y: hsPanelY + 40,
+      y: hsPanelY + 34,
       width: HS_PANEL_WIDTH - 20,
-      height: HS_PANEL_HEIGHT - 50,
+      height: HS_PANEL_HEIGHT - 44,
     });
     this.hsTable = new DataTable(this, {
       x: 0,
@@ -354,7 +354,7 @@ export class GameOverScene extends Phaser.Scene {
     const rankings = rankCompanies(state);
     const rankPanelY = L.contentTop + 380;
     const rankPanelWidth = hsPanelX + HS_PANEL_WIDTH - L.fullContentLeft;
-    this.rankPanel = new Panel(this, {
+    this.rankPanel = new GlassPanel(this, {
       x: L.fullContentLeft,
       y: rankPanelY,
       width: rankPanelWidth,
@@ -364,9 +364,9 @@ export class GameOverScene extends Phaser.Scene {
 
     this.rankTableFrame = new ScrollFrame(this, {
       x: L.fullContentLeft + 10,
-      y: rankPanelY + 40,
+      y: rankPanelY + 34,
       width: rankPanelWidth - 20,
-      height: RANK_PANEL_HEIGHT - 50,
+      height: RANK_PANEL_HEIGHT - 44,
     });
     this.rankTable = new DataTable(this, {
       x: 0,
@@ -515,9 +515,9 @@ export class GameOverScene extends Phaser.Scene {
     this.hsPanel.setPosition(hsPanelX, hsPanelY);
     this.hsPanel.setSize(HS_PANEL_WIDTH, HS_PANEL_HEIGHT);
 
-    this.hsTableFrame.setPosition(hsPanelX + 10, hsPanelY + 40);
-    this.hsTableFrame.setSize(HS_PANEL_WIDTH - 20, HS_PANEL_HEIGHT - 50);
-    this.hsTable.setSize(HS_PANEL_WIDTH - 20, HS_PANEL_HEIGHT - 50);
+    this.hsTableFrame.setPosition(hsPanelX + 10, hsPanelY + 34);
+    this.hsTableFrame.setSize(HS_PANEL_WIDTH - 20, HS_PANEL_HEIGHT - 44);
+    this.hsTable.setSize(HS_PANEL_WIDTH - 20, HS_PANEL_HEIGHT - 44);
 
     // Rankings panel
     const rankPanelY = L.contentTop + 380;
@@ -525,9 +525,9 @@ export class GameOverScene extends Phaser.Scene {
     this.rankPanel.setPosition(L.fullContentLeft, rankPanelY);
     this.rankPanel.setSize(rankPanelWidth, RANK_PANEL_HEIGHT);
 
-    this.rankTableFrame.setPosition(L.fullContentLeft + 10, rankPanelY + 40);
-    this.rankTableFrame.setSize(rankPanelWidth - 20, RANK_PANEL_HEIGHT - 50);
-    this.rankTable.setSize(rankPanelWidth - 20, RANK_PANEL_HEIGHT - 50);
+    this.rankTableFrame.setPosition(L.fullContentLeft + 10, rankPanelY + 34);
+    this.rankTableFrame.setSize(rankPanelWidth - 20, RANK_PANEL_HEIGHT - 44);
+    this.rankTable.setSize(rankPanelWidth - 20, RANK_PANEL_HEIGHT - 44);
 
     // Action buttons
     const btnY = L.contentTop + L.contentHeight - 100;
