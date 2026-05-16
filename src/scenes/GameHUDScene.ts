@@ -70,9 +70,9 @@ function formatSlotSummary(state: GameState): {
     (c) =>
       c.term.kind === "fixedTerm" && c.term.expiresOnTurn - state.turn <= 2,
   );
-  const text = `Charters: ${charters.length} (${permanent}P/${fixedTerm}F) · Upkeep: §${Math.round(
+  const text = `Charters ${charters.length} (${permanent}P/${fixedTerm}F) · §${Math.round(
     upkeep,
-  ).toLocaleString("en-US")}`;
+  ).toLocaleString("en-US")}/q`;
   return { text, anySaturated: cantPay || expiringSoon };
 }
 import { getPortraitTextureKey } from "../data/portraits.ts";
@@ -124,6 +124,11 @@ function fitImageCover(
   image.setDisplaySize(srcW * scale, srcH * scale);
 }
 
+const COMMAND_RIBBON_GUTTER = 8;
+const END_TURN_SIZE = 48;
+const END_TURN_MARGIN = 12;
+const TICKER_SIDE_GUTTER = 8;
+
 export class GameHUDScene extends Phaser.Scene {
   private companyLabel!: Label;
   private turnLabel!: Label;
@@ -148,8 +153,10 @@ export class GameHUDScene extends Phaser.Scene {
   private settingsPanel: SettingsPanel | null = null;
   private adviserPanel!: AdviserPanel;
   private actionPromptLabel!: Label;
+  private actionPromptBg!: Phaser.GameObjects.Rectangle;
   private routeSlotLabel!: Label;
   private researchLabel!: Label;
+  private statusChipBg!: Phaser.GameObjects.Rectangle;
   private apBadgeLabel!: Label;
   private navBadges = new Map<string, Phaser.GameObjects.Arc>();
   private endTurnModal: Modal | null = null;
@@ -187,9 +194,9 @@ export class GameHUDScene extends Phaser.Scene {
     /** "audio" | "save" — drives Y placement relative to bottom of sidebar. */
     role: "audio" | "save";
   }> = [];
-  private readonly navIconButtonSize = 46;
+  private readonly navIconButtonSize = 40;
   private readonly navIconSpacing = 8;
-  private readonly navHitHeight = 50;
+  private readonly navHitHeight = 46;
   private readonly navTooltipByScene: Record<string, string> = {
     GalaxyMapScene: "Galaxy overview — scan territory, lanes, and route flow",
     RoutesScene: "Route Command — create and optimize trade routes",
@@ -278,27 +285,28 @@ export class GameHUDScene extends Phaser.Scene {
     audio.setPlanningSubstate("galaxy");
     this.sceneUi = new SceneUiDirector(this);
 
-    // ── Top Bar ──────────────────────────────────────────────
+    // ── Command Ribbon ───────────────────────────────────────
     this.topBarBg = this.add
       .nineslice(
-        0,
-        0,
+        L.contentLeft,
+        COMMAND_RIBBON_GUTTER / 2,
         "hud-bar-bg",
         undefined,
-        L.gameWidth,
-        L.hudTopBarHeight,
+        L.maxContentWidth,
+        L.hudTopBarHeight - COMMAND_RIBBON_GUTTER,
         10,
         10,
         10,
         10,
       )
       .setOrigin(0, 0)
-      .setAlpha(0.92);
+      .setAlpha(0.72)
+      .setDepth(20);
 
     // CEO portrait (small, left of company name)
-    const portraitSize = L.hudTopBarHeight - 12;
+    const portraitSize = L.hudTopBarHeight - 14;
     const portraitKey = getPortraitTextureKey(state.ceoPortrait.portraitId);
-    const hudPortraitX = 6 + portraitSize / 2;
+    const hudPortraitX = L.contentLeft + 10 + portraitSize / 2;
     const hudPortraitY = L.hudTopBarHeight / 2;
 
     // Eagerly kick off portrait load to maximize time for it to complete.
@@ -317,6 +325,7 @@ export class GameHUDScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5);
     fitImageCover(portraitImg, portraitSize, portraitSize);
     this.ceoPortraitImg = portraitImg;
+    this.ceoPortraitImg.setDepth(22);
     // Chamfered mask (Phaser 4 filter-based mask)
     const c = getTheme().shape.portrait.chamfer;
     const hudMask = makeChamferedMaskShape(
@@ -353,6 +362,7 @@ export class GameHUDScene extends Phaser.Scene {
     }
     this.ceoPortraitBorder.closePath();
     this.ceoPortraitBorder.strokePath();
+    this.ceoPortraitBorder.setDepth(23);
 
     // Update the portrait image once the texture loads. We only need to skip
     // if the image has been destroyed outright (scene shut down) — being
@@ -377,7 +387,7 @@ export class GameHUDScene extends Phaser.Scene {
       });
 
     // Company name (left-aligned, shifted right for portrait)
-    const nameOffsetX = 6 + portraitSize + 10;
+    const nameOffsetX = L.contentLeft + 10 + portraitSize + 10;
     this.companyLabel = new Label(this, {
       x: nameOffsetX,
       y: L.hudTopBarHeight / 2,
@@ -385,6 +395,7 @@ export class GameHUDScene extends Phaser.Scene {
       style: "body",
     });
     this.companyLabel.setOrigin(0, 0.5);
+    this.companyLabel.setDepth(24);
     this.companyLabel.setInteractive({ useHandCursor: true });
     this.companyLabel.on("pointerover", () => {
       this.companyLabel.setLabelColor(theme.colors.accent);
@@ -406,6 +417,7 @@ export class GameHUDScene extends Phaser.Scene {
       style: "value",
     });
     this.turnLabel.setOrigin(0.5, 0.5);
+    this.turnLabel.setDepth(24);
     this.turnLabel.setInteractive({ useHandCursor: true });
     this.turnLabel.on("pointerover", () => {
       this.turnLabel.setLabelColor(theme.colors.accent);
@@ -430,16 +442,32 @@ export class GameHUDScene extends Phaser.Scene {
       color: apCurrent > 0 ? theme.colors.accent : theme.colors.textDim,
     });
     this.apBadgeLabel.setOrigin(0, 0.5);
+    this.apBadgeLabel.setDepth(24);
+
+    const statusChipW = Math.min(330, Math.max(220, L.maxContentWidth * 0.28));
+    this.statusChipBg = this.add
+      .rectangle(
+        L.contentLeft + L.maxContentWidth - 8,
+        L.hudTopBarHeight / 2,
+        statusChipW,
+        34,
+        theme.colors.background,
+        0.42,
+      )
+      .setOrigin(1, 0.5)
+      .setStrokeStyle(1, theme.colors.panelBorder, 0.26)
+      .setDepth(21);
 
     // Cash display (right-aligned, green/red conditional)
     this.cashLabel = new Label(this, {
-      x: L.gameWidth - 20,
+      x: L.contentLeft + L.maxContentWidth - 18,
       y: L.hudTopBarHeight / 2,
       text: formatCash(state.cash),
       style: "value",
       color: state.cash >= 0 ? theme.colors.profit : theme.colors.loss,
     });
     this.cashLabel.setOrigin(1, 0.5);
+    this.cashLabel.setDepth(24);
     this.cashLabel.setInteractive({ useHandCursor: true });
     this.cashLabel.on("pointerover", () => {
       this.cashLabel.setScale(1.03);
@@ -456,7 +484,7 @@ export class GameHUDScene extends Phaser.Scene {
     // Streak counter (left of cash, hidden until streak >= 2)
     const initStreak = state.storyteller?.consecutiveProfitTurns ?? 0;
     this.streakLabel = new Label(this, {
-      x: L.gameWidth - 20,
+      x: L.contentLeft + L.maxContentWidth - 18,
       y: L.hudTopBarHeight / 2 + 1,
       text: initStreak >= 2 ? `\uD83D\uDD25 ${initStreak}` : "",
       style: "caption",
@@ -464,6 +492,7 @@ export class GameHUDScene extends Phaser.Scene {
     });
     this.streakLabel.setOrigin(1, 0.5);
     this.streakLabel.setAlpha(initStreak >= 2 ? 1 : 0);
+    this.streakLabel.setDepth(25);
 
     // ── Left Navigation Sidebar (Paradox-style icon strip) ──
     // 6-icon nav: 4 standalone (Map/Routes/Fleet/Finance) + 2 grouped
@@ -496,7 +525,8 @@ export class GameHUDScene extends Phaser.Scene {
         10,
       )
       .setOrigin(0, 0)
-      .setAlpha(0.88);
+      .setAlpha(0.62)
+      .setDepth(18);
 
     // Right edge accent line
     this.navSidebarAccent = this.add
@@ -508,7 +538,8 @@ export class GameHUDScene extends Phaser.Scene {
         theme.colors.panelBorder,
       )
       .setOrigin(0, 0)
-      .setAlpha(0.6);
+      .setAlpha(0.5)
+      .setDepth(19);
 
     this.navTooltip = new Tooltip(this, { showDelay: 300 });
     this.navTooltip.attachTo(this.companyLabel, "Back to galaxy map");
@@ -517,7 +548,7 @@ export class GameHUDScene extends Phaser.Scene {
 
     const iconBtnSize = this.navIconButtonSize;
     const iconSpacing = this.navIconSpacing;
-    const navStartY = navSidebarTop + 12;
+    const navStartY = navSidebarTop + 8;
     const navCenterX = L.navSidebarWidth / 2;
 
     for (let i = 0; i < navItems.length; i++) {
@@ -537,10 +568,12 @@ export class GameHUDScene extends Phaser.Scene {
           0,
         )
         .setOrigin(0.5, 0.5)
-        .setInteractive({ useHandCursor: true });
+        .setInteractive({ useHandCursor: true })
+        .setDepth(30);
 
       const btnContainer = this.add.container(navCenterX, btnY);
       btnContainer.setSize(L.navSidebarWidth, this.navHitHeight);
+      btnContainer.setDepth(31);
 
       // Button background (hover/active states)
       const bg = this.add
@@ -663,9 +696,9 @@ export class GameHUDScene extends Phaser.Scene {
     });
     this.settingsButtons.push({ container: saveBtn, role: "save" });
 
-    // ── Bottom Bar ───────────────────────────────────────────
+    // ── Floating Status / End Turn ───────────────────────────
     const bottomBarY = L.hudBottomBarTop;
-    const bottomBarMidY = bottomBarY + L.hudBottomBarHeight / 2;
+    const promptY = L.hudTopBarHeight + 14;
 
     this.bottomBarBg = this.add
       .nineslice(
@@ -674,47 +707,66 @@ export class GameHUDScene extends Phaser.Scene {
         "hud-bar-bg",
         undefined,
         L.gameWidth,
-        L.hudBottomBarHeight,
+        1,
         10,
         10,
         10,
         10,
       )
       .setOrigin(0, 0)
-      .setAlpha(0.88);
+      .setAlpha(0);
 
-    // Phase indicator (left side of bottom bar)
+    // Phase is no longer visible as a dedicated label; actionPromptLabel
+    // carries phase context inside a small glass chip.
     this.phaseLabel = new Label(this, {
       x: 20,
-      y: bottomBarMidY,
+      y: promptY,
       text: `Phase: ${state.phase}`,
       style: "caption",
     });
     this.phaseLabel.setOrigin(0, 0.5);
+    this.phaseLabel.setVisible(false);
 
-    // Action prompt (right of phase label, with enough clearance)
+    this.actionPromptBg = this.add
+      .rectangle(
+        L.contentLeft + L.maxContentWidth - 8,
+        promptY,
+        360,
+        28,
+        theme.colors.background,
+        0.36,
+      )
+      .setOrigin(1, 0.5)
+      .setStrokeStyle(1, theme.colors.panelBorder, 0.22)
+      .setDepth(21);
+
+    // Action prompt chip under the command ribbon.
     this.actionPromptLabel = new Label(this, {
-      x: 200,
-      y: bottomBarMidY,
+      x: L.contentLeft + L.maxContentWidth - 18,
+      y: promptY,
       text: "",
       style: "caption",
       color: theme.colors.textDim,
+      maxWidth: 340,
     });
-    this.actionPromptLabel.setOrigin(0, 0.5);
+    this.actionPromptLabel.setOrigin(1, 0.5);
+    this.actionPromptLabel.setDepth(24);
 
     // Route slot indicator (bottom bar, to the left of the end turn area).
     // Shows all three pools inline so a saturated tier is immediately visible.
     const slotSummary = formatSlotSummary(state);
     this.routeSlotLabel = new Label(this, {
-      x: L.gameWidth - 200,
-      y: bottomBarMidY - 8,
+      x: L.contentLeft + L.maxContentWidth - 122,
+      y: L.hudTopBarHeight / 2 - 8,
       text: slotSummary.text,
       style: "caption",
       color: slotSummary.anySaturated
         ? theme.colors.loss
         : theme.colors.textDim,
+      maxWidth: statusChipW - 124,
     });
     this.routeSlotLabel.setOrigin(1, 0.5);
+    this.routeSlotLabel.setDepth(24);
 
     // Research progress indicator (bottom bar, below route slots)
     const techState = state.tech;
@@ -722,8 +774,8 @@ export class GameHUDScene extends Phaser.Scene {
       ? `Researching...`
       : "No research";
     this.researchLabel = new Label(this, {
-      x: L.gameWidth - 200,
-      y: bottomBarMidY + 8,
+      x: L.contentLeft + L.maxContentWidth - 122,
+      y: L.hudTopBarHeight / 2 + 8,
       text: researchText,
       style: "caption",
       color: techState?.currentResearchId
@@ -731,33 +783,40 @@ export class GameHUDScene extends Phaser.Scene {
         : theme.colors.textDim,
     });
     this.researchLabel.setOrigin(1, 0.5);
+    this.researchLabel.setDepth(24);
+    this.routeSlotLabel.setVisible(!L.isCompact);
+    this.researchLabel.setVisible(!L.isCompact);
 
     this.updateActionPrompt();
 
     // End Turn button cluster (bottom right area)
     // End Turn button (rounded, bottom-right corner)
-    const endTurnSize = 52;
-    const endTurnX = L.gameWidth - endTurnSize - 12;
+    const endTurnSize = END_TURN_SIZE;
+    const endTurnX = L.gameWidth - endTurnSize - END_TURN_MARGIN;
+    const endTurnY = L.hudBottomBarTop - endTurnSize - END_TURN_MARGIN;
     // Turn info display — sits to the LEFT of the ▶ button with a 12px gap,
     // not stacked above it (previous placement collided with the button).
     this.bottomTurnInfoLabel = new Label(this, {
       x: endTurnX - 12,
-      y: bottomBarY + endTurnSize / 2,
+      y: endTurnY + endTurnSize / 2,
       text: formatTurnShort(state.turn),
       style: "caption",
     });
     this.bottomTurnInfoLabel.setOrigin(1, 0.5);
+    this.bottomTurnInfoLabel.setDepth(56);
 
     this.endTurnButton = new Button(this, {
       x: endTurnX,
-      y: bottomBarY,
+      y: endTurnY,
       width: endTurnSize,
       height: endTurnSize,
       label: "▶",
+      testId: "btn-end-turn",
       onClick: () => {
         this.handleEndTurn();
       },
     });
+    this.endTurnButton.setDepth(56);
     this.endTurnButton.setVisible(state.phase === "planning");
 
     // ── Horizontal News Ticker strip (below bottom bar) ──
@@ -771,7 +830,7 @@ export class GameHUDScene extends Phaser.Scene {
         theme.colors.background,
       )
       .setOrigin(0, 0)
-      .setAlpha(0.97)
+      .setAlpha(0.68)
       .setDepth(290);
     // 1px top border
     this.tickerBorder = this.add
@@ -783,7 +842,7 @@ export class GameHUDScene extends Phaser.Scene {
     this.tickerGradient = this.add.graphics().setDepth(289);
     const bg = theme.colors.background;
     this.tickerGradient.fillGradientStyle(bg, bg, bg, bg, 0, 0, 0.95, 0.95);
-    this.tickerGradient.fillRect(0, tickerY - 24, L.gameWidth, 24);
+    this.tickerGradient.fillRect(0, tickerY - 14, L.gameWidth, 14);
     // newsTicker is created/recreated by relayout() so the geometry is
     // owned by a single code path.
 
@@ -879,13 +938,16 @@ export class GameHUDScene extends Phaser.Scene {
   private relayout(): void {
     const L = getLayout();
 
-    // ── Top bar ─────────────────────────────────────────────
-    this.topBarBg.setPosition(0, 0);
-    this.topBarBg.setSize(L.gameWidth, L.hudTopBarHeight);
+    // ── Command ribbon ─────────────────────────────────────
+    this.topBarBg.setPosition(L.contentLeft, COMMAND_RIBBON_GUTTER / 2);
+    this.topBarBg.setSize(
+      L.maxContentWidth,
+      L.hudTopBarHeight - COMMAND_RIBBON_GUTTER,
+    );
 
-    // CEO portrait cluster (image + mask + border ring) — left side of top bar.
-    const portraitSize = L.hudTopBarHeight - 12;
-    const hudPortraitX = 6 + portraitSize / 2;
+    // CEO portrait cluster (image + mask + border ring) — left side of ribbon.
+    const portraitSize = L.hudTopBarHeight - 14;
+    const hudPortraitX = L.contentLeft + 10 + portraitSize / 2;
     const hudPortraitY = L.hudTopBarHeight / 2;
     this.ceoPortraitImg.setPosition(hudPortraitX, hudPortraitY);
     fitImageCover(this.ceoPortraitImg, portraitSize, portraitSize);
@@ -925,12 +987,32 @@ export class GameHUDScene extends Phaser.Scene {
 
     // Top-bar labels.
     const topMidY = L.hudTopBarHeight / 2;
-    const nameOffsetX = 6 + portraitSize + 10;
+    const nameOffsetX = L.contentLeft + 10 + portraitSize + 10;
     this.companyLabel.setPosition(nameOffsetX, topMidY);
     this.turnLabel.setPosition(L.gameWidth / 2, topMidY);
     this.apBadgeLabel.setPosition(L.gameWidth / 2 + 80, topMidY);
-    this.cashLabel.setPosition(L.gameWidth - 20, topMidY);
-    this.streakLabel.setPosition(L.gameWidth - 20, topMidY + 1);
+    const statusChipW = Math.min(330, Math.max(220, L.maxContentWidth * 0.28));
+    this.statusChipBg.setPosition(
+      L.contentLeft + L.maxContentWidth - 8,
+      topMidY,
+    );
+    this.statusChipBg.setSize(statusChipW, 34);
+    this.cashLabel.setPosition(L.contentLeft + L.maxContentWidth - 18, topMidY);
+    this.streakLabel.setPosition(
+      L.contentLeft + L.maxContentWidth - 18,
+      topMidY + 1,
+    );
+    this.routeSlotLabel.setPosition(
+      L.contentLeft + L.maxContentWidth - 122,
+      topMidY - 8,
+    );
+    this.routeSlotLabel.setSize(statusChipW - 124, 14);
+    this.researchLabel.setPosition(
+      L.contentLeft + L.maxContentWidth - 122,
+      topMidY + 8,
+    );
+    this.routeSlotLabel.setVisible(!L.isCompact);
+    this.researchLabel.setVisible(!L.isCompact);
 
     // ── Nav sidebar background + accent line ──────────────
     const navSidebarTop = L.hudTopBarHeight;
@@ -943,7 +1025,7 @@ export class GameHUDScene extends Phaser.Scene {
     // Nav button cluster — recompute Y for each scene in build order.
     const iconBtnSize = this.navIconButtonSize;
     const iconSpacing = this.navIconSpacing;
-    const navStartY = navSidebarTop + 12;
+    const navStartY = navSidebarTop + 8;
     const navCenterX = L.navSidebarWidth / 2;
     for (let i = 0; i < this.navOrder.length; i++) {
       const sceneKey = this.navOrder[i];
@@ -968,25 +1050,34 @@ export class GameHUDScene extends Phaser.Scene {
       );
     }
 
-    // ── Bottom bar ──────────────────────────────────────────
+    // ── Floating prompt + end-turn cluster ──────────────────
     const bottomBarY = L.hudBottomBarTop;
-    const bottomBarMidY = bottomBarY + L.hudBottomBarHeight / 2;
     this.bottomBarBg.setPosition(0, bottomBarY);
-    this.bottomBarBg.setSize(L.gameWidth, L.hudBottomBarHeight);
+    this.bottomBarBg.setSize(L.gameWidth, 1);
 
-    this.phaseLabel.setPosition(20, bottomBarMidY);
-    this.actionPromptLabel.setPosition(200, bottomBarMidY);
-    this.routeSlotLabel.setPosition(L.gameWidth - 200, bottomBarMidY - 8);
-    this.researchLabel.setPosition(L.gameWidth - 200, bottomBarMidY + 8);
+    const promptY = L.hudTopBarHeight + 14;
+    this.phaseLabel.setPosition(20, promptY);
+    this.phaseLabel.setVisible(false);
+    this.actionPromptBg.setPosition(
+      L.contentLeft + L.maxContentWidth - 8,
+      promptY,
+    );
+    this.actionPromptBg.setSize(360, 28);
+    this.actionPromptLabel.setPosition(
+      L.contentLeft + L.maxContentWidth - 18,
+      promptY,
+    );
+    this.actionPromptLabel.setSize(340, 16);
 
     // End Turn cluster (button + small turn-info label) — right edge.
-    const endTurnSize = 52;
-    const endTurnX = L.gameWidth - endTurnSize - 12;
+    const endTurnSize = END_TURN_SIZE;
+    const endTurnX = L.gameWidth - endTurnSize - END_TURN_MARGIN;
+    const endTurnY = L.hudBottomBarTop - endTurnSize - END_TURN_MARGIN;
     this.bottomTurnInfoLabel.setPosition(
       endTurnX - 12,
-      bottomBarY + endTurnSize / 2,
+      endTurnY + endTurnSize / 2,
     );
-    this.endTurnButton.setPosition(endTurnX, bottomBarY);
+    this.endTurnButton.setPosition(endTurnX, endTurnY);
 
     // ── News ticker strip ──────────────────────────────────
     const tickerY = L.gameHeight - L.hudTickerHeight;
@@ -1007,22 +1098,25 @@ export class GameHUDScene extends Phaser.Scene {
       0.95,
       0.95,
     );
-    this.tickerGradient.fillRect(0, tickerY - 24, L.gameWidth, 24);
+    this.tickerGradient.fillRect(0, tickerY - 14, L.gameWidth, 14);
 
     // News ticker reflows in place — mask + scroll travel rebuild against
     // the new bounds without destroying the underlying graphics objects.
     if (this.newsTicker) {
-      this.newsTicker.setPosition(L.navSidebarWidth, tickerY);
+      this.newsTicker.setPosition(
+        L.navSidebarWidth + TICKER_SIDE_GUTTER,
+        tickerY,
+      );
       this.newsTicker.setSize(
-        L.gameWidth - L.navSidebarWidth,
+        L.gameWidth - L.navSidebarWidth - TICKER_SIDE_GUTTER * 2,
         L.hudTickerHeight,
       );
     } else {
       this.newsTicker = new HorizontalNewsTicker(
         this,
-        L.navSidebarWidth,
+        L.navSidebarWidth + TICKER_SIDE_GUTTER,
         tickerY,
-        L.gameWidth - L.navSidebarWidth,
+        L.gameWidth - L.navSidebarWidth - TICKER_SIDE_GUTTER * 2,
         L.hudTickerHeight,
         {
           onItemClick: (item) => {
@@ -1607,11 +1701,11 @@ export class GameHUDScene extends Phaser.Scene {
         stripTop,
         stripWidth,
         stripHeight,
-        theme.colors.panelBg,
-        0.78,
+        theme.colors.background,
+        0.38,
       )
       .setOrigin(0, 0)
-      .setStrokeStyle(1, theme.colors.panelBorder, 0.6);
+      .setStrokeStyle(1, theme.colors.panelBorder, 0.28);
     this.tabStrip.add(bg);
 
     // Render tabs left-to-right.
@@ -1636,7 +1730,7 @@ export class GameHUDScene extends Phaser.Scene {
           tabWidth,
           tabHeight,
           isActive ? theme.colors.buttonBg : theme.colors.headerBg,
-          isActive ? 1.0 : 0.6,
+          isActive ? 0.78 : 0.42,
         )
         .setOrigin(0, 0)
         .setStrokeStyle(
@@ -1871,9 +1965,9 @@ export class GameHUDScene extends Phaser.Scene {
     let x: number, y: number, w: number, h: number;
 
     if (region === "endTurn") {
-      const sz = 52;
-      x = L.gameWidth - sz - 12 - 4;
-      y = L.hudBottomBarTop - 4;
+      const sz = END_TURN_SIZE;
+      x = L.gameWidth - sz - END_TURN_MARGIN - 4;
+      y = L.hudBottomBarTop - sz - END_TURN_MARGIN - 4;
       w = sz + 8;
       h = sz + 8;
     } else if (region === "createRouteBtn") {
@@ -1926,15 +2020,19 @@ export class GameHUDScene extends Phaser.Scene {
     const state = gameStore.getState();
 
     if (state.phase === "simulation") {
+      this.actionPromptBg.setVisible(true);
+      this.actionPromptLabel.setVisible(true);
       this.actionPromptLabel.setText(
-        `▶ Simulating ${formatTurnShort(state.turn)}...`,
+        `Simulating ${formatTurnShort(state.turn)}...`,
       );
       this.actionPromptLabel.setLabelColor(theme.colors.accent);
       return;
     }
     if (state.phase === "review") {
+      this.actionPromptBg.setVisible(true);
+      this.actionPromptLabel.setVisible(true);
       this.actionPromptLabel.setText(
-        `✅ Quarter complete (${formatTurnShort(state.turn)}) — review results`,
+        `Quarter complete — review ${formatTurnShort(state.turn)}`,
       );
       this.actionPromptLabel.setLabelColor(theme.colors.textDim);
       return;
@@ -1942,17 +2040,19 @@ export class GameHUDScene extends Phaser.Scene {
 
     // Planning phase — context-sensitive prompt
     if (state.activeRoutes.length === 0) {
-      this.actionPromptLabel.setText(
-        "💡 Open Routes to set up your first trade route",
-      );
+      this.actionPromptBg.setVisible(true);
+      this.actionPromptLabel.setVisible(true);
+      this.actionPromptLabel.setText("Open Routes to create your first lane");
       this.actionPromptLabel.setLabelColor(theme.colors.warning);
       return;
     }
 
     const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
     if (unassigned.length > 0 && state.activeRoutes.length > 0) {
+      this.actionPromptBg.setVisible(true);
+      this.actionPromptLabel.setVisible(true);
       this.actionPromptLabel.setText(
-        `💡 ${unassigned.length} ship${unassigned.length > 1 ? "s" : ""} unassigned — check Fleet`,
+        `${unassigned.length} ship${unassigned.length > 1 ? "s" : ""} unassigned — Fleet`,
       );
       this.actionPromptLabel.setLabelColor(theme.colors.warning);
       return;
@@ -1964,17 +2064,17 @@ export class GameHUDScene extends Phaser.Scene {
           state.fleet.length
         : 100;
     if (avgCondition < 50 && state.fleet.length > 0) {
-      this.actionPromptLabel.setText(
-        "⚠️ Fleet needs maintenance — check Fleet",
-      );
+      this.actionPromptBg.setVisible(true);
+      this.actionPromptLabel.setVisible(true);
+      this.actionPromptLabel.setText("Fleet needs maintenance — Fleet");
       this.actionPromptLabel.setLabelColor(theme.colors.loss);
       return;
     }
 
     if (state.cash < 0 && state.storyteller.turnsInDebt >= 2) {
-      this.actionPromptLabel.setText(
-        "⚠️ In debt — sell ships or take a loan in Finance",
-      );
+      this.actionPromptBg.setVisible(true);
+      this.actionPromptLabel.setVisible(true);
+      this.actionPromptLabel.setText("In debt — use Finance tools");
       this.actionPromptLabel.setLabelColor(theme.colors.loss);
       return;
     }
@@ -1984,22 +2084,26 @@ export class GameHUDScene extends Phaser.Scene {
       (c) => c.status === "available",
     );
     if (availableContracts.length > 0 && state.activeRoutes.length > 0) {
+      this.actionPromptBg.setVisible(true);
+      this.actionPromptLabel.setVisible(true);
       this.actionPromptLabel.setText(
-        `📋 ${availableContracts.length} contract${availableContracts.length > 1 ? "s" : ""} available — check Contracts`,
+        `${availableContracts.length} contract${availableContracts.length > 1 ? "s" : ""} available — Contracts`,
       );
       this.actionPromptLabel.setLabelColor(theme.colors.accent);
       return;
     }
 
     if (!state.tech?.currentResearchId && state.activeRoutes.length > 0) {
-      this.actionPromptLabel.setText(
-        "🔬 No active research — pick a tech in Research",
-      );
+      this.actionPromptBg.setVisible(true);
+      this.actionPromptLabel.setVisible(true);
+      this.actionPromptLabel.setText("No active research — Research");
       this.actionPromptLabel.setLabelColor(theme.colors.warning);
       return;
     }
 
-    this.actionPromptLabel.setText("✓ Ready — press ▶ to end turn");
+    this.actionPromptBg.setVisible(false);
+    this.actionPromptLabel.setVisible(false);
+    this.actionPromptLabel.setText("Ready");
     this.actionPromptLabel.setLabelColor(theme.colors.profit);
   }
 
@@ -2182,6 +2286,7 @@ export class GameHUDScene extends Phaser.Scene {
     this.endTurnModal = new Modal(this, {
       title: "Before You End Turn",
       body: issues.join("\n") + "\n\nEnd turn anyway?",
+      testId: "modal-end-turn-confirm",
       okText: "End Turn",
       cancelText: "Go Back",
       onOk: () => {

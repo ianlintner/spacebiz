@@ -37,10 +37,10 @@ function computeMetrics(w: number, h: number): LayoutMetrics {
   const isCompact = w < 1100;
 
   const sidebarWidth = isCompact ? 0 : 240;
-  const navSidebarWidth = isPortrait ? 0 : 56;
-  const hudTopBarHeight = 56;
-  const hudBottomBarHeight = 52;
-  const hudTickerHeight = 36;
+  const navSidebarWidth = isPortrait ? 0 : 48;
+  const hudTopBarHeight = 48;
+  const hudBottomBarHeight = 0;
+  const hudTickerHeight = 24;
   const contentGap = 12;
 
   // Scale content to fill available space, keeping small margins on each side.
@@ -105,10 +105,10 @@ export const GAME_HEIGHT = 720;
 export const MAX_CONTENT_WIDTH = 1100;
 export const SIDEBAR_WIDTH = 240;
 export const CONTENT_GAP = 12;
-export const HUD_TOP_BAR_HEIGHT = 56;
-export const HUD_BOTTOM_BAR_HEIGHT = 52;
-export const HUD_TICKER_HEIGHT = 36;
-export const NAV_SIDEBAR_WIDTH = 56;
+export const HUD_TOP_BAR_HEIGHT = 48;
+export const HUD_BOTTOM_BAR_HEIGHT = 0;
+export const HUD_TICKER_HEIGHT = 24;
+export const NAV_SIDEBAR_WIDTH = 48;
 export const CONTENT_TOP = HUD_TOP_BAR_HEIGHT;
 export const CONTENT_HEIGHT =
   GAME_HEIGHT - HUD_TOP_BAR_HEIGHT - HUD_BOTTOM_BAR_HEIGHT - HUD_TICKER_HEIGHT;

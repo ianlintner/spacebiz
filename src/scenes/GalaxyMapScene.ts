@@ -52,8 +52,8 @@ interface LayerToggleButton {
   width: number;
 }
 
-const VIZ_TOP_STRIP = 60;
-const VIZ_BOTTOM_STRIP = 60; // company filter row height
+const VIZ_TOP_STRIP = 40;
+const VIZ_BOTTOM_STRIP = 40; // company filter row height
 const TOGGLE_FILTER_WIDTH = 220;
 
 export class GalaxyMapScene extends Phaser.Scene {
@@ -542,7 +542,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.toolbar?.reposition(L);
 
     // HUD overlay strip.
-    const hudLabelTop = L.contentTop + 18;
+    const hudLabelTop = L.contentTop + 10;
     if (this.hudBackdropLeft) {
       this.hudBackdropLeft.setPosition(L.mainContentLeft + 8, hudLabelTop - 4);
     }
@@ -553,7 +553,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       );
     }
     this.hudTitleLabel?.setPosition(L.mainContentLeft + 16, hudLabelTop);
-    this.hudSlotsLabel?.setPosition(L.mainContentLeft + 16, hudLabelTop + 18);
+    this.hudSlotsLabel?.setPosition(L.mainContentLeft + 16, hudLabelTop + 16);
     this.hudHintText?.setPosition(
       L.mainContentLeft + L.mainContentWidth - 16,
       hudLabelTop,
@@ -565,16 +565,16 @@ export class GalaxyMapScene extends Phaser.Scene {
       const navX = Math.floor(
         L.mainContentLeft + L.mainContentWidth / 2 - navW / 2,
       );
-      this.navDropdown.setPosition(navX, hudLabelTop - 2);
+      this.navDropdown.setPosition(navX, hudLabelTop - 3);
     }
 
     // Layer toggle row — reposition company filter button.
-    const rowY = L.contentTop + L.contentHeight - 56;
+    const rowY = L.contentTop + L.contentHeight - 36;
     const x = L.mainContentLeft + 8;
     if (this.companyFilterButton) {
       const cf = this.companyFilterButton;
       cf.bg.setPosition(x, rowY);
-      cf.label.setPosition(x + cf.width / 2, rowY + 18);
+      cf.label.setPosition(x + cf.width / 2, rowY + 15);
       cf.hit.setPosition(x, rowY);
     }
 
@@ -603,7 +603,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     const slotsUsed = sysUsed + empUsed + galUsed;
     const slotsTotal = sysTot + empTot + galTot;
 
-    const hudLabelTop = L.contentTop + 18;
+    const hudLabelTop = L.contentTop + 10;
     const addBackdrop = (
       x: number,
       y: number,
@@ -622,7 +622,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       L.mainContentLeft + 8,
       hudLabelTop - 4,
       156,
-      46,
+      38,
       0,
       0,
     );
@@ -630,7 +630,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       L.mainContentLeft + L.mainContentWidth - 8,
       hudLabelTop - 4,
       280,
-      58,
+      42,
       1,
       0,
     );
@@ -645,7 +645,7 @@ export class GalaxyMapScene extends Phaser.Scene {
     this.hudTitleLabel.setDepth(901);
     this.hudSlotsLabel = new Label(this, {
       x: L.mainContentLeft + 16,
-      y: hudLabelTop + 18,
+      y: hudLabelTop + 16,
       text: `Sys ${sysUsed}/${sysTot} · Emp ${empUsed}/${empTot} · Gal ${galUsed}/${galTot}`,
       style: "caption",
       color: slotsUsed >= slotsTotal ? theme.colors.loss : theme.colors.textDim,
@@ -679,12 +679,12 @@ export class GalaxyMapScene extends Phaser.Scene {
     const navDropdownX = Math.floor(
       L.mainContentLeft + L.mainContentWidth / 2 - navDropdownWidth / 2,
     );
-    const navDropdownY = hudLabelTop - 2;
+    const navDropdownY = hudLabelTop - 3;
     this.navDropdown = new AutocompleteInput(this, {
       x: navDropdownX,
       y: navDropdownY,
       width: navDropdownWidth,
-      height: 32,
+      height: 30,
       placeholder: "Jump to system…",
       getSuggestions: () => {
         // Read the latest galaxy each keystroke so this widget keeps working
@@ -779,21 +779,21 @@ export class GalaxyMapScene extends Phaser.Scene {
       return `Filter: ${co?.name ?? id}`;
     };
 
-    const rowY = L.contentTop + L.contentHeight - 56;
+    const rowY = L.contentTop + L.contentHeight - 36;
     const x = L.mainContentLeft + 8;
 
     // Company filter — wider button, separate row slot. Custom isOn() returns
     // true whenever a filter is active so the styling reflects "filtering on".
     const filterWidth = TOGGLE_FILTER_WIDTH;
     const filterBg = this.add
-      .rectangle(x, rowY, filterWidth, 36, theme.colors.panelBg, 0.85)
+      .rectangle(x, rowY, filterWidth, 30, theme.colors.panelBg, 0.72)
       .setStrokeStyle(1, theme.colors.panelBorder, 0.6)
       .setOrigin(0, 0)
       .setDepth(902);
     const filterText = this.add
       .text(
         x + filterWidth / 2,
-        rowY + 18,
+        rowY + 15,
         labelForFilter(this.companyFilter),
         {
           fontSize: `${theme.fonts.caption.size}px`,
@@ -804,7 +804,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5)
       .setDepth(903);
     const filterHit = this.add
-      .zone(x, rowY, filterWidth, 36)
+      .zone(x, rowY, filterWidth, 30)
       .setOrigin(0, 0)
       .setInteractive({ cursor: "pointer", useHandCursor: true });
     const refreshFilter = (): void => {

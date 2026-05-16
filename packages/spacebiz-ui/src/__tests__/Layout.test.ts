@@ -26,6 +26,19 @@ describe("Layout metrics", () => {
     expect(L.contentHeight).toBeGreaterThan(0);
   });
 
+  it("reserves compact command-ribbon chrome at the legacy 1280x720 size", () => {
+    updateLayout(1280, 720);
+    const L = getLayout();
+
+    expect(L.hudTopBarHeight).toBe(48);
+    expect(L.hudBottomBarHeight).toBe(0);
+    expect(L.hudTickerHeight).toBe(24);
+    expect(L.navSidebarWidth).toBe(48);
+    expect(L.contentTop).toBe(48);
+    expect(L.contentHeight).toBe(648);
+    expect(L.hudBottomBarTop).toBe(696);
+  });
+
   it("centers the content area at the previous HD ceiling (1920x720)", () => {
     updateLayout(1920, 720);
     const L = getLayout();
