@@ -72,7 +72,7 @@ describe("GlassPanel.getContentY", () => {
       title: "Finance",
     });
     const theme = getTheme();
-    expect(p.getContentY()).toBeGreaterThan(theme.spacing.sm);
+    expect(p.getContentY()).toBe(30 + theme.spacing.xs);
   });
 });
 

@@ -61,7 +61,7 @@ export class GlassPanel extends Phaser.GameObjects.Container {
         {
           fontSize: `${config.titleFontSize ?? theme.fonts.caption.size}px`,
           fontFamily: theme.fonts.heading.family,
-          color: colorToString(theme.colors.accent),
+          color: colorToString(theme.color.accent.primary),
         },
       );
       this.titleUnderline = scene.add
@@ -70,7 +70,7 @@ export class GlassPanel extends Phaser.GameObjects.Container {
           GLASS_TITLE_HEIGHT - 1,
           config.width,
           1,
-          theme.colors.accent,
+          theme.color.accent.primary,
         )
         .setOrigin(0, 0)
         .setAlpha(0.7);
