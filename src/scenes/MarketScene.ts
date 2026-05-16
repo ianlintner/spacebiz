@@ -5,10 +5,10 @@ import type { CargoType as CargoTypeValue } from "../data/types.ts";
 import { BASE_CARGO_PRICES } from "../data/constants.ts";
 import {
   getTheme,
-  Label,
   DataTable,
   ScrollFrame,
-  Panel,
+  GlassPanel,
+  StatusChip,
   PortraitPanel,
   createStarfield,
   getLayout,
@@ -49,8 +49,8 @@ function planetTypeLabel(type: string): string {
 
 export class MarketScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
-  private contentPanel!: Panel;
-  private fuelLabel!: Label;
+  private contentPanel!: GlassPanel;
+  private fuelChip!: StatusChip;
   private tableFrame!: ScrollFrame;
   private table!: DataTable;
 
@@ -79,7 +79,7 @@ export class MarketScene extends Phaser.Scene {
     });
 
     // --- Main content panel ---
-    this.contentPanel = new Panel(this, {
+    this.contentPanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,
@@ -92,12 +92,15 @@ export class MarketScene extends Phaser.Scene {
 
     // Fuel price display inside content panel
     const fuelTrendStr = trendArrow(state.market.fuelTrend);
-    this.fuelLabel = new Label(this, {
+    const chipH = 26;
+    this.fuelChip = new StatusChip(this, {
       x: absX,
-      y: absY + 2,
-      text: `Fuel Price: ${formatCash(state.market.fuelPrice)} ${fuelTrendStr}`,
-      style: "value",
-      color: theme.colors.accent,
+      y: absY + chipH / 2,
+      width: 180,
+      height: chipH,
+      label: "Fuel",
+      value: `${formatCash(state.market.fuelPrice)} ${fuelTrendStr}`,
+      variant: state.market.fuelTrend === "rising" ? "warn" : "default",
     });
 
     // Build columns: Planet, Type, then one per cargo type
@@ -166,15 +169,15 @@ export class MarketScene extends Phaser.Scene {
 
     this.tableFrame = new ScrollFrame(this, {
       x: absX,
-      y: absY + 28,
+      y: absY + 36,
       width: content.width,
-      height: content.height - 32,
+      height: content.height - 40,
     });
     this.table = new DataTable(this, {
       x: 0,
       y: 0,
       width: content.width,
-      height: content.height - 32,
+      height: content.height - 40,
       contentSized: true,
       columns: columnDefs,
       keyboardNavigation: true,
@@ -234,11 +237,12 @@ export class MarketScene extends Phaser.Scene {
     const absX = L.mainContentLeft + content.x;
     const absY = L.contentTop + content.y;
 
-    this.fuelLabel.setPosition(absX, absY + 2);
+    const chipH = 26;
+    this.fuelChip.setPosition(absX, absY + chipH / 2);
 
-    this.tableFrame.setPosition(absX, absY + 28);
-    this.tableFrame.setSize(content.width, content.height - 32);
+    this.tableFrame.setPosition(absX, absY + 36);
+    this.tableFrame.setSize(content.width, content.height - 40);
 
-    this.table.setSize(content.width, content.height - 32);
+    this.table.setSize(content.width, content.height - 40);
   }
 }

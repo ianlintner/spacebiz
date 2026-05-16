@@ -14,6 +14,7 @@ import {
   ScrollFrame,
   Modal,
   Panel,
+  GlassPanel,
   SceneUiDirector,
   createStarfield,
   getLayout,
@@ -56,7 +57,7 @@ export class FinanceScene extends Phaser.Scene {
 
   // ── Layout-dependent fields ──
   private portrait!: PortraitPanel;
-  private mainPanel!: Panel;
+  private mainPanel!: GlassPanel;
   private tabGroup!: TabGroup;
   // CEO portrait overlay — raw Phaser GameObjects, no setSize(); rebuilt on resize.
   private ceoImg!: Phaser.GameObjects.Image;
@@ -129,7 +130,7 @@ export class FinanceScene extends Phaser.Scene {
     }
 
     // --- Main content panel with title ---
-    this.mainPanel = new Panel(this, {
+    this.mainPanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,

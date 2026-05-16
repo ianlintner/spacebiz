@@ -14,8 +14,8 @@ import { getStandingTier } from "../game/diplomacy/StandingTiers.ts";
 import {
   Button,
   DataTable,
+  GlassPanel,
   Label,
-  Panel,
   ScrollFrame,
   attachReflowHandler,
   createStarfield,
@@ -120,10 +120,10 @@ interface TargetRow {
  * Lobby and propose-non-compete need multi-target pickers and ship in v2.
  */
 export class DiplomacyScene extends Phaser.Scene {
-  private targetTablePanel!: Panel;
+  private targetTablePanel!: GlassPanel;
   private targetTableFrame!: ScrollFrame;
   private targetTable!: DataTable;
-  private actionPanel!: Panel;
+  private actionPanel!: GlassPanel;
   private actionButtons: Button[] = [];
   private tagDetailLabels: Phaser.GameObjects.Text[] = [];
   /**
@@ -223,7 +223,7 @@ export class DiplomacyScene extends Phaser.Scene {
 
   private buildTargetTable(L: ReturnType<typeof getLayout>): void {
     const tableW = Math.floor(L.fullContentWidth * 0.55);
-    this.targetTablePanel = new Panel(this, {
+    this.targetTablePanel = new GlassPanel(this, {
       x: L.fullContentLeft,
       y: L.contentTop,
       width: tableW,
@@ -276,7 +276,7 @@ export class DiplomacyScene extends Phaser.Scene {
       L.fullContentLeft + Math.floor(L.fullContentWidth * 0.55) + 8;
     const panelW =
       L.fullContentWidth - Math.floor(L.fullContentWidth * 0.55) - 8;
-    this.actionPanel = new Panel(this, {
+    this.actionPanel = new GlassPanel(this, {
       x: panelX,
       y: L.contentTop,
       width: panelW,

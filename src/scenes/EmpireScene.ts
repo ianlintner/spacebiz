@@ -6,8 +6,8 @@ import {
   Button,
   DataTable,
   ScrollFrame,
-  Label,
-  Panel,
+  GlassPanel,
+  StatusChip,
   PortraitPanel,
   createStarfield,
   getLayout,
@@ -50,13 +50,13 @@ function statusColor(value: unknown): number | null {
 
 export class EmpireScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
-  private contentPanel!: Panel;
+  private contentPanel!: GlassPanel;
   private tableFrame!: ScrollFrame;
   private table!: DataTable;
   private filterToPlayer = true;
   private cachedRows: Array<Record<string, unknown>> = [];
   private filterToggleBtn!: Button;
-  private filterSummaryLabel!: Label;
+  private filterSummaryChip!: StatusChip;
 
   constructor() {
     super({ key: "EmpireScene" });
@@ -88,7 +88,7 @@ export class EmpireScene extends Phaser.Scene {
     ]);
 
     // Content panel
-    this.contentPanel = new Panel(this, {
+    this.contentPanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,
@@ -120,14 +120,14 @@ export class EmpireScene extends Phaser.Scene {
     });
     this.filterToggleBtn.setActive(this.filterToPlayer);
 
-    this.filterSummaryLabel = new Label(this, {
+    const chipH = 26;
+    this.filterSummaryChip = new StatusChip(this, {
       x: absX + 8,
       y: absY + toolbarH / 2,
-      text: "",
-      style: "caption",
+      width: 160,
+      height: chipH,
+      value: "",
     });
-    // Align label vertically with button
-    this.filterSummaryLabel.setOrigin(0, 0.5);
 
     this.tableFrame = new ScrollFrame(this, {
       x: absX,
@@ -186,7 +186,7 @@ export class EmpireScene extends Phaser.Scene {
     // Filter toolbar: autoWidth toggle button + dynamic summary label.
     // Both flex to their content; reposition only.
     this.filterToggleBtn.setPosition(absX, absY);
-    this.filterSummaryLabel.setPosition(
+    this.filterSummaryChip.setPosition(
       this.filterToggleBtn.x + this.filterToggleBtn.width + 8,
       absY + toolbarH / 2,
     );
@@ -208,7 +208,7 @@ export class EmpireScene extends Phaser.Scene {
     this.table.setRows(visible);
     const total = this.cachedRows.length;
     const shown = visible.length;
-    this.filterSummaryLabel.setText(
+    this.filterSummaryChip.setValue(
       this.filterToPlayer
         ? `${shown} of ${total} relations`
         : `${total} relations`,

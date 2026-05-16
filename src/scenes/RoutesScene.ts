@@ -16,6 +16,7 @@ import {
   Modal,
   ScrollableList,
   Panel,
+  GlassPanel,
   TabGroup,
   PortraitPanel,
   openRouteBuilder,
@@ -126,7 +127,7 @@ export class RoutesScene extends Phaser.Scene {
   private miniMapGap = 8;
 
   // ── Main layout panels ──
-  private contentPanel!: Panel;
+  private contentPanel!: GlassPanel;
   private tabGroup!: TabGroup;
   private createSelectedBtn!: Button;
 
@@ -186,7 +187,7 @@ export class RoutesScene extends Phaser.Scene {
     const panelH = L.contentHeight;
 
     // Background panel
-    this.contentPanel = new Panel(this, {
+    this.contentPanel = new GlassPanel(this, {
       x: panelX,
       y: panelY,
       width: panelW,
@@ -195,7 +196,7 @@ export class RoutesScene extends Phaser.Scene {
     });
 
     // Tab group sits at the top of the content area
-    const tabY = panelY + 38;
+    const tabY = panelY + this.contentPanel.getContentY();
     const tabContentY = 0; // relative to tab content container
 
     this.tabGroup = new TabGroup(this, {
@@ -819,7 +820,7 @@ export class RoutesScene extends Phaser.Scene {
     this.contentPanel.setSize(L.mainContentWidth, L.contentHeight);
 
     // Tab group.
-    const tabY = L.contentTop + 38;
+    const tabY = L.contentTop + this.contentPanel.getContentY();
     this.tabGroup.setPosition(L.mainContentLeft, tabY);
     this.tabGroup.setSize(L.mainContentWidth, this.tabGroup.height);
 

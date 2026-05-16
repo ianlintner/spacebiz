@@ -5,7 +5,7 @@ import {
   getTheme,
   colorToString,
   Button,
-  Panel,
+  GlassPanel,
   PortraitPanel,
   SceneUiDirector,
   createStarfield,
@@ -33,7 +33,7 @@ const QUEUE_ROW_HEIGHT = 72;
 
 export class TechTreeScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
-  private mainPanel!: Panel;
+  private mainPanel!: GlassPanel;
   private graph!: TechGraphCanvas;
   private queueRow!: TechQueueRow;
   private rpStatusText!: Phaser.GameObjects.Text;
@@ -73,7 +73,7 @@ export class TechTreeScene extends Phaser.Scene {
     );
 
     // Main panel
-    this.mainPanel = new Panel(this, {
+    this.mainPanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,

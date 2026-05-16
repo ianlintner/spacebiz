@@ -5,7 +5,7 @@ import {
   getTheme,
   DataTable,
   ScrollFrame,
-  Panel,
+  GlassPanel,
   PortraitPanel,
   TabGroup,
   StandingsGraph,
@@ -46,7 +46,7 @@ function personalityLabel(p: string): string {
 
 export class CompetitionScene extends Phaser.Scene {
   private portrait!: PortraitPanel;
-  private contentPanel!: Panel;
+  private contentPanel!: GlassPanel;
   private tabGroup!: TabGroup;
   private table!: DataTable;
   private intelTier: IntelTier = 0;
@@ -101,7 +101,7 @@ export class CompetitionScene extends Phaser.Scene {
     this.portrait.updatePortrait("company", 0, "Competition", sidebarStats);
 
     // Content panel
-    this.contentPanel = new Panel(this, {
+    this.contentPanel = new GlassPanel(this, {
       x: L.mainContentLeft,
       y: L.contentTop,
       width: L.mainContentWidth,
