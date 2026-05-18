@@ -7,6 +7,7 @@ import type {
   TutorialTrigger,
   EventCategory,
 } from "../../data/types.ts";
+import { CargoType } from "../../data/types.ts";
 import { pickRandomRdChief } from "./RdChiefs.ts";
 import {
   GRADE_COMMENTARY,
@@ -17,6 +18,15 @@ import {
   buildRevealTexts,
 } from "./AdviserMessages.ts";
 import { TUTORIAL_STEPS } from "./TutorialDefinitions.ts";
+import {
+  getCapacityCostForScope,
+  computeUtilization,
+} from "../fleet/CapacityManager.ts";
+import {
+  getTotalFreightCapacity,
+  getTotalPassengerCapacity,
+} from "../tech/TechEffects.ts";
+import { getRouteScope } from "../routes/RouteManager.ts";
 
 // ── Init ───────────────────────────────────────────────────
 
@@ -114,27 +124,43 @@ export function generateTurnMessages(
     const w = WARNING_MESSAGES.find((m) => m.id === "warn_no_routes")!;
     messages.push(makeMessage(w, turn));
   }
-  if (state.fleet.length === 0) {
-    const w = WARNING_MESSAGES.find((m) => m.id === "warn_no_ships")!;
-    messages.push(makeMessage(w, turn));
-  }
   if (state.activeRoutes.length === 1) {
     const w = WARNING_MESSAGES.find((m) => m.id === "warn_single_route")!;
     if (!shown.has(w.id)) messages.push(makeMessage(w, turn));
   }
-  const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
-  if (unassigned.length > 0 && state.activeRoutes.length > 0) {
-    const w = WARNING_MESSAGES.find((m) => m.id === "warn_unassigned")!;
-    if (!shown.has(w.id)) messages.push(makeMessage(w, turn));
+
+  // Capacity utilization warnings & tips
+  let usedFC = 0;
+  let usedPC = 0;
+  for (const route of state.activeRoutes) {
+    if (route.paused) continue;
+    const scope = getRouteScope(route, state);
+    const cost = getCapacityCostForScope(scope);
+    if (route.cargoType === CargoType.Passengers) {
+      usedPC += cost;
+    } else {
+      usedFC += cost;
+    }
   }
-  const avgCondition =
-    state.fleet.length > 0
-      ? state.fleet.reduce((sum, s) => sum + s.condition, 0) /
-        state.fleet.length
-      : 100;
-  if (avgCondition < 50 && state.fleet.length > 0) {
-    const w = WARNING_MESSAGES.find((m) => m.id === "warn_low_condition")!;
-    if (!shown.has(w.id)) messages.push(makeMessage(w, turn));
+  const totalFC = getTotalFreightCapacity(state.tech);
+  const totalPC = getTotalPassengerCapacity(state.tech);
+  const freightUtil = computeUtilization(usedFC, totalFC);
+  const passengerUtil = computeUtilization(usedPC, totalPC);
+
+  // Overcapacity warning (> 120%)
+  if (freightUtil > 1.2 || passengerUtil > 1.2) {
+    const w = WARNING_MESSAGES.find(
+      (m) => m.id === "tip_capacity_overcapacity",
+    );
+    if (w && !shown.has(w.id)) messages.push(makeMessage(w, turn));
+  }
+  // Underutilization tip (< 50%) with active routes
+  if (
+    state.activeRoutes.length > 0 &&
+    ((totalFC > 0 && freightUtil < 0.5) || (totalPC > 0 && passengerUtil < 0.5))
+  ) {
+    const w = WARNING_MESSAGES.find((m) => m.id === "warn_underutilization");
+    if (w && !shown.has(w.id)) messages.push(makeMessage(w, turn));
   }
   // Contract at risk: active contract with turnsWithoutShip >= 1
   const contractAtRisk = state.contracts.some(

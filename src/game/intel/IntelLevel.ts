@@ -2,6 +2,8 @@ import { TECH_TREE } from "../../data/constants.ts";
 import type { AICompany, GameState } from "../../data/types.ts";
 import { TechBranch } from "../../data/types.ts";
 import { getAITechBranch } from "../ai/steps/aiTechStep.ts";
+import { getRouteScope } from "../routes/RouteManager.ts";
+import { getCapacityCostForScope } from "../fleet/CapacityManager.ts";
 
 // ---------------------------------------------------------------------------
 // Intel Level — gates rival visibility based on Intelligence tech (Wave 3.4)
@@ -15,7 +17,7 @@ export type IntelTier = 0 | 1 | 2 | 3 | 4;
  * - Tier 0 (no intel tech): rank, score, companyName, ceoName only
  * - Tier 1 (intelligence_1): + techBranch, techTier
  * - Tier 2 (intelligence_2): + hubTier, contractsCompleted
- * - Tier 3 (intelligence_3): + routeCount, fleetSize
+ * - Tier 3 (intelligence_3): + routeCount, usedCapacity
  * - Tier 4 (intelligence_4): + cash
  */
 export interface RivalIntelView {
@@ -34,7 +36,7 @@ export interface RivalIntelView {
   contractsCompleted?: number;
   // Intel T3+:
   routeCount?: number;
-  fleetSize?: number;
+  usedCapacity?: number;
   // Intel T4+:
   cash?: number;
 }
@@ -72,6 +74,7 @@ export function buildRivalView(
   intelTier: IntelTier,
   rank: number = 0,
   score: number = 0,
+  state?: GameState,
 ): RivalIntelView {
   const view: RivalIntelView = {
     companyId: company.id,
@@ -102,10 +105,19 @@ export function buildRivalView(
     view.contractsCompleted = company.contractsCompleted ?? 0;
   }
 
-  // Tier 3: route count + fleet size
+  // Tier 3: route count + used capacity
   if (intelTier >= 3) {
     view.routeCount = company.activeRoutes.length;
-    view.fleetSize = company.fleet.length;
+    if (state) {
+      let used = 0;
+      for (const route of company.activeRoutes) {
+        if (route.paused) continue;
+        used += getCapacityCostForScope(getRouteScope(route, state));
+      }
+      view.usedCapacity = used;
+    } else {
+      view.usedCapacity = 0;
+    }
   }
 
   // Tier 4: cash
@@ -129,7 +141,7 @@ export function getNextIntelUnlockDescription(
     case 1:
       return "Research Intelligence T2 to reveal rivals' hub level and contract history";
     case 2:
-      return "Research Intelligence T3 to reveal rivals' route count and fleet size";
+      return "Research Intelligence T3 to reveal rivals' route count and capacity usage";
     case 3:
       return "Research Intelligence T4 to reveal rivals' cash reserves";
     case 4:

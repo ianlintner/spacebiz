@@ -115,7 +115,7 @@ export class CompetitionScene extends Phaser.Scene {
     // Build table rows — use intel-gated views
     const rows = companies.map((company, index) => {
       const empire = empireMap.get(company.empireId);
-      const view = buildRivalView(company, this.intelTier, index + 1, 0);
+      const view = buildRivalView(company, this.intelTier, index + 1, 0, state);
 
       // Cash: only visible at Intel T4
       const cashDisplay =
@@ -125,9 +125,9 @@ export class CompetitionScene extends Phaser.Scene {
       const routesDisplay =
         view.routeCount !== undefined ? view.routeCount : "???";
 
-      // Fleet: only visible at Intel T3
+      // Capacity used: only visible at Intel T3
       const fleetDisplay =
-        view.fleetSize !== undefined ? view.fleetSize : "???";
+        view.usedCapacity !== undefined ? view.usedCapacity : "???";
 
       return {
         companyId: company.id,
@@ -324,7 +324,7 @@ export class CompetitionScene extends Phaser.Scene {
 
     const state = gameStore.getState();
     const empire = state.galaxy.empires.find((e) => e.id === company.empireId);
-    const view = buildRivalView(company, this.intelTier, 0, 0);
+    const view = buildRivalView(company, this.intelTier, 0, 0, state);
 
     const assignedShips = company.activeRoutes.reduce(
       (sum: number, r) => sum + r.assignedShipIds.length,
@@ -359,14 +359,17 @@ export class CompetitionScene extends Phaser.Scene {
       details.push({ label: "Hub Tier", value: "???" });
     }
 
-    // Tier 3: routes + fleet
+    // Tier 3: routes + capacity used
     if (view.routeCount !== undefined) {
       details.push({ label: "Routes", value: String(view.routeCount) });
-      details.push({ label: "Ships", value: String(view.fleetSize) });
+      details.push({
+        label: "Capacity Used",
+        value: String(view.usedCapacity ?? 0),
+      });
       details.push({ label: "Assigned", value: String(assignedShips) });
     } else {
       details.push({ label: "Routes", value: "???" });
-      details.push({ label: "Ships", value: "???" });
+      details.push({ label: "Capacity Used", value: "???" });
     }
 
     // Tier 4: cash
