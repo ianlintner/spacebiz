@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 import type { Technology } from "../data/types.ts";
 import { TECH_GRAPH } from "../data/constants.ts";
-import { applyClippingMask, getTheme } from "@spacebiz/ui";
+import { applyClippingMask, getTheme, getBranchColor } from "@spacebiz/ui";
 
 export const BRANCH_LABELS: Record<string, string> = {
   Logistics: "Logistics",
@@ -31,19 +31,17 @@ const RING_SPACING = 130;
 const NODE_SIZE = 60;
 const HALF = NODE_SIZE / 2;
 
-const STATE_COLORS = {
-  completed: 0x44aa44,
-  researching: 0xffcc00,
-  queued: 0xff8800,
-  available: 0x4488ff,
-  locked: 0x333344,
-} as const;
-
-type NodeState = keyof typeof STATE_COLORS;
+type NodeState =
+  | "completed"
+  | "researching"
+  | "queued"
+  | "available"
+  | "locked";
 
 interface NodeView {
   container: Phaser.GameObjects.Container;
   bg: Phaser.GameObjects.Graphics;
+  glow: Phaser.GameObjects.Graphics; // NEW: outer halo behind bg
   iconText: Phaser.GameObjects.Text;
   nameText: Phaser.GameObjects.Text;
   tech: Technology;
@@ -153,11 +151,12 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
         tech.position.radius,
       );
 
+      // Glow layer (drawn first, behind everything; additive blend).
+      const glow = this.scene.add.graphics();
+      glow.setBlendMode(Phaser.BlendModes.ADD);
+      glow.setAlpha(0);
+
       const bg = this.scene.add.graphics();
-      bg.fillStyle(STATE_COLORS.locked, 1);
-      bg.fillRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
-      bg.lineStyle(2, 0x666688, 1);
-      bg.strokeRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
 
       const iconText = this.scene.add
         .text(0, -8, tech.icon, {
@@ -177,6 +176,7 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
         .setOrigin(0.5, 0);
 
       const nodeContainer = new Phaser.GameObjects.Container(this.scene, x, y, [
+        glow,
         bg,
         iconText,
         nameText,
@@ -185,19 +185,14 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
       nodeContainer.setSize(NODE_SIZE, NODE_SIZE);
       nodeContainer.setInteractive();
       nodeContainer.on("pointerup", () => this.config.onSelect(tech.id));
-      nodeContainer.on("pointerover", () => {
-        bg.clear();
-        bg.fillStyle(0xffffff, 0.15);
-        bg.fillRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
-        bg.lineStyle(2, 0xaaaacc, 1);
-        bg.strokeRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
-      });
+      nodeContainer.on("pointerover", () => this.applyHoverStyle(tech.id));
       nodeContainer.on("pointerout", () => this.refreshNodeView(tech.id));
 
       this.graphGroup.add(nodeContainer);
       this.nodeViews.set(tech.id, {
         container: nodeContainer,
         bg,
+        glow,
         iconText,
         nameText,
         tech,
@@ -223,18 +218,41 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
           neighbor.position.angle,
           neighbor.position.radius,
         );
-        const bothComplete =
-          state.completedTechIds.includes(tech.id) &&
-          state.completedTechIds.includes(neighborId);
-        this.edgeGfx.lineStyle(
-          bothComplete ? 2 : 1,
-          bothComplete ? 0x88aaff : 0x334455,
-          1,
-        );
-        this.edgeGfx.beginPath();
-        this.edgeGfx.moveTo(x1, y1);
-        this.edgeGfx.lineTo(x2, y2);
-        this.edgeGfx.strokePath();
+        const aDone = state.completedTechIds.includes(tech.id);
+        const bDone = state.completedTechIds.includes(neighborId);
+        const bothDone = aDone && bDone;
+        const eitherDone = aDone || bDone;
+
+        // Branch color = higher-tier endpoint's branch (fallback to tech's branch)
+        const branchTech = neighbor.tier > tech.tier ? neighbor : tech;
+        const branchColor = getBranchColor(branchTech.branch);
+
+        if (bothDone) {
+          // Glow pass first (wide, dim, additive)
+          this.edgeGfx.lineStyle(6, branchColor, 0.25);
+          this.edgeGfx.beginPath();
+          this.edgeGfx.moveTo(x1, y1);
+          this.edgeGfx.lineTo(x2, y2);
+          this.edgeGfx.strokePath();
+          // Core line
+          this.edgeGfx.lineStyle(3, branchColor, 1);
+          this.edgeGfx.beginPath();
+          this.edgeGfx.moveTo(x1, y1);
+          this.edgeGfx.lineTo(x2, y2);
+          this.edgeGfx.strokePath();
+        } else if (eitherDone) {
+          this.edgeGfx.lineStyle(1.5, branchColor, 0.35);
+          this.edgeGfx.beginPath();
+          this.edgeGfx.moveTo(x1, y1);
+          this.edgeGfx.lineTo(x2, y2);
+          this.edgeGfx.strokePath();
+        } else {
+          this.edgeGfx.lineStyle(1, 0x243049, 1);
+          this.edgeGfx.beginPath();
+          this.edgeGfx.moveTo(x1, y1);
+          this.edgeGfx.lineTo(x2, y2);
+          this.edgeGfx.strokePath();
+        }
       }
     }
   }
@@ -252,19 +270,89 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
     const view = this.nodeViews.get(techId);
     if (!view) return;
     const nodeState = this.getNodeState(techId, this.currentState);
-    const color = STATE_COLORS[nodeState];
+    const branchColor = getBranchColor(view.tech.branch);
+    const RESEARCHING_COLOR = 0xfcd96f; // gold
+
     view.bg.clear();
-    view.bg.fillStyle(color, nodeState === "locked" ? 0.5 : 0.85);
-    view.bg.fillRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
-    view.bg.lineStyle(
-      2,
-      nodeState === "completed"
-        ? 0x88ff88
-        : nodeState === "available"
-          ? 0x88aaff
-          : 0x666688,
-      1,
-    );
+    view.glow.clear();
+    view.glow.setAlpha(0);
+
+    switch (nodeState) {
+      case "locked": {
+        view.container.setAlpha(0.35);
+        view.bg.fillStyle(0x1a2235, 1);
+        view.bg.fillRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
+        view.bg.lineStyle(1, 0x2c3a55, 1);
+        view.bg.strokeRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
+        break;
+      }
+      case "available": {
+        view.container.setAlpha(0.92);
+        view.bg.fillStyle(0x141c2e, 0.95);
+        view.bg.fillRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
+        view.bg.lineStyle(2, branchColor, 1);
+        view.bg.strokeRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
+        break;
+      }
+      case "queued": {
+        view.container.setAlpha(1);
+        view.bg.fillStyle(0x141c2e, 0.95);
+        view.bg.fillRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
+        view.bg.lineStyle(2, branchColor, 1);
+        view.bg.strokeRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
+        this.drawHalo(view.glow, branchColor, 0.35);
+        view.glow.setAlpha(1);
+        break;
+      }
+      case "researching": {
+        view.container.setAlpha(1);
+        view.bg.fillStyle(0x2a1a08, 1);
+        view.bg.fillRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
+        view.bg.lineStyle(2, RESEARCHING_COLOR, 1);
+        view.bg.strokeRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
+        this.drawHalo(view.glow, RESEARCHING_COLOR, 0.6);
+        view.glow.setAlpha(0.55);
+        // Breathing animation is started by ensureBreathingTween (Task 4).
+        break;
+      }
+      case "completed": {
+        view.container.setAlpha(1);
+        view.bg.fillStyle(0x0d1a30, 1);
+        view.bg.fillRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
+        view.bg.lineStyle(2, branchColor, 1);
+        view.bg.strokeRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
+        this.drawHalo(view.glow, branchColor, 0.45);
+        view.glow.setAlpha(1);
+        break;
+      }
+    }
+  }
+
+  private drawHalo(
+    g: Phaser.GameObjects.Graphics,
+    color: number,
+    intensity: number,
+  ): void {
+    // Three concentric stroked rects with falling alpha — cheap, no shader.
+    for (let i = 0; i < 3; i++) {
+      const pad = 4 + i * 4;
+      const alpha = intensity * (1 - i * 0.3);
+      g.lineStyle(2, color, alpha);
+      g.strokeRoundedRect(
+        -HALF - pad,
+        -HALF - pad,
+        NODE_SIZE + pad * 2,
+        NODE_SIZE + pad * 2,
+        10 + i * 2,
+      );
+    }
+  }
+
+  private applyHoverStyle(techId: string): void {
+    const view = this.nodeViews.get(techId);
+    if (!view) return;
+    // Brighten the existing bg by drawing a white overlay.
+    view.bg.lineStyle(2, 0xffffff, 0.9);
     view.bg.strokeRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
   }
 
