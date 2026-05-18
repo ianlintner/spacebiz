@@ -112,10 +112,15 @@ export class TechTreeScene extends Phaser.Scene {
     });
     this.bonusesContent.add(this.bonusesPanel);
 
+    // TabGroup positions tab buttons during construction based on width and
+    // does not reposition them in setSize. Pass the correct initial width so
+    // the tab buttons land in the right place. (Window resize after this
+    // point will leave the buttons at their initial positions — acceptable
+    // tradeoff for now; would require a TabGroup library change to fix.)
     this.tabs = new TabGroup(this, {
       x: 0,
       y: 0,
-      width: 100,
+      width: mainWidth - 24,
       tabHeight: TAB_STRIP_HEIGHT,
       tabs: [
         { label: "Tree", content: this.treeContent },
