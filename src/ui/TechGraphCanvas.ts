@@ -351,7 +351,8 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
   private applyHoverStyle(techId: string): void {
     const view = this.nodeViews.get(techId);
     if (!view) return;
-    // Brighten the existing bg by drawing a white overlay.
+    // Re-render the base state cleanly, then layer the hover overlay on top.
+    this.refreshNodeView(techId);
     view.bg.lineStyle(2, 0xffffff, 0.9);
     view.bg.strokeRoundedRect(-HALF, -HALF, NODE_SIZE, NODE_SIZE, 8);
   }
