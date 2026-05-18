@@ -2,7 +2,6 @@ import { CargoType, AIPersonality } from "../../../data/types.ts";
 import type {
   AICompany,
   GameState,
-  Ship,
   ActiveRoute,
   Planet,
   MarketState,
@@ -108,14 +107,12 @@ function getUsedPassengerCapacity(
 // ---------------------------------------------------------------------------
 
 export interface DecisionResult {
-  fleet: Ship[];
   routes: ActiveRoute[];
   cash: number;
 }
 
 export function makeAIDecisions(
   company: AICompany,
-  fleet: Ship[],
   routes: ActiveRoute[],
   cash: number,
   state: GameState,
@@ -190,7 +187,7 @@ export function makeAIDecisions(
     routeAttempts++;
   }
 
-  return { fleet, routes: currentRoutes, cash: currentCash };
+  return { routes: currentRoutes, cash: currentCash };
 }
 
 // ---------------------------------------------------------------------------

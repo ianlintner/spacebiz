@@ -116,7 +116,6 @@ export function simulateAITurns(
     let updatedRoutes = [...company.activeRoutes];
     const decisionResult = makeAIDecisions(
       company,
-      company.fleet, // fleet passed through unchanged
       updatedRoutes,
       newCash,
       state,
