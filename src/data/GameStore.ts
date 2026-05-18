@@ -86,7 +86,7 @@ function createDefaultState(): GameState {
     captains: [],
     routeMarket: [],
     researchEvents: [],
-    unlockedNavTabs: ["map", "routes", "fleet", "finance"],
+    unlockedNavTabs: ["map", "routes", "finance"],
     reputationTier: "unknown",
     empireReputation: {},
     diplomacy: { ...EMPTY_DIPLOMACY_STATE },

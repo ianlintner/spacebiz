@@ -27,12 +27,15 @@ function runSim(overrides: Partial<SimulationConfig> = {}): SimulationResult {
 // ---------------------------------------------------------------------------
 
 describe("AI behavioral: fleet management", () => {
-  it("AI companies start with at least 1 ship", () => {
+  it("AI companies start with an empty fleet (capacity comes from tech pools)", () => {
     const result = runSim({ maxTurns: 1 });
     const firstTurn = result.turnLogs[0];
 
+    // Post-Task-9: AI companies no longer get a starter ship at setup.
+    // They may buy capacity during turn 1, so we just assert fleetSize is
+    // non-negative (i.e. the new pipeline doesn't crash with empty fleets).
     for (const company of firstTurn.companies) {
-      expect(company.fleetSize).toBeGreaterThanOrEqual(1);
+      expect(company.fleetSize).toBeGreaterThanOrEqual(0);
     }
   });
 

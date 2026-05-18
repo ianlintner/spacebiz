@@ -3,11 +3,10 @@ import { createContext } from "@lexiconlang/core";
 import { megacorpName } from "@lexiconlang/scifi";
 import { generateGalaxy } from "../generation/GalaxyGenerator.ts";
 import { initializeMarkets } from "../generation/MarketInitializer.ts";
-import { ShipClass, AIPersonality, GalaxyShape } from "../data/types.ts";
+import { AIPersonality, GalaxyShape } from "../data/types.ts";
 import type {
   GameState,
   Planet,
-  Ship,
   StarSystem,
   StorytellerState,
   AICompany,
@@ -21,7 +20,6 @@ import type {
 import { EMPTY_DIPLOMACY_STATE } from "../data/types.ts";
 import { initAdviserState } from "./adviser/AdviserEngine.ts";
 import {
-  SHIP_TEMPLATES,
   GAME_LENGTH_PRESETS,
   AI_STARTING_CASH,
   BASE_ROUTE_SLOTS,
@@ -57,25 +55,6 @@ const ROSTER_SEED_OFFSET = 0x517a33;
 export interface NewGameResult {
   state: GameState;
   startingSystemOptions: StarSystem[];
-}
-
-function createShipFromTemplate(shipClass: ShipClass, id: string): Ship {
-  const template = SHIP_TEMPLATES[shipClass];
-  return {
-    id,
-    name: template.name,
-    class: template.class,
-    cargoCapacity: template.cargoCapacity,
-    passengerCapacity: template.passengerCapacity,
-    speed: template.speed,
-    fuelEfficiency: template.fuelEfficiency,
-    reliability: template.baseReliability,
-    age: 0,
-    condition: 100,
-    purchaseCost: template.purchaseCost,
-    maintenanceCost: template.baseMaintenance,
-    assignedRouteId: null,
-  };
 }
 
 function selectStartingSystems(
@@ -189,25 +168,6 @@ function createAICompanies(
     const empireId = empireQueue[i];
     const personality = AI_PERSONALITIES[i % AI_PERSONALITIES.length];
 
-    // AI companies start with one CargoShuttle so they can open routes immediately
-    const starterTemplate = SHIP_TEMPLATES[ShipClass.CargoShuttle];
-    const starterShip: Ship = {
-      id: `ai-${i}-ship-0`,
-      name: starterTemplate.name,
-      class: starterTemplate.class,
-      cargoCapacity: starterTemplate.cargoCapacity,
-      passengerCapacity: starterTemplate.passengerCapacity,
-      speed: starterTemplate.speed,
-      fuelEfficiency: starterTemplate.fuelEfficiency,
-      reliability: starterTemplate.baseReliability,
-      age: 0,
-      condition: 100,
-      purchaseCost: starterTemplate.purchaseCost,
-      maintenanceCost: starterTemplate.baseMaintenance,
-      assignedRouteId: null,
-    };
-    const aiFleet: Ship[] = [starterShip];
-
     const empireSystems = systems.filter((s) => s.empireId === empireId);
     const empireSystemId =
       empireSystems[i % Math.max(1, empireSystems.length)]?.id;
@@ -219,8 +179,8 @@ function createAICompanies(
       id: `ai-${i}`,
       name,
       empireId,
-      cash: AI_STARTING_CASH - starterTemplate.purchaseCost,
-      fleet: aiFleet,
+      cash: AI_STARTING_CASH,
+      fleet: [],
       activeRoutes: [] as ActiveRoute[],
       reputation: 50,
       totalCargoDelivered: 0,
@@ -254,18 +214,6 @@ export function createNewGame(
   // generation doesn't depend on galaxy generation RNG state)
   const marketRng = new SeededRNG(seed + 1);
   const market = initializeMarkets(galaxyData, marketRng);
-
-  // Create starting fleet
-  const startingShips: Ship[] = [];
-  for (let i = 0; i < config.startingShips; i++) {
-    const shipClass =
-      i === 0
-        ? ShipClass.CargoShuttle
-        : i === 1
-          ? ShipClass.PassengerShuttle
-          : ShipClass.MixedHauler;
-    startingShips.push(createShipFromTemplate(shipClass, `ship-${i}`));
-  }
 
   // Initialize storyteller. `turnsSinceLastDilemma` starts high so the first
   // dilemma can fire as soon as the player has cleared the early-game ramp.
@@ -435,7 +383,7 @@ export function createNewGame(
     borderPorts,
     diplomaticRelations,
     hyperlaneDensity: "medium",
-    fleet: startingShips,
+    fleet: [],
     activeRoutes: [],
     market,
     aiCompanies,
@@ -467,7 +415,7 @@ export function createNewGame(
     captains: [],
     routeMarket: [],
     researchEvents: [],
-    unlockedNavTabs: ["map", "routes", "fleet", "finance"],
+    unlockedNavTabs: ["map", "routes", "finance"],
     reputationTier: "unknown",
     empireReputation: Object.fromEntries(
       galaxyData.empires.map((e: Empire) => [e.id, 50]),
