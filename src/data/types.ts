@@ -1166,7 +1166,11 @@ export interface TechEffect {
     | "addMarketForecast"
     | "addSaturationDisplay"
     | "addMarketReset"
-    | "addRPPerTurn";
+    | "addRPPerTurn"
+    | "addFreightCapacity"
+    | "addPassengerCapacity"
+    | "upgradeFreightHull"
+    | "upgradePassengerHull";
   value: number;
   target?: "friendly" | "neutral" | "hostile" | "all";
 }

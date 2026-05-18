@@ -200,6 +200,42 @@ export const FLEET_OVERHEAD_THRESHOLD = 4;
 /** Per-ship overhead rate above the threshold */
 export const FLEET_OVERHEAD_PER_SHIP = 0.05;
 
+// ── Fleet Capacity Pools ────────────────────────────────────────
+/** Starting freight capacity units before any Logistics AI research */
+export const BASE_FREIGHT_CAPACITY = 4;
+/** Starting passenger capacity units before any Logistics AI research */
+export const BASE_PASSENGER_CAPACITY = 4;
+
+/** Capacity units consumed per route scope */
+export const CAPACITY_COST_BY_SCOPE: Record<string, number> = {
+  system: 1,
+  empire: 2,
+  galactic: 3,
+};
+
+/** One-time route opening fee by scope */
+export const ROUTE_OPENING_COST_BY_SCOPE: Record<string, number> = {
+  system: 15_000,
+  empire: 45_000,
+  galactic: 120_000,
+};
+
+/** Base per-turn operating cost rate (multiplied by scope cost and hull efficiency) */
+export const ROUTE_BASE_OPERATING_RATE = 3_000;
+
+/** Revenue multipliers by hull mark (index 0 unused; index 1 = Mk I) */
+export const HULL_REVENUE_MULT = [0, 1.0, 1.15, 1.35, 1.6, 2.0] as const;
+
+/** Operating cost efficiency multipliers by hull mark (lower = cheaper) */
+export const HULL_EFFICIENCY_MULT = [0, 1.0, 0.9, 0.8, 0.7, 0.6] as const;
+
+/** Hull mark required to open each scope */
+export const MIN_HULL_MARK_BY_SCOPE: Record<string, number> = {
+  system: 1,
+  empire: 2,
+  galactic: 3,
+};
+
 // ── Route Slots ────────────────────────────────────────────────
 
 export const BASE_ROUTE_SLOTS = 3;
