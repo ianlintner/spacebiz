@@ -10,8 +10,6 @@ import type {
 import { buildTurnBrief } from "../turn/TurnBriefBuilder.ts";
 import { evaluateNavUnlocks } from "../nav/NavUnlocks.ts";
 import {
-  DISTANCE_PREMIUM_RATE,
-  DISTANCE_PREMIUM_CAP,
   HULL_REVENUE_MULT,
   CAPACITY_COST_BY_SCOPE,
 } from "../../data/constants.ts";
@@ -23,7 +21,6 @@ import {
 import { calculatePrice } from "../economy/PriceCalculator.ts";
 import { updateMarket } from "../economy/MarketUpdater.ts";
 import { getActiveProducers } from "../economy/IndustryChain.ts";
-import { calculateTripsPerTurn } from "../routes/RouteManager.ts";
 import { calculateTariff } from "../routes/TariffCalculator.ts";
 import {
   selectEvents,
@@ -194,11 +191,12 @@ function simulateRoute(
   const galacticSynergy =
     hasAI5MkVSynergy && scope === RouteScope.Galactic ? 1.1 : 1.0;
 
-  // Base speed per hull type (Mk I baseline)
-  const baseSpeed = isPassenger ? 5 : 4;
-  const rawTrips = calculateTripsPerTurn(route.distance, baseSpeed);
+  // Fixed 1 trip per turn — distance sensitivity now lives in the scope-demand
+  // multiplier table (see SCOPE_DEMAND_MULTIPLIERS in constants.ts). The
+  // speed modifier from events (solar storms, etc.) still reduces throughput;
+  // effectiveTrips is now a [0, 1+] multiplier rather than a trip count.
   const speedMod = getRouteSpeedModifier(activeEvents, route);
-  const effectiveTrips = Math.max(0, Math.floor(rawTrips * speedMod));
+  const effectiveTrips = Math.max(0, speedMod);
 
   // Breakdown: random chance when overcrowding cost is severe (> 50% above normal)
   const overcrowdingFactor = Math.max(0, overcrowding.costMultiplier - 1);
@@ -260,16 +258,14 @@ function simulateRoute(
   const destEntry = destMarket[route.cargoType];
   const price = calculatePrice(destEntry, route.cargoType);
 
-  // Base capacity per route type (standardized)
-  const baseCapacity = isPassenger ? 60 : 80;
+  // Base capacity per route type (standardized). Bumped 10x from the old
+  // 60/80 baseline to compensate for the removal of the trips-by-distance
+  // multiplier (formerly clamped to ~10 trips/turn for most routes).
+  const baseCapacity = isPassenger ? 600 : 800;
   const totalMoved = baseCapacity * effectiveTrips;
 
-  const scopeMult = getScopeDemandMultiplier(route.cargoType, scope);
-  const distancePremium =
-    scope === RouteScope.System
-      ? 0
-      : Math.min(DISTANCE_PREMIUM_CAP, route.distance * DISTANCE_PREMIUM_RATE);
-  const revenueMultiplier = scopeMult * (1 + distancePremium);
+  // Scope multiplier IS the distance sensitivity now (cargo-type-aware).
+  const revenueMultiplier = getScopeDemandMultiplier(route.cargoType, scope);
 
   const revenueModifier = getRevenueMultiplier(state);
   const rawRevenue =

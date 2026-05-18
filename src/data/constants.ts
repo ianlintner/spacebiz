@@ -171,13 +171,13 @@ export const SCOPE_DEMAND_MULTIPLIERS: Record<
   CargoType,
   Record<RouteScope, number>
 > = {
-  [CargoType.Passengers]: { system: 0.3, empire: 1.0, galactic: 1.3 },
-  [CargoType.RawMaterials]: { system: 0.5, empire: 1.1, galactic: 0.4 },
-  [CargoType.Food]: { system: 0.5, empire: 1.1, galactic: 0.4 },
-  [CargoType.Technology]: { system: 0.25, empire: 1.0, galactic: 1.5 },
-  [CargoType.Luxury]: { system: 0.2, empire: 0.9, galactic: 1.7 },
-  [CargoType.Hazmat]: { system: 0.5, empire: 1.1, galactic: 0.4 },
-  [CargoType.Medical]: { system: 0.3, empire: 1.0, galactic: 1.2 },
+  [CargoType.Passengers]: { system: 0.8, empire: 1.0, galactic: 1.1 },
+  [CargoType.RawMaterials]: { system: 1.2, empire: 1.0, galactic: 0.65 },
+  [CargoType.Food]: { system: 1.2, empire: 1.0, galactic: 0.7 },
+  [CargoType.Technology]: { system: 0.75, empire: 1.0, galactic: 1.35 },
+  [CargoType.Luxury]: { system: 0.6, empire: 1.0, galactic: 1.65 },
+  [CargoType.Hazmat]: { system: 1.1, empire: 1.0, galactic: 0.8 },
+  [CargoType.Medical]: { system: 0.85, empire: 1.0, galactic: 1.2 },
 };
 
 /** Target distribution of route market entries across scopes per generation. */

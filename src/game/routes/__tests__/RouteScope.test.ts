@@ -303,10 +303,10 @@ describe("Scope demand multipliers", () => {
     );
     expect(luxGal).toBeGreaterThan(luxSys);
     expect(luxGal).toBeGreaterThan(1);
-    expect(luxSys).toBeLessThan(0.5);
+    expect(luxSys).toBeLessThan(1);
   });
 
-  it("raw materials reward local/empire scope and punish galactic", () => {
+  it("raw materials reward short-haul (system) scope and punish galactic", () => {
     const rawSys = getScopeDemandMultiplier(
       CargoType.RawMaterials,
       RouteScope.System,
@@ -319,8 +319,8 @@ describe("Scope demand multipliers", () => {
       CargoType.RawMaterials,
       RouteScope.Galactic,
     );
+    expect(rawSys).toBeGreaterThan(rawEmp);
     expect(rawEmp).toBeGreaterThan(rawGal);
-    expect(rawEmp).toBeGreaterThan(rawSys);
   });
 
   it("food behaves like raw materials (heavy/perishable)", () => {
@@ -353,42 +353,41 @@ describe("Scope demand multipliers", () => {
 
   // ── Balance regression guards ──────────────────────────────────────
   //
-  // These thresholds were derived from the post-rebalance simulation that
-  // accompanied PR #69's balance audit. They protect against accidentally
-  // re-buffing local routes (the original "local routes too profitable"
-  // complaint) when tuning future cargo curves.
+  // The new model anchors every cargo at empire=1.0 and uses the scope
+  // multiplier itself as the distance-sensitivity axis (no distance premium,
+  // no trips-by-distance). These guards protect that structure.
 
-  it("average system multiplier stays well below the old 0.5 flat cap", () => {
-    const all = Object.values(CargoType);
-    const sum = all.reduce(
-      (acc, c) => acc + SCOPE_DEMAND_MULTIPLIERS[c][RouteScope.System],
-      0,
-    );
-    const avg = sum / all.length;
-    // Old model used a flat 0.5 across all cargo at intra-system.
-    // The new curve must be a meaningful nerf, not a buff or wash.
-    expect(avg).toBeLessThan(0.45);
-  });
-
-  it("luxury and technology favor galactic over system by a wide margin", () => {
-    for (const c of [CargoType.Luxury, CargoType.Technology] as const) {
-      const sys = SCOPE_DEMAND_MULTIPLIERS[c][RouteScope.System];
-      const gal = SCOPE_DEMAND_MULTIPLIERS[c][RouteScope.Galactic];
-      // Galactic should be at least 5× system for "scarcity-priced" cargo —
-      // the headline mechanic that distinguishes the new model.
-      expect(gal / sys).toBeGreaterThanOrEqual(5);
+  it("every cargo is anchored at empire=1.0", () => {
+    for (const cargo of Object.values(CargoType)) {
+      expect(SCOPE_DEMAND_MULTIPLIERS[cargo][RouteScope.Empire]).toBeCloseTo(
+        1.0,
+        2,
+      );
     }
   });
 
-  it("heavy goods (raw, food, hazmat) all peak at empire scope", () => {
+  it("premium cargo (luxury, technology, medical) favors galactic over system", () => {
+    for (const c of [
+      CargoType.Luxury,
+      CargoType.Technology,
+      CargoType.Medical,
+    ] as const) {
+      const sys = SCOPE_DEMAND_MULTIPLIERS[c][RouteScope.System];
+      const gal = SCOPE_DEMAND_MULTIPLIERS[c][RouteScope.Galactic];
+      expect(gal).toBeGreaterThan(sys);
+    }
+  });
+
+  it("bulk goods (raw, food, hazmat) favor system over galactic", () => {
     for (const c of [
       CargoType.RawMaterials,
       CargoType.Food,
       CargoType.Hazmat,
     ] as const) {
       const m = SCOPE_DEMAND_MULTIPLIERS[c];
-      expect(m[RouteScope.Empire]).toBeGreaterThan(m[RouteScope.System]);
-      expect(m[RouteScope.Empire]).toBeGreaterThan(m[RouteScope.Galactic]);
+      expect(m[RouteScope.System]).toBeGreaterThan(m[RouteScope.Galactic]);
+      // Bulk peaks at system scope under the new short-haul-bias model.
+      expect(m[RouteScope.System]).toBeGreaterThanOrEqual(m[RouteScope.Empire]);
     }
   });
 });

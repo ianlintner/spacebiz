@@ -1,4 +1,4 @@
-import { CargoType, RouteScope } from "../../../data/types.ts";
+import { CargoType } from "../../../data/types.ts";
 import type {
   AICompany,
   GameState,
@@ -6,13 +6,8 @@ import type {
   CargoType as CargoTypeT,
   TechState,
 } from "../../../data/types.ts";
+import { CAPACITY_COST_BY_SCOPE } from "../../../data/constants.ts";
 import {
-  DISTANCE_PREMIUM_RATE,
-  DISTANCE_PREMIUM_CAP,
-  CAPACITY_COST_BY_SCOPE,
-} from "../../../data/constants.ts";
-import {
-  calculateTripsPerTurn,
   getRouteScope,
   getScopeDemandMultiplier,
 } from "../../routes/RouteManager.ts";
@@ -87,10 +82,12 @@ export function simulateAIRoutes(
     const scope = getRouteScope(route, state);
     const isPassengers = route.cargoType === CargoType.Passengers;
 
-    // Standardized base capacity (matches TurnSimulator's capacity-pool model)
-    const baseCapacity = isPassengers ? 60 : 80;
-    const baseSpeed = isPassengers ? 5 : 4;
-    const trips = calculateTripsPerTurn(route.distance, baseSpeed);
+    // Standardized base capacity (matches TurnSimulator's capacity-pool model).
+    // Bumped 10x from the old 60/80 baseline to compensate for removal of the
+    // trips-by-distance multiplier. Fixed trips=1 per turn for parity with
+    // the player simulator.
+    const baseCapacity = isPassengers ? 600 : 800;
+    const trips = 1;
 
     const destMarket = market.planetMarkets[route.destinationPlanetId];
     if (!destMarket) continue;
@@ -100,22 +97,15 @@ export function simulateAIRoutes(
 
     const moved = baseCapacity * trips;
 
-    // Apply the same scope-based revenue curve the player uses
-    const scopeMult = getScopeDemandMultiplier(route.cargoType, scope);
-    const distancePremium =
-      scope === RouteScope.System
-        ? 0
-        : Math.min(
-            DISTANCE_PREMIUM_CAP,
-            route.distance * DISTANCE_PREMIUM_RATE,
-          );
-    const revenueMultiplier = scopeMult * (1 + distancePremium);
+    // Scope multiplier IS the distance sensitivity (cargo-type-aware).
+    const revenueMultiplier = getScopeDemandMultiplier(route.cargoType, scope);
 
     let revenue = price * moved * revenueMultiplier;
 
-    // Fuel cost: scope-cost-based (matches TurnSimulator)
+    // Fuel cost: scope-cost-based (matches TurnSimulator). trips=1, so the
+    // multiplier is implicit.
     const scopeCost = CAPACITY_COST_BY_SCOPE[scope] ?? 1;
-    let fuelCost = scopeCost * 2 * market.fuelPrice * trips;
+    let fuelCost = scopeCost * 2 * market.fuelPrice;
 
     // Apply AI hub bonuses to route economics
     const hubBonuses = applyAIHubBonuses(revenue, fuelCost, 0, company.aiHub);

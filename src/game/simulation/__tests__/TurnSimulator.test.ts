@@ -30,11 +30,8 @@ import {
   MAX_TURNS,
   BASE_FUEL_PRICE,
   BASE_CARGO_PRICES,
-  DISTANCE_PREMIUM_RATE,
-  DISTANCE_PREMIUM_CAP,
   SCOPE_DEMAND_MULTIPLIERS,
 } from "../../../data/constants.ts";
-import { calculateTripsPerTurn } from "../../routes/RouteManager.ts";
 import { initAdviserState } from "../../adviser/AdviserEngine.ts";
 
 // ---------------------------------------------------------------------------
@@ -301,29 +298,15 @@ describe("TurnSimulator", () => {
       const state = makeGameState();
       const rng = new SeededRNG(42);
 
-      // With default setup:
-      // Ship: speed=4, cargoCapacity=80, fuelEfficiency=0.8
-      // Route: distance=50, cargoType=Food
-      // Market: baseDemand=100, baseSupply=100, saturation=0 → price = BASE_CARGO_PRICES[Food]
-      const trips = calculateTripsPerTurn(50, 4);
-      // trips = floor(100 / (50*2/4)) = floor(100/25) = 4
-      expect(trips).toBe(4);
-
-      const distancePremium = Math.min(
-        DISTANCE_PREMIUM_CAP,
-        50 * DISTANCE_PREMIUM_RATE,
-      );
-      // Both planets sit in emp-1, so the route falls in the empire scope.
-      // Food carries a 1.1× scope demand multiplier on empire-tier routes.
+      // New model: fixed trips=1 (modulated only by event speed multipliers),
+      // baseCapacity=800 for freight, no distance premium. Scope multiplier
+      // alone carries the cargo-vs-distance signal.
+      // Route: distance=50, cargoType=Food, scope=empire (planet-a/sys-1 →
+      // planet-b/sys-2, both in emp-1). Food empire multiplier = 1.0.
       const scopeMult = SCOPE_DEMAND_MULTIPLIERS[CargoType.Food].empire;
       const expectedRevenue =
         Math.round(
-          BASE_CARGO_PRICES[CargoType.Food] *
-            80 *
-            trips *
-            scopeMult *
-            (1 + distancePremium) *
-            100,
+          BASE_CARGO_PRICES[CargoType.Food] * 800 * 1 * scopeMult * 100,
         ) / 100;
       const result = simulateTurn(state, rng);
 
@@ -347,11 +330,11 @@ describe("TurnSimulator", () => {
       const state = makeGameState();
       const rng = new SeededRNG(42);
 
-      // New capacity-based formula: scopeCost * 2 * fuelPrice * trips
-      // Route: distance=50, scope=empire (planet-a in sys-1/emp-1, planet-b in sys-2/emp-1)
-      // scopeCost=2 (empire), trips=calculateTripsPerTurn(50, 4)=4
-      const trips = calculateTripsPerTurn(50, 4); // 4
-      const expectedFuelCost = 2 * 2 * BASE_FUEL_PRICE * trips; // scopeCost=2, factor=2
+      // New capacity-based formula: scopeCost * 2 * fuelPrice * effectiveTrips.
+      // effectiveTrips is now the event speed modifier (default 1.0) rather
+      // than a trips-by-distance count.
+      // Route: distance=50, scope=empire. scopeCost=2 (empire), trips=1.
+      const expectedFuelCost = 2 * 2 * BASE_FUEL_PRICE * 1;
 
       const result = simulateTurn(state, rng);
       const turnResult = result.history[result.history.length - 1];
@@ -373,8 +356,8 @@ describe("TurnSimulator", () => {
       // Note: market is updated by updateMarket after saturation is set,
       // but we track the turn result's cargo delivered to verify delivery happened
       const turnResult = result.history[result.history.length - 1];
-      const trips = calculateTripsPerTurn(50, 4); // 4
-      const expectedCargoDelivered = 80 * trips; // capacity * trips
+      // baseCapacity=800 for freight × trips=1
+      const expectedCargoDelivered = 800;
       expect(turnResult.cargoDelivered[CargoType.Food]).toBe(
         expectedCargoDelivered,
       );

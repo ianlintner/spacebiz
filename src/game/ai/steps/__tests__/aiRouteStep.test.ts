@@ -244,7 +244,7 @@ function makeState(): GameState {
 }
 
 describe("simulateAIRoutes — scope multiplier parity", () => {
-  it("applies the empire scope multiplier (1.1× for food)", () => {
+  it("applies the empire scope multiplier (1.0× for food)", () => {
     const state = makeState();
     const company = makeAI("p-a", "p-b", 100); // sys-1 → sys-2, both emp-1
     const result = simulateAIRoutes(
@@ -254,19 +254,16 @@ describe("simulateAIRoutes — scope multiplier parity", () => {
       new SeededRNG(1),
     );
 
-    // Expected: price × capacity × trips × scopeMult × (1 + distancePremium)
-    // ship speed 4, distance 100 → trips = floor(100 / 50) = 2
-    // food@empire = 1.1, distancePremium = min(0.5, 100*0.0015) = 0.15
+    // New model: fixed trips=1, baseCapacity=800 freight, scopeMult only.
+    // food@empire = 1.0
     const price = BASE_CARGO_PRICES[CargoType.Food];
-    const trips = 2;
     const scopeMult = SCOPE_DEMAND_MULTIPLIERS[CargoType.Food].empire;
-    const distancePremium = 0.15;
-    const expected = price * 80 * trips * scopeMult * (1 + distancePremium);
+    const expected = price * 800 * 1 * scopeMult;
 
     expect(result.revenue).toBeCloseTo(expected, 0);
   });
 
-  it("applies the galactic scope multiplier and rewards distance for luxury", () => {
+  it("applies the galactic scope multiplier for luxury", () => {
     const state = makeState();
     // luxury cargo, p-a (emp-1) → p-c (emp-2), distance 200
     const company: AICompany = {
@@ -290,19 +287,15 @@ describe("simulateAIRoutes — scope multiplier parity", () => {
     );
 
     const price = BASE_CARGO_PRICES[CargoType.Luxury];
-    // ship speed 4, distance 200 → trips = floor(100 / 100) = 1
-    const trips = 1;
     const scopeMult = SCOPE_DEMAND_MULTIPLIERS[CargoType.Luxury].galactic;
-    const distancePremium = Math.min(0.5, 200 * 0.0015);
     // tariff is applied separately in the AI step (separate from revenue)
-    const expectedRevenue =
-      price * 80 * trips * scopeMult * (1 + distancePremium);
+    const expectedRevenue = price * 800 * 1 * scopeMult;
 
     // revenue is the *gross* before tariff — match the gross
     expect(result.revenue).toBeCloseTo(expectedRevenue, 0);
   });
 
-  it("does not apply distance premium at system scope", () => {
+  it("applies the system scope multiplier for short-haul food", () => {
     const state = makeState();
     // Both planets in sys-1 — make a second p-a2 in sys-1 to construct a
     // system-scope route.
@@ -340,11 +333,9 @@ describe("simulateAIRoutes — scope multiplier parity", () => {
     );
 
     const price = BASE_CARGO_PRICES[CargoType.Food];
-    // dist 25, speed 4 → trips = floor(100 / 12.5) = 8
-    const trips = 8;
     const scopeMult = SCOPE_DEMAND_MULTIPLIERS[CargoType.Food].system;
-    // System scope: NO distance premium
-    const expected = price * 80 * trips * scopeMult * 1.0;
+    // No distance premium — scope multiplier is the only distance signal.
+    const expected = price * 800 * 1 * scopeMult;
 
     expect(result.revenue).toBeCloseTo(expected, 0);
   });
