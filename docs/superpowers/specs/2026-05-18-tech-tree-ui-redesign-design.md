@@ -29,7 +29,7 @@ branch-by-angle, tier-by-radius is a feature) and rebuilds everything around it.
 the top switches the main content area between Tree / Researched / Bonuses
 views — the right rail stays put across all three tabs.
 
-```
+```text
 ┌──────────────────────────────────────────────────┬─────────────────┐
 │  [ Tree ]  [ Researched ]  [ Bonuses ]           │  ⚙ Currently    │
 ├──────────────────────────────────────────────────┤    Researching  │
@@ -146,6 +146,7 @@ Each branch gets a signature color used in:
 | Intelligence | Pink   | `#ff9ce0` |
 | Crisis       | Orange | `#ffaa66` |
 | Diplomacy    | Mint   | `#9cffb0` |
+| Fleet        | Violet | `#c89cff` |
 
 These get added as `branchColors` to the legacy flat `Theme.colors` map (not
 the semantic `color.*` tokens — branch colors are domain-specific, not
@@ -220,7 +221,7 @@ Below current research, above queue. The same data the current
 - Status badge (Available / Queued / Researching / Completed / Locked)
 - Effect description (multi-line, wrapped)
 - Cost row: `Cost: N RP` + `Owned: ×K` for repeatables
-- Prerequisites if locked: "Requires: <neighbor name>"
+- Prerequisites if locked: `Requires: <neighbor name>` (placeholder is filled at render time)
 - **Action button** — full-width gradient button. Label varies:
   - `Unlock — N RP` when affordable and available
   - `Queue — N RP` when available but unaffordable
