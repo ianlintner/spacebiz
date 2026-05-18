@@ -147,7 +147,7 @@ export class TechTreeScene extends Phaser.Scene {
     });
 
     this.rpStatusText = this.add.text(0, 0, "", {
-      fontSize: "10px",
+      fontSize: `${theme.fonts.caption.size}px`,
       fontFamily: theme.fonts.caption.family,
       color: colorToString(theme.colors.textDim),
     });
@@ -178,14 +178,15 @@ export class TechTreeScene extends Phaser.Scene {
     this.tabs.setPosition(tabX, tabY);
     this.tabs.setSize(mainWidth - 24, TAB_STRIP_HEIGHT);
 
-    const contentInnerX = L.mainContentLeft + 12;
     const contentInnerY = tabY + TAB_STRIP_HEIGHT + 8;
     const contentInnerW = mainWidth - 24;
     const contentInnerH = contentHeight - (contentInnerY - contentTop) - 12;
 
-    this.treeContent.setPosition(contentInnerX, contentInnerY);
-    this.researchedContent.setPosition(contentInnerX, contentInnerY);
-    this.bonusesContent.setPosition(contentInnerX, contentInnerY);
+    // Content containers are children of TabGroup, positioned in LOCAL coords.
+    // TabGroup already places them at (0, tabHeight); add 8px gap below the strip.
+    this.treeContent.setPosition(0, TAB_STRIP_HEIGHT + 8);
+    this.researchedContent.setPosition(0, TAB_STRIP_HEIGHT + 8);
+    this.bonusesContent.setPosition(0, TAB_STRIP_HEIGHT + 8);
 
     this.graph.setPosition(0, 0);
     this.graph.setSize(contentInnerW, contentInnerH);
