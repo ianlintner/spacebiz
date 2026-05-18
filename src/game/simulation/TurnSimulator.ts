@@ -1,7 +1,6 @@
 import { CargoType } from "../../data/types.ts";
 import type {
   GameState,
-  Ship,
   ActiveRoute,
   TurnResult,
   RoutePerformance,
@@ -11,9 +10,10 @@ import type {
 import { buildTurnBrief } from "../turn/TurnBriefBuilder.ts";
 import { evaluateNavUnlocks } from "../nav/NavUnlocks.ts";
 import {
-  BREAKDOWN_THRESHOLD,
   DISTANCE_PREMIUM_RATE,
   DISTANCE_PREMIUM_CAP,
+  HULL_REVENUE_MULT,
+  CAPACITY_COST_BY_SCOPE,
 } from "../../data/constants.ts";
 import { RouteScope } from "../../data/types.ts";
 import {
@@ -23,11 +23,6 @@ import {
 import { calculatePrice } from "../economy/PriceCalculator.ts";
 import { updateMarket } from "../economy/MarketUpdater.ts";
 import { getActiveProducers } from "../economy/IndustryChain.ts";
-import {
-  ageFleet,
-  calculateMaintenanceCosts,
-  calculateShipValue,
-} from "../fleet/FleetManager.ts";
 import { calculateTripsPerTurn } from "../routes/RouteManager.ts";
 import { calculateTariff } from "../routes/TariffCalculator.ts";
 import {
@@ -64,16 +59,26 @@ import {
 } from "../contracts/ContractGenerator.ts";
 import { calculateRPPerTurn, processResearch } from "../tech/TechTree.ts";
 import {
-  getMaintenanceMultiplier,
   getFuelMultiplier,
   getRevenueMultiplier,
+} from "../tech/TechEffects.ts";
+import {
+  getCapacityCostForScope,
+  computeOvercapacityFactors,
+  computeRouteOperatingCost,
+  computeUtilization,
+} from "../fleet/CapacityManager.ts";
+import {
+  getFreightHullMark,
+  getPassengerHullMark,
+  getTotalFreightCapacity,
+  getTotalPassengerCapacity,
 } from "../tech/TechEffects.ts";
 import { SeededRNG } from "../../utils/SeededRNG.ts";
 import { rosterTick } from "../../generation/news/universeRoster.ts";
 import { processDiplomacyTurn } from "../empire/DiplomacyManager.ts";
 import { getHubUpkeep } from "../hub/HubManager.ts";
 import {
-  getRepairBonus,
   getRPBonus,
   getTariffMultiplier,
   getSaturationMultiplier,
@@ -133,9 +138,10 @@ function planetToSystemId(planetId: string): string | null {
   return null;
 }
 
-interface ShipRouteResult {
+interface RouteSimResult {
   revenue: number;
   fuelCost: number;
+  operatingCost: number;
   cargoMoved: number;
   passengersMoved: number;
   trips: number;
@@ -143,19 +149,29 @@ interface ShipRouteResult {
 }
 
 /**
- * Simulate a single ship on a route for one turn.
+ * Simulate a route for one turn using the capacity-pool model.
+ * No per-ship simulation — revenue and costs are derived from hull marks,
+ * utilization factors, and scope-based formulas.
  */
-function simulateShipOnRoute(
-  ship: Ship,
+function simulateRoute(
   route: ActiveRoute,
   state: GameState,
   rng: SeededRNG,
   activeEvents: GameEvent[],
-): ShipRouteResult {
+  freightHullMark: 1 | 2 | 3 | 4 | 5,
+  passengerHullMark: 1 | 2 | 3 | 4 | 5,
+  freightOvercrowding: { revenueMultiplier: number; costMultiplier: number },
+  passengerOvercrowding: { revenueMultiplier: number; costMultiplier: number },
+  cubicSoftener: number,
+  restraintBonusFreight: number,
+  restraintBonusPassenger: number,
+  hasAI5MkVSynergy: boolean,
+): RouteSimResult {
   if (!route.cargoType) {
     return {
       revenue: 0,
       fuelCost: 0,
+      operatingCost: 0,
       cargoMoved: 0,
       passengersMoved: 0,
       trips: 0,
@@ -163,24 +179,42 @@ function simulateShipOnRoute(
     };
   }
 
-  const rawTrips = calculateTripsPerTurn(route.distance, ship.speed);
+  const scope = getRouteScope(route, state);
+  const isPassenger = route.cargoType === CargoType.Passengers;
+  const hullMark = isPassenger ? passengerHullMark : freightHullMark;
+  const hullRevMult = HULL_REVENUE_MULT[hullMark];
+  const overcrowding = isPassenger
+    ? passengerOvercrowding
+    : freightOvercrowding;
+  const adjustedCostMult =
+    1 + (overcrowding.costMultiplier - 1) * cubicSoftener;
+  const restraintBonus = isPassenger
+    ? restraintBonusPassenger
+    : restraintBonusFreight;
+  const galacticSynergy =
+    hasAI5MkVSynergy && scope === RouteScope.Galactic ? 1.1 : 1.0;
 
-  // Apply speed modifier from active events (e.g. pirate activity, solar flare)
+  // Base speed per hull type (Mk I baseline)
+  const baseSpeed = isPassenger ? 5 : 4;
+  const rawTrips = calculateTripsPerTurn(route.distance, baseSpeed);
   const speedMod = getRouteSpeedModifier(activeEvents, route);
   const effectiveTrips = Math.max(0, Math.floor(rawTrips * speedMod));
 
-  // Check for breakdown
-  const brokeDown =
-    ship.condition < BREAKDOWN_THRESHOLD &&
-    rng.chance(1 - ship.condition / 100);
+  // Breakdown: random chance when overcrowding cost is severe (> 50% above normal)
+  const overcrowdingFactor = Math.max(0, overcrowding.costMultiplier - 1);
+  const breakdownChance =
+    overcrowdingFactor > 0.5 ? (overcrowdingFactor - 0.5) * 0.4 : 0;
+  const brokeDown = breakdownChance > 0 && rng.chance(breakdownChance);
 
   if (brokeDown) {
-    // Ship breaks down: 0 revenue, partial fuel for 1 trip
-    const partialFuelCost =
-      route.distance * 2 * ship.fuelEfficiency * state.market.fuelPrice;
+    const scopeCost = CAPACITY_COST_BY_SCOPE[scope] ?? 1;
+    const fuelCost = scopeCost * state.market.fuelPrice;
+    const operatingCost =
+      computeRouteOperatingCost(scope, hullMark) * adjustedCostMult;
     return {
       revenue: 0,
-      fuelCost: partialFuelCost,
+      fuelCost: Math.round(fuelCost * 100) / 100,
+      operatingCost: Math.round(operatingCost * 100) / 100,
       cargoMoved: 0,
       passengersMoved: 0,
       trips: 0,
@@ -188,12 +222,34 @@ function simulateShipOnRoute(
     };
   }
 
-  // Normal operation
+  // No market data → no revenue, still pay operating costs
   const destMarket = state.market.planetMarkets[route.destinationPlanetId];
   if (!destMarket) {
+    const operatingCost =
+      computeRouteOperatingCost(scope, hullMark) * adjustedCostMult;
     return {
       revenue: 0,
       fuelCost: 0,
+      operatingCost: Math.round(operatingCost * 100) / 100,
+      cargoMoved: 0,
+      passengersMoved: 0,
+      trips: effectiveTrips,
+      breakdowns: 0,
+    };
+  }
+
+  // Quarantine blocks passenger routes
+  if (isPassenger && isPassengerRouteBlocked(activeEvents, route)) {
+    const scopeCost = CAPACITY_COST_BY_SCOPE[scope] ?? 1;
+    const fuelMultiplier = getFuelMultiplier(state);
+    const fuelCost =
+      scopeCost * 2 * state.market.fuelPrice * effectiveTrips * fuelMultiplier;
+    const operatingCost =
+      computeRouteOperatingCost(scope, hullMark) * adjustedCostMult;
+    return {
+      revenue: 0,
+      fuelCost: Math.round(fuelCost * 100) / 100,
+      operatingCost: Math.round(operatingCost * 100) / 100,
       cargoMoved: 0,
       passengersMoved: 0,
       trips: effectiveTrips,
@@ -204,51 +260,44 @@ function simulateShipOnRoute(
   const destEntry = destMarket[route.cargoType];
   const price = calculatePrice(destEntry, route.cargoType);
 
-  const isPassengers = route.cargoType === CargoType.Passengers;
+  // Base capacity per route type (standardized)
+  const baseCapacity = isPassenger ? 60 : 80;
+  const totalMoved = baseCapacity * effectiveTrips;
 
-  // Block passenger routes affected by quarantine or similar events
-  if (isPassengers && isPassengerRouteBlocked(activeEvents, route)) {
-    const fuelCost =
-      route.distance *
-      2 *
-      ship.fuelEfficiency *
-      state.market.fuelPrice *
-      effectiveTrips;
-    return {
-      revenue: 0,
-      fuelCost: Math.round(fuelCost * 100) / 100,
-      cargoMoved: 0,
-      passengersMoved: 0,
-      trips: effectiveTrips,
-      breakdowns: 0,
-    };
-  }
-
-  const capacity = isPassengers ? ship.passengerCapacity : ship.cargoCapacity;
-
-  const totalCargoMoved = capacity * effectiveTrips;
-  const scope = getRouteScope(route, state);
   const scopeMult = getScopeDemandMultiplier(route.cargoType, scope);
   const distancePremium =
     scope === RouteScope.System
       ? 0
       : Math.min(DISTANCE_PREMIUM_CAP, route.distance * DISTANCE_PREMIUM_RATE);
   const revenueMultiplier = scopeMult * (1 + distancePremium);
-  const revenue = price * totalCargoMoved * revenueMultiplier;
 
-  // Fuel cost = distance * 2 * fuelEfficiency * fuelPrice * effectiveTrips
+  const revenueModifier = getRevenueMultiplier(state);
+  const rawRevenue =
+    price *
+    totalMoved *
+    revenueMultiplier *
+    hullRevMult *
+    overcrowding.revenueMultiplier *
+    restraintBonus *
+    galacticSynergy *
+    revenueModifier;
+
+  // Fuel cost: scope-cost-based (replaces per-ship fuelEfficiency)
+  const scopeCost = CAPACITY_COST_BY_SCOPE[scope] ?? 1;
+  const fuelMultiplier = getFuelMultiplier(state);
   const fuelCost =
-    route.distance *
-    2 *
-    ship.fuelEfficiency *
-    state.market.fuelPrice *
-    effectiveTrips;
+    scopeCost * 2 * state.market.fuelPrice * effectiveTrips * fuelMultiplier;
+
+  // Operating cost per route per turn
+  const operatingCost =
+    computeRouteOperatingCost(scope, hullMark) * adjustedCostMult;
 
   return {
-    revenue: Math.round(revenue * 100) / 100,
+    revenue: Math.round(rawRevenue * 100) / 100,
     fuelCost: Math.round(fuelCost * 100) / 100,
-    cargoMoved: isPassengers ? 0 : totalCargoMoved,
-    passengersMoved: isPassengers ? totalCargoMoved : 0,
+    operatingCost: Math.round(operatingCost * 100) / 100,
+    cargoMoved: isPassenger ? 0 : totalMoved,
+    passengersMoved: isPassenger ? totalMoved : 0,
     trips: effectiveTrips,
     breakdowns: 0,
   };
@@ -329,24 +378,11 @@ function processLoans(loans: Loan[]): {
 
 /**
  * Check if the player has gone bankrupt.
- * Bankruptcy: cash < 0 and fleet total value < |cash| and turnsInDebt >= 2.
+ * Bankruptcy: cash < 0 and turnsInDebt >= 2.
  */
-function checkBankruptcy(
-  cash: number,
-  fleet: Ship[],
-  turnsInDebt: number,
-): boolean {
+function checkBankruptcy(cash: number, turnsInDebt: number): boolean {
   if (cash >= 0) return false;
-
-  const totalFleetValue = fleet.reduce(
-    (sum, ship) => sum + calculateShipValue(ship),
-    0,
-  );
-
-  // Insufficient assets to cover debt
-  const insufficientAssets = totalFleetValue < Math.abs(cash);
-
-  return insufficientAssets && turnsInDebt >= 2;
+  return turnsInDebt >= 2;
 }
 
 function appendTurnReportLines(state: GameState, lines: string[]): GameState {
@@ -374,9 +410,49 @@ function appendTurnReportLines(state: GameState, lines: string[]): GameState {
 export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   let nextState: GameState = { ...state, turnReport: {} };
 
-  // ----- Step 1 & 2: Route simulation (revenue, fuel, breakdowns) -----
+  // ----- Step 1: Compute fleet capacity and utilization -----
+  const freightHullMark = getFreightHullMark(nextState.tech);
+  const passengerHullMark = getPassengerHullMark(nextState.tech);
+  const totalFC = getTotalFreightCapacity(nextState.tech);
+  const totalPC = getTotalPassengerCapacity(nextState.tech);
+
+  let usedFC = 0;
+  let usedPC = 0;
+  for (const route of nextState.activeRoutes) {
+    if (route.paused) continue;
+    const scope = getRouteScope(route, nextState);
+    const cost = getCapacityCostForScope(scope);
+    if (route.cargoType === CargoType.Passengers) usedPC += cost;
+    else usedFC += cost;
+  }
+
+  const freightUtil = computeUtilization(usedFC, totalFC);
+  const passengerUtil = computeUtilization(usedPC, totalPC);
+  const freightOvercrowding = computeOvercapacityFactors(freightUtil);
+  const passengerOvercrowding = computeOvercapacityFactors(passengerUtil);
+
+  // Logistics AI 4 softens the cubic overcrowding cost curve
+  const hasLogisticsAI4 =
+    (nextState.tech.purchaseCount["logistics_ai_4"] ?? 0) > 0;
+  const cubicSoftener = hasLogisticsAI4 ? 0.8 : 1.0;
+
+  // Logistics AI 2 grants a revenue bonus when utilization ≤ 80%
+  const hasLogisticsAI2 =
+    (nextState.tech.purchaseCount["logistics_ai_2"] ?? 0) > 0;
+  const freightRestraintBonus =
+    hasLogisticsAI2 && freightUtil <= 0.8 ? 1.05 : 1.0;
+  const passengerRestraintBonus =
+    hasLogisticsAI2 && passengerUtil <= 0.8 ? 1.05 : 1.0;
+
+  // Logistics AI 5 + Freight Hull Mk V galactic synergy
+  const hasAI5MkVSynergy =
+    (nextState.tech.purchaseCount["logistics_ai_5"] ?? 0) > 0 &&
+    freightHullMark === 5;
+
+  // ----- Step 2: Route simulation (revenue, fuel, operating costs) -----
   let totalRevenue = 0;
   let totalFuelCosts = 0;
+  let totalOperatingCosts = 0;
   let totalPassengers = 0;
   let totalMothballFees = 0;
   const cargoDelivered: Record<CargoTypeT, number> = {
@@ -392,10 +468,6 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
 
   // Track deliveries per planet per cargo type for saturation
   const deliveriesByPlanet = new Map<string, Map<CargoTypeT, number>>();
-
-  // Tech multipliers applied to all routes
-  const revenueMultiplier = getRevenueMultiplier(nextState);
-  const fuelMultiplier = getFuelMultiplier(nextState);
 
   for (const route of nextState.activeRoutes) {
     // Player-paused routes skip the simulation entirely — no revenue, no fuel
@@ -436,50 +508,36 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       continue;
     }
 
-    let routeRevenue = 0;
-    let routeFuelCost = 0;
-    let routeCargoMoved = 0;
-    let routePassengersMoved = 0;
-    let routeTrips = 0;
-    let routeBreakdowns = 0;
+    const result = simulateRoute(
+      route,
+      nextState,
+      rng,
+      nextState.activeEvents,
+      freightHullMark,
+      passengerHullMark,
+      freightOvercrowding,
+      passengerOvercrowding,
+      cubicSoftener,
+      freightRestraintBonus,
+      passengerRestraintBonus,
+      hasAI5MkVSynergy,
+    );
 
-    for (const shipId of route.assignedShipIds) {
-      const ship = nextState.fleet.find((s) => s.id === shipId);
-      if (!ship) continue;
-
-      const result = simulateShipOnRoute(
-        ship,
-        route,
-        nextState,
-        rng,
-        nextState.activeEvents,
-      );
-      routeRevenue += result.revenue;
-      routeFuelCost += result.fuelCost;
-      routeCargoMoved += result.cargoMoved;
-      routePassengersMoved += result.passengersMoved;
-      routeTrips += result.trips;
-      routeBreakdowns += result.breakdowns;
-    }
-
-    // Apply tech multipliers
-    routeRevenue *= revenueMultiplier;
-    routeFuelCost *= fuelMultiplier;
-
-    totalRevenue += routeRevenue;
-    totalFuelCosts += routeFuelCost;
-    totalPassengers += routePassengersMoved;
+    totalRevenue += result.revenue;
+    totalFuelCosts += result.fuelCost;
+    totalOperatingCosts += result.operatingCost;
+    totalPassengers += result.passengersMoved;
 
     // Track cargo delivered by type
     if (route.cargoType) {
       if (route.cargoType === CargoType.Passengers) {
-        cargoDelivered[CargoType.Passengers] += routePassengersMoved;
+        cargoDelivered[CargoType.Passengers] += result.passengersMoved;
       } else {
-        cargoDelivered[route.cargoType] += routeCargoMoved;
+        cargoDelivered[route.cargoType] += result.cargoMoved;
       }
 
       // Track for saturation update
-      const totalDelivered = routeCargoMoved + routePassengersMoved;
+      const totalDelivered = result.cargoMoved + result.passengersMoved;
       if (totalDelivered > 0) {
         if (!deliveriesByPlanet.has(route.destinationPlanetId)) {
           deliveriesByPlanet.set(route.destinationPlanetId, new Map());
@@ -492,12 +550,12 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
 
     routePerformances.push({
       routeId: route.id,
-      trips: routeTrips,
-      revenue: Math.round(routeRevenue * 100) / 100,
-      fuelCost: Math.round(routeFuelCost * 100) / 100,
-      cargoMoved: routeCargoMoved,
-      passengersMoved: routePassengersMoved,
-      breakdowns: routeBreakdowns,
+      trips: result.trips,
+      revenue: result.revenue,
+      fuelCost: result.fuelCost,
+      cargoMoved: result.cargoMoved,
+      passengersMoved: result.passengersMoved,
+      breakdowns: result.breakdowns,
     });
   }
 
@@ -523,11 +581,6 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
 
   // ----- Step 3: Update saturation at destination planets -----
   nextState = updateSaturation(nextState, deliveriesByPlanet);
-
-  // ----- Step 4: Calculate maintenance costs -----
-  const maintenanceCosts =
-    calculateMaintenanceCosts(nextState.fleet) *
-    getMaintenanceMultiplier(nextState);
 
   // ----- Step 4b: Hub upkeep -----
   const hubUpkeep = nextState.stationHub
@@ -583,36 +636,7 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   const { updatedLoans, totalInterest } = processLoans(nextState.loans);
   nextState = { ...nextState, loans: updatedLoans };
 
-  // ----- Step 6: Age fleet -----
-  const agedFleet = ageFleet(nextState.fleet, rng);
-
-  // ----- Step 6a: Apply hub Repair Bay bonus -----
-  const repairBonus =
-    nextState.stationHub && nextState.stationHub.systemId
-      ? getRepairBonus(nextState.stationHub, nextState.stationHub.systemId)
-      : 0;
-  const repairedFleet =
-    repairBonus > 0
-      ? agedFleet.map((ship) => {
-          // Only boost ships on routes touching the hub system
-          if (!ship.assignedRouteId) return ship;
-          const route = nextState.activeRoutes.find(
-            (r) => r.id === ship.assignedRouteId,
-          );
-          if (!route) return ship;
-          const hubSysId = nextState.stationHub!.systemId;
-          const originSysId = planetToSystemId(route.originPlanetId);
-          const destSysId = planetToSystemId(route.destinationPlanetId);
-          if (originSysId !== hubSysId && destSysId !== hubSysId) return ship;
-          return {
-            ...ship,
-            condition: Math.min(100, ship.condition + repairBonus),
-          };
-        })
-      : agedFleet;
-  nextState = { ...nextState, fleet: repairedFleet };
-
-  // ----- Step 6b: Simulate AI company turns -----
+  // ----- Step 6: Simulate AI company turns -----
   const aiResult = simulateAITurns(nextState, rng);
   nextState = {
     ...nextState,
@@ -960,7 +984,7 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   const netProfit =
     totalRevenue -
     totalFuelCosts -
-    maintenanceCosts -
+    totalOperatingCosts -
     totalInterest -
     totalTariffCosts -
     totalMothballFees -
@@ -991,7 +1015,7 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
     turn: nextState.turn,
     revenue: Math.round(totalRevenue * 100) / 100,
     fuelCosts: Math.round(totalFuelCosts * 100) / 100,
-    maintenanceCosts: Math.round(maintenanceCosts * 100) / 100,
+    maintenanceCosts: Math.round(totalOperatingCosts * 100) / 100,
     loanPayments: totalInterest,
     tariffCosts: totalTariffCosts,
     otherCosts: totalMothballFees + hubUpkeep + charterUpkeep,
@@ -1053,13 +1077,7 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
   nextState = { ...nextState, turn: nextTurn };
 
   // Check bankruptcy
-  if (
-    checkBankruptcy(
-      nextState.cash,
-      nextState.fleet,
-      nextState.storyteller.turnsInDebt,
-    )
-  ) {
+  if (checkBankruptcy(nextState.cash, nextState.storyteller.turnsInDebt)) {
     nextState = {
       ...nextState,
       gameOver: true,
