@@ -26,15 +26,14 @@ type TagContributor = (input: ContributionInput) => number;
 
 const tagContributors: Record<OptionScalingTag, TagContributor> = {
   fleetCondition: ({ state }) => {
-    if (state.fleet.length === 0) return -10;
-    const avg =
-      state.fleet.reduce((sum, s) => sum + s.condition, 0) / state.fleet.length;
-    // condition is 0-100; map to ±20 around 50.
-    return ((avg - 50) / 50) * 20;
+    // Ships no longer exist; use active route count as a proxy for
+    // operational health. Empty operations = -10, otherwise neutral 0.
+    if (state.activeRoutes.length === 0) return -10;
+    return 0;
   },
   fleetSize: ({ state }) => {
-    // Diminishing returns: log2(n+1) * 6, clamped at 30.
-    const raw = Math.log2(state.fleet.length + 1) * 6;
+    // Diminishing returns based on active routes (ships were removed).
+    const raw = Math.log2(state.activeRoutes.length + 1) * 6;
     return Math.min(30, raw);
   },
   tech: ({ state, option }) => {

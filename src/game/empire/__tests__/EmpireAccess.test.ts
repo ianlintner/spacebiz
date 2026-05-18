@@ -122,7 +122,6 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
         },
       ],
     },
-    fleet: [],
     activeRoutes: [],
     market: { fuelPrice: 12, fuelTrend: "stable", planetMarkets: {} },
     aiCompanies: [],
@@ -528,7 +527,6 @@ describe("Empire Access", () => {
         originPlanetId: "tp-1",
         destinationPlanetId: "tp-2",
         distance: 100,
-        assignedShipIds: [],
         cargoType: "food" as import("../../../data/types.ts").CargoType,
       };
       const state = makeMinimalState([existingFoodRoute]);
@@ -548,7 +546,6 @@ describe("Empire Access", () => {
         originPlanetId: "tp-1",
         destinationPlanetId: "tp-2",
         distance: 100,
-        assignedShipIds: [],
         cargoType: "food" as import("../../../data/types.ts").CargoType,
       };
       const state = makeMinimalState([existingFoodRoute]);
@@ -568,7 +565,6 @@ describe("Empire Access", () => {
         originPlanetId: "tp-2",
         destinationPlanetId: "tp-1",
         distance: 100,
-        assignedShipIds: [],
         cargoType: "food" as import("../../../data/types.ts").CargoType,
       };
       const state = makeMinimalState([existingFoodRoute]);

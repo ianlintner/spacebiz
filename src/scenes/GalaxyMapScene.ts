@@ -223,8 +223,7 @@ export class GalaxyMapScene extends Phaser.Scene {
       const routesMaybeChanged =
         !changedKeys ||
         changedKeys.has("activeRoutes") ||
-        changedKeys.has("aiCompanies") ||
-        changedKeys.has("fleet");
+        changedKeys.has("aiCompanies");
 
       const systemsChanged =
         nextState.galaxy.systems !== this.lastSystemsRef ||

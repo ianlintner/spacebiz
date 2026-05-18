@@ -862,7 +862,6 @@ export class RoutesScene extends Phaser.Scene {
     this.opportunities = scanAllRouteOpportunities(
       state.galaxy.planets,
       state.galaxy.systems,
-      state.fleet,
       state.market,
       state.activeRoutes,
       state.cash,
@@ -934,7 +933,8 @@ export class RoutesScene extends Phaser.Scene {
       return true;
     });
 
-    const availableShips = state.fleet.filter((s) => !s.assignedRouteId).length;
+    // Ships no longer tracked individually; report 0 idle ships.
+    const availableShips = 0;
     const profitableCount = filtered.filter(
       (o) => o.estProfit > 0 && !o.alreadyActive,
     ).length;
@@ -1086,8 +1086,6 @@ export class RoutesScene extends Phaser.Scene {
         emptyText = `No ${subject} routes match your filter`;
         emptyHint =
           "Widen the cargo, distance, or scope filter — or try Any/All.";
-      } else if (availableShips === 0 && state.fleet.length === 0) {
-        emptyHint = "Buy a ship from the Fleet screen to unlock routes.";
       } else {
         emptyHint = "Tech and luxury cargo unlocks more options later.";
       }
@@ -1478,12 +1476,8 @@ export class RoutesScene extends Phaser.Scene {
         fuelCost = 0;
         profit = 0;
       } else if (route.cargoType) {
-        const rev = estimateRouteRevenue(route, undefined, state.market, state);
-        const fuel = estimateRouteFuelCost(
-          route,
-          undefined,
-          state.market.fuelPrice,
-        );
+        const rev = estimateRouteRevenue(route, state.market, state);
+        const fuel = estimateRouteFuelCost(route, state.market.fuelPrice);
         revenue = rev;
         fuelCost = fuel;
         profit = rev - fuel;
@@ -1619,10 +1613,6 @@ export class RoutesScene extends Phaser.Scene {
           { label: "Hops", value: hops.toString() },
           { label: "Crossings", value: crossings.toString() },
           { label: "Cargo", value: route.cargoType ?? "None" },
-          {
-            label: "Ships",
-            value: route.assignedShipIds.length.toString(),
-          },
         ],
         { planetType: destination.type },
       );
@@ -1642,10 +1632,10 @@ export class RoutesScene extends Phaser.Scene {
     this.selectedRouteSummary.setText(routeTitle);
 
     const revenue = route.cargoType
-      ? estimateRouteRevenue(route, undefined, state.market, state)
+      ? estimateRouteRevenue(route, state.market, state)
       : null;
     const fuel = route.cargoType
-      ? estimateRouteFuelCost(route, undefined, state.market.fuelPrice)
+      ? estimateRouteFuelCost(route, state.market.fuelPrice)
       : null;
     const profit = revenue != null && fuel != null ? revenue - fuel : null;
     const profitLabel =
@@ -1768,12 +1758,11 @@ export class RoutesScene extends Phaser.Scene {
 
     const modal = new Modal(this, {
       title: "Delete Route",
-      body: "Are you sure you want to delete this route? All assigned ships will be unassigned.",
+      body: "Are you sure you want to delete this route? Capacity slots will be freed.",
       onOk: () => {
         const freshState = gameStore.getState();
-        const { fleet, routes } = deleteRoute(
+        const { routes } = deleteRoute(
           this.selectedRouteId!,
-          freshState.fleet,
           freshState.activeRoutes,
         );
         const updatedLocks = removeCargoLocks(
@@ -1781,7 +1770,6 @@ export class RoutesScene extends Phaser.Scene {
           freshState.interEmpireCargoLocks,
         );
         gameStore.update({
-          fleet,
           activeRoutes: routes,
           interEmpireCargoLocks: updatedLocks,
         });

@@ -16,7 +16,6 @@ function makeRoute(overrides: Partial<ActiveRoute> = {}): ActiveRoute {
     originPlanetId: "planet-1-2-0",
     destinationPlanetId: "planet-3-4-1",
     distance: 10,
-    assignedShipIds: [],
     cargoType: CargoType.RawMaterials,
     ...overrides,
   };

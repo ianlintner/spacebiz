@@ -42,7 +42,6 @@ const rival: AICompany = {
   name: "Chen Logistics",
   empireId: "sol",
   cash: 1_000_000,
-  fleet: [],
   activeRoutes: [],
   reputation: 50,
   totalCargoDelivered: 0,

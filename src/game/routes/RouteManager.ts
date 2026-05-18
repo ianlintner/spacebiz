@@ -2,7 +2,6 @@ import type {
   Planet,
   StarSystem,
   ActiveRoute,
-  Ship,
   MarketState,
   CargoType,
   CargoMarketEntry,
@@ -19,12 +18,9 @@ import {
 import {
   TURN_DURATION,
   MAX_TRIPS_PER_TURN,
-  SHIP_TEMPLATES,
   BASE_LICENSE_FEE,
   LICENSE_FEE_DISTANCE_DIVISOR,
   LICENSE_FEE_ROUTE_ESCALATION,
-  DISTANCE_PREMIUM_RATE,
-  DISTANCE_PREMIUM_CAP,
   SCOPE_DEMAND_MULTIPLIERS,
   BASE_GALACTIC_ROUTE_SLOTS,
   BASE_SYSTEM_ROUTE_SLOTS,
@@ -32,7 +28,6 @@ import {
 } from "../../data/constants.ts";
 import { calculatePrice } from "../economy/PriceCalculator.ts";
 import { getLicenseFeeMultiplier } from "../reputation/ReputationEffects.ts";
-import type { ShipClass } from "../../data/types.ts";
 import { getTechRouteSlotBonus } from "../tech/TechEffects.ts";
 import { getRouteSlotBonus } from "../hub/HubBonusCalculator.ts";
 import {
@@ -420,9 +415,7 @@ export interface RouteTrafficVisual {
   ownerId: string;
   routeId: string;
   pathSystemIds: string[];
-  assignedShips: Ship[];
   visibleUnits: number;
-  visualClassMix: ShipClass[];
   cargoType: CargoType | null;
 }
 
@@ -438,15 +431,12 @@ export interface LocalRouteMotionPoint extends RouteTrafficWaypoint {
 interface RouteTrafficSource {
   ownerId: string;
   routes: ActiveRoute[];
-  fleet: Ship[];
 }
 
-export function getVisibleRouteTrafficUnits(assignedShipCount: number): number {
-  if (assignedShipCount <= 0) return 0;
-  if (assignedShipCount === 1) return 1;
-  if (assignedShipCount <= 3) return 2;
-  if (assignedShipCount <= 6) return 3;
-  return 4;
+export function getVisibleRouteTrafficUnits(_routeOrCount?: unknown): number {
+  // Post Ship-removal: routes always render with a single visual unit; the
+  // capacity-pool model has no per-ship visualization.
+  return 1;
 }
 
 function hashRouteId(routeId: string): number {
@@ -551,13 +541,12 @@ export function buildSunAvoidingLocalRouteMotionPath(
 
 export function buildRouteTrafficVisuals(
   routes: ActiveRoute[],
-  fleet: Ship[],
   planets: Planet[],
   hyperlanes: Hyperlane[],
   borderPorts: BorderPort[],
 ): RouteTrafficVisual[] {
   return buildRouteTrafficVisualsFromSources(
-    [{ ownerId: "player", routes, fleet }],
+    [{ ownerId: "player", routes }],
     planets,
     hyperlanes,
     borderPorts,
@@ -574,28 +563,16 @@ function buildRouteTrafficVisualsFromSources(
     planets.map((planet) => [planet.id, planet.systemId]),
   );
 
-  return sources.flatMap(({ ownerId, routes, fleet }) => {
-    const fleetById = new Map(fleet.map((ship) => [ship.id, ship]));
-
+  return sources.flatMap(({ ownerId, routes }) => {
     return routes.flatMap((route) => {
-      if (route.assignedShipIds.length === 0) {
-        return [];
-      }
-
-      const assignedShips = route.assignedShipIds.flatMap((shipId) => {
-        const ship = fleetById.get(shipId);
-        return ship ? [ship] : [];
-      });
-
-      if (assignedShips.length === 0) {
-        return [];
-      }
-
       const originSystemId = planetSystemById.get(route.originPlanetId);
       const destinationSystemId = planetSystemById.get(
         route.destinationPlanetId,
       );
       if (!originSystemId || !destinationSystemId) {
+        return [];
+      }
+      if (originSystemId === destinationSystemId) {
         return [];
       }
 
@@ -605,9 +582,6 @@ function buildRouteTrafficVisualsFromSources(
         hyperlanes,
         borderPorts,
       );
-      if (originSystemId === destinationSystemId) {
-        return [];
-      }
       const pathSystemIds =
         path && path.systems.length >= 2
           ? path.systems
@@ -622,9 +596,7 @@ function buildRouteTrafficVisualsFromSources(
           ownerId,
           routeId: route.id,
           pathSystemIds,
-          assignedShips,
-          visibleUnits: getVisibleRouteTrafficUnits(assignedShips.length),
-          visualClassMix: assignedShips.map((ship) => ship.class),
+          visibleUnits: 1,
           cargoType: route.cargoType,
         },
       ];
@@ -635,24 +607,17 @@ function buildRouteTrafficVisualsFromSources(
 export function buildGalaxyRouteTrafficVisuals(
   state: Pick<
     GameState,
-    | "activeRoutes"
-    | "fleet"
-    | "aiCompanies"
-    | "galaxy"
-    | "hyperlanes"
-    | "borderPorts"
+    "activeRoutes" | "aiCompanies" | "galaxy" | "hyperlanes" | "borderPorts"
   >,
 ): RouteTrafficVisual[] {
   const sources: RouteTrafficSource[] = [
     {
       ownerId: "player",
       routes: state.activeRoutes,
-      fleet: state.fleet,
     },
     ...state.aiCompanies.map((company) => ({
       ownerId: company.id,
       routes: company.activeRoutes,
-      fleet: company.fleet,
     })),
   ];
 
@@ -666,14 +631,12 @@ export function buildGalaxyRouteTrafficVisuals(
 
 export function buildRouteTrafficStateKey(
   routes: ActiveRoute[],
-  fleet: Ship[],
   planets: Planet[],
   hyperlanes: Hyperlane[],
   borderPorts: BorderPort[],
 ): string {
   const visuals = buildRouteTrafficVisuals(
     routes,
-    fleet,
     planets,
     hyperlanes,
     borderPorts,
@@ -684,9 +647,7 @@ export function buildRouteTrafficStateKey(
       ownerId: visual.ownerId,
       routeId: visual.routeId,
       pathSystemIds: visual.pathSystemIds,
-      assignedShipIds: visual.assignedShips.map((ship) => ship.id),
       visibleUnits: visual.visibleUnits,
-      visualClassMix: visual.visualClassMix,
     })),
   );
 }
@@ -694,12 +655,7 @@ export function buildRouteTrafficStateKey(
 export function buildGalaxyRouteTrafficStateKey(
   state: Pick<
     GameState,
-    | "activeRoutes"
-    | "fleet"
-    | "aiCompanies"
-    | "galaxy"
-    | "hyperlanes"
-    | "borderPorts"
+    "activeRoutes" | "aiCompanies" | "galaxy" | "hyperlanes" | "borderPorts"
   >,
 ): string {
   const visuals = buildGalaxyRouteTrafficVisuals(state);
@@ -709,9 +665,7 @@ export function buildGalaxyRouteTrafficStateKey(
       ownerId: visual.ownerId,
       routeId: visual.routeId,
       pathSystemIds: visual.pathSystemIds,
-      assignedShipIds: visual.assignedShips.map((ship) => ship.id),
       visibleUnits: visual.visibleUnits,
-      visualClassMix: visual.visualClassMix,
     })),
   );
 }
@@ -792,82 +746,22 @@ export function createRoute(
     originPlanetId: originId,
     destinationPlanetId: destId,
     distance,
-    assignedShipIds: [],
     cargoType,
     charterId,
   };
 }
 
 /**
- * Assign a ship to a route. Updates both fleet (ship.assignedRouteId) and
- * routes (route.assignedShipIds).
- */
-export function assignShipToRoute(
-  shipId: string,
-  routeId: string,
-  fleet: Ship[],
-  routes: ActiveRoute[],
-): { fleet: Ship[]; routes: ActiveRoute[] } {
-  const updatedFleet = fleet.map((s) =>
-    s.id === shipId ? { ...s, assignedRouteId: routeId } : s,
-  );
-
-  const updatedRoutes = routes.map((r) =>
-    r.id === routeId
-      ? { ...r, assignedShipIds: [...r.assignedShipIds, shipId] }
-      : r,
-  );
-
-  return { fleet: updatedFleet, routes: updatedRoutes };
-}
-
-/**
- * Unassign a ship from its current route.
- */
-export function unassignShip(
-  shipId: string,
-  fleet: Ship[],
-  routes: ActiveRoute[],
-): { fleet: Ship[]; routes: ActiveRoute[] } {
-  const ship = fleet.find((s) => s.id === shipId);
-  const currentRouteId = ship?.assignedRouteId;
-
-  const updatedFleet = fleet.map((s) =>
-    s.id === shipId ? { ...s, assignedRouteId: null } : s,
-  );
-
-  const updatedRoutes = currentRouteId
-    ? routes.map((r) =>
-        r.id === currentRouteId
-          ? {
-              ...r,
-              assignedShipIds: r.assignedShipIds.filter((id) => id !== shipId),
-            }
-          : r,
-      )
-    : routes;
-
-  return { fleet: updatedFleet, routes: updatedRoutes };
-}
-
-/**
- * Delete a route. Also unassigns all ships from it.
+ * Delete a route from the routes array.
+ *
+ * Post Ship-removal, routes carry no per-ship assignments; deletion is a
+ * simple filter on the routes list.
  */
 export function deleteRoute(
   routeId: string,
-  fleet: Ship[],
   routes: ActiveRoute[],
-): { fleet: Ship[]; routes: ActiveRoute[] } {
-  const route = routes.find((r) => r.id === routeId);
-  const shipIdsToUnassign = new Set(route?.assignedShipIds ?? []);
-
-  const updatedFleet = fleet.map((s) =>
-    shipIdsToUnassign.has(s.id) ? { ...s, assignedRouteId: null } : s,
-  );
-
-  const updatedRoutes = routes.filter((r) => r.id !== routeId);
-
-  return { fleet: updatedFleet, routes: updatedRoutes };
+): { routes: ActiveRoute[] } {
+  return { routes: routes.filter((r) => r.id !== routeId) };
 }
 
 export function setRoutePaused(
@@ -900,23 +794,19 @@ export function setRouteCargo(
  * premium.
  */
 /**
- * Reference ship used for capacity-pool route estimates when no specific
- * ship is supplied. Approximates an average freighter so the route-level
- * revenue/fuel numbers stay stable regardless of fleet composition.
+ * Reference ship-like profile used for capacity-pool route estimates.
+ * Approximates an average freighter so the route-level revenue/fuel numbers
+ * stay stable in the post Ship-removal capacity model.
  */
-const REFERENCE_SHIP: Pick<
-  Ship,
-  "speed" | "cargoCapacity" | "passengerCapacity" | "fuelEfficiency"
-> = {
+const REFERENCE_SHIP = {
   speed: 1,
   cargoCapacity: 80,
   passengerCapacity: 40,
   fuelEfficiency: 1,
-};
+} as const;
 
 export function estimateRouteRevenue(
   route: ActiveRoute,
-  ship: Ship | undefined,
   market: MarketState,
   state?: Pick<GameState, "galaxy">,
 ): number {
@@ -928,7 +818,7 @@ export function estimateRouteRevenue(
   const destEntry = destMarket[route.cargoType];
   const price = calculatePrice(destEntry, route.cargoType);
 
-  const ref = ship ?? REFERENCE_SHIP;
+  const ref = REFERENCE_SHIP;
   const trips = calculateTripsPerTurn(route.distance, ref.speed);
 
   // Use passenger capacity for passengers, cargo capacity for everything else
@@ -943,13 +833,7 @@ export function estimateRouteRevenue(
     state != null ? getRouteScope(route, state) : inferScopeFromIds(route);
   const scopeMult = getScopeDemandMultiplier(route.cargoType, scope);
 
-  const distancePremium =
-    scope === RouteScopeEnum.System
-      ? 0
-      : Math.min(DISTANCE_PREMIUM_CAP, route.distance * DISTANCE_PREMIUM_RATE);
-  const revenueMultiplier = scopeMult * (1 + distancePremium);
-
-  return Math.round(totalCargoMoved * price * revenueMultiplier * 100) / 100;
+  return Math.round(totalCargoMoved * price * scopeMult * 100) / 100;
 }
 
 /**
@@ -978,10 +862,9 @@ function inferScopeFromIds(
  */
 export function estimateRouteFuelCost(
   route: ActiveRoute,
-  ship: Ship | undefined,
   fuelPrice: number,
 ): number {
-  const ref = ship ?? REFERENCE_SHIP;
+  const ref = REFERENCE_SHIP;
   const trips = calculateTripsPerTurn(route.distance, ref.speed);
   const totalDistance = trips * route.distance * 2;
   const fuelCost = totalDistance * ref.fuelEfficiency * fuelPrice;
@@ -1006,6 +889,7 @@ export interface RouteOpportunity {
   shipName: string;
   shipClass: string;
   shipSource: "owned" | "autoBuy" | "none";
+  // ^ legacy field; in the capacity-pool model it is always "none".
   shipCost: number;
   licenseFee: number;
   alreadyActive: boolean;
@@ -1026,18 +910,12 @@ export interface RouteOpportunity {
 export function scanAllRouteOpportunities(
   planets: Planet[],
   systems: StarSystem[],
-  fleet: Ship[],
   market: MarketState,
   activeRoutes: ActiveRoute[],
-  cash: number,
+  _cash: number,
   state?: GameState,
 ): RouteOpportunity[] {
   const cargoTypes = Object.values(CargoTypeEnum) as CargoType[];
-  const availableShips = fleet.filter((s) => !s.assignedRouteId);
-  const shipCandidatesByCargo = buildShipCandidatesByCargo(
-    availableShips,
-    cash,
-  );
 
   // Pre-build set of active route keys for quick lookup
   const activeRouteKeys = new Set(
@@ -1155,28 +1033,29 @@ export function scanAllRouteOpportunities(
         const destEntry = destMarket[cargoType];
         const price = calculatePrice(destEntry, cargoType);
         const scopeMult = getScopeDemandMultiplier(cargoType, scope);
-        const distancePremium =
-          scope === RouteScopeEnum.System
-            ? 0
-            : Math.min(DISTANCE_PREMIUM_CAP, distance * DISTANCE_PREMIUM_RATE);
-        const revenueMultiplier = scopeMult * (1 + distancePremium);
 
-        // Pick the *most profitable* ship the player can field on this
-        // specific route (owned, or affordable to buy). The candidate list
-        // is precomputed per cargo type once per scan — see
-        // buildShipCandidatesByCargo — so the inner loop is pure scoring,
-        // no allocation.
-        const candidates = shipCandidatesByCargo.get(cargoType) ?? [];
-        const best = pickBestFromCandidates(
-          candidates,
-          cargoType,
-          distance,
-          price,
-          market.fuelPrice,
-          revenueMultiplier,
-        );
-        if (!best) continue;
-        if (best.profit <= 0) continue;
+        // Capacity-pool model: use a fixed reference vessel for revenue/fuel
+        // projections. Hull marks alter actual revenue in TurnSimulator but
+        // are intentionally factored out here so the Route Finder ranking
+        // stays stable across tech progression.
+        const isPassenger = cargoType === "passengers";
+        const refCap = isPassenger
+          ? REFERENCE_SHIP.passengerCapacity
+          : REFERENCE_SHIP.cargoCapacity;
+        const trips = calculateTripsPerTurn(distance, REFERENCE_SHIP.speed);
+        const revenue =
+          Math.round(trips * refCap * price * scopeMult * 100) / 100;
+        const fuelCost =
+          Math.round(
+            trips *
+              distance *
+              2 *
+              REFERENCE_SHIP.fuelEfficiency *
+              market.fuelPrice *
+              100,
+          ) / 100;
+        const profit = revenue - fuelCost;
+        if (profit <= 0) continue;
 
         opportunities.push({
           originPlanetId: origin.id,
@@ -1187,15 +1066,14 @@ export function scanAllRouteOpportunities(
           bestCargoType: cargoType,
           destPrice: price,
           destTrend: destEntry.trend,
-          estRevenue: best.revenue,
-          estFuelCost: best.fuelCost,
-          estProfit: best.profit,
-          tripsPerTurn: best.trips,
-          shipName: best.candidate.name,
-          shipClass: best.candidate.class,
-          shipSource: best.candidate.source,
-          shipCost:
-            best.candidate.source === "owned" ? 0 : best.candidate.purchaseCost,
+          estRevenue: revenue,
+          estFuelCost: fuelCost,
+          estProfit: profit,
+          tripsPerTurn: trips,
+          shipName: "—",
+          shipClass: "capacity",
+          shipSource: "none",
+          shipCost: 0,
           licenseFee,
           alreadyActive,
           scope,
@@ -1238,119 +1116,4 @@ export function scanAllRouteOpportunities(
   return remaining > 0
     ? [...reserved, ...overflow.slice(0, remaining)]
     : reserved.slice(0, HARD_CAP);
-}
-
-interface ShipCandidate {
-  name: string;
-  class: string;
-  cargoCapacity: number;
-  passengerCapacity: number;
-  speed: number;
-  fuelEfficiency: number;
-  source: "owned" | "autoBuy";
-  purchaseCost: number;
-}
-
-interface RouteShipPick {
-  candidate: ShipCandidate;
-  trips: number;
-  revenue: number;
-  fuelCost: number;
-  profit: number;
-}
-
-/**
- * Build the static set of ship candidates that don't depend on the
- * (origin, dest, cargo) tuple. Hoisting this out of `pickBestShipForRoute`
- * matters because the scanner calls that function ~P×P×C times per pass
- * — rebuilding the owned + affordable-template list every iteration was
- * pure waste since the inputs (fleet, cash, SHIP_TEMPLATES) are fixed for
- * the whole scan.
- */
-function buildShipCandidatesByCargo(
-  availableShips: Ship[],
-  cash: number,
-): Map<CargoType, ShipCandidate[]> {
-  const byCargo = new Map<CargoType, ShipCandidate[]>();
-  const cargoTypes = Object.values(CargoTypeEnum) as CargoType[];
-
-  const ownedTemplates: ShipCandidate[] = availableShips.map((ship) => ({
-    name: ship.name,
-    class: ship.class,
-    cargoCapacity: ship.cargoCapacity,
-    passengerCapacity: ship.passengerCapacity,
-    speed: ship.speed,
-    fuelEfficiency: ship.fuelEfficiency,
-    source: "owned",
-    purchaseCost: 0,
-  }));
-
-  const shipClasses = Object.keys(SHIP_TEMPLATES) as ShipClass[];
-  const affordableTemplates: ShipCandidate[] = [];
-  for (const sc of shipClasses) {
-    const t = SHIP_TEMPLATES[sc];
-    if (t.purchaseCost > cash) continue;
-    affordableTemplates.push({
-      name: t.name,
-      class: t.class,
-      cargoCapacity: t.cargoCapacity,
-      passengerCapacity: t.passengerCapacity,
-      speed: t.speed,
-      fuelEfficiency: t.fuelEfficiency,
-      source: "autoBuy",
-      purchaseCost: t.purchaseCost,
-    });
-  }
-
-  for (const cargo of cargoTypes) {
-    const isPassenger = cargo === "passengers";
-    const list: ShipCandidate[] = [];
-    for (const c of ownedTemplates) {
-      if ((isPassenger ? c.passengerCapacity : c.cargoCapacity) > 0)
-        list.push(c);
-    }
-    for (const c of affordableTemplates) {
-      if ((isPassenger ? c.passengerCapacity : c.cargoCapacity) > 0)
-        list.push(c);
-    }
-    byCargo.set(cargo, list);
-  }
-  return byCargo;
-}
-
-/**
- * Score a precomputed candidate set against a specific (distance, price,
- * fuelPrice, revenueMultiplier). Inner loop only — no allocation.
- */
-function pickBestFromCandidates(
-  candidates: ShipCandidate[],
-  cargoType: CargoType,
-  distance: number,
-  price: number,
-  fuelPrice: number,
-  revenueMultiplier: number,
-): RouteShipPick | null {
-  if (candidates.length === 0) return null;
-  const isPassenger = cargoType === "passengers";
-  let best: RouteShipPick | null = null;
-  for (const c of candidates) {
-    const cap = isPassenger ? c.passengerCapacity : c.cargoCapacity;
-    const trips = calculateTripsPerTurn(distance, c.speed);
-    const revenue =
-      Math.round(trips * cap * price * revenueMultiplier * 100) / 100;
-    const totalDist = trips * distance * 2;
-    const fuelCost =
-      Math.round(totalDist * c.fuelEfficiency * fuelPrice * 100) / 100;
-    const profit = revenue - fuelCost;
-    const beats =
-      best === null ||
-      profit > best.profit ||
-      (profit === best.profit &&
-        c.source === "owned" &&
-        best.candidate.source === "autoBuy");
-    if (beats) {
-      best = { candidate: c, trips, revenue, fuelCost, profit };
-    }
-  }
-  return best;
 }

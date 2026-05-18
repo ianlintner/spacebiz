@@ -8,12 +8,7 @@ import {
 } from "../ChoiceEventResolver.ts";
 import { EVENT_CHAIN_DEFINITIONS } from "../EventChainDefinitions.ts";
 import { SeededRNG } from "../../../utils/SeededRNG.ts";
-import {
-  CargoType,
-  PlanetType,
-  ShipClass,
-  EventCategory,
-} from "../../../data/types.ts";
+import { CargoType, PlanetType, EventCategory } from "../../../data/types.ts";
 import type {
   GameState,
   ChoiceEvent,
@@ -115,23 +110,6 @@ function makeMinimalState(overrides: Partial<GameState> = {}): GameState {
       systems,
       planets,
     },
-    fleet: [
-      {
-        id: "ship-1",
-        name: "Shuttle Alpha",
-        class: ShipClass.CargoShuttle,
-        cargoCapacity: 80,
-        passengerCapacity: 0,
-        speed: 4,
-        fuelEfficiency: 0.8,
-        reliability: 92,
-        age: 0,
-        condition: 100,
-        purchaseCost: 40000,
-        maintenanceCost: 2000,
-        assignedRouteId: null,
-      },
-    ],
     activeRoutes: [],
     market: {
       fuelPrice: BASE_FUEL_PRICE,

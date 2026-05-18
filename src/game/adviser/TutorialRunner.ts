@@ -7,12 +7,7 @@ import {
   createRoute,
   calculateDistance,
   addCargoLock,
-  assignShipToRoute,
 } from "../routes/RouteManager.ts";
-import { buyShip } from "../fleet/FleetManager.ts";
-import { SHIP_TEMPLATES } from "../../data/constants.ts";
-import type { ShipClass } from "../../data/types.ts";
-
 export interface TutorialCallbacks {
   navigateTo: (sceneName: string) => void;
   skipTutorial: () => void;
@@ -97,7 +92,6 @@ export class TutorialRunner {
     const opportunities = scanAllRouteOpportunities(
       state.galaxy.planets,
       state.galaxy.systems,
-      state.fleet,
       state.market,
       state.activeRoutes,
       state.cash,
@@ -134,8 +128,7 @@ export class TutorialRunner {
     );
 
     const route = createRoute(origin.id, dest.id, distance, opp.bestCargoType);
-    let fleet = [...state.fleet];
-    let routes = [...state.activeRoutes, route];
+    const routes = [...state.activeRoutes, route];
     const locks = addCargoLock(
       origin.id,
       dest.id,
@@ -146,67 +139,16 @@ export class TutorialRunner {
       state.interEmpireCargoLocks,
     );
 
-    const isPassenger = opp.bestCargoType === "passengers";
-    let cash = state.cash;
-    let shipId: string | null =
-      fleet
-        .filter((s) => !s.assignedRouteId)
-        .filter((s) =>
-          isPassenger ? s.passengerCapacity > 0 : s.cargoCapacity > 0,
-        )
-        .sort((a, b) =>
-          isPassenger
-            ? b.passengerCapacity - a.passengerCapacity
-            : b.cargoCapacity - a.cargoCapacity,
-        )[0]?.id ?? null;
-
-    let boughtShipName: string | null = null;
-
-    if (!shipId && opp.shipSource === "autoBuy") {
-      const shipClasses = Object.keys(SHIP_TEMPLATES) as ShipClass[];
-      const compatible = shipClasses
-        .map((sc) => ({ class: sc, template: SHIP_TEMPLATES[sc] }))
-        .filter((e) =>
-          isPassenger
-            ? e.template.passengerCapacity > 0
-            : e.template.cargoCapacity > 0,
-        )
-        .filter((e) => e.template.purchaseCost <= cash)
-        .sort((a, b) => a.template.purchaseCost - b.template.purchaseCost);
-
-      if (compatible.length > 0) {
-        const { ship, cost } = buyShip(compatible[0].class, fleet);
-        fleet = [...fleet, ship];
-        cash -= cost;
-        shipId = ship.id;
-        boughtShipName = ship.name;
-      }
-    }
-
-    if (shipId) {
-      const assigned = assignShipToRoute(shipId, route.id, fleet, routes);
-      fleet = assigned.fleet;
-      routes = assigned.routes;
-    }
-
     gameStore.update({
       activeRoutes: routes,
-      fleet,
       interEmpireCargoLocks: locks,
-      cash,
     });
 
     this.callbacks.showActiveRoutes();
 
-    const shipNote = boughtShipName
-      ? `Bought ${boughtShipName} and assigned to the route — ready to haul!`
-      : shipId
-        ? `${fleet.find((s) => s.id === shipId)?.name} is assigned and ready to haul.`
-        : "Assign a ship from the Fleet screen when you're ready.";
-
     this.scene.time.delayedCall(1100, () => {
       this.showFinalModal(
-        `Route opened: ${opp.originName} → ${opp.destinationName} (${opp.bestCargoType}). ${shipNote} Hit the End Turn button to run the simulation — your ships will haul cargo and revenue will roll in!`,
+        `Route opened: ${opp.originName} → ${opp.destinationName} (${opp.bestCargoType}). Capacity is drawn from your global fleet pools. Hit the End Turn button to run the simulation!`,
       );
     });
   }

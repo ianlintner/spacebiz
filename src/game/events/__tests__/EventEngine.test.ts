@@ -3,12 +3,7 @@ import { PlanetBiome } from "../../../data/types.ts";
 import { selectEvents, applyEventEffects, tickEvents } from "../EventEngine.ts";
 import type { GalaxyInfo } from "../EventEngine.ts";
 import { SeededRNG } from "../../../utils/SeededRNG.ts";
-import {
-  EventCategory,
-  CargoType,
-  PlanetType,
-  ShipClass,
-} from "../../../data/types.ts";
+import { EventCategory, CargoType, PlanetType } from "../../../data/types.ts";
 import type {
   StorytellerState,
   GameState,
@@ -105,7 +100,6 @@ function makeRoutes(): ActiveRoute[] {
       originPlanetId: "planet-a1",
       destinationPlanetId: "planet-b1",
       distance: 250,
-      assignedShipIds: ["ship-1"],
       cargoType: CargoType.Food,
     },
   ];
@@ -173,23 +167,6 @@ function makeMinimalGameState(): GameState {
       systems: galaxy.systems,
       planets: galaxy.planets,
     },
-    fleet: [
-      {
-        id: "ship-1",
-        name: "Shuttle Alpha",
-        class: ShipClass.CargoShuttle,
-        cargoCapacity: 80,
-        passengerCapacity: 0,
-        speed: 4,
-        fuelEfficiency: 0.8,
-        reliability: 92,
-        age: 0,
-        condition: 100,
-        purchaseCost: 40000,
-        maintenanceCost: 2000,
-        assignedRouteId: null,
-      },
-    ],
     activeRoutes: makeRoutes(),
     market: {
       fuelPrice: BASE_FUEL_PRICE,

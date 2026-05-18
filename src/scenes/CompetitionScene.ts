@@ -326,10 +326,8 @@ export class CompetitionScene extends Phaser.Scene {
     const empire = state.galaxy.empires.find((e) => e.id === company.empireId);
     const view = buildRivalView(company, this.intelTier, 0, 0, state);
 
-    const assignedShips = company.activeRoutes.reduce(
-      (sum: number, r) => sum + r.assignedShipIds.length,
-      0,
-    );
+    // Capacity-pool model: report active route count in place of "assigned ships".
+    const assignedShips = company.activeRoutes.length;
 
     const details: { label: string; value: string }[] = [
       { label: "Company", value: company.name },

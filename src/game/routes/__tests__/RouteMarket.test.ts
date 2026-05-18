@@ -160,7 +160,6 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
       systems: makeSystems(),
       planets,
     },
-    fleet: [],
     activeRoutes: [],
     market: {
       fuelPrice: BASE_FUEL_PRICE,

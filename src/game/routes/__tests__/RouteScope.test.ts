@@ -135,7 +135,6 @@ function makeRoute(
     destinationPlanetId: dest,
     distance: 50,
     cargoType: CargoType.Food,
-    assignedShipIds: [],
   };
 }
 
@@ -155,7 +154,6 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
     galaxyShape: "spiral",
     playerEmpireId: "emp-1",
     galaxy: { sectors, empires: [], systems, planets },
-    fleet: [],
     activeRoutes: [],
     market: { fuelPrice: 10, fuelTrend: "stable", planetMarkets: {} },
     aiCompanies: [],

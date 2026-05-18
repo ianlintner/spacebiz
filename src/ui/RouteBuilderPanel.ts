@@ -1,17 +1,8 @@
 import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
-import { SHIP_TEMPLATES } from "../data/constants.ts";
 import { CargoType } from "../data/types.ts";
-import type {
-  CargoType as CargoTypeValue,
-  Planet,
-  Ship,
-  ShipClass,
-  ShipTemplate,
-} from "../data/types.ts";
-import { buyShip } from "../game/fleet/FleetManager.ts";
+import type { CargoType as CargoTypeValue, Planet } from "../data/types.ts";
 import {
-  assignShipToRoute,
   calculateDistance,
   calculateLicenseFee,
   createRoute,
@@ -606,8 +597,9 @@ export class RouteBuilderPanel {
     return getCargoAtIndex(this.cargoIndex);
   }
 
-  private getAvailableShips(): Ship[] {
-    return gameStore.getState().fleet.filter((ship) => !ship.assignedRouteId);
+  private getAvailableShips(): Array<{ id: string; name: string }> {
+    // Ships removed in the capacity redesign.
+    return [];
   }
 
   private getShipSelectionOptions(): Array<{
@@ -643,30 +635,13 @@ export class RouteBuilderPanel {
       state.hyperlanes,
       state.borderPorts,
     );
-    const refShip: PreviewShip = {
-      id: null,
-      name: "ref",
-      cargoCapacity: 80,
-      passengerCapacity: 40,
-      speed: 1,
-      fuelEfficiency: 1,
-    };
     let bestCargo: CargoTypeValue | null = null;
     let bestProfit = -Infinity;
     for (const c of CARGO_VALUES) {
       try {
         const r = createRoute(origin.id, destination.id, distance, c);
-        const rev = estimateRouteRevenue(
-          r,
-          refShip as Ship,
-          state.market,
-          state,
-        );
-        const fuel = estimateRouteFuelCost(
-          r,
-          refShip as Ship,
-          state.market.fuelPrice,
-        );
+        const rev = estimateRouteRevenue(r, state.market, state);
+        const fuel = estimateRouteFuelCost(r, state.market.fuelPrice);
         const profit = rev - fuel;
         if (profit > bestProfit) {
           bestProfit = profit;
@@ -977,17 +952,8 @@ export class RouteBuilderPanel {
       distance,
       cargo,
     );
-    const revenue = estimateRouteRevenue(
-      routePreview,
-      previewShip as Ship,
-      state.market,
-      state,
-    );
-    const fuel = estimateRouteFuelCost(
-      routePreview,
-      previewShip as Ship,
-      state.market.fuelPrice,
-    );
+    const revenue = estimateRouteRevenue(routePreview, state.market, state);
+    const fuel = estimateRouteFuelCost(routePreview, state.market.fuelPrice);
     const profit = revenue - fuel;
 
     return {
@@ -1026,31 +992,13 @@ export class RouteBuilderPanel {
       state.hyperlanes,
       state.borderPorts,
     );
-    const refShip: PreviewShip = {
-      id: null,
-      name: "ref",
-      cargoCapacity: 80,
-      passengerCapacity: 40,
-      speed: 1,
-      fuelEfficiency: 1,
-    };
-
     let bestCargo: CargoTypeValue | null = null;
     let bestProfit = -Infinity;
     for (const c of CARGO_VALUES) {
       try {
         const r = createRoute(origin.id, destination.id, distance, c);
-        const rev = estimateRouteRevenue(
-          r,
-          refShip as Ship,
-          state.market,
-          state,
-        );
-        const fuel = estimateRouteFuelCost(
-          r,
-          refShip as Ship,
-          state.market.fuelPrice,
-        );
+        const rev = estimateRouteRevenue(r, state.market, state);
+        const fuel = estimateRouteFuelCost(r, state.market.fuelPrice);
         const profit = rev - fuel;
         if (profit > bestProfit) {
           bestProfit = profit;
@@ -1072,42 +1020,21 @@ export class RouteBuilderPanel {
     return { text, isOnBest };
   }
 
-  private getPreviewShip(cargoType: CargoTypeValue): PreviewShip | null {
+  private getPreviewShip(_cargoType: CargoTypeValue): PreviewShip | null {
     const state = gameStore.getState();
     const selectedShipId = this.getSelectedShipId();
 
-    if (selectedShipId) {
-      const manualShip = state.fleet.find(
-        (ship) => ship.id === selectedShipId && !ship.assignedRouteId,
-      );
-      if (manualShip) {
-        return manualShip;
-      }
-    }
-
-    const autoShip = pickBestAvailableShip(state.fleet, cargoType);
-    if (autoShip) {
-      return {
-        ...autoShip,
-        name: `${autoShip.name} (auto)`,
-      };
-    }
-
-    if (!this.autoBuy) {
-      return null;
-    }
-
-    const cheapestClass = getCheapestCompatibleShipClass(cargoType);
-    if (!cheapestClass) {
-      return null;
-    }
-
-    const template = SHIP_TEMPLATES[cheapestClass];
-    if (state.cash < template.purchaseCost) {
-      return null;
-    }
-
-    return templateToPreviewShip(template);
+    // Ships removed; preview is always the reference-vessel placeholder.
+    void selectedShipId;
+    void state;
+    return {
+      id: null,
+      name: "Capacity",
+      cargoCapacity: 80,
+      passengerCapacity: 40,
+      speed: 1,
+      fuelEfficiency: 1,
+    };
   }
 
   private confirm(): void {
@@ -1211,51 +1138,8 @@ export class RouteBuilderPanel {
       charterMatch.charterId,
     );
 
-    let updatedFleet = [...latestState.fleet];
-    let updatedRoutes = [...latestState.activeRoutes, route];
-    let updatedCash = latestState.cash - licenseFee;
-    let assignedShipId: string | null = null;
-    let assignedShipName: string | null = null;
-    let autoBoughtShipName: string | null = null;
-
-    const selectedShipId = this.getSelectedShipId();
-    if (
-      selectedShipId &&
-      updatedFleet.some(
-        (ship) => ship.id === selectedShipId && !ship.assignedRouteId,
-      )
-    ) {
-      assignedShipId = selectedShipId;
-    } else {
-      assignedShipId = pickBestAvailableShip(updatedFleet, cargo)?.id ?? null;
-    }
-
-    if (!assignedShipId && this.autoBuy) {
-      const cheapestClass = getCheapestCompatibleShipClass(cargo);
-      if (cheapestClass) {
-        const template = SHIP_TEMPLATES[cheapestClass];
-        if (updatedCash >= template.purchaseCost) {
-          const { ship, cost } = buyShip(cheapestClass, updatedFleet);
-          updatedFleet = [...updatedFleet, ship];
-          updatedCash -= cost;
-          assignedShipId = ship.id;
-          autoBoughtShipName = ship.name;
-        }
-      }
-    }
-
-    if (assignedShipId) {
-      const assignmentResult = assignShipToRoute(
-        assignedShipId,
-        route.id,
-        updatedFleet,
-        updatedRoutes,
-      );
-      updatedFleet = assignmentResult.fleet;
-      updatedRoutes = assignmentResult.routes;
-      assignedShipName =
-        updatedFleet.find((ship) => ship.id === assignedShipId)?.name ?? null;
-    }
+    const updatedRoutes = [...latestState.activeRoutes, route];
+    const updatedCash = latestState.cash - licenseFee;
 
     // Track inter-empire cargo lock
     const updatedLocks = addCargoLock(
@@ -1269,7 +1153,6 @@ export class RouteBuilderPanel {
     );
 
     gameStore.update({
-      fleet: updatedFleet,
       activeRoutes: updatedRoutes,
       interEmpireCargoLocks: updatedLocks,
       cash: updatedCash,
@@ -1280,9 +1163,9 @@ export class RouteBuilderPanel {
       originPlanetId: origin.id,
       destinationPlanetId: destination.id,
       cargoType: cargo,
-      assignedShipId,
-      assignedShipName,
-      autoBoughtShipName,
+      assignedShipId: null,
+      assignedShipName: null,
+      autoBoughtShipName: null,
     });
 
     this.layer.destroy();
@@ -1335,63 +1218,6 @@ export class RouteBuilderPanel {
   destroy(): void {
     this.scene.input.keyboard?.off("keydown", this.keyHandler);
   }
-}
-
-function pickBestAvailableShip(
-  fleet: Ship[],
-  cargoType: CargoTypeValue,
-): Ship | null {
-  const availableShips = fleet.filter((ship) => !ship.assignedRouteId);
-  if (availableShips.length === 0) {
-    return null;
-  }
-
-  if (cargoType === CargoType.Passengers) {
-    return (
-      [...availableShips]
-        .filter((ship) => ship.passengerCapacity > 0)
-        .sort((a, b) => b.passengerCapacity - a.passengerCapacity)[0] ??
-      availableShips[0]
-    );
-  }
-
-  return (
-    [...availableShips]
-      .filter((ship) => ship.cargoCapacity > 0)
-      .sort((a, b) => b.cargoCapacity - a.cargoCapacity)[0] ?? availableShips[0]
-  );
-}
-
-function getCheapestCompatibleShipClass(
-  cargoType: CargoTypeValue,
-): ShipClass | null {
-  const shipClasses = Object.keys(SHIP_TEMPLATES) as ShipClass[];
-  const compatibleClasses = shipClasses.filter((shipClass) => {
-    const template = SHIP_TEMPLATES[shipClass];
-    return cargoType === CargoType.Passengers
-      ? template.passengerCapacity > 0
-      : template.cargoCapacity > 0;
-  });
-
-  compatibleClasses.sort(
-    (left, right) =>
-      SHIP_TEMPLATES[left].purchaseCost - SHIP_TEMPLATES[right].purchaseCost,
-  );
-
-  return compatibleClasses[0] ?? null;
-}
-
-function templateToPreviewShip(template: ShipTemplate): PreviewShip {
-  return {
-    id: null,
-    name: template.name,
-    cargoCapacity: template.cargoCapacity,
-    passengerCapacity: template.passengerCapacity,
-    speed: template.speed,
-    fuelEfficiency: template.fuelEfficiency,
-    purchaseCost: template.purchaseCost,
-    isPurchasedPreview: true,
-  };
 }
 
 function wrapIndex(index: number, length: number): number {

@@ -62,7 +62,6 @@ function makeAI(
     name: id,
     empireId,
     cash: 200_000,
-    fleet: [],
     activeRoutes: [],
     reputation: 55,
     totalCargoDelivered: 0,

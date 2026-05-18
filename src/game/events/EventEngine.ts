@@ -7,7 +7,6 @@ import type {
   ActiveRoute,
   EventEffect,
   Empire,
-  Ship,
 } from "../../data/types.ts";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 import { EVENT_TEMPLATES } from "./EventDefinitions.ts";
@@ -682,30 +681,20 @@ export function isRouteGrounded(
  */
 export function calculateMothballFee(
   route: ActiveRoute,
-  fleet: Ship[],
   activeEvents: GameEvent[],
   systems: StarSystem[],
   planets: { id: string; systemId: string }[],
   state?: GameState,
 ): number {
   if (!isRouteGrounded(route, activeEvents, systems, planets)) return 0;
-  if (route.assignedShipIds.length === 0) return 0;
 
   // If the player has the "addEmbargoImmunity" tech, no mothball fee
   if (state && hasTechEffect(state, "addEmbargoImmunity")) return 0;
 
-  let totalFee = 0;
-  for (const shipId of route.assignedShipIds) {
-    const ship = fleet.find((s) => s.id === shipId);
-    if (ship) {
-      totalFee += ship.maintenanceCost * MOTHBALL_FEE_RATIO;
-    }
-  }
-
-  // Tech "addMothballRefund" reduces mothball fee (value is a negative multiplier)
-  // This tech is handled in simulation where the refund is applied
-
-  return Math.round(totalFee);
+  // Capacity-pool model: ships no longer have per-vessel maintenance.
+  // Mothball fee is a flat per-route placeholder.
+  const FLAT_MOTHBALL_FEE = 1000;
+  return Math.round(FLAT_MOTHBALL_FEE * MOTHBALL_FEE_RATIO);
 }
 
 /**

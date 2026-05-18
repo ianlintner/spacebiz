@@ -4,7 +4,6 @@ import type {
   CargoType as CargoTypeT,
   AICompany,
 } from "../../data/types.ts";
-import { calculateShipValue } from "../fleet/FleetManager.ts";
 import { CARGO_DIVERSITY_BONUS } from "../../data/constants.ts";
 
 // ---------------------------------------------------------------------------
@@ -37,16 +36,12 @@ const MAX_HIGH_SCORES = 10;
  *   + distinctCargoTypesDelivered * CARGO_DIVERSITY_BONUS
  */
 export function calculateScore(state: GameState): number {
-  // Net worth: cash + fleet value - loan balances
-  const fleetValue = state.fleet.reduce(
-    (sum, ship) => sum + calculateShipValue(ship),
-    0,
-  );
+  // Net worth: cash - loan balances (capacity pools have no liquidation value).
   const loanBalance = state.loans.reduce(
     (sum, loan) => sum + loan.remainingBalance,
     0,
   );
-  const netWorth = state.cash + fleetValue - loanBalance;
+  const netWorth = state.cash - loanBalance;
 
   // Reputation bonus
   const reputationBonus = state.reputation * 100;
@@ -135,11 +130,7 @@ function countEmpiresTraded(state: GameState): number {
  * Compute the net worth of an AI company for ranking.
  */
 function computeAINetWorth(company: AICompany): number {
-  const fleetValue = company.fleet.reduce(
-    (sum, ship) => sum + calculateShipValue(ship),
-    0,
-  );
-  return company.cash + fleetValue;
+  return company.cash;
 }
 
 export interface CompanyRanking {
@@ -157,21 +148,15 @@ export interface CompanyRanking {
  */
 export function rankCompanies(state: GameState): CompanyRanking[] {
   const playerScore = calculateScore(state);
-  const playerFleetValue = state.fleet.reduce(
-    (sum, ship) => sum + calculateShipValue(ship),
-    0,
-  );
   const playerNetWorth =
-    state.cash +
-    playerFleetValue -
-    state.loans.reduce((sum, l) => sum + l.remainingBalance, 0);
+    state.cash - state.loans.reduce((sum, l) => sum + l.remainingBalance, 0);
 
   const rankings: CompanyRanking[] = [
     {
       name: state.companyName,
       isPlayer: true,
       netWorth: Math.round(playerNetWorth),
-      fleetSize: state.fleet.length,
+      fleetSize: state.activeRoutes.length,
       routeCount: state.activeRoutes.length,
       score: playerScore,
     },
@@ -179,7 +164,6 @@ export function rankCompanies(state: GameState): CompanyRanking[] {
 
   for (const ai of state.aiCompanies) {
     const aiNetWorth = computeAINetWorth(ai);
-    // AI score: simplified — net worth + cargo bonus + route bonus
     const aiScore = Math.round(
       aiNetWorth +
         ai.reputation * 100 +
@@ -190,7 +174,7 @@ export function rankCompanies(state: GameState): CompanyRanking[] {
       name: ai.name,
       isPlayer: false,
       netWorth: Math.round(aiNetWorth),
-      fleetSize: ai.fleet.length,
+      fleetSize: ai.activeRoutes.length,
       routeCount: ai.activeRoutes.length,
       score: aiScore,
     });

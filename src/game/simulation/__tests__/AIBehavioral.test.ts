@@ -39,26 +39,8 @@ describe("AI behavioral: fleet management", () => {
     }
   });
 
-  it(
-    "at least one AI company purchases ships within 15 turns",
-    { timeout: 15000 },
-    () => {
-      const result = runSim({ maxTurns: 15 });
-
-      let anyPurchase = false;
-      for (const log of result.turnLogs) {
-        for (const c of log.companies) {
-          if (c.shipsPurchased.length > 0) {
-            anyPurchase = true;
-            break;
-          }
-        }
-        if (anyPurchase) break;
-      }
-
-      expect(anyPurchase).toBe(true);
-    },
-  );
+  // Ship purchasing was removed with the Fleet Capacity Redesign.
+  // AIs now grow via capacity-pool tech, not per-vessel buys.
 });
 
 describe("AI behavioral: route management", () => {

@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import { gameStore } from "../data/GameStore.ts";
-import { ContractStatus, ContractType, ShipClass } from "../data/types.ts";
+import { ContractStatus, ContractType } from "../data/types.ts";
 import type {
   Contract,
   ContractType as ContractTypeValue,
@@ -35,11 +35,7 @@ import {
 import {
   getAvailableRouteSlots,
   getUsedRouteSlots,
-  assignShipToRoute,
 } from "../game/routes/RouteManager.ts";
-import { SHIP_TEMPLATES } from "../data/constants.ts";
-import { buyShip } from "../game/fleet/FleetManager.ts";
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -73,13 +69,6 @@ function contractTypeLabel(type: ContractTypeValue): string {
 
 function contractStatusLabel(c: Contract): string {
   if (c.status === ContractStatus.Active) {
-    if (c.linkedRouteId) {
-      const state = gameStore.getState();
-      const route = state.activeRoutes.find((r) => r.id === c.linkedRouteId);
-      if (route && route.assignedShipIds.length === 0) {
-        return "\u26A0 No Ship";
-      }
-    }
     return "\u2713 On Track";
   }
   return c.status;
@@ -698,48 +687,10 @@ export class ContractsScene extends Phaser.Scene {
 
             let nextState = { ...freshState, ...patch };
 
-            if (autoBuyChecked) {
-              const hasIdleShip = nextState.fleet.some(
-                (s) => !s.assignedRouteId,
-              );
-              if (!hasIdleShip) {
-                const cheapestClass = Object.values(ShipClass).reduce(
-                  (best, cls) =>
-                    SHIP_TEMPLATES[cls].purchaseCost <
-                    SHIP_TEMPLATES[best].purchaseCost
-                      ? cls
-                      : best,
-                );
-                if (
-                  nextState.cash >= SHIP_TEMPLATES[cheapestClass].purchaseCost
-                ) {
-                  const { ship, cost } = buyShip(
-                    cheapestClass,
-                    nextState.fleet,
-                  );
-                  nextState = {
-                    ...nextState,
-                    fleet: [...nextState.fleet, ship],
-                    cash: nextState.cash - cost,
-                  };
-                }
-              }
-
-              // Assign the first idle ship to the new route.
-              const linkedRouteId = nextState.contracts.find(
-                (ct) => ct.id === c.id,
-              )?.linkedRouteId;
-              const idleShip = nextState.fleet.find((s) => !s.assignedRouteId);
-              if (idleShip && linkedRouteId) {
-                const { fleet: f2, routes: r2 } = assignShipToRoute(
-                  idleShip.id,
-                  linkedRouteId,
-                  nextState.fleet,
-                  nextState.activeRoutes,
-                );
-                nextState = { ...nextState, fleet: f2, activeRoutes: r2 };
-              }
-            }
+            // Auto-buy/auto-assign UI removed: ships no longer exist in the
+            // capacity-pool model. Contracts auto-link to their route at
+            // accept time; capacity is drawn from the global pool.
+            void autoBuyChecked;
 
             gameStore.setState(nextState);
             this.selectedAvailableId = null;
@@ -829,8 +780,9 @@ export class ContractsScene extends Phaser.Scene {
       : null;
 
     const route = state.activeRoutes.find((r) => r.id === c.linkedRouteId);
-    const shipCount = route ? route.assignedShipIds.length : 0;
-    const hasShip = shipCount > 0;
+    const hasRoute = route != null;
+    const shipCount = hasRoute ? 1 : 0;
+    const hasShip = hasRoute;
 
     const details: Array<{ label: string; value: string }> = [
       { label: "Type", value: contractTypeLabel(c.type) },

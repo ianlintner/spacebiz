@@ -92,7 +92,6 @@ export class Ships2D {
     const texKey = getStarGlowTexture(this.scene, 0xffffff);
 
     for (const visual of visuals) {
-      if (visual.assignedShips.length === 0) continue;
       if (visual.visibleUnits === 0) continue;
 
       // setRoutes() always runs before setShips() (GalaxyMapScene.rebuildTrafficShips).

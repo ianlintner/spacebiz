@@ -21,7 +21,6 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     galaxyShape: "spiral",
     playerEmpireId: "empire-1",
     galaxy: { sectors: [], empires: [], systems: [], planets: [] },
-    fleet: [],
     activeRoutes: [],
     market: { fuelPrice: 10, fuelTrend: "stable", planetMarkets: {} },
     aiCompanies: [],

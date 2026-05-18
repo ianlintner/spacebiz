@@ -306,7 +306,6 @@ function openAIRoute(
         originPlanetId: origin.id,
         destinationPlanetId: dest.id,
         distance,
-        assignedShipIds: [],
         cargoType: null,
       };
       const scope = getRouteScope(tempRoute, state);
@@ -394,7 +393,6 @@ function openAIRoute(
     originPlanetId: bestRoute.origin.id,
     destinationPlanetId: bestRoute.dest.id,
     distance: bestRoute.distance,
-    assignedShipIds: [],
     cargoType: bestRoute.cargoType,
   };
 

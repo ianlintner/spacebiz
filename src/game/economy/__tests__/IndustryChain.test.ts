@@ -48,7 +48,6 @@ function makeRoute(
     originPlanetId: "origin-1",
     destinationPlanetId: destPlanetId,
     distance: 100,
-    assignedShipIds: [],
     cargoType,
     paused,
   };

@@ -27,7 +27,6 @@ function createDefaultState(): GameState {
     galaxyShape: "spiral",
     playerEmpireId: "",
     galaxy: { sectors: [], empires: [], systems: [], planets: [] },
-    fleet: [],
     activeRoutes: [],
     market: { fuelPrice: 10, fuelTrend: "stable", planetMarkets: {} },
     aiCompanies: [],
@@ -96,7 +95,7 @@ function createDefaultState(): GameState {
 /**
  * Dev-only top-level freeze. Catches accidental `gameStore.getState().cash = 0`
  * mutations in tests and during development. Shallow only — nested objects
- * (`fleet`, `galaxy`, etc.) are not frozen, so `state.fleet.push(...)` still
+ * (`galaxy`, etc.) are not frozen, so `state.activeRoutes.push(...)` still
  * silently bypasses the update pipeline. Stripped from production builds via
  * `import.meta.env.DEV`.
  */

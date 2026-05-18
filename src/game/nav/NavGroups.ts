@@ -98,18 +98,9 @@ export function hasSceneUrgency(sceneKey: string, state: GameState): boolean {
     case "RoutesScene":
       return state.activeRoutes.length === 0;
 
-    case "FleetScene": {
-      const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
-      const avgCond =
-        state.fleet.length > 0
-          ? state.fleet.reduce((sum, s) => sum + s.condition, 0) /
-            state.fleet.length
-          : 100;
-      return (
-        (unassigned.length > 0 && state.activeRoutes.length > 0) ||
-        (avgCond < 50 && state.fleet.length > 0)
-      );
-    }
+    case "FleetScene":
+      // Capacity-pool model: no per-ship attention badges; no badge.
+      return false;
 
     case "FinanceScene":
       return state.cash < 0;

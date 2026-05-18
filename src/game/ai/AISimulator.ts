@@ -67,7 +67,7 @@ export function simulateAITurns(
         netProfit: 0,
         cashAtEnd: company.cash,
         routeCount: 0,
-        fleetSize: company.fleet.length,
+        fleetSize: company.activeRoutes.length,
         bankrupt: true,
       });
       return company;
@@ -208,7 +208,7 @@ export function simulateAITurns(
       netProfit: Math.round(netProfit * 100) / 100,
       cashAtEnd: updatedCompany.cash,
       routeCount: updatedCompany.activeRoutes.length,
-      fleetSize: updatedCompany.fleet.length,
+      fleetSize: updatedCompany.activeRoutes.length,
       bankrupt: updatedCompany.bankrupt,
       narrativeBeat: narrative.beat,
     });
@@ -293,7 +293,6 @@ function replaceBankruptCompanies(
       name,
       empireId,
       cash: startingCash,
-      fleet: [], // no individual ships in capacity-pool model
       activeRoutes: [],
       reputation: 40, // slightly below average — they're newcomers
       totalCargoDelivered: 0,

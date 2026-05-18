@@ -1,5 +1,4 @@
 import type {
-  Ship,
   StorytellerState,
   GameState,
   ChoiceEvent,
@@ -21,13 +20,14 @@ import { computeOptionSuccess } from "./SuccessFormula.ts";
  */
 function calculateHealthScore(
   cash: number,
-  fleet: Ship[],
+  activeRouteCount: number,
   lastTurnProfit: number,
 ): number {
   const cashRatio = Math.max(0, Math.min(cash / STARTING_CASH, 2));
   const cashScore = (cashRatio / 2) * 40;
 
-  const fleetSize = Math.max(0, Math.min(fleet.length, 10));
+  // Ships were removed; substitute active route count as the proxy.
+  const fleetSize = Math.max(0, Math.min(activeRouteCount, 10));
   const fleetScore = (fleetSize / 10) * 20;
 
   const profitTarget = STARTING_CASH * 0.1;
@@ -56,10 +56,14 @@ const INTENSITY_DECAY = 0.6;
 export function updateStorytellerState(
   state: StorytellerState,
   cash: number,
-  fleet: Ship[],
+  activeRouteCount: number,
   lastTurnProfit: number,
 ): StorytellerState {
-  const playerHealthScore = calculateHealthScore(cash, fleet, lastTurnProfit);
+  const playerHealthScore = calculateHealthScore(
+    cash,
+    activeRouteCount,
+    lastTurnProfit,
+  );
 
   const turnsInDebt = cash < 0 ? state.turnsInDebt + 1 : 0;
   const consecutiveProfitTurns =

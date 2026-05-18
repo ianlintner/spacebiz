@@ -1,10 +1,6 @@
 import type * as Phaser from "phaser";
 import { SeededRNG } from "../../../../src/utils/SeededRNG.ts";
-import type {
-  EventCategory,
-  PlanetType,
-  ShipClass,
-} from "../../../../src/data/types.ts";
+import type { EventCategory, PlanetType } from "../../../../src/data/types.ts";
 import { getTheme, lerpColor } from "@spacebiz/ui";
 
 // Re-export expression types from the Phaser-free module so callers can
@@ -29,7 +25,7 @@ export type AlienRole =
 
 export interface PortraitData {
   planetType?: PlanetType;
-  shipClass?: ShipClass;
+  shipClass?: string;
   starColor?: number;
   planetCount?: number;
   eventCategory?: EventCategory;
@@ -382,7 +378,7 @@ function renderResearchPortrait(
 function renderShipPortrait(
   g: Phaser.GameObjects.Graphics,
   grid: PixelGrid,
-  shipClass: ShipClass,
+  shipClass: string,
   seed: number,
 ): void {
   const rng = new SeededRNG(seed);
@@ -390,7 +386,7 @@ function renderShipPortrait(
   fillGradientV(g, grid, 0x03050a, 0x11182a);
   starfield(g, grid, rng, 14, [0xeef5ff, 0x7fdfff]);
 
-  const accentMap: Record<ShipClass, number> = {
+  const accentMap: Record<string, number> = {
     cargoShuttle: 0x2de5d4,
     passengerShuttle: 0xf0ca68,
     mixedHauler: 0x7ed2ff,
@@ -880,7 +876,7 @@ export function drawResearchPortrait(
 
 export function drawShipPortrait(
   g: Phaser.GameObjects.Graphics,
-  shipClass: ShipClass,
+  shipClass: string,
   w: number,
   h: number,
   seed: number,

@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { PlanetBiome, EmpireArchetype } from "../../../data/types.ts";
 import {
   CargoType,
-  ShipClass,
   PlanetType,
   ContractStatus,
   ContractType,
@@ -144,30 +143,12 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
         },
       ],
     },
-    fleet: [
-      {
-        id: "ship-1",
-        name: "Test Ship",
-        class: ShipClass.CargoShuttle,
-        cargoCapacity: 80,
-        passengerCapacity: 0,
-        speed: 4,
-        fuelEfficiency: 0.8,
-        reliability: 92,
-        age: 0,
-        condition: 100,
-        purchaseCost: 40000,
-        maintenanceCost: 2000,
-        assignedRouteId: "route-1",
-      },
-    ],
     activeRoutes: [
       {
         id: "route-1",
         originPlanetId: "planet-a",
         destinationPlanetId: "planet-b",
         distance: 50,
-        assignedShipIds: ["ship-1"],
         cargoType: CargoType.Food,
       },
     ],

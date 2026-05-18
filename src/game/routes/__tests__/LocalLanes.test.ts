@@ -105,7 +105,6 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
     galaxyShape: "spiral",
     playerEmpireId: "empire-1",
     galaxy: { sectors: [], empires: [], systems, planets },
-    fleet: [],
     activeRoutes: [],
     market: { fuelPrice: 10, fuelTrend: "stable", planetMarkets: {} },
     aiCompanies: [],
@@ -165,7 +164,6 @@ function makeLocalRoute(id: string): ActiveRoute {
     destinationPlanetId: "planet-0-0-1",
     distance: 15,
     cargoType: "rawMaterials",
-    assignedShipIds: [],
   };
 }
 
@@ -177,7 +175,6 @@ function makeInterstellarRoute(id: string): ActiveRoute {
     destinationPlanetId: "planet-0-1-0",
     distance: 140,
     cargoType: "technology",
-    assignedShipIds: [],
   };
 }
 
@@ -204,7 +201,6 @@ describe("isLocalRoute", () => {
       destinationPlanetId: "planet-0-0-1",
       distance: 10,
       cargoType: null,
-      assignedShipIds: [],
     };
     expect(isLocalRoute(route, state)).toBe(false);
   });

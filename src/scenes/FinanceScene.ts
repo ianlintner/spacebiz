@@ -24,7 +24,6 @@ import {
 } from "@spacebiz/ui";
 import { attachReflowHandler } from "../ui/index.ts";
 import { PortraitPanel } from "@rogue-universe/shared";
-import { calculateShipValue } from "../game/fleet/FleetManager.ts";
 import { getHubUpkeep } from "../game/hub/HubManager.ts";
 import { getRevenueMultiplier } from "../game/hub/HubBonusCalculator.ts";
 
@@ -82,15 +81,12 @@ export class FinanceScene extends Phaser.Scene {
     const state = gameStore.getState();
 
     // --- Left sidebar: Company health portrait ---
-    const fleetValue = state.fleet.reduce(
-      (sum, ship) => sum + calculateShipValue(ship),
-      0,
-    );
+    // Capacity-pool model: no ship-liquidation value contributes to net worth.
     const totalLoans = state.loans.reduce(
       (sum, loan) => sum + loan.remainingBalance,
       0,
     );
-    const netWorth = state.cash + fleetValue - totalLoans;
+    const netWorth = state.cash - totalLoans;
 
     this.portrait = new PortraitPanel(this, {
       x: L.sidebarLeft,
@@ -105,7 +101,7 @@ export class FinanceScene extends Phaser.Scene {
       [
         { label: "Cash", value: formatCash(state.cash) },
         { label: "Net Worth", value: formatCash(netWorth) },
-        { label: "Fleet Value", value: formatCash(fleetValue) },
+        { label: "Fleet Value", value: formatCash(0) },
         { label: "Loans", value: formatCash(totalLoans) },
       ],
       { eventCategory: "market" },
@@ -449,12 +445,8 @@ export class FinanceScene extends Phaser.Scene {
     // Cash
     addRow("Cash", formatCash(state.cash), theme.colors.accent);
 
-    // Fleet value
-    const fleetValue = state.fleet.reduce(
-      (sum, ship) => sum + calculateShipValue(ship),
-      0,
-    );
-    addRow("Fleet Value", formatCash(fleetValue), theme.colors.profit);
+    // Fleet value — capacity-pool model has no per-ship liquidation value.
+    addRow("Fleet Value", formatCash(0), theme.colors.profit);
 
     // Total loans
     const totalLoans = state.loans.reduce(
@@ -469,8 +461,8 @@ export class FinanceScene extends Phaser.Scene {
 
     addSeparator();
 
-    // Net worth
-    const netWorth = state.cash + fleetValue - totalLoans;
+    // Net worth — capacity-pool model excludes ship liquidation value.
+    const netWorth = state.cash - totalLoans;
     addRow(
       "Net Worth",
       formatCash(netWorth),

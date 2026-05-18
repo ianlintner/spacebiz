@@ -395,23 +395,6 @@ export const EmpireArchetype = {
 export type EmpireArchetype =
   (typeof EmpireArchetype)[keyof typeof EmpireArchetype];
 
-export const ShipClass = {
-  CargoShuttle: "cargoShuttle",
-  PassengerShuttle: "passengerShuttle",
-  MixedHauler: "mixedHauler",
-  FastCourier: "fastCourier",
-  BulkFreighter: "bulkFreighter",
-  StarLiner: "starLiner",
-  MegaHauler: "megaHauler",
-  LuxuryLiner: "luxuryLiner",
-  Tug: "tug",
-  RefrigeratedHauler: "refrigeratedHauler",
-  ArmoredFreighter: "armoredFreighter",
-  DiplomaticYacht: "diplomaticYacht",
-  ColonyShip: "colonyShip",
-} as const;
-export type ShipClass = (typeof ShipClass)[keyof typeof ShipClass];
-
 export const EventCategory = {
   Market: "market",
   Hazard: "hazard",
@@ -685,42 +668,11 @@ export interface MarketState {
   planetMarkets: Record<string, PlanetMarket>;
 }
 
-export interface ShipTemplate {
-  class: ShipClass;
-  name: string;
-  cargoCapacity: number;
-  passengerCapacity: number;
-  speed: number;
-  fuelEfficiency: number;
-  baseReliability: number;
-  purchaseCost: number;
-  baseMaintenance: number;
-}
-
-export interface Ship {
-  id: string;
-  name: string;
-  class: ShipClass;
-  cargoCapacity: number;
-  passengerCapacity: number;
-  speed: number;
-  fuelEfficiency: number;
-  reliability: number;
-  age: number;
-  condition: number;
-  purchaseCost: number;
-  maintenanceCost: number;
-  assignedRouteId: string | null;
-  /** Captain assigned to this ship, if any */
-  captainId?: string;
-}
-
 export interface ActiveRoute {
   id: string;
   originPlanetId: string;
   destinationPlanetId: string;
   distance: number;
-  assignedShipIds: string[];
   cargoType: CargoType | null;
   /**
    * If true, the route is paused: the simulator skips revenue and fuel for
@@ -989,7 +941,6 @@ export interface AICompany {
   name: string;
   empireId: string;
   cash: number;
-  fleet: Ship[];
   activeRoutes: ActiveRoute[];
   reputation: number;
   totalCargoDelivered: number;
@@ -1348,7 +1299,6 @@ export interface GameState {
     systems: StarSystem[];
     planets: Planet[];
   };
-  fleet: Ship[];
   activeRoutes: ActiveRoute[];
   market: MarketState;
   aiCompanies: AICompany[];

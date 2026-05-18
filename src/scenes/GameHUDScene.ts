@@ -2047,29 +2047,7 @@ export class GameHUDScene extends Phaser.Scene {
       return;
     }
 
-    const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
-    if (unassigned.length > 0 && state.activeRoutes.length > 0) {
-      this.actionPromptBg.setVisible(true);
-      this.actionPromptLabel.setVisible(true);
-      this.actionPromptLabel.setText(
-        `${unassigned.length} ship${unassigned.length > 1 ? "s" : ""} unassigned — Fleet`,
-      );
-      this.actionPromptLabel.setLabelColor(theme.colors.warning);
-      return;
-    }
-
-    const avgCondition =
-      state.fleet.length > 0
-        ? state.fleet.reduce((sum, s) => sum + s.condition, 0) /
-          state.fleet.length
-        : 100;
-    if (avgCondition < 50 && state.fleet.length > 0) {
-      this.actionPromptBg.setVisible(true);
-      this.actionPromptLabel.setVisible(true);
-      this.actionPromptLabel.setText("Fleet needs maintenance — Fleet");
-      this.actionPromptLabel.setLabelColor(theme.colors.loss);
-      return;
-    }
+    // Capacity-pool model: no per-ship unassigned / condition prompts.
 
     if (state.cash < 0 && state.storyteller.turnsInDebt >= 2) {
       this.actionPromptBg.setVisible(true);
@@ -2259,17 +2237,8 @@ export class GameHUDScene extends Phaser.Scene {
     const state = gameStore.getState();
     const issues: string[] = [];
 
-    if (state.activeRoutes.length === 0 && state.fleet.length > 0) {
-      issues.push("You have no active routes. Your ships will sit idle.");
-    }
-    if (state.fleet.length === 0) {
-      issues.push("You have no ships! Buy one from Fleet first.");
-    }
-    const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
-    if (unassigned.length > 0 && state.activeRoutes.length > 0) {
-      issues.push(
-        `${unassigned.length} ship${unassigned.length > 1 ? "s" : ""} not assigned to a route.`,
-      );
+    if (state.activeRoutes.length === 0) {
+      issues.push("You have no active routes. Open Routes to create one.");
     }
 
     if (issues.length === 0) {
@@ -2313,8 +2282,6 @@ export class GameHUDScene extends Phaser.Scene {
   getSmartPostTurnScene(): string {
     const state = gameStore.getState();
     if (state.activeRoutes.length === 0) return "RoutesScene";
-    const unassigned = state.fleet.filter((s) => !s.assignedRouteId);
-    if (unassigned.length > 0) return "FleetScene";
     if (state.cash < 0) return "FinanceScene";
     return "GalaxyMapScene";
   }

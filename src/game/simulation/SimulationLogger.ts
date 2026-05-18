@@ -136,10 +136,8 @@ export class SimulationLogger {
     // Update previous cash for next turn's delta calculation
     for (const company of state.aiCompanies) {
       this.previousCash.set(company.id, company.cash);
-      this.previousFleetIds.set(
-        company.id,
-        new Set(company.fleet.map((s) => s.id)),
-      );
+      // Ships removed; fleet ID tracking kept as an empty set for back-compat.
+      this.previousFleetIds.set(company.id, new Set<string>());
       this.previousRouteIds.set(
         company.id,
         new Set(company.activeRoutes.map((r) => r.id)),
@@ -174,11 +172,7 @@ export class SimulationLogger {
         continue;
       }
 
-      if (
-        company.fleet.length > 0 &&
-        company.activeRoutes.length === 0 &&
-        company.cash > 50000
-      ) {
+      if (company.activeRoutes.length === 0 && company.cash > 50000) {
         const count = (this.noRouteTurnCounts.get(company.id) ?? 0) + 1;
         this.noRouteTurnCounts.set(company.id, count);
 
@@ -186,11 +180,11 @@ export class SimulationLogger {
           warnings.push({
             level: "warn",
             code: "AI_STUCK_NO_ROUTES",
-            message: `${company.name} has ${company.fleet.length} ships but 0 routes for ${count} turns`,
+            message: `${company.name} has cash but 0 routes for ${count} turns`,
             context: {
               companyId: company.id,
               companyName: company.name,
-              fleetSize: company.fleet.length,
+              fleetSize: 0,
               cash: company.cash,
               turnsStuck: count,
             },
@@ -419,12 +413,8 @@ export class SimulationLogger {
       const revenue = summary?.revenue ?? 0;
       const cashDelta = company.cash - prevCash;
 
-      // Detect new ships by comparing fleet IDs to previous turn
-      const prevFleet =
-        this.previousFleetIds.get(company.id) ?? new Set<string>();
-      const newShips = company.fleet
-        .filter((s) => !prevFleet.has(s.id))
-        .map((s) => s.name);
+      // Ships removed: no per-vessel purchase tracking.
+      const newShips: string[] = [];
 
       // Detect new routes by comparing route IDs to previous turn
       const prevRoutes =
@@ -450,7 +440,7 @@ export class SimulationLogger {
           tariffs: 0,
           licenses: 0,
         },
-        fleetSize: company.fleet.length,
+        fleetSize: company.activeRoutes.length,
         routeCount: company.activeRoutes.length,
         shipsPurchased: newShips,
         routesOpened: newRoutes,

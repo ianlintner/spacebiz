@@ -70,7 +70,6 @@ export function makeCompany(
     name,
     empireId: "emp-1",
     cash,
-    fleet: [],
     activeRoutes: [],
     reputation: 50,
     totalCargoDelivered: 0,

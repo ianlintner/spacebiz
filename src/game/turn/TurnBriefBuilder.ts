@@ -23,20 +23,7 @@ export function buildTurnBrief(state: GameState): TurnBriefCard[] {
   let idCounter = 0;
   const nextId = (): string => `brief-${++idCounter}`;
 
-  // 1. Ships with critical condition (< 30)
-  for (const ship of state.fleet) {
-    if (ship.condition < 30) {
-      cards.push({
-        id: nextId(),
-        category: "warning",
-        urgency: "critical",
-        title: "Ship Critical",
-        summary: `${ship.name} is near breakdown`,
-        action: "resolve",
-        linkedId: ship.id,
-      });
-    }
-  }
+  // 1. (was: ship-condition warnings — ships removed in capacity model)
 
   // 2. Active contracts expiring in 1 or 2 turns
   for (const contract of state.contracts) {
@@ -76,20 +63,7 @@ export function buildTurnBrief(state: GameState): TurnBriefCard[] {
     });
   }
 
-  // 4. Ships with no assigned route (idle)
-  const idleCount = state.fleet.filter(
-    (s) => s.assignedRouteId === null,
-  ).length;
-  if (idleCount > 0) {
-    cards.push({
-      id: nextId(),
-      category: "warning",
-      urgency: "medium",
-      title: "Idle Ships",
-      summary: `${idleCount} ship(s) not assigned to routes`,
-      action: "resolve",
-    });
-  }
+  // 4. (was: idle-ship warning — ships removed in capacity model)
 
   // 5. Route market opportunities expiring soon
   for (const entry of state.routeMarket) {

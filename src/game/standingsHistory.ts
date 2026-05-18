@@ -1,7 +1,4 @@
-import type { AICompany, GameState, Ship, ShipClass } from "../data/types.ts";
-import { ShipClass as ShipClassValues } from "../data/types.ts";
-import { SHIP_TEMPLATES } from "../data/constants.ts";
-
+import type { AICompany, GameState } from "../data/types.ts";
 export type StandingsMetric = "cash" | "routes" | "fleet";
 
 export interface StandingsSnapshot {
@@ -13,8 +10,11 @@ export interface CompanyTimeSeries {
   /** Stable identifier — "player" for the player, AICompany.id for rivals. */
   id: string;
   snapshots: StandingsSnapshot[];
-  /** Used to pick the sprite at the line tip. */
-  shipClass: ShipClass;
+  /**
+   * Legacy field. Ships no longer exist; kept as a string for compatibility
+   * with renderers that still key on a sprite name. Always `"capacity"`.
+   */
+  shipClass: string;
   isBankrupt: boolean;
   /** Final/current metric value, used for rank ordering. */
   currentValue: number;
@@ -33,24 +33,6 @@ export interface StandingsData {
 
 const RIVAL_BAND_FUZZ = 0.15;
 
-/**
- * Pick the ShipClass with the highest purchaseCost in the fleet.
- * Returns CargoShuttle for empty fleets. Tie-break: first in array order.
- */
-export function selectFlagshipClass(fleet: readonly Ship[]): ShipClass {
-  if (fleet.length === 0) return ShipClassValues.CargoShuttle;
-  let best = fleet[0];
-  let bestCost = SHIP_TEMPLATES[best.class]?.purchaseCost ?? 0;
-  for (let i = 1; i < fleet.length; i++) {
-    const cost = SHIP_TEMPLATES[fleet[i].class]?.purchaseCost ?? 0;
-    if (cost > bestCost) {
-      best = fleet[i];
-      bestCost = cost;
-    }
-  }
-  return best.class;
-}
-
 /** ±15% range around `value`. */
 export function rivalBandBounds(value: number): {
   lower: number;
@@ -66,7 +48,6 @@ function buildPlayerSeries(
   state: GameState,
   metric: StandingsMetric,
 ): CompanyTimeSeries {
-  const flagship = selectFlagshipClass(state.fleet);
   const snapshots: StandingsSnapshot[] = [];
 
   if (metric === "cash") {
@@ -80,16 +61,16 @@ function buildPlayerSeries(
     }
     snapshots.push({ turn: state.turn, value: state.activeRoutes.length });
   } else {
-    // Fleet metric: TurnResult does not record playerFleetSize, so we only
-    // know the current turn. Future work could add it to TurnResult.
-    snapshots.push({ turn: state.turn, value: state.fleet.length });
+    // Fleet metric: ships no longer exist; use active route count as the
+    // closest proxy for fleet size in the capacity-pool model.
+    snapshots.push({ turn: state.turn, value: state.activeRoutes.length });
   }
 
   const last = snapshots[snapshots.length - 1];
   return {
     id: "player",
     snapshots,
-    shipClass: flagship,
+    shipClass: "capacity",
     isBankrupt: false,
     currentValue: last?.value ?? 0,
   };
@@ -100,7 +81,6 @@ function buildRivalSeries(
   rival: AICompany,
   metric: StandingsMetric,
 ): CompanyTimeSeries {
-  const flagship = selectFlagshipClass(rival.fleet);
   const snapshots: StandingsSnapshot[] = [];
   let bankruptSeen = false;
 
@@ -117,16 +97,15 @@ function buildRivalSeries(
 
     if (summary.bankrupt) {
       bankruptSeen = true;
-      break; // Trim subsequent zero-value snapshots after bankruptcy.
+      break;
     }
   }
 
-  // Append a current-turn snapshot for active rivals so the tip lands at "now".
   if (!bankruptSeen && !rival.bankrupt) {
     let curr: number;
     if (metric === "cash") curr = rival.cash;
     else if (metric === "routes") curr = rival.activeRoutes.length;
-    else curr = rival.fleet.length;
+    else curr = rival.activeRoutes.length;
     if (
       snapshots.length === 0 ||
       snapshots[snapshots.length - 1].turn !== state.turn
@@ -139,7 +118,7 @@ function buildRivalSeries(
   return {
     id: rival.id,
     snapshots,
-    shipClass: flagship,
+    shipClass: "capacity",
     isBankrupt: bankruptSeen || rival.bankrupt,
     currentValue: last?.value ?? 0,
   };
@@ -161,8 +140,6 @@ export function buildStandingsData(
     }
   }
 
-  // Y-axis range: include the *upper band* of every rival snapshot, since
-  // bands float against this shared scale and must not clip.
   let yMin = 0;
   let yMax = 0;
   for (const snap of playerSeries.snapshots) {
@@ -177,20 +154,23 @@ export function buildStandingsData(
       if (lower < yMin) yMin = lower;
     }
   }
-  if (yMax === yMin) yMax = yMin + 1; // avoid a degenerate zero-height range.
+  if (yMax === yMin) yMax = yMin + 1;
 
   return { metric, playerSeries, rivalSeries, maxTurns, yMin, yMax };
 }
 
-/**
- * Compute current ranks (1-indexed) across all companies in the data,
- * sorted by `currentValue` descending. Bankrupt companies are still
- * ranked but their badge will be rendered as "✕" by the UI layer.
- */
 export function computeRanks(data: StandingsData): Map<string, number> {
   const all = [data.playerSeries, ...data.rivalSeries];
   const sorted = [...all].sort((a, b) => b.currentValue - a.currentValue);
   const ranks = new Map<string, number>();
   sorted.forEach((s, i) => ranks.set(s.id, i + 1));
   return ranks;
+}
+
+/**
+ * @deprecated Kept as a no-op stub; ships no longer exist. Callers should
+ * remove their usage.
+ */
+export function selectFlagshipClass(_fleet: readonly unknown[]): string {
+  return "capacity";
 }

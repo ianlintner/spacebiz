@@ -18,8 +18,6 @@ import {
   SCOUT_COST_AP,
   SCOUT_COST_CASH,
   ROUTE_MARKET_SCOPE_QUOTA,
-  DISTANCE_PREMIUM_RATE,
-  DISTANCE_PREMIUM_CAP,
 } from "../../data/constants.ts";
 import type { SeededRNG } from "../../utils/SeededRNG.ts";
 import { calculatePrice } from "../economy/PriceCalculator.ts";
@@ -113,11 +111,7 @@ function estimateExactProfit(
 
   const scope = classifyPairScope(origin, dest, state.galaxy.systems);
   const scopeMult = getScopeDemandMultiplier(cargoType, scope);
-  const distancePremium =
-    scope === RouteScopeEnum.System
-      ? 0
-      : Math.min(DISTANCE_PREMIUM_CAP, distance * DISTANCE_PREMIUM_RATE);
-  const revenueMultiplier = scopeMult * (1 + distancePremium);
+  const revenueMultiplier = scopeMult;
 
   const fuelPerTrip = distance * 2 * 0.8 * state.market.fuelPrice;
   const revenue = trips * representativeCapacity * price * revenueMultiplier;
@@ -133,7 +127,6 @@ function estimateExactProfit(
       originPlanetId: origin.id,
       destinationPlanetId: dest.id,
       distance,
-      assignedShipIds: [],
       cargoType,
     };
     tariff = calculateTariff(

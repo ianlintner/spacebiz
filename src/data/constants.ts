@@ -1,6 +1,4 @@
 import {
-  ShipClass,
-  type ShipTemplate,
   PlanetType,
   CargoType,
   TechBranch,
@@ -14,7 +12,7 @@ import {
 
 // ── Save Version ───────────────────────────────────────────────
 /** Increment when GameState shape changes in a save-incompatible way */
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 // ── Action Points ──────────────────────────────────────────────
 export const ACTION_POINTS_PER_TURN = 2;
@@ -41,11 +39,6 @@ export const LOAN_INTEREST_RATE_MIN = 0.05;
 export const LOAN_INTEREST_RATE_MAX = 0.08;
 export const SATURATION_DECAY_RATE = 0.08;
 export const SATURATION_PRICE_IMPACT = 0.8;
-export const CONDITION_DECAY_MIN = 2;
-export const CONDITION_DECAY_MAX = 5;
-export const OVERHAUL_COST_RATIO = 0.3;
-export const OVERHAUL_RESTORE_CONDITION = 90;
-export const BREAKDOWN_THRESHOLD = 50;
 export const TURN_DURATION = 100;
 /** Hard cap on trips per turn to prevent intra-system routes from being exploited */
 export const MAX_TRIPS_PER_TURN = 10;
@@ -61,10 +54,6 @@ export const LOCAL_ROUTE_SLOTS = 2;
 export const LOCAL_ROUTE_REVENUE_CAP = 0.5;
 /** @deprecated alias of LOCAL_ROUTE_REVENUE_CAP — replaced by scope multipliers. */
 export const INTRA_SYSTEM_REVENUE_MULTIPLIER = LOCAL_ROUTE_REVENUE_CAP;
-// Longer routes command higher freight rates (per distance unit, capped)
-export const DISTANCE_PREMIUM_RATE = 0.0015;
-export const DISTANCE_PREMIUM_CAP = 0.5;
-
 // ── Route Scope Slot Pools ─────────────────────────────────────
 //
 // Routes are classified by scope (see `getRouteScope` in RouteManager.ts) and
@@ -192,13 +181,6 @@ export const ROUTE_MARKET_SCOPE_QUOTA: Record<RouteScope, number> = {
 export const BASE_LICENSE_FEE = 5000;
 export const LICENSE_FEE_DISTANCE_DIVISOR = 100;
 export const LICENSE_FEE_ROUTE_ESCALATION = 0.25;
-
-// ── Fleet Overhead ─────────────────────────────────────────────
-
-/** Ships below this count incur no fleet overhead */
-export const FLEET_OVERHEAD_THRESHOLD = 4;
-/** Per-ship overhead rate above the threshold */
-export const FLEET_OVERHEAD_PER_SHIP = 0.05;
 
 // ── Fleet Capacity Pools ────────────────────────────────────────
 /** Starting freight capacity units before any Logistics AI research */
@@ -467,160 +449,9 @@ export const TARIFF_HOSTILE_MAX = 0.2;
 // ── AI Constants ───────────────────────────────────────────────
 
 export const AI_STARTING_CASH = 200000;
-export const AI_BUY_THRESHOLD_MULTIPLIER = 1.5; // buy when cash > 1.5× cheapest ship
 export const AI_MAX_ROUTES = 12; // cap routes per AI company
-export const AI_MAX_FLEET = 15; // cap fleet size per AI company
-export const AI_MAX_PURCHASES_PER_TURN = 2; // max ships bought per turn
-export const AI_OVERHAUL_CONDITION = 60; // overhaul ships below this condition
-export const AI_MAX_SHIP_SPEND_RATIO = 0.4; // SteadyHauler won't spend more than 40% cash on one ship
 export const AI_REPLACEMENT_DELAY = 3; // turns after bankruptcy before a replacement company spawns
 export const AI_REPLACEMENT_CASH_RATIO = 0.75; // replacement companies start with 75% of normal starting cash
-
-export const SHIP_TEMPLATES: Record<ShipClass, ShipTemplate> = {
-  [ShipClass.CargoShuttle]: {
-    class: ShipClass.CargoShuttle,
-    name: "Cargo Shuttle",
-    cargoCapacity: 80,
-    passengerCapacity: 0,
-    speed: 4,
-    fuelEfficiency: 0.8,
-    baseReliability: 92,
-    purchaseCost: 40000,
-    baseMaintenance: 2000,
-  },
-  [ShipClass.PassengerShuttle]: {
-    class: ShipClass.PassengerShuttle,
-    name: "Passenger Shuttle",
-    cargoCapacity: 0,
-    passengerCapacity: 60,
-    speed: 5,
-    fuelEfficiency: 1.0,
-    baseReliability: 90,
-    purchaseCost: 55000,
-    baseMaintenance: 3000,
-  },
-  [ShipClass.MixedHauler]: {
-    class: ShipClass.MixedHauler,
-    name: "Mixed Hauler",
-    cargoCapacity: 50,
-    passengerCapacity: 30,
-    speed: 3,
-    fuelEfficiency: 1.2,
-    baseReliability: 88,
-    purchaseCost: 60000,
-    baseMaintenance: 3500,
-  },
-  [ShipClass.FastCourier]: {
-    class: ShipClass.FastCourier,
-    name: "Fast Courier",
-    cargoCapacity: 30,
-    passengerCapacity: 10,
-    speed: 8,
-    fuelEfficiency: 2.0,
-    baseReliability: 85,
-    purchaseCost: 80000,
-    baseMaintenance: 5000,
-  },
-  [ShipClass.BulkFreighter]: {
-    class: ShipClass.BulkFreighter,
-    name: "Bulk Freighter",
-    cargoCapacity: 200,
-    passengerCapacity: 0,
-    speed: 2,
-    fuelEfficiency: 1.0,
-    baseReliability: 94,
-    purchaseCost: 180000,
-    baseMaintenance: 8000,
-  },
-  [ShipClass.StarLiner]: {
-    class: ShipClass.StarLiner,
-    name: "Star Liner",
-    cargoCapacity: 0,
-    passengerCapacity: 150,
-    speed: 6,
-    fuelEfficiency: 1.5,
-    baseReliability: 88,
-    purchaseCost: 280000,
-    baseMaintenance: 12000,
-  },
-  [ShipClass.MegaHauler]: {
-    class: ShipClass.MegaHauler,
-    name: "Mega Hauler",
-    cargoCapacity: 400,
-    passengerCapacity: 0,
-    speed: 2,
-    fuelEfficiency: 1.2,
-    baseReliability: 90,
-    purchaseCost: 500000,
-    baseMaintenance: 22000,
-  },
-  [ShipClass.LuxuryLiner]: {
-    class: ShipClass.LuxuryLiner,
-    name: "Luxury Liner",
-    cargoCapacity: 20,
-    passengerCapacity: 120,
-    speed: 7,
-    fuelEfficiency: 1.8,
-    baseReliability: 86,
-    purchaseCost: 600000,
-    baseMaintenance: 25000,
-  },
-  [ShipClass.Tug]: {
-    class: ShipClass.Tug,
-    name: "System Tug",
-    cargoCapacity: 20,
-    passengerCapacity: 0,
-    speed: 3,
-    fuelEfficiency: 0.6,
-    baseReliability: 95,
-    purchaseCost: 15000,
-    baseMaintenance: 800,
-  },
-  [ShipClass.RefrigeratedHauler]: {
-    class: ShipClass.RefrigeratedHauler,
-    name: "Refrigerated Hauler",
-    cargoCapacity: 70,
-    passengerCapacity: 0,
-    speed: 3,
-    fuelEfficiency: 1.1,
-    baseReliability: 90,
-    purchaseCost: 120000,
-    baseMaintenance: 6000,
-  },
-  [ShipClass.ArmoredFreighter]: {
-    class: ShipClass.ArmoredFreighter,
-    name: "Armored Freighter",
-    cargoCapacity: 150,
-    passengerCapacity: 0,
-    speed: 2,
-    fuelEfficiency: 1.4,
-    baseReliability: 96,
-    purchaseCost: 240000,
-    baseMaintenance: 11000,
-  },
-  [ShipClass.DiplomaticYacht]: {
-    class: ShipClass.DiplomaticYacht,
-    name: "Diplomatic Yacht",
-    cargoCapacity: 15,
-    passengerCapacity: 40,
-    speed: 7,
-    fuelEfficiency: 1.6,
-    baseReliability: 93,
-    purchaseCost: 200000,
-    baseMaintenance: 9000,
-  },
-  [ShipClass.ColonyShip]: {
-    class: ShipClass.ColonyShip,
-    name: "Colony Ship",
-    cargoCapacity: 120,
-    passengerCapacity: 80,
-    speed: 2,
-    fuelEfficiency: 1.5,
-    baseReliability: 91,
-    purchaseCost: 350000,
-    baseMaintenance: 15000,
-  },
-};
 
 export const PLANET_PASSENGER_VOLUME: Record<PlanetType, number> = {
   [PlanetType.Agricultural]: 15,

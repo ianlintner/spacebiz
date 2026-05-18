@@ -485,7 +485,6 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       // Grounded routes generate no revenue; charge mothball fee instead
       const mothballFee = calculateMothballFee(
         route,
-        nextState.fleet,
         nextState.activeEvents,
         nextState.galaxy.systems,
         nextState.galaxy.planets,
@@ -1000,7 +999,7 @@ export function simulateTurn(state: GameState, rng: SeededRNG): GameState {
       ? { ...nextState.storyteller, turnsSinceLastDecision: -1 }
       : nextState.storyteller,
     nextState.cash,
-    nextState.fleet,
+    nextState.activeRoutes.length,
     netProfit,
   );
   // If player resolved a choice this turn, the +1 in updateStorytellerState brings it to 0

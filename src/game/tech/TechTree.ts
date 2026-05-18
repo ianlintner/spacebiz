@@ -176,7 +176,7 @@ export function calculateRPPerTurn(state: GameState): number {
   // Diversity bonus
   const distinctCargos = new Set(
     state.activeRoutes
-      .filter((r) => r.cargoType && r.assignedShipIds.length > 0)
+      .filter((r) => r.cargoType && !r.paused)
       .map((r) => r.cargoType),
   );
   if (distinctCargos.size >= RP_DIVERSITY_THRESHOLD) {
@@ -189,7 +189,7 @@ export function calculateRPPerTurn(state: GameState): number {
   );
   let researchRouteCount = 0;
   for (const route of state.activeRoutes) {
-    if (route.assignedShipIds.length === 0) continue;
+    if (route.paused) continue;
     if (
       researchPlanets.has(route.originPlanetId) ||
       researchPlanets.has(route.destinationPlanetId)

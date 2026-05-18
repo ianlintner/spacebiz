@@ -39,7 +39,6 @@ import {
 } from "./siteContent.ts";
 import { CEO_PORTRAITS } from "./data/portraits.ts";
 import { EMPIRE_LEADER_PORTRAITS } from "./data/empireLeaderPortraits.ts";
-import { SHIP_TEMPLATES } from "./data/constants.ts";
 import { writeDraft } from "./game/SaveManager.ts";
 import { gameStore } from "./data/GameStore.ts";
 
@@ -217,12 +216,6 @@ function renderWikiLinks(): string {
       title: `Leader Directory (${EMPIRE_LEADER_PORTRAITS.length})`,
       href: "/wiki/leaders.html",
       caption: "Empire leadership roster with archetype and species labels.",
-    },
-    {
-      title: `Ship Directory (${Object.keys(SHIP_TEMPLATES).length})`,
-      href: "/wiki/ships.html",
-      caption:
-        "Ship classes, capacities, performance, and operating cost baselines.",
     },
   ]
     .map(

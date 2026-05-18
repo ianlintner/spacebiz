@@ -87,7 +87,6 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
         },
       ],
     },
-    fleet: [],
     activeRoutes: [],
     market: { fuelPrice: 12, fuelTrend: "stable", planetMarkets: {} },
     aiCompanies: [],

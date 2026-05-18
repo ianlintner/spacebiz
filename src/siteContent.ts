@@ -2,7 +2,6 @@ import {
   BASE_CARGO_PRICES,
   MAX_TURNS,
   STARTING_CASH,
-  SHIP_TEMPLATES,
 } from "./data/constants.ts";
 
 // Static cheat-sheet mapping for the marketing/help site. The real per-planet
@@ -47,7 +46,7 @@ const PLANET_FAMILY_PROFILES: Record<
     demands: [CargoType.Food, CargoType.Medical, CargoType.Technology],
   },
 };
-import { CargoType, PlanetType, ShipClass } from "./data/types.ts";
+import { CargoType, PlanetType } from "./data/types.ts";
 
 export interface HeroMetric {
   label: string;
@@ -84,10 +83,18 @@ export interface DisclosureCard {
   bullets: string[];
 }
 
-const STARTER_SHIPS = [
-  SHIP_TEMPLATES[ShipClass.CargoShuttle],
-  SHIP_TEMPLATES[ShipClass.PassengerShuttle],
-];
+// Ships removed in the fleet capacity redesign — keep an empty list so the
+// "Starter Fleet" UI section becomes a no-op gracefully.
+const STARTER_SHIPS: Array<{
+  name: string;
+  class: string;
+  cargoCapacity: number;
+  passengerCapacity: number;
+  speed: number;
+  fuelEfficiency: number;
+  baseReliability: number;
+  purchaseCost: number;
+}> = [];
 
 const LABELS: Record<string, string> = {
   [CargoType.Passengers]: "Passengers",
@@ -331,7 +338,7 @@ export const DISCLOSURE_CARDS: DisclosureCard[] = [
 export const STARTER_FLEET_CARDS: CheatSheetCard[] = STARTER_SHIPS.map(
   (ship) => ({
     title: ship.name,
-    caption: `${ship.class === ShipClass.CargoShuttle ? "Freight" : "Passenger"} starter hull`,
+    caption: `${ship.cargoCapacity > 0 ? "Freight" : "Passenger"} starter hull`,
     bullets: [
       `Capacity: ${ship.cargoCapacity > 0 ? `${ship.cargoCapacity} cargo` : `${ship.passengerCapacity} passengers`}`,
       `Speed: ${ship.speed} | Fuel efficiency: ${ship.fuelEfficiency.toFixed(1)}`,

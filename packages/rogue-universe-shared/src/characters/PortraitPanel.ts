@@ -14,13 +14,11 @@ import type {
 } from "./PortraitGenerator.ts";
 import type {
   Planet,
-  Ship,
   StarSystem,
   GameEvent,
   AICompany,
   Empire,
 } from "../../../../src/data/types.ts";
-import { SHIP_TEMPLATES } from "../../../../src/data/constants.ts";
 import { getPlanetPortraitTextureKey } from "../../../../src/data/planetPortraits.ts";
 import {
   getSystemPortraitTextureKey,
@@ -312,22 +310,8 @@ export class PortraitPanel extends Phaser.GameObjects.Container {
     );
   }
 
-  /** Convenience: show a ship portrait with relevant stats. */
-  showShip(ship: Ship): void {
-    const template = SHIP_TEMPLATES[ship.class];
-    this.updatePortrait(
-      "ship",
-      hashString(ship.id),
-      ship.name,
-      [
-        { label: "Class", value: template.name },
-        { label: "Cargo", value: String(ship.cargoCapacity) },
-        { label: "Speed", value: String(ship.speed) },
-        { label: "Condition", value: `${ship.condition}%` },
-      ],
-      { shipClass: ship.class },
-    );
-  }
+  // showShip(): removed with the Ship type. The capacity-pool model no
+  // longer exposes per-vessel portraits.
 
   /** Convenience: show a star system portrait. */
   showSystem(system: StarSystem, planetCount: number): void {

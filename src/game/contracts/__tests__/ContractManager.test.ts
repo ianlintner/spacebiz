@@ -83,7 +83,6 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
         },
       ],
     },
-    fleet: [],
     activeRoutes: [],
     market: { fuelPrice: 12, fuelTrend: "stable", planetMarkets: {} },
     aiCompanies: [],
@@ -220,7 +219,6 @@ describe("Contract Lifecycle", () => {
         destinationPlanetId: "planet-2",
         distance: 10,
         cargoType: CargoType.Food,
-        assignedShipIds: ["ship-1"],
       };
       const state = createTestState({
         contracts: [contract],
@@ -247,7 +245,6 @@ describe("Contract Lifecycle", () => {
         destinationPlanetId: "planet-2",
         distance: 10,
         cargoType: CargoType.Food,
-        assignedShipIds: ["ship-1"],
       };
       const state = createTestState({
         contracts: [contract],
@@ -273,7 +270,6 @@ describe("Contract Lifecycle", () => {
         destinationPlanetId: "planet-2",
         distance: 10,
         cargoType: CargoType.Food,
-        assignedShipIds: [],
         paused: true, // route is paused
       };
       const state = createTestState({
@@ -298,7 +294,6 @@ describe("Contract Lifecycle", () => {
         destinationPlanetId: "planet-2",
         distance: 10,
         cargoType: CargoType.Food,
-        assignedShipIds: [],
         paused: true, // route is paused
       };
       const state = createTestState({
@@ -341,7 +336,6 @@ describe("Contract Lifecycle", () => {
         destinationPlanetId: "planet-2",
         distance: 10,
         cargoType: CargoType.Food,
-        assignedShipIds: ["ship-1"],
       };
       const state = createTestState({
         contracts: [contract],
@@ -374,7 +368,6 @@ describe("Contract Lifecycle", () => {
         destinationPlanetId: "planet-2",
         distance: 10,
         cargoType: CargoType.Food,
-        assignedShipIds: ["ship-1"],
       };
       const state = createTestState({
         contracts: [contract],
@@ -403,7 +396,6 @@ describe("Contract Lifecycle", () => {
         destinationPlanetId: "planet-2",
         distance: 10,
         cargoType: CargoType.Passengers,
-        assignedShipIds: ["ship-1"],
       };
       const state = createTestState({
         contracts: [contract],
@@ -429,7 +421,6 @@ describe("Contract Lifecycle", () => {
         destinationPlanetId: "planet-2",
         distance: 10,
         cargoType: CargoType.Food,
-        assignedShipIds: ["ship-1"],
       };
       const state = createTestState({
         contracts: [contract],
@@ -457,7 +448,6 @@ describe("Contract Lifecycle", () => {
         destinationPlanetId: "planet-2",
         distance: 10,
         cargoType: CargoType.Passengers,
-        assignedShipIds: ["ship-1"],
       };
       const state = createTestState({
         contracts: [contract],
@@ -546,7 +536,6 @@ describe("Contract Lifecycle", () => {
         destinationPlanetId: "planet-2",
         distance: 10,
         cargoType: CargoType.Passengers,
-        assignedShipIds: ["ai-ship-1"],
       };
       const state = createTestState({
         contracts: [contract],
@@ -559,7 +548,6 @@ describe("Contract Lifecycle", () => {
             name: "AI",
             empireId: "empire-1",
             cash: 100000,
-            fleet: [],
             activeRoutes: [],
             reputation: 50,
             totalCargoDelivered: 0,
