@@ -21,9 +21,6 @@ export type {
   TechGraphState,
   TechGraphCanvasConfig,
 } from "./TechGraphCanvas.ts";
-export { TechQueueRow } from "./TechQueueRow.ts";
-export type { TechQueueRowConfig, TechQueueRowState } from "./TechQueueRow.ts";
-
 export { StationBuilderGrid, ROOM_COLORS } from "./StationBuilderGrid.ts";
 export type {
   StationBuilderGridConfig,
