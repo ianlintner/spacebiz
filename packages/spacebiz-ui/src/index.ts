@@ -14,6 +14,9 @@ export {
 } from "./Theme.ts";
 export type { ThemeConfig } from "./Theme.ts";
 
+export { BRANCH_COLORS, getBranchColor } from "./theme/branchColors.ts";
+export type { BranchId } from "./theme/branchColors.ts";
+
 export * from "./Layout.ts";
 export * from "./DepthLayers.ts";
 export * from "./TextMetrics.ts";
