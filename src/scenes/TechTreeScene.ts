@@ -283,6 +283,7 @@ export class TechTreeScene extends Phaser.Scene {
       queue: tech.queue,
       researchPoints: tech.researchPoints,
       isAvailable: (id) => isTechAvailable(id, tech),
+      committedBranches: tech.committedBranches,
     });
 
     this.currentCard.setCardState(state);
