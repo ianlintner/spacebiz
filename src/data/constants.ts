@@ -1643,3 +1643,12 @@ export const SIMPLE_TERMINAL_UPGRADES: Array<{
     cost: 35000,
   },
 ];
+
+/**
+ * Cash cost in §-credits to acquire the Nth branch commitment (1-indexed).
+ * Hard-capped at 3 commitments per game. Permanent — no swaps or refunds.
+ * See docs/superpowers/specs/2026-05-18-research-economy-redesign-design.md.
+ */
+export const COMMITMENT_COSTS = [50_000, 150_000, 400_000] as const;
+
+export const MAX_COMMITMENTS = COMMITMENT_COSTS.length;
