@@ -17,12 +17,14 @@ import { TechDetailCard } from "../ui/tech/TechDetailCard.ts";
 import { TechQueuePanel } from "../ui/tech/TechQueuePanel.ts";
 import { TechResearchedTable } from "../ui/tech/TechResearchedTable.ts";
 import { TechBonusesPanel } from "../ui/tech/TechBonusesPanel.ts";
+import { TechCommitmentBadge } from "../ui/tech/TechCommitmentBadge.ts";
 import {
   instantUnlockOrQueue,
   isTechAvailable,
   removeFromQueue,
   reorderQueue,
 } from "../game/tech/TechTree.ts";
+import { commitToBranch } from "../game/tech/BranchCommitment.ts";
 
 const RAIL_WIDTH = 280;
 const RAIL_GAP = 12;
@@ -43,6 +45,7 @@ export class TechTreeScene extends Phaser.Scene {
 
   private currentCard!: TechCurrentResearchCard;
   private detailCard!: TechDetailCard;
+  private commitmentBadge!: TechCommitmentBadge;
   private queuePanel!: TechQueuePanel;
   private rpStatusText!: Phaser.GameObjects.Text;
 
@@ -131,6 +134,11 @@ export class TechTreeScene extends Phaser.Scene {
     });
 
     // ── Right rail ──────────────────────────────────────────────
+    this.commitmentBadge = new TechCommitmentBadge(this, {
+      x: 0,
+      y: 0,
+      width: RAIL_WIDTH - 24,
+    });
     this.currentCard = new TechCurrentResearchCard(this, {
       x: 0,
       y: 0,
@@ -141,6 +149,7 @@ export class TechTreeScene extends Phaser.Scene {
       y: 0,
       width: RAIL_WIDTH - 24,
       onAction: (techId) => this.handleUnlockOrQueue(techId),
+      onCommit: (branchId) => this.handleCommit(branchId),
     });
     this.queuePanel = new TechQueuePanel(this, {
       x: 0,
@@ -206,6 +215,10 @@ export class TechTreeScene extends Phaser.Scene {
     this.rpStatusText.setPosition(railInnerX, railInnerY);
 
     let y = railInnerY + 18;
+    this.commitmentBadge.setPosition(railInnerX, y);
+    this.commitmentBadge.resize(railInnerW);
+    y += this.commitmentBadge.getBadgeHeight() + 8;
+
     this.currentCard.setPosition(railInnerX, y);
     this.currentCard.resize(railInnerW);
     y += this.currentCard.getCardHeight() + 8;
@@ -222,6 +235,14 @@ export class TechTreeScene extends Phaser.Scene {
     this.selectedTechId = techId;
     const state = gameStore.getState();
     this.detailCard.setSelection(techId, state.tech);
+  }
+
+  private handleCommit(branchId: string): void {
+    const state = gameStore.getState();
+    const result = commitToBranch(branchId, state.tech, state.cash);
+    if (!result) return;
+    gameStore.setState({ ...state, tech: result.tech, cash: result.newCash });
+    this.refresh();
   }
 
   private handleUnlockOrQueue(techId: string): void {
@@ -254,6 +275,7 @@ export class TechTreeScene extends Phaser.Scene {
     this.rpStatusText.setText(
       `${tech.researchPoints} RP available · ${tech.completedTechIds.length} techs unlocked`,
     );
+    this.commitmentBadge.setBadgeState(tech);
 
     this.graph.setGraphState({
       completedTechIds: tech.completedTechIds,
@@ -261,6 +283,7 @@ export class TechTreeScene extends Phaser.Scene {
       queue: tech.queue,
       researchPoints: tech.researchPoints,
       isAvailable: (id) => isTechAvailable(id, tech),
+      committedBranches: tech.committedBranches,
     });
 
     this.currentCard.setCardState(state);

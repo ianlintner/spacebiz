@@ -12,7 +12,7 @@ import {
 
 // ── Save Version ───────────────────────────────────────────────
 /** Increment when GameState shape changes in a save-incompatible way */
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 
 // ── Action Points ──────────────────────────────────────────────
 export const ACTION_POINTS_PER_TURN = 2;
@@ -243,8 +243,6 @@ export const CONTRACT_UNASSIGNED_SHIP_LIMIT = 2;
 // ── Tech Tree ──────────────────────────────────────────────────
 
 export const BASE_RP_PER_TURN = 1;
-export const RP_DIVERSITY_THRESHOLD = 4;
-export const RP_RESEARCH_PLANET_BONUS = 0.5;
 
 // ── Mothball ───────────────────────────────────────────────────
 
@@ -603,7 +601,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🏢",
     branch: TechBranch.Logistics,
     tier: 3,
-    rpCost: 20,
+    rpCost: 40,
     position: { angle: 270, radius: 3 },
     edges: ["logistics_2a", "logistics_2b", "logistics_4"],
     description: "+1 route slot, −10% license fees",
@@ -618,7 +616,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🌌",
     branch: TechBranch.Logistics,
     tier: 4,
-    rpCost: 45,
+    rpCost: 90,
     position: { angle: 270, radius: 4 },
     edges: ["logistics_3", "logistics_cap"],
     description: "+1 route slot, +10% all revenue",
@@ -633,7 +631,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🏆",
     branch: TechBranch.Logistics,
     tier: 4,
-    rpCost: 60,
+    rpCost: 120,
     position: { angle: 270, radius: 4.8 },
     edges: ["logistics_4"],
     description: "+2 route slots, −15% license fees, +5% revenue",
@@ -715,7 +713,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🤖",
     branch: TechBranch.Engineering,
     tier: 3,
-    rpCost: 22,
+    rpCost: 45,
     position: { angle: 342, radius: 3 },
     edges: ["engineering_2a", "engineering_2b", "engineering_4"],
     description: "+3 condition/turn auto-repair",
@@ -727,7 +725,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🚀",
     branch: TechBranch.Engineering,
     tier: 4,
-    rpCost: 45,
+    rpCost: 90,
     position: { angle: 342, radius: 4 },
     edges: ["engineering_3", "engineering_cap"],
     description: "−20% overhaul cost, ship decay −10%",
@@ -742,7 +740,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🏆",
     branch: TechBranch.Engineering,
     tier: 4,
-    rpCost: 60,
+    rpCost: 120,
     position: { angle: 342, radius: 4.8 },
     edges: ["engineering_4"],
     description: "+5 auto-repair/turn, −10% maintenance, −10% fuel",
@@ -815,7 +813,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "💹",
     branch: TechBranch.Intelligence,
     tier: 3,
-    rpCost: 22,
+    rpCost: 45,
     position: { angle: 54, radius: 3 },
     edges: ["intelligence_2a", "intelligence_2b", "intelligence_4"],
     description: "Route finder shows true net profit, −20% saturation impact",
@@ -827,7 +825,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "📈",
     branch: TechBranch.Intelligence,
     tier: 4,
-    rpCost: 45,
+    rpCost: 90,
     position: { angle: 54, radius: 4 },
     edges: ["intelligence_3", "intelligence_cap"],
     description: "Reset saturation on 1 planet per 5 turns",
@@ -839,7 +837,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🏆",
     branch: TechBranch.Intelligence,
     tier: 4,
-    rpCost: 60,
+    rpCost: 120,
     position: { angle: 54, radius: 4.8 },
     edges: ["intelligence_4"],
     description: "+2 RP/turn, +10% revenue, −10% saturation",
@@ -907,7 +905,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "⛑️",
     branch: TechBranch.Crisis,
     tier: 3,
-    rpCost: 22,
+    rpCost: 45,
     position: { angle: 126, radius: 3 },
     edges: ["crisis_2a", "crisis_2b", "crisis_4"],
     description: "Grounded routes pay 50% mothball refund",
@@ -919,7 +917,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "⚓",
     branch: TechBranch.Crisis,
     tier: 4,
-    rpCost: 45,
+    rpCost: 90,
     position: { angle: 126, radius: 4 },
     edges: ["crisis_3", "crisis_cap"],
     description: "Breakdowns earn 50% revenue, +1 embargo immunity",
@@ -934,7 +932,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🏆",
     branch: TechBranch.Crisis,
     tier: 4,
-    rpCost: 60,
+    rpCost: 120,
     position: { angle: 126, radius: 4.8 },
     edges: ["crisis_4"],
     description: "Event costs −20%, event duration −1 more",
@@ -1043,7 +1041,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🌍",
     branch: TechBranch.Diplomacy,
     tier: 3,
-    rpCost: 20,
+    rpCost: 40,
     position: { angle: 198, radius: 3 },
     edges: ["diplomacy_2a", "diplomacy_2b", "diplomacy_4"],
     description: "−20% tariffs all empires, +1 cargo type/pair",
@@ -1058,7 +1056,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "👑",
     branch: TechBranch.Diplomacy,
     tier: 4,
-    rpCost: 45,
+    rpCost: 90,
     position: { angle: 198, radius: 4 },
     edges: ["diplomacy_3", "diplomacy_cap"],
     description: "Embargo immunity +2, hostile tariffs −25%",
@@ -1073,7 +1071,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🏆",
     branch: TechBranch.Diplomacy,
     tier: 4,
-    rpCost: 60,
+    rpCost: 120,
     position: { angle: 198, radius: 4.8 },
     edges: ["diplomacy_4"],
     description: "−20% all tariffs, +2 cargo types/pair",
@@ -1102,7 +1100,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🚛",
     branch: TechBranch.Fleet,
     tier: 3,
-    rpCost: 28,
+    rpCost: 60,
     position: { angle: 162, radius: 3 },
     edges: ["freight_hull_mk2", "freight_hull_mk4"],
     description: "+35% freight revenue, −20% fuel, unlocks galactic routes",
@@ -1114,7 +1112,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🏗️",
     branch: TechBranch.Fleet,
     tier: 4,
-    rpCost: 50,
+    rpCost: 100,
     position: { angle: 162, radius: 4 },
     edges: ["freight_hull_mk3", "freight_hull_mk5"],
     description: "+60% freight revenue, −30% fuel",
@@ -1126,7 +1124,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🌌",
     branch: TechBranch.Fleet,
     tier: 4,
-    rpCost: 80,
+    rpCost: 160,
     position: { angle: 162, radius: 4.8 },
     edges: ["freight_hull_mk4"],
     description: "×2.0 freight revenue, −40% fuel, peak efficiency",
@@ -1152,7 +1150,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🛳️",
     branch: TechBranch.Fleet,
     tier: 3,
-    rpCost: 28,
+    rpCost: 60,
     position: { angle: 198, radius: 3 },
     edges: ["passenger_hull_mk2", "passenger_hull_mk4"],
     description: "+35% passenger revenue, −20% fuel, unlocks galactic routes",
@@ -1164,7 +1162,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🌟",
     branch: TechBranch.Fleet,
     tier: 4,
-    rpCost: 50,
+    rpCost: 100,
     position: { angle: 198, radius: 4 },
     edges: ["passenger_hull_mk3", "passenger_hull_mk5"],
     description: "+60% passenger revenue, −30% fuel",
@@ -1176,7 +1174,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "👑",
     branch: TechBranch.Fleet,
     tier: 4,
-    rpCost: 80,
+    rpCost: 160,
     position: { angle: 198, radius: 4.8 },
     edges: ["passenger_hull_mk4"],
     description: "×2.0 passenger revenue, −40% fuel, peak efficiency",
@@ -1220,7 +1218,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "📡",
     branch: TechBranch.Fleet,
     tier: 3,
-    rpCost: 30,
+    rpCost: 60,
     position: { angle: 180, radius: 3 },
     edges: ["logistics_ai_2", "logistics_ai_4"],
     description: "+5 FC, +5 PC; route breakdown chance −50%",
@@ -1235,7 +1233,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "⚛️",
     branch: TechBranch.Fleet,
     tier: 4,
-    rpCost: 50,
+    rpCost: 100,
     position: { angle: 180, radius: 4 },
     edges: ["logistics_ai_3", "logistics_ai_5"],
     description: "+6 FC, +5 PC; overcapacity cost curve softened (×0.8)",
@@ -1250,7 +1248,7 @@ export const TECH_GRAPH: Technology[] = [
     icon: "🏆",
     branch: TechBranch.Fleet,
     tier: 4,
-    rpCost: 75,
+    rpCost: 150,
     position: { angle: 180, radius: 4.8 },
     edges: ["logistics_ai_4"],
     description: "+8 FC, +6 PC; synergy with Hull Mk V: +10% galactic revenue",
@@ -1549,14 +1547,41 @@ export const HUB_ROOM_DEFINITIONS: Record<HubRoomType, HubRoomDefinition> = {
   [HubRoomType.ResearchLab]: {
     type: HubRoomType.ResearchLab,
     name: "Research Lab",
-    description: "Generates +1 research point per turn.",
+    description:
+      "Generates +1 research point per turn. Foundation for advanced research facilities.",
     icon: "🔬",
-    buildCost: 20000,
-    upkeepCost: 2500,
-    limit: 1,
-    techRequirement: "intelligence_2",
+    buildCost: 15_000,
+    upkeepCost: 1_500,
+    limit: 3,
+    techRequirement: null,
     bonusScope: "empire",
     bonusEffects: [{ type: "addRPPerTurn", value: 1 }],
+  },
+  [HubRoomType.RdCenter]: {
+    type: HubRoomType.RdCenter,
+    name: "R&D Center",
+    description:
+      "Generates +3 research points per turn. Requires a Research Lab in the same hub + 1 branch commitment.",
+    icon: "🧪",
+    buildCost: 50_000,
+    upkeepCost: 5_000,
+    limit: 2,
+    techRequirement: null,
+    bonusScope: "empire",
+    bonusEffects: [{ type: "addRPPerTurn", value: 3 }],
+  },
+  [HubRoomType.TheoreticalInstitute]: {
+    type: HubRoomType.TheoreticalInstitute,
+    name: "Theoretical Institute",
+    description:
+      "Generates +6 research points per turn. Requires an R&D Center in the same hub + 2 branch commitments.",
+    icon: "🏛️",
+    buildCost: 150_000,
+    upkeepCost: 15_000,
+    limit: 1,
+    techRequirement: null,
+    bonusScope: "empire",
+    bonusEffects: [{ type: "addRPPerTurn", value: 6 }],
   },
   [HubRoomType.CargoWarehouse]: {
     type: HubRoomType.CargoWarehouse,
@@ -1594,6 +1619,9 @@ export const HUB_STARTER_ROOMS: HubRoomType[] = [
   HubRoomType.SimpleTerminal,
   HubRoomType.TradeOffice,
   HubRoomType.PassengerLounge,
+  HubRoomType.ResearchLab,
+  HubRoomType.RdCenter,
+  HubRoomType.TheoreticalInstitute,
 ];
 
 /** Room types that require tech and are randomized per run */
@@ -1608,7 +1636,6 @@ export const HUB_TECH_GATED_ROOMS: HubRoomType[] = [
   HubRoomType.MarketExchange,
   HubRoomType.CustomsBureau,
   HubRoomType.RepairBay,
-  HubRoomType.ResearchLab,
   HubRoomType.CargoWarehouse,
   HubRoomType.SecurityOffice,
 ];
@@ -1643,3 +1670,12 @@ export const SIMPLE_TERMINAL_UPGRADES: Array<{
     cost: 35000,
   },
 ];
+
+/**
+ * Cash cost in §-credits to acquire the Nth branch commitment (1-indexed).
+ * Hard-capped at 3 commitments per game. Permanent — no swaps or refunds.
+ * See docs/superpowers/specs/2026-05-18-research-economy-redesign-design.md.
+ */
+export const COMMITMENT_COSTS = [50_000, 150_000, 400_000] as const;
+
+export const MAX_COMMITMENTS = COMMITMENT_COSTS.length;

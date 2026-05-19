@@ -58,6 +58,7 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
       researchProgress: 0,
       purchaseCount: {},
       queue: [],
+      committedBranches: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],
@@ -98,6 +99,7 @@ describe("Tech Effects", () => {
         researchProgress: 0,
         purchaseCount: { logistics_hub: 1, logistics_3: 1 },
         queue: [],
+        committedBranches: [],
       },
     });
     // logistics_hub = +1, logistics_3 = +1
@@ -118,6 +120,7 @@ describe("Tech Effects", () => {
         researchProgress: 0,
         purchaseCount: { logistics_hub: 1 },
         queue: [],
+        committedBranches: [],
       },
     });
     expect(hasTechEffect(state, "addRouteSlots")).toBe(true);
@@ -137,6 +140,7 @@ describe("Tech Effects", () => {
         researchProgress: 0,
         purchaseCount: { logistics_hub: 1, logistics_3: 1 },
         queue: [],
+        committedBranches: [],
       },
     });
     expect(getLicenseFeeMultiplier(state)).toBeCloseTo(0.9);
@@ -151,6 +155,7 @@ describe("Tech Effects", () => {
         researchProgress: 0,
         purchaseCount: { fuel_savings_r: 2 },
         queue: [],
+        committedBranches: [],
       },
     });
     // fuel_savings_r = -0.01 per purchase; 2 purchases = -0.02 total
@@ -166,6 +171,7 @@ describe("Tech Effects", () => {
         researchProgress: 0,
         purchaseCount: { fuel_savings_r: 3 },
         queue: [],
+        committedBranches: [],
       },
     });
     // fuel_savings_r = -0.01 per purchase; 3 purchases = -0.03 total
@@ -182,6 +188,7 @@ describe("Tech Effects", () => {
         researchProgress: 0,
         purchaseCount: { fuel_savings_r: 2 },
         queue: [],
+        committedBranches: [],
       },
     });
     // Should be -0.02 (2 purchases × -0.01), not -0.01
@@ -218,6 +225,7 @@ describe("getFreightHullMark", () => {
       queue: [],
       currentResearchId: null,
       researchProgress: 0,
+      committedBranches: [],
     };
     expect(getFreightHullMark(tech)).toBe(1);
   });
@@ -232,6 +240,7 @@ describe("getPassengerHullMark", () => {
       queue: [],
       currentResearchId: null,
       researchProgress: 0,
+      committedBranches: [],
     };
     expect(getPassengerHullMark(tech)).toBe(1);
   });
@@ -246,6 +255,7 @@ describe("getTotalFreightCapacity", () => {
       queue: [],
       currentResearchId: null,
       researchProgress: 0,
+      committedBranches: [],
     };
     expect(getTotalFreightCapacity(tech)).toBe(4);
   });
@@ -260,6 +270,7 @@ describe("getTotalPassengerCapacity", () => {
       queue: [],
       currentResearchId: null,
       researchProgress: 0,
+      committedBranches: [],
     };
     expect(getTotalPassengerCapacity(tech)).toBe(4);
   });

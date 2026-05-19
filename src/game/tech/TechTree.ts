@@ -2,9 +2,10 @@ import type { GameState, TechState, Technology } from "../../data/types.ts";
 import {
   TECH_GRAPH,
   BASE_RP_PER_TURN,
-  RP_DIVERSITY_THRESHOLD,
-  RP_RESEARCH_PLANET_BONUS,
+  HUB_ROOM_DEFINITIONS,
 } from "../../data/constants.ts";
+import { calculateRouteRP } from "./DeliveryRP.ts";
+import { isBranchCommitted } from "./BranchCommitment.ts";
 
 const CARGO_PACT_IDS = new Set([
   "diplomacy_food",
@@ -49,6 +50,12 @@ export function isTechAvailable(techId: string, tech: TechState): boolean {
         (tech.completedTechIds.includes(id) || tech.queue.includes(id)),
     );
     if (conflict) return false;
+  }
+
+  // Tier wall — T3 and T4 require the branch to be committed.
+  // T1/T2 are accessible to any player.
+  if (node.tier >= 3 && !isBranchCommitted(node.branch, tech)) {
+    return false;
   }
 
   // Center node is always available
@@ -173,46 +180,113 @@ export function processResearch(
 export function calculateRPPerTurn(state: GameState): number {
   let rp = BASE_RP_PER_TURN;
 
-  // Diversity bonus
-  const distinctCargos = new Set(
-    state.activeRoutes
-      .filter((r) => r.cargoType && !r.paused)
-      .map((r) => r.cargoType),
-  );
-  if (distinctCargos.size >= RP_DIVERSITY_THRESHOLD) {
-    rp += 1;
-  }
-
-  // TechWorld bonus
-  const researchPlanets = new Set(
-    state.galaxy.planets.filter((p) => p.type === "techWorld").map((p) => p.id),
-  );
-  let researchRouteCount = 0;
-  for (const route of state.activeRoutes) {
-    if (route.paused) continue;
-    if (
-      researchPlanets.has(route.originPlanetId) ||
-      researchPlanets.has(route.destinationPlanetId)
-    ) {
-      researchRouteCount++;
+  // Delivery RP: sum across active routes for the current turn.
+  // Look up the most recent turn's trip count from history; if no history
+  // yet (first turn) or the route isn't in the last turn's report, assume
+  // 1 trip as a UI forecast estimate.
+  const lastResult =
+    state.history.length > 0 ? state.history[state.history.length - 1] : null;
+  const tripsByRoute = new Map<string, number>();
+  if (lastResult) {
+    for (const perf of lastResult.routePerformance) {
+      tripsByRoute.set(perf.routeId, perf.trips);
     }
   }
-  rp += Math.floor(researchRouteCount * RP_RESEARCH_PLANET_BONUS);
 
-  // RP node bonus (addRPPerTurn effects), capped at +4
-  let rpNodeBonus = 0;
+  for (const route of state.activeRoutes) {
+    if (route.paused) continue;
+    const trips = tripsByRoute.get(route.id) ?? 1;
+    rp += calculateRouteRP(route, trips, state);
+  }
+
+  // Tech-effect RP: completed techs with addRPPerTurn effects.
+  // No cap — the new economy uses room build costs and commitment scarcity
+  // as the throttle, not a hard RP ceiling.
   for (const [techId, count] of Object.entries(state.tech.purchaseCount)) {
     const node = TECH_GRAPH.find((n) => n.id === techId);
     if (!node) continue;
     for (const effect of node.effects) {
       if (effect.type === "addRPPerTurn") {
-        rpNodeBonus += effect.value * count;
+        rp += effect.value * count;
       }
     }
   }
-  rp += Math.min(Math.floor(rpNodeBonus), 4);
 
-  return rp;
+  // Hub-room RP: hub rooms with addRPPerTurn effects (Research Lab, R&D
+  // Center, Theoretical Institute). state.stationHub is singular and may
+  // be null.
+  if (state.stationHub) {
+    for (const room of state.stationHub.rooms) {
+      const def = HUB_ROOM_DEFINITIONS[room.type];
+      if (!def) continue;
+      for (const effect of def.bonusEffects) {
+        if (effect.type === "addRPPerTurn") {
+          rp += effect.value;
+        }
+      }
+    }
+  }
+
+  // Round to 2 decimals (delivery RP is fractional)
+  return Math.round(rp * 100) / 100;
+}
+
+export interface RPBreakdown {
+  base: number;
+  delivery: number;
+  infrastructure: number;
+  total: number;
+}
+
+export function getRPBreakdown(state: GameState): RPBreakdown {
+  const base = BASE_RP_PER_TURN;
+
+  const lastResult =
+    state.history.length > 0 ? state.history[state.history.length - 1] : null;
+  const tripsByRoute = new Map<string, number>();
+  if (lastResult) {
+    for (const perf of lastResult.routePerformance) {
+      tripsByRoute.set(perf.routeId, perf.trips);
+    }
+  }
+
+  let delivery = 0;
+  for (const route of state.activeRoutes) {
+    if (route.paused) continue;
+    const trips = tripsByRoute.get(route.id) ?? 1;
+    delivery += calculateRouteRP(route, trips, state);
+  }
+
+  let infrastructure = 0;
+  for (const [techId, count] of Object.entries(state.tech.purchaseCount)) {
+    const node = TECH_GRAPH.find((n) => n.id === techId);
+    if (!node) continue;
+    for (const effect of node.effects) {
+      if (effect.type === "addRPPerTurn") {
+        infrastructure += effect.value * count;
+      }
+    }
+  }
+  if (state.stationHub) {
+    for (const room of state.stationHub.rooms) {
+      const def = HUB_ROOM_DEFINITIONS[room.type];
+      if (!def) continue;
+      for (const effect of def.bonusEffects) {
+        if (effect.type === "addRPPerTurn") {
+          infrastructure += effect.value;
+        }
+      }
+    }
+  }
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const total = base + delivery + infrastructure;
+  return {
+    base: round2(base),
+    delivery: round2(delivery),
+    infrastructure: round2(infrastructure),
+    total: round2(total),
+  };
 }
 
 export function getCurrentResearch(tech: TechState): Technology | null {

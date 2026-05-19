@@ -10,6 +10,7 @@ function emptyTechState(): TechState {
     queue: [],
     currentResearchId: null,
     researchProgress: 0,
+    committedBranches: [],
   };
 }
 

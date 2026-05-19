@@ -26,6 +26,7 @@ function makeTechState(overrides: Partial<TechState> = {}): TechState {
     researchProgress: 0,
     purchaseCount: {},
     queue: [],
+    committedBranches: [],
     ...overrides,
   };
 }
@@ -305,35 +306,60 @@ describe("Tech Tree System", () => {
   });
 
   describe("calculateRPPerTurn", () => {
-    it("returns base RP with no routes", () => {
+    it("returns BASE_RP_PER_TURN for an empty state", () => {
       const state = createTestState();
       expect(calculateRPPerTurn(state)).toBe(BASE_RP_PER_TURN);
     });
 
-    it("gives diversity bonus for varied cargo types", () => {
-      const routes = [
-        makeRoute("r1", "food", true),
-        makeRoute("r2", "technology", true),
-        makeRoute("r3", "rawMaterials", true),
-        makeRoute("r4", "luxury", true),
-      ];
-      const state = createTestState({ activeRoutes: routes });
+    it("adds RP from completed tech with addRPPerTurn effects (no cap)", () => {
+      // intelligence_2b has addRPPerTurn value 1
+      const state = createTestState({
+        tech: makeTechState({
+          completedTechIds: ["intelligence_2b"],
+          purchaseCount: { intelligence_2b: 1 },
+        }),
+      });
       const rp = calculateRPPerTurn(state);
-      expect(rp).toBeGreaterThan(BASE_RP_PER_TURN);
+      // base + 1 from intel_2b effect
+      expect(rp).toBe(BASE_RP_PER_TURN + 1);
     });
 
-    it("gives research planet bonus", () => {
+    it("tech addRPPerTurn scales with repeat purchases (no cap)", () => {
+      // intelligence_2b is repeatable; purchased twice → +2
+      const state = createTestState({
+        tech: makeTechState({
+          completedTechIds: ["intelligence_2b"],
+          purchaseCount: { intelligence_2b: 2 },
+        }),
+      });
+      const rp = calculateRPPerTurn(state);
+      expect(rp).toBe(BASE_RP_PER_TURN + 2);
+    });
+
+    it("adds delivery RP from active routes (no history → defaults to 1 trip)", () => {
+      // Route connects planet-1 and planet-2; history is empty so trips = 1.
+      // calculateRouteRP returns a positive fractional value, so total > base.
       const state = createTestState({
         galaxy: {
           sectors: [],
           empires: [],
-          systems: [],
+          systems: [
+            {
+              id: "s1",
+              name: "Sol",
+              sectorId: "sec1",
+              empireId: "",
+              x: 0,
+              y: 0,
+              starColor: 0xffffff,
+            },
+          ],
           planets: [
             {
               id: "planet-1",
               name: "P1",
               systemId: "s1",
-              type: "techWorld",
+              type: "frontier" as import("../../../data/types.ts").PlanetType,
               x: 0,
               y: 0,
               population: 1000,
@@ -347,7 +373,62 @@ describe("Tech Tree System", () => {
               id: "planet-2",
               name: "P2",
               systemId: "s1",
-              type: "frontier",
+              type: "frontier" as import("../../../data/types.ts").PlanetType,
+              x: 0,
+              y: 0,
+              population: 1000,
+              biome: PlanetBiome.Colony,
+              productionTags: [],
+              consumptionTags: [],
+              productionScale: 1.0,
+              populationCap: 10,
+            },
+          ],
+        },
+        activeRoutes: [makeRoute("r1", "food", true)],
+        history: [],
+      });
+      const rp = calculateRPPerTurn(state);
+      // Delivery RP > 0 (food ×0.7, distance clamped at min 0.5 × 1 trip × 0.15 base)
+      expect(rp).toBeGreaterThan(BASE_RP_PER_TURN);
+    });
+
+    it("uses trip count from most recent history entry when available", () => {
+      const baseState = createTestState({
+        galaxy: {
+          sectors: [],
+          empires: [],
+          systems: [
+            {
+              id: "s1",
+              name: "Sol",
+              sectorId: "sec1",
+              empireId: "",
+              x: 0,
+              y: 0,
+              starColor: 0xffffff,
+            },
+          ],
+          planets: [
+            {
+              id: "planet-1",
+              name: "P1",
+              systemId: "s1",
+              type: "frontier" as import("../../../data/types.ts").PlanetType,
+              x: 0,
+              y: 0,
+              population: 1000,
+              biome: PlanetBiome.Colony,
+              productionTags: [],
+              consumptionTags: [],
+              productionScale: 1.0,
+              populationCap: 10,
+            },
+            {
+              id: "planet-2",
+              name: "P2",
+              systemId: "s1",
+              type: "frontier" as import("../../../data/types.ts").PlanetType,
               x: 0,
               y: 0,
               population: 1000,
@@ -361,9 +442,79 @@ describe("Tech Tree System", () => {
         },
         activeRoutes: [makeRoute("r1", "food", true)],
       });
+      // One trip (default) vs five trips — five should yield more RP
+      const stateOnce = { ...baseState, history: [] };
+      const stateMany = {
+        ...baseState,
+        history: [
+          {
+            turn: 2,
+            revenue: 0,
+            fuelCosts: 0,
+            maintenanceCosts: 0,
+            loanPayments: 0,
+            tariffCosts: 0,
+            otherCosts: 0,
+            netProfit: 0,
+            cashAtEnd: 100000,
+            cargoDelivered:
+              {} as import("../../../data/types.ts").TurnResult["cargoDelivered"],
+            passengersTransported: 0,
+            eventsOccurred: [],
+            aiSummaries: [],
+            routePerformance: [
+              {
+                routeId: "r1",
+                trips: 5,
+                revenue: 0,
+                fuelCost: 0,
+                cargoMoved: 0,
+                passengersMoved: 0,
+                breakdowns: 0,
+              },
+            ],
+          },
+        ],
+      };
+      const rpOnce = calculateRPPerTurn(stateOnce);
+      const rpMany = calculateRPPerTurn(stateMany);
+      expect(rpMany).toBeGreaterThan(rpOnce);
+    });
+
+    it("paused routes do not contribute delivery RP", () => {
+      const pausedRoute = makeRoute("r1", "food", false); // paused: true
+      const state = createTestState({
+        activeRoutes: [pausedRoute],
+        history: [],
+      });
+      expect(calculateRPPerTurn(state)).toBe(BASE_RP_PER_TURN);
+    });
+
+    it("adds hub-room RP when stationHub has a ResearchLab", () => {
+      const state = createTestState({
+        stationHub: {
+          level: 1,
+          systemId: "s1",
+          empireId: "empire-1",
+          availableRoomTypes: [],
+          rooms: [
+            {
+              id: "room-1",
+              type: "researchLab" as import("../../../data/types.ts").HubRoomType,
+              gridX: 0,
+              gridY: 0,
+            },
+          ],
+        },
+      });
       const rp = calculateRPPerTurn(state);
-      // planet-1 is research type, route goes to/from it → bonus
-      expect(rp).toBeGreaterThanOrEqual(BASE_RP_PER_TURN);
+      // ResearchLab bonusEffects: addRPPerTurn value 1
+      expect(rp).toBe(BASE_RP_PER_TURN + 1);
+    });
+
+    it("null stationHub does not throw and returns base RP", () => {
+      const state = createTestState({ stationHub: null });
+      expect(calculateRPPerTurn(state)).toBe(BASE_RP_PER_TURN);
     });
   });
 
@@ -451,5 +602,38 @@ describe("Tech Tree System", () => {
       const progress = getResearchProgress(tech);
       expect(progress).toBe(0.5); // 3/6
     });
+  });
+});
+
+describe("isTechAvailable — tier wall", () => {
+  it("blocks T3+ techs in uncommitted branches", () => {
+    // logistics_4 is T4; needs both: (a) prereq logistics_3 owned, (b) Logistics committed.
+    // Provide only (a) — expect blocked.
+    const tech = makeTechState({
+      researchPoints: 1_000,
+      completedTechIds: ["logistics_3"],
+      purchaseCount: { logistics_3: 1 },
+    });
+    expect(isTechAvailable("logistics_4", tech)).toBe(false);
+  });
+
+  it("allows T3+ techs in committed branches when prereq owned", () => {
+    const tech = makeTechState({
+      researchPoints: 1_000,
+      completedTechIds: ["logistics_3"],
+      purchaseCount: { logistics_3: 1 },
+      committedBranches: ["logistics"],
+    });
+    expect(isTechAvailable("logistics_4", tech)).toBe(true);
+  });
+
+  it("allows T1/T2 techs without commitment", () => {
+    const tech = makeTechState({
+      researchPoints: 1_000,
+      completedTechIds: ["fuel_efficiency_1"],
+      purchaseCount: { fuel_efficiency_1: 1 },
+    });
+    // logistics_hub is T1, no commitment required
+    expect(isTechAvailable("logistics_hub", tech)).toBe(true);
   });
 });

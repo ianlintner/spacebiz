@@ -195,6 +195,7 @@ function makeAICompany(routes: ActiveRoute[], empireId = "emp-1"): AICompany {
       researchProgress: 0,
       purchaseCount: {},
       queue: [],
+      committedBranches: [],
     },
   };
 }
@@ -246,6 +247,7 @@ function makeGameState(): GameState {
       researchProgress: 0,
       purchaseCount: {},
       queue: [],
+      committedBranches: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],

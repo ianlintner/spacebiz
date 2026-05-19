@@ -3,12 +3,18 @@ import { Button, colorToString, getBranchColor, getTheme } from "@spacebiz/ui";
 import { TECH_GRAPH } from "../../data/constants.ts";
 import type { TechState } from "../../data/types.ts";
 import { effectiveCost, isTechAvailable } from "../../game/tech/TechTree.ts";
+import {
+  canCommitToBranch,
+  getNextCommitmentCost,
+} from "../../game/tech/BranchCommitment.ts";
+import { gameStore } from "../../data/GameStore.ts";
 
 export interface TechDetailCardConfig {
   x: number;
   y: number;
   width: number;
   onAction: (techId: string) => void;
+  onCommit: (branchId: string) => void;
 }
 
 export class TechDetailCard extends Phaser.GameObjects.Container {
@@ -25,12 +31,16 @@ export class TechDetailCard extends Phaser.GameObjects.Container {
   private prereqText!: Phaser.GameObjects.Text;
   private button!: Button;
   private selectedTechId: string | null = null;
+  private currentButtonAction: "unlock" | "commit" = "unlock";
+  private currentBranchId: string | null = null;
   private onAction: (techId: string) => void;
+  private onCommit: (branchId: string) => void;
 
   constructor(scene: Phaser.Scene, config: TechDetailCardConfig) {
     super(scene, config.x, config.y);
     this.cardWidth = config.width;
     this.onAction = config.onAction;
+    this.onCommit = config.onCommit;
     scene.add.existing(this);
 
     const theme = getTheme();
@@ -128,7 +138,11 @@ export class TechDetailCard extends Phaser.GameObjects.Container {
       label: "Unlock",
       disabled: true,
       onClick: () => {
-        if (this.selectedTechId) this.onAction(this.selectedTechId);
+        if (this.currentButtonAction === "commit") {
+          if (this.currentBranchId) this.onCommit(this.currentBranchId);
+        } else {
+          if (this.selectedTechId) this.onAction(this.selectedTechId);
+        }
       },
     });
     this.add(this.button);
@@ -163,6 +177,28 @@ export class TechDetailCard extends Phaser.GameObjects.Container {
     const available = isTechAvailable(node.id, tech);
     const cost = effectiveCost(node.id, tech);
     const canAfford = tech.researchPoints >= cost;
+
+    // Commit gate: shown when viewing a T3+ node in an uncommitted branch
+    const isT3Plus = node.tier >= 3;
+    const branchUncommitted = !tech.committedBranches.includes(node.branch);
+    const showCommitButton = isT3Plus && branchUncommitted;
+    let commitGateLabel: string | null = null;
+    let commitGateEnabled = false;
+    if (showCommitButton) {
+      const state = gameStore.getState();
+      const commitCheck = canCommitToBranch(node.branch, tech, state.cash);
+      const commitCost = getNextCommitmentCost(tech);
+      if (commitCost === null) {
+        commitGateLabel = "Commitment cap reached";
+        commitGateEnabled = false;
+      } else if (commitCheck.ok) {
+        commitGateLabel = `Commit to ${branchLabel(node.branch)} — §${commitCost.toLocaleString("en-US")}`;
+        commitGateEnabled = true;
+      } else {
+        commitGateLabel = `Commit — ${commitCheck.reason}`;
+        commitGateEnabled = false;
+      }
+    }
 
     let statusLabel: string;
     let statusColor: number;
@@ -217,7 +253,12 @@ export class TechDetailCard extends Phaser.GameObjects.Container {
     // Button state
     let label = "Select a technology";
     let disabled = true;
-    if (isCompleted) {
+    let buttonAction: "unlock" | "commit" = "unlock";
+    if (showCommitButton && commitGateLabel !== null) {
+      label = commitGateLabel;
+      disabled = !commitGateEnabled;
+      buttonAction = "commit";
+    } else if (isCompleted) {
       label = "Maxed out";
     } else if (isResearching) {
       label = "Already researching";
@@ -232,6 +273,8 @@ export class TechDetailCard extends Phaser.GameObjects.Container {
       label = `Queue — ${cost} RP`;
       disabled = false;
     }
+    this.currentButtonAction = buttonAction;
+    this.currentBranchId = buttonAction === "commit" ? node.branch : null;
     this.button.setLabel(label);
     this.button.setDisabled(disabled);
     this.button.setVisible(true);

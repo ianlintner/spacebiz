@@ -17,6 +17,7 @@ export interface TechGraphState {
   queue: string[];
   researchPoints: number;
   isAvailable: (techId: string) => boolean;
+  committedBranches: string[];
 }
 
 export interface TechGraphCanvasConfig {
@@ -263,6 +264,14 @@ export class TechGraphCanvas extends Phaser.GameObjects.Container {
     if (state.completedTechIds.includes(techId)) return "completed";
     if (state.queue[0] === techId) return "researching";
     if (state.queue.includes(techId)) return "queued";
+    const node = TECH_GRAPH.find((n) => n.id === techId);
+    if (
+      node &&
+      node.tier >= 3 &&
+      !state.committedBranches.includes(node.branch)
+    ) {
+      return "locked";
+    }
     if (state.isAvailable(techId)) return "available";
     return "locked";
   }

@@ -48,6 +48,7 @@ function makeTech(completedTechIds: string[] = []): TechState {
     researchProgress: 0,
     purchaseCount: {},
     queue: [],
+    committedBranches: [],
   };
 }
 
@@ -150,20 +151,20 @@ describe("getHubUpkeep", () => {
 describe("canBuildRoom", () => {
   it("allows building when all conditions met", () => {
     const hub = makeHub();
-    const result = canBuildRoom(hub, HubRoomType.TradeOffice, [], 100000);
+    const result = canBuildRoom(hub, HubRoomType.TradeOffice, [], 100000, []);
     expect(result.canBuild).toBe(true);
   });
 
   it("rejects unavailable room type", () => {
     const hub = makeHub({ availableRoomTypes: [HubRoomType.TradeOffice] });
-    const result = canBuildRoom(hub, HubRoomType.FuelDepot, [], 100000);
+    const result = canBuildRoom(hub, HubRoomType.FuelDepot, [], 100000, []);
     expect(result.canBuild).toBe(false);
     expect(result.reason).toContain("not available");
   });
 
   it("rejects when tech requirement not met", () => {
     const hub = makeHub();
-    const result = canBuildRoom(hub, HubRoomType.OreProcessing, [], 100000);
+    const result = canBuildRoom(hub, HubRoomType.OreProcessing, [], 100000, []);
     expect(result.canBuild).toBe(false);
     expect(result.reason).toContain("tech");
   });
@@ -175,6 +176,7 @@ describe("canBuildRoom", () => {
       HubRoomType.OreProcessing,
       ["logistics_1"],
       100000,
+      [],
     );
     expect(result.canBuild).toBe(true);
   });
@@ -184,7 +186,7 @@ describe("canBuildRoom", () => {
       rooms: [{ id: "r1", type: HubRoomType.TradeOffice, gridX: 0, gridY: 0 }],
     });
     // Trade Office has limit 1
-    const result = canBuildRoom(hub, HubRoomType.TradeOffice, [], 100000);
+    const result = canBuildRoom(hub, HubRoomType.TradeOffice, [], 100000, []);
     expect(result.canBuild).toBe(false);
     expect(result.reason).toContain("Limit");
   });
@@ -198,14 +200,14 @@ describe("canBuildRoom", () => {
       gridY: 0,
     }));
     const hub = makeHub({ rooms });
-    const result = canBuildRoom(hub, HubRoomType.TradeOffice, [], 100000);
+    const result = canBuildRoom(hub, HubRoomType.TradeOffice, [], 100000, []);
     expect(result.canBuild).toBe(false);
     expect(result.reason).toContain("slots");
   });
 
   it("rejects when insufficient cash", () => {
     const hub = makeHub();
-    const result = canBuildRoom(hub, HubRoomType.TradeOffice, [], 5);
+    const result = canBuildRoom(hub, HubRoomType.TradeOffice, [], 5, []);
     expect(result.canBuild).toBe(false);
     expect(result.reason).toContain("cash");
   });
@@ -484,14 +486,26 @@ describe("upgradeTerminal", () => {
 describe("canBuildRoom — upgrade-only rejection", () => {
   it("rejects ImprovedTerminal as upgrade-only", () => {
     const hub = makeHub();
-    const result = canBuildRoom(hub, HubRoomType.ImprovedTerminal, [], 100000);
+    const result = canBuildRoom(
+      hub,
+      HubRoomType.ImprovedTerminal,
+      [],
+      100000,
+      [],
+    );
     expect(result.canBuild).toBe(false);
     expect(result.reason).toContain("Upgrade only");
   });
 
   it("rejects AdvancedTerminal as upgrade-only", () => {
     const hub = makeHub();
-    const result = canBuildRoom(hub, HubRoomType.AdvancedTerminal, [], 100000);
+    const result = canBuildRoom(
+      hub,
+      HubRoomType.AdvancedTerminal,
+      [],
+      100000,
+      [],
+    );
     expect(result.canBuild).toBe(false);
     expect(result.reason).toContain("Upgrade only");
   });
@@ -532,5 +546,99 @@ describe("demolishRoom — terminal protection", () => {
     const result = demolishRoom(hub, "r1");
     expect(result).not.toBeNull();
     expect(result!.hub.rooms).toHaveLength(0);
+  });
+});
+
+describe("canBuildRoom — R&D tier prereqs", () => {
+  function rdHub(): StationHub {
+    return makeHub({
+      availableRoomTypes: [
+        HubRoomType.ResearchLab,
+        HubRoomType.RdCenter,
+        HubRoomType.TheoreticalInstitute,
+      ],
+    });
+  }
+
+  it("RdCenter blocked without Research Lab", () => {
+    const result = canBuildRoom(rdHub(), HubRoomType.RdCenter, [], 1_000_000, [
+      "logistics",
+    ]);
+    expect(result.canBuild).toBe(false);
+    expect(result.reason).toMatch(/Research Lab/i);
+  });
+
+  it("RdCenter blocked without commitment", () => {
+    const hub: StationHub = {
+      ...rdHub(),
+      rooms: [{ id: "r1", type: HubRoomType.ResearchLab, gridX: 0, gridY: 0 }],
+    };
+    const result = canBuildRoom(hub, HubRoomType.RdCenter, [], 1_000_000, []);
+    expect(result.canBuild).toBe(false);
+    expect(result.reason).toMatch(/commitment/i);
+  });
+
+  it("RdCenter allowed with Lab + 1 commitment", () => {
+    const hub: StationHub = {
+      ...rdHub(),
+      rooms: [{ id: "r1", type: HubRoomType.ResearchLab, gridX: 0, gridY: 0 }],
+    };
+    const result = canBuildRoom(hub, HubRoomType.RdCenter, [], 1_000_000, [
+      "logistics",
+    ]);
+    expect(result.canBuild).toBe(true);
+  });
+
+  it("TheoreticalInstitute blocked without R&D Center", () => {
+    const hub: StationHub = {
+      ...rdHub(),
+      rooms: [{ id: "r1", type: HubRoomType.ResearchLab, gridX: 0, gridY: 0 }],
+    };
+    const result = canBuildRoom(
+      hub,
+      HubRoomType.TheoreticalInstitute,
+      [],
+      1_000_000,
+      ["logistics", "engineering"],
+    );
+    expect(result.canBuild).toBe(false);
+    expect(result.reason).toMatch(/R&D Center/i);
+  });
+
+  it("TheoreticalInstitute blocked with only 1 commitment", () => {
+    const hub: StationHub = {
+      ...rdHub(),
+      rooms: [
+        { id: "r1", type: HubRoomType.ResearchLab, gridX: 0, gridY: 0 },
+        { id: "r2", type: HubRoomType.RdCenter, gridX: 1, gridY: 0 },
+      ],
+    };
+    const result = canBuildRoom(
+      hub,
+      HubRoomType.TheoreticalInstitute,
+      [],
+      1_000_000,
+      ["logistics"],
+    );
+    expect(result.canBuild).toBe(false);
+    expect(result.reason).toMatch(/2 branch commitments/i);
+  });
+
+  it("TheoreticalInstitute allowed with Center + 2 commitments", () => {
+    const hub: StationHub = {
+      ...rdHub(),
+      rooms: [
+        { id: "r1", type: HubRoomType.ResearchLab, gridX: 0, gridY: 0 },
+        { id: "r2", type: HubRoomType.RdCenter, gridX: 1, gridY: 0 },
+      ],
+    };
+    const result = canBuildRoom(
+      hub,
+      HubRoomType.TheoreticalInstitute,
+      [],
+      1_000_000,
+      ["logistics", "engineering"],
+    );
+    expect(result.canBuild).toBe(true);
   });
 });

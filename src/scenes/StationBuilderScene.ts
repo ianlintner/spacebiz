@@ -193,7 +193,13 @@ export class StationBuilderScene extends Phaser.Scene {
       const cols = Math.max(1, Math.floor(paletteContent.width / (btnW + gap)));
 
       for (const rt of roomTypes) {
-        const check = canBuildRoom(hub, rt, completedTechIds, state.cash);
+        const check = canBuildRoom(
+          hub,
+          rt,
+          completedTechIds,
+          state.cash,
+          state.tech.committedBranches,
+        );
 
         const bx = paletteContent.x + col * (btnW + gap) + btnW / 2;
         const by = paletteContent.y + row * (btnH + gap) + btnH / 2;
@@ -765,7 +771,13 @@ export class StationBuilderScene extends Phaser.Scene {
     const state = gameStore.getState();
     const hub = state.stationHub;
     const check = hub
-      ? canBuildRoom(hub, roomType, state.tech.completedTechIds, state.cash)
+      ? canBuildRoom(
+          hub,
+          roomType,
+          state.tech.completedTechIds,
+          state.cash,
+          state.tech.committedBranches,
+        )
       : { canBuild: false, reason: "No hub" };
     if (check.canBuild) {
       const hint = new Label(this, {

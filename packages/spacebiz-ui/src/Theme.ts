@@ -469,6 +469,22 @@ export function colorWithAlpha(
 }
 
 /** Interpolate between two hex colors. t=0 returns c1, t=1 returns c2. */
+/**
+ * Returns a hex color number associated with a tech branch ID.
+ * Used to tint labels and indicators for committed branches.
+ */
+export function getBranchColor(branchId: string): number {
+  const BRANCH_COLORS: Record<string, number> = {
+    logistics: 0x44aaff,
+    engineering: 0xff9922,
+    intelligence: 0xcc44ff,
+    crisis: 0xff4444,
+    diplomacy: 0x44ffaa,
+    fleet: 0xffdd22,
+  };
+  return BRANCH_COLORS[branchId] ?? 0x9999bb;
+}
+
 export function lerpColor(c1: number, c2: number, t: number): number {
   const r1 = (c1 >> 16) & 0xff;
   const g1 = (c1 >> 8) & 0xff;

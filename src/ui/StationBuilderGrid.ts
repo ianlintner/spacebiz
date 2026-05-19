@@ -29,6 +29,8 @@ export const ROOM_COLORS: Record<string, number> = {
   customsBureau: 0x88cc44,
   repairBay: 0xff4488,
   researchLab: 0x44ddff,
+  rdCenter: 0x22bbee,
+  theoreticalInstitute: 0x0099cc,
   cargoWarehouse: 0xcc8844,
   securityOffice: 0xdd4444,
 };

@@ -29,6 +29,7 @@ const DEFAULT_TECH_STATE: TechState = {
   researchPoints: 0,
   currentResearchId: null,
   researchProgress: 0,
+  committedBranches: [],
 };
 
 // ---------------------------------------------------------------------------

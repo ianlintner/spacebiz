@@ -1,11 +1,11 @@
 import type {
   StationHub,
   HubRoom,
-  HubRoomType,
   HubRoomDefinition,
   TechState,
   Hyperlane,
 } from "../../data/types";
+import { HubRoomType } from "../../data/types";
 import {
   HUB_UPGRADE_COSTS,
   HUB_LEVEL_SLOTS,
@@ -82,6 +82,7 @@ export function canBuildRoom(
   roomType: HubRoomType,
   completedTechIds: string[],
   cash: number,
+  committedBranches: string[],
 ): CanBuildResult {
   const def = HUB_ROOM_DEFINITIONS[roomType];
 
@@ -96,6 +97,28 @@ export function canBuildRoom(
 
   if (def.techRequirement && !completedTechIds.includes(def.techRequirement)) {
     return { canBuild: false, reason: `Requires tech: ${def.techRequirement}` };
+  }
+
+  // R&D Center requires a Research Lab in this hub + 1 commitment held.
+  if (roomType === HubRoomType.RdCenter) {
+    const hasLab = hub.rooms.some((r) => r.type === HubRoomType.ResearchLab);
+    if (!hasLab) {
+      return { canBuild: false, reason: "Requires a Research Lab in this hub" };
+    }
+    if (committedBranches.length < 1) {
+      return { canBuild: false, reason: "Requires 1 branch commitment" };
+    }
+  }
+
+  // Theoretical Institute requires an R&D Center in this hub + 2 commitments.
+  if (roomType === HubRoomType.TheoreticalInstitute) {
+    const hasCenter = hub.rooms.some((r) => r.type === HubRoomType.RdCenter);
+    if (!hasCenter) {
+      return { canBuild: false, reason: "Requires an R&D Center in this hub" };
+    }
+    if (committedBranches.length < 2) {
+      return { canBuild: false, reason: "Requires 2 branch commitments" };
+    }
   }
 
   const existingCount = hub.rooms.filter((r) => r.type === roomType).length;
@@ -139,7 +162,13 @@ export function buildRoom(
     return null;
   }
 
-  const check = canBuildRoom(hub, roomType, tech.completedTechIds, cash);
+  const check = canBuildRoom(
+    hub,
+    roomType,
+    tech.completedTechIds,
+    cash,
+    tech.committedBranches,
+  );
   if (!check.canBuild) return null;
 
   const def = HUB_ROOM_DEFINITIONS[roomType];

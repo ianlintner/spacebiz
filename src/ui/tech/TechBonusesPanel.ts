@@ -4,6 +4,8 @@ import {
   getEffectBreakdown,
   type EffectEntry,
 } from "../../game/tech/EffectBreakdown.ts";
+import { getRPBreakdown } from "../../game/tech/TechTree.ts";
+import { gameStore } from "../../data/GameStore.ts";
 import type { TechState } from "../../data/types.ts";
 
 export interface TechBonusesPanelConfig {
@@ -32,6 +34,7 @@ export class TechBonusesPanel extends Phaser.GameObjects.Container {
   private cfg: TechBonusesPanelConfig;
   private cardGroup: Phaser.GameObjects.Container;
   private emptyText: Phaser.GameObjects.Text;
+  private rpBreakdownText: Phaser.GameObjects.Text;
   private cardCount = 0;
 
   constructor(scene: Phaser.Scene, config: TechBonusesPanelConfig) {
@@ -61,10 +64,24 @@ export class TechBonusesPanel extends Phaser.GameObjects.Container {
       .setOrigin(0.5, 0.5)
       .setVisible(false);
     this.add(this.emptyText);
+
+    this.rpBreakdownText = scene.add.text(0, 2, "", {
+      fontSize: "11px",
+      fontFamily: theme.fonts.body.family,
+      color: colorToString(theme.colors.text),
+      fontStyle: "bold",
+    });
+    this.add(this.rpBreakdownText);
   }
 
   setBonusesState(tech: TechState): this {
     this.cardGroup.removeAll(true);
+
+    const breakdown = getRPBreakdown(gameStore.getState());
+    this.rpBreakdownText.setText(
+      `RP/turn  ·  ${breakdown.base} base · ${breakdown.delivery} deliveries · ${breakdown.infrastructure} infra  ·  ${breakdown.total} total`,
+    );
+
     const entries = getEffectBreakdown(tech);
     this.cardCount = entries.length;
 
@@ -81,7 +98,7 @@ export class TechBonusesPanel extends Phaser.GameObjects.Container {
       const col = idx % cols;
       const row = Math.floor(idx / cols);
       const x = col * (cardWidth + CARD_GAP);
-      const y = row * (CARD_HEIGHT + CARD_GAP);
+      const y = 24 + row * (CARD_HEIGHT + CARD_GAP);
       this.renderCard(entry, x, y, cardWidth);
     });
 
