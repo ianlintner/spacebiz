@@ -160,4 +160,32 @@ describe("calculateRouteRP", () => {
 
     expect(calculateRouteRP(route, 0, state)).toBe(0);
   });
+
+  it("returns 0 when route has null cargoType", () => {
+    const p1 = makePlanet("p1", "s1", 0, 0);
+    const p2 = makePlanet("p2", "s1", 5, 0);
+    const s1 = makeSystem("s1", "e1");
+    const state = makeState([p1, p2], [s1]);
+    const route = {
+      ...makeRoute("p1", "p2", "food"),
+      cargoType: null,
+    } as ActiveRoute;
+    expect(calculateRouteRP(route, 3, state)).toBe(0);
+  });
+
+  it("returns 0 when origin planet is missing from state", () => {
+    const p2 = makePlanet("p2", "s1", 5, 0);
+    const s1 = makeSystem("s1", "e1");
+    const state = makeState([p2], [s1]); // no p1
+    const route = makeRoute("p1", "p2", "food");
+    expect(calculateRouteRP(route, 1, state)).toBe(0);
+  });
+
+  it("returns 0 when destination planet is missing from state", () => {
+    const p1 = makePlanet("p1", "s1", 0, 0);
+    const s1 = makeSystem("s1", "e1");
+    const state = makeState([p1], [s1]); // no p2
+    const route = makeRoute("p1", "p2", "food");
+    expect(calculateRouteRP(route, 1, state)).toBe(0);
+  });
 });
