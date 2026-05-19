@@ -181,6 +181,7 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
       researchProgress: 0,
       purchaseCount: {},
       queue: [],
+      committedBranches: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],
@@ -258,6 +259,7 @@ describe("Phase 3 Integration", () => {
         purchaseCount: {},
         // Queue fuel_efficiency_1 (center node, always available, costs 4 RP)
         queue: ["fuel_efficiency_1"],
+        committedBranches: [],
       },
     });
 
@@ -281,6 +283,7 @@ describe("Phase 3 Integration", () => {
         researchProgress: 0,
         purchaseCount: {},
         queue: [],
+        committedBranches: [],
       },
     });
 
@@ -312,6 +315,7 @@ describe("Phase 3 Integration", () => {
         researchProgress: 0,
         purchaseCount: { logistics_hub: 1 },
         queue: [],
+        committedBranches: [],
       },
     });
 
@@ -340,6 +344,7 @@ describe("Phase 3 Integration", () => {
         researchProgress: 0,
         purchaseCount: {},
         queue: [],
+        committedBranches: [],
       },
     });
     const enhancedScore = calculateScore(enhancedState);

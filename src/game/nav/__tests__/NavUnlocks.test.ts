@@ -70,6 +70,7 @@ function makeState(
       researchProgress: 0,
       purchaseCount: {},
       queue: [],
+      committedBranches: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],

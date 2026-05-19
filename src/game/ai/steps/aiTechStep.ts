@@ -139,6 +139,7 @@ export function processAITech(
     researchProgress: 0,
     purchaseCount: {},
     queue: [],
+    committedBranches: [],
   };
 
   // Accumulate 1 RP per turn

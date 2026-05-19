@@ -1152,6 +1152,10 @@ export interface TechState {
   queue: string[]; // ordered pending unlock IDs
   currentResearchId: string | null; // = queue[0] ?? null
   researchProgress: number; // display value: Math.min(rp, effectiveCost(queue[0]))
+  /** Branch IDs the player has paid to commit to. Unlocks T3+ research in
+   * those branches. Hard-capped at 3 commitments per game; cost scales per
+   * commitment (see COMMITMENT_COSTS). Permanent — no swaps. */
+  committedBranches: string[];
 }
 
 // ── Character / Portrait types ─────────────────────────────

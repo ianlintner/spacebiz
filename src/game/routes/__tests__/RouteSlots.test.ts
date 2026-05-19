@@ -49,6 +49,7 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
       researchProgress: 0,
       purchaseCount: {},
       queue: [],
+      committedBranches: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],
@@ -100,6 +101,7 @@ describe("Route Slot System", () => {
         researchProgress: 0,
         purchaseCount: { logistics_hub: 1 },
         queue: [],
+        committedBranches: [],
       },
     });
     expect(getAvailableRouteSlots(state)).toBe(5);
@@ -138,6 +140,7 @@ describe("Route Slot System", () => {
         researchProgress: 0,
         purchaseCount: { logistics_hub: 1, logistics_3: 1 },
         queue: [],
+        committedBranches: [],
       },
     });
     expect(getAvailableRouteSlots(state)).toBe(6);

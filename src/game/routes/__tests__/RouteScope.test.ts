@@ -182,6 +182,7 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
       researchProgress: 0,
       purchaseCount: {},
       queue: [],
+      committedBranches: [],
     },
     empireTradePolicies: {},
     interEmpireCargoLocks: [],

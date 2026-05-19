@@ -48,6 +48,7 @@ function makeTech(completedTechIds: string[] = []): TechState {
     researchProgress: 0,
     purchaseCount: {},
     queue: [],
+    committedBranches: [],
   };
 }
 
